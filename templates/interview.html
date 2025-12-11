@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interview in Progress - MockFlow-AI</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <!-- Load LiveKit Client Library -->
+    <script src="https://unpkg.com/livekit-client@2.5.0/dist/livekit-client.umd.min.js" onerror="console.error('Failed to load LiveKit from unpkg')"></script>
+    <!-- Fallback to jsdelivr CDN -->
+    <script>
+        if (typeof LiveKit === 'undefined' && typeof LivekitClient === 'undefined') {
+            console.log('Trying fallback CDN...');
+            document.write('<script src="https://cdn.jsdelivr.net/npm/livekit-client@2.5.0/dist/livekit-client.umd.min.js"><\/script>');
+        }
+    </script>
+    <div class="interview-room">
+        <!-- Stage Indicator -->
+        <div id="stageIndicator" class="stage-indicator">
+            <div class="stage-info">
+                <span id="stageName" class="stage-name">Connecting...</span>
+                <span id="stageDescription" class="stage-description">Please wait</span>
+            </div>
+            <div class="stage-timer">
+                <span id="stageTimer">0:00</span>
+            </div>
+        </div>
+
+        <!-- Connection Status -->
+        <div id="status" class="status">
+            <span class="status-icon">●</span>
+            <span id="statusText">Connecting to interview room...</span>
+        </div>
+
+        <!-- Audio Visualizer -->
+        <div class="audio-visualizer" id="audioViz">
+            <div class="pulse"></div>
+            <div class="pulse-ring"></div>
+        </div>
+
+        <!-- Interview Controls -->
+        <div class="interview-controls">
+            <button id="muteBtn" class="btn-control" style="display: none;">
+                <span id="muteIcon">🎤</span>
+                <span id="muteText">Mute</span>
+            </button>
+
+            <button id="endBtn" class="btn-end" style="display: none;">
+                End Interview
+            </button>
+        </div>
+
+        <!-- Transcript Display (optional, can be toggled) -->
+        <div id="transcriptContainer" class="transcript-container" style="display: none;">
+            <h3>Conversation Transcript</h3>
+            <div id="transcript" class="transcript">
+                <!-- Transcript messages will appear here -->
+            </div>
+            <button id="toggleTranscript" class="btn-secondary">
+                Show Transcript
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Wait for LiveKit client to load
+        window.addEventListener('load', function() {
+            // Check if LiveKit client is loaded (try both LiveKit and LivekitClient)
+            const LK = window.LiveKit || window.LivekitClient;
+            if (typeof LK === 'undefined') {
+                console.error('LiveKit client failed to load');
+                console.log('Available globals:', Object.keys(window).filter(k => k.toLowerCase().includes('live')));
+                document.getElementById('statusText').textContent = 'Failed to load required libraries';
+                return;
+            }
+
+            // Use the detected LiveKit namespace
+            const LivekitClient = LK;
+
+            // Get candidate info from URL params
+            const urlParams = new URLSearchParams(window.location.search);
+            const candidateName = urlParams.get('name') || 'Candidate';
+            const candidateEmail = urlParams.get('email') || '';
+            const candidateRole = urlParams.get('role') || '';
+            const candidateLevel = urlParams.get('level') || '';
+
+        // UI elements
+        const statusEl = document.getElementById('statusText');
+        const stageNameEl = document.getElementById('stageName');
+        const stageDescEl = document.getElementById('stageDescription');
+        const stageTimerEl = document.getElementById('stageTimer');
+        const muteBtn = document.getElementById('muteBtn');
+        const endBtn = document.getElementById('endBtn');
+        const transcriptEl = document.getElementById('transcript');
+        const toggleTranscriptBtn = document.getElementById('toggleTranscript');
+
+        // Stage information
+        const stageInfo = {
+            'greeting': {
+                name: 'Welcome',
+                description: 'Introduction'
+            },
+            'self_intro': {
+                name: 'Stage 1',
+                description: 'Self-Introduction'
+            },
+            'past_experience': {
+                name: 'Stage 2',
+                description: 'Past Experience'
+            },
+            'closing': {
+                name: 'Closing',
+                description: 'Wrap-up'
+            }
+        };
+
+        // Stage timer
+        let stageStartTime = Date.now();
+        let timerInterval = null;
+
+        function updateTimer() {
+            const elapsed = Math.floor((Date.now() - stageStartTime) / 1000);
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            stageTimerEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            stageStartTime = Date.now();
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        function updateStage(stage) {
+            const info = stageInfo[stage] || { name: 'Interview', description: 'In Progress' };
+            stageNameEl.textContent = info.name;
+            stageDescEl.textContent = info.description;
+            startTimer();
+        }
+
+        function updateStatus(text, type = 'info') {
+            statusEl.textContent = text;
+            const statusContainer = document.getElementById('status');
+            statusContainer.className = `status status-${type}`;
+        }
+
+        function addTranscript(speaker, text) {
+            const msgEl = document.createElement('div');
+            msgEl.className = `transcript-message transcript-${speaker.toLowerCase()}`;
+            msgEl.innerHTML = `
+                <span class="transcript-speaker">${speaker}:</span>
+                <span class="transcript-text">${text}</span>
+            `;
+            transcriptEl.appendChild(msgEl);
+            transcriptEl.scrollTop = transcriptEl.scrollHeight;
+        }
+
+        // Toggle transcript visibility
+        toggleTranscriptBtn.addEventListener('click', () => {
+            const container = document.getElementById('transcriptContainer');
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                toggleTranscriptBtn.textContent = 'Hide Transcript';
+            } else {
+                container.style.display = 'none';
+                toggleTranscriptBtn.textContent = 'Show Transcript';
+            }
+        });
+
+        // Connect to LiveKit
+        updateStatus('Requesting access token...', 'connecting');
+
+        fetch('/api/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: candidateName,
+                email: candidateEmail,
+                role: candidateRole,
+                level: candidateLevel
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+
+            updateStatus('Connecting to interview room...', 'connecting');
+
+            // Create LiveKit room
+            const room = new LivekitClient.Room({
+                adaptiveStream: true,
+                dynacast: true,
+                videoCaptureDefaults: {
+                    resolution: LivekitClient.VideoPresets.h720.resolution,
+                },
+            });
+
+            // Room connected
+            room.on(LivekitClient.RoomEvent.Connected, () => {
+                updateStatus('Connected - Interview starting soon', 'connected');
+                updateStage('greeting');
+
+                // Show controls
+                muteBtn.style.display = 'inline-flex';
+                endBtn.style.display = 'inline-block';
+
+                setTimeout(() => {
+                    document.getElementById('status').style.display = 'none';
+                }, 3000);
+            });
+
+            // Track subscribed (agent audio)
+            room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
+                if (track.kind === LivekitClient.Track.Kind.Audio) {
+                    const audioElement = track.attach();
+                    audioElement.volume = 1.0;
+                    document.body.appendChild(audioElement);
+
+                    console.log('[LIVEKIT] Agent audio track subscribed');
+                }
+            });
+
+            // Data received (for stage updates, if implemented)
+            room.on(LivekitClient.RoomEvent.DataReceived, (payload, participant) => {
+                try {
+                    const data = JSON.parse(new TextDecoder().decode(payload));
+                    if (data.type === 'stage_change') {
+                        updateStage(data.stage);
+                        console.log('[LIVEKIT] Stage changed to:', data.stage);
+                    }
+                } catch (e) {
+                    console.error('[LIVEKIT] Error parsing data:', e);
+                }
+            });
+
+            // Disconnected
+            room.on(LivekitClient.RoomEvent.Disconnected, (reason) => {
+                updateStatus('Interview ended', 'disconnected');
+                if (timerInterval) clearInterval(timerInterval);
+                console.log('[LIVEKIT] Disconnected:', reason);
+
+                // Show completion message
+                setTimeout(() => {
+                    alert('Interview completed! Thank you for participating.');
+                    window.location.href = '/';
+                }, 2000);
+            });
+
+            // Connection quality changed
+            room.on(LivekitClient.RoomEvent.ConnectionQualityChanged, (quality, participant) => {
+                console.log('[LIVEKIT] Connection quality:', quality);
+            });
+
+            // Mute/unmute button
+            let isMuted = false;
+            muteBtn.addEventListener('click', async () => {
+                isMuted = !isMuted;
+                const localParticipant = room.localParticipant;
+
+                if (localParticipant) {
+                    await localParticipant.setMicrophoneEnabled(!isMuted);
+                    document.getElementById('muteIcon').textContent = isMuted ? '🔇' : '🎤';
+                    document.getElementById('muteText').textContent = isMuted ? 'Unmute' : 'Mute';
+                }
+            });
+
+            // End interview button
+            endBtn.addEventListener('click', () => {
+                if (confirm('Are you sure you want to end the interview?')) {
+                    room.disconnect();
+                }
+            });
+
+            // Connect to room
+            room.connect(data.url, data.token)
+                .then(() => {
+                    console.log('[LIVEKIT] Successfully connected to room:', data.room);
+                })
+                .catch(error => {
+                    console.error('[LIVEKIT] Connection error:', error);
+                    updateStatus('Connection failed: ' + error.message, 'error');
+                });
+
+        })
+        .catch(error => {
+            console.error('[ERROR] Token generation failed:', error);
+            updateStatus('Failed to connect: ' + error.message, 'error');
+        });
+
+        }); // End window.addEventListener('load')
+    </script>
+</body>
+</html>

@@ -1,35 +1,19 @@
 # Core LiveKit Dependencies
-livekit==0.17.3
-livekit-agents==0.11.2
-livekit-protocol==0.8.0
+livekit>=1.0.19,<2
+livekit-api>=1.0.7,<2
+livekit-agents>=0.11.2
 
 # LiveKit Plugins
-livekit-plugins-openai==0.10.1
-livekit-plugins-deepgram==0.8.2
-livekit-plugins-silero==0.8.1
+livekit-plugins-openai>=1.3.6
+livekit-plugins-deepgram>=1.3.6
+livekit-plugins-silero>=1.3.6
 
-# AI/ML Dependencies
-openai>=1.50.0
-anthropic>=0.39.0
+# Flask Web Framework
+Flask==3.0.0
+Flask-Cors==4.0.0
 
-# Audio Processing
-numpy>=1.24.0
-scipy>=1.11.0
-
-# Async/Networking
-aiohttp>=3.9.0
-websockets>=12.0
+# Environment & Configuration
+python-dotenv==1.0.0
 
 # Utilities
-python-dotenv>=1.0.0
-pydantic>=2.5.0
-
-# Logging and Monitoring
-structlog>=24.1.0
-colorlog>=6.8.0
-
-# Development
-pytest>=7.4.0
-pytest-asyncio>=0.21.0
-black>=23.12.0
-ruff>=0.1.9
+aiohttp>=3.9.0
