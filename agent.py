@@ -363,27 +363,29 @@ async def entrypoint(ctx: JobContext):
 
         logger.info("[SESSION] Starting agent session")
 
-        try:
-            # Start agent session
-            session.start(agent=agent, room=ctx.room)
-
-            # Wait for participant to join
-            logger.info("[SESSION] Waiting for participant to join...")
-            await asyncio.sleep(2)
-
-            # Agent greets first to start the conversation
+        # Schedule initial greeting after a short delay
+        async def send_initial_greeting():
+            """Send greeting after participant joins."""
+            await asyncio.sleep(2)  # Wait for participant to connect
             initial_greeting = (
                 "Hello! Welcome to MockFlow AI. "
                 "I'm Alex, and I'll be conducting your mock interview today. "
                 "Let's begin - please take a moment to introduce yourself."
             )
-            await session.say(initial_greeting, allow_interruptions=True)
-            logger.info("[SESSION] Initial greeting sent")
+            try:
+                await session.say(initial_greeting, allow_interruptions=True)
+                logger.info("[SESSION] Initial greeting sent")
+            except Exception as e:
+                logger.error(f"[SESSION] Failed to send greeting: {e}")
 
-            # Now wait for session to complete
-            await session.aclose()
+        # Start greeting task
+        greeting_task = asyncio.create_task(send_initial_greeting())
 
+        try:
+            # Start agent session (blocks until session ends)
+            await session.start(agent=agent, room=ctx.room)
         finally:
+            greeting_task.cancel()
             fallback_task.cancel()
             logger.info("[SESSION] Session ended")
 
