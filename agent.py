@@ -70,29 +70,45 @@ INSTRUCTIONS = {
 You are a friendly and professional interviewer named Alex conducting a mock interview.
 
 Your task right now:
-- Greet the candidate warmly
-- Introduce yourself as Alex, an AI interviewer
-- Ask them to tell you about themselves
-- Keep this brief (under 1 minute)
+1. Greet the candidate warmly
+2. Introduce yourself as Alex, an AI interviewer
+3. EXPLAIN THE INTERVIEW STRUCTURE:
+   - "This interview has 3 main stages:"
+   - "Stage 1: Self-introduction - tell me about yourself (2-3 minutes)"
+   - "Stage 2: Past experience - discuss your projects and work (3-4 minutes)"
+   - "Stage 3: Closing - wrap up and next steps (1 minute)"
+4. Ask if they're ready to begin
+5. Once they confirm, transition immediately to self_intro stage using the transition_stage tool
 
-Important: Start speaking immediately with a warm greeting. Be natural and conversational.
+Keep this entire greeting under 45 seconds. Be concise and clear.
+
+IMPORTANT: As soon as the candidate says they're ready (e.g., "yes", "sure", "let's start", "I'm ready"),
+call transition_stage immediately to move to self_intro.
 """,
 
     InterviewStage.SELF_INTRO: """
 You are conducting the self-introduction stage of a mock interview.
 
 Your task:
-- Listen actively to the candidate's introduction
-- Ask 1-2 natural follow-up questions about their background, education, or current role
-- Show genuine interest through thoughtful questions
-- Keep this stage conversational (3-4 minutes total)
+- Ask the candidate to introduce themselves (background, education, current role)
+- Listen actively to their response
+- Ask ONE brief follow-up question to show engagement
+- Keep this stage SHORT (2-3 minutes maximum)
 
-When you feel you have enough information about their background, call the transition_stage tool.
+TIMING RULES (CRITICAL):
+- After hearing their introduction (about 1-2 minutes of them speaking), ask ONE follow-up
+- After they answer that follow-up, IMMEDIATELY call transition_stage
+- Do NOT ask multiple follow-ups
+- Do NOT extend this stage beyond 2-3 minutes
+
+When to transition:
+- They've shared their background
+- You've asked ONE follow-up and they've answered
+- Call transition_stage with reason: "Candidate provided introduction"
 
 Guidelines:
-- Ask one question at a time
-- Wait for complete responses before asking follow-ups
-- Be encouraging and supportive
+- Be encouraging but brief
+- Focus on moving forward efficiently
 """,
 
     InterviewStage.PAST_EXPERIENCE: """
@@ -100,17 +116,27 @@ You are now discussing the candidate's past experience in detail.
 
 Your task:
 - Reference something specific from their introduction
-- Ask about past projects, challenges, and solutions
-- Use the STAR method framework (Situation, Task, Action, Result)
-- Probe deeper on technical/professional skills
-- Keep this stage focused (5-7 minutes)
+- Ask about ONE specific project or experience
+- Let them explain the project, challenges, and solutions
+- Keep this stage focused (3-4 minutes maximum)
 
-When satisfied with their responses, call transition_stage.
+TIMING RULES (CRITICAL):
+- Ask about ONE project/experience
+- Listen to their full explanation
+- Ask ONE clarifying or follow-up question
+- After they answer, IMMEDIATELY call transition_stage
+- Do NOT ask about multiple projects
+- Do NOT extend beyond 4 minutes
+
+When to transition:
+- They've described one project in detail
+- They've explained challenges and solutions
+- Call transition_stage with reason: "Candidate shared project experience"
 
 Guidelines:
-- Ask about specific examples from their experience
-- Focus on problem-solving approaches
-- Ask clarifying questions when needed
+- Use STAR method prompts (Situation, Task, Action, Result)
+- Focus on ONE specific example
+- Be efficient with time
 """,
 
     InterviewStage.CLOSING: """
@@ -158,11 +184,11 @@ class InterviewAgent(Agent):
 
             time_in_stage = ctx.userdata.time_in_current_stage()
 
-            # Minimum time gates (prevent rushing)
+            # Minimum time gates (prevent rushing) - reduced for faster interviews
             MIN_TIMES = {
-                InterviewStage.GREETING: 15,
-                InterviewStage.SELF_INTRO: 60,
-                InterviewStage.PAST_EXPERIENCE: 120,
+                InterviewStage.GREETING: 10,   # Reduced from 15
+                InterviewStage.SELF_INTRO: 45,  # Reduced from 60
+                InterviewStage.PAST_EXPERIENCE: 60,  # Reduced from 120
             }
 
             min_time = MIN_TIMES.get(current_stage, 0)
@@ -183,6 +209,9 @@ class InterviewAgent(Agent):
                 f"(reason: {reason}, time_in_stage: {time_in_stage:.1f}s)"
             )
 
+            # Emit stage change to UI
+            await self._emit_stage_change(ctx, next_stage)
+
             transition_messages = {
                 InterviewStage.SELF_INTRO: "Great, let's dive into your background and experience.",
                 InterviewStage.PAST_EXPERIENCE: "Excellent introduction. Now I'd like to hear more about your past work experience.",
@@ -190,10 +219,32 @@ class InterviewAgent(Agent):
             }
 
             return transition_messages.get(next_stage, f"Transitioned to {next_stage.value}")
-            
+
         except Exception as e:
             logger.error(f"[AGENT] Transition error: {e}", exc_info=True)
             return f"Error during transition: {str(e)}"
+
+    async def _emit_stage_change(self, ctx: RunContext[InterviewState], new_stage: InterviewStage):
+        """Emit stage change event to the room for UI updates."""
+        try:
+            import json
+
+            data_payload = json.dumps({
+                "type": "stage_change",
+                "stage": new_stage.value
+            })
+
+            # Access room through the session
+            room = ctx.session.room if hasattr(ctx.session, 'room') else None
+            if room and room.local_participant:
+                await room.local_participant.publish_data(
+                    data_payload.encode('utf-8')
+                )
+                logger.info(f"[UI] Emitted stage change: {new_stage.value}")
+            else:
+                logger.warning(f"[UI] Cannot emit stage change - no room available")
+        except Exception as e:
+            logger.error(f"[UI] Failed to emit stage change: {e}")
 
     @function_tool
     async def record_response(
@@ -221,6 +272,44 @@ class InterviewAgent(Agent):
     async def on_exit(self):
         """Called when agent is deactivated."""
         logger.info("[AGENT] Agent deactivating")
+
+
+async def emit_user_caption(ctx: JobContext, text: str):
+    """Emit user caption to the UI."""
+    try:
+        import json
+
+        data_payload = json.dumps({
+            "type": "user_caption",
+            "text": text
+        })
+
+        await ctx.room.local_participant.publish_data(
+            data_payload.encode('utf-8')
+        )
+
+        logger.debug(f"[UI] Emitted user caption: {text[:50]}...")
+    except Exception as e:
+        logger.error(f"[UI] Failed to emit user caption: {e}")
+
+
+async def emit_agent_caption(ctx: JobContext, text: str):
+    """Emit agent caption to the UI."""
+    try:
+        import json
+
+        data_payload = json.dumps({
+            "type": "agent_caption",
+            "text": text
+        })
+
+        await ctx.room.local_participant.publish_data(
+            data_payload.encode('utf-8')
+        )
+
+        logger.debug(f"[UI] Emitted agent caption: {text[:50]}...")
+    except Exception as e:
+        logger.error(f"[UI] Failed to emit agent caption: {e}")
 
 
 @server.rtc_session()
@@ -301,16 +390,20 @@ async def entrypoint(ctx: JobContext):
 
         logger.info("[SESSION] AgentSession created")
 
-        # Event handlers for logging
+        # Event handlers for logging and caption emission
         @session.on("user_input_transcribed")
         def on_user_speech(event):
             if event.is_final:
                 logger.info(f"[USER] {event.transcript}")
+                # Emit user caption to UI
+                asyncio.create_task(emit_user_caption(ctx, event.transcript))
 
-        @session.on("agent_speech_committed") 
+        @session.on("agent_speech_committed")
         def on_agent_speech(event):
             text = getattr(event, 'text', str(event))
             logger.info(f"[AGENT SPEECH] {text[:150]}...")
+            # Emit agent caption to UI
+            asyncio.create_task(emit_agent_caption(ctx, text))
 
         @session.on("agent_state_changed")
         def on_state_change(event):
@@ -320,7 +413,7 @@ async def entrypoint(ctx: JobContext):
 
         # Start fallback timer
         fallback_task = asyncio.create_task(
-            stage_fallback_timer(session, interview_state)
+            stage_fallback_timer(session, interview_state, ctx)
         )
 
         logger.info("[SESSION] Starting agent session")
@@ -348,22 +441,23 @@ async def entrypoint(ctx: JobContext):
         logger.info("[SESSION] Session cleanup complete")
 
 
-async def stage_fallback_timer(session: AgentSession, state: InterviewState):
+async def stage_fallback_timer(session: AgentSession, state: InterviewState, ctx: JobContext):
     """
     Enhanced fallback mechanism with time-based stage transitions.
+    More aggressive timing for efficient interviews.
     """
     STAGE_LIMITS = {
-        InterviewStage.GREETING: 90,
-        InterviewStage.SELF_INTRO: 360,
-        InterviewStage.PAST_EXPERIENCE: 480,
-        InterviewStage.CLOSING: 120,
+        InterviewStage.GREETING: 60,   # Reduced from 90 - should transition quickly after explaining
+        InterviewStage.SELF_INTRO: 180,  # Reduced from 360 - 3 minutes max
+        InterviewStage.PAST_EXPERIENCE: 240,  # Reduced from 480 - 4 minutes max
+        InterviewStage.CLOSING: 90,   # Reduced from 120
     }
 
-    WARNING_THRESHOLD = 0.8
+    WARNING_THRESHOLD = 0.75  # Warn earlier (75% instead of 80%)
 
     try:
         while True:
-            await asyncio.sleep(30)
+            await asyncio.sleep(20)  # Check more frequently (every 20s instead of 30s)
 
             current_stage = state.verify_state()
             time_in_stage = state.time_in_current_stage()
@@ -377,7 +471,8 @@ async def stage_fallback_timer(session: AgentSession, state: InterviewState):
 
             if time_in_stage > warning_time and time_in_stage < limit:
                 logger.warning(
-                    f"[FALLBACK] Stage {current_stage.value} approaching time limit"
+                    f"[FALLBACK] Stage {current_stage.value} approaching time limit "
+                    f"({time_in_stage:.0f}s / {limit}s)"
                 )
 
             if time_in_stage > limit:
@@ -386,10 +481,29 @@ async def stage_fallback_timer(session: AgentSession, state: InterviewState):
                 if next_stage:
                     logger.warning(
                         f"[FALLBACK] FORCING stage transition: "
-                        f"{current_stage.value} -> {next_stage.value}"
+                        f"{current_stage.value} -> {next_stage.value} "
+                        f"(exceeded {limit}s limit)"
                     )
                     state.transition_to(next_stage, forced=True)
 
+                    # Emit stage change to UI
+                    try:
+                        import json
+
+                        data_payload = json.dumps({
+                            "type": "stage_change",
+                            "stage": next_stage.value
+                        })
+
+                        await ctx.room.local_participant.publish_data(
+                            data_payload.encode('utf-8')
+                        )
+
+                        logger.info(f"[UI] Emitted forced stage change: {next_stage.value}")
+                    except Exception as e:
+                        logger.error(f"[UI] Failed to emit forced stage change: {e}")
+
+                    # Announce transition
                     try:
                         transition_announcements = {
                             InterviewStage.SELF_INTRO: "Let's move on to discuss your background.",
