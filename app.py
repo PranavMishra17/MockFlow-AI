@@ -139,7 +139,7 @@ def generate_token():
             LIVEKIT_API_SECRET
         )
 
-        # Set identity and grants
+        # Set identity and grants with metadata
         token.with_identity(name).with_name(name).with_grants(
             api.VideoGrants(
                 room_join=True,
@@ -147,7 +147,11 @@ def generate_token():
                 can_publish=True,
                 can_subscribe=True,
             )
-        )
+        ).with_attributes({
+            'role': role,
+            'level': level,
+            'email': email
+        })
 
         # Generate JWT
         jwt_token = token.to_jwt()

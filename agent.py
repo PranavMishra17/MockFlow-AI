@@ -81,53 +81,68 @@ Do NOT wait for the candidate's response before calling transition_stage.
 You are conducting the self-introduction stage of a mock interview.
 
 Your task:
-- Ask the candidate to introduce themselves (background, education, current role)
-- Listen actively to their response
-- Ask ONE brief follow-up question to show engagement
-- Keep this stage SHORT (2-3 minutes maximum)
+1. First, ask the candidate to introduce themselves (background, education, current role)
+2. Listen actively to their response
+3. IMPORTANT: After they respond, call assess_response to evaluate the depth and quality of their introduction
+4. Based on the assessment result:
+   - If adequate (depth >= 3): Ask ONE brief clarifying question, then call transition_stage
+   - If insufficient (depth < 3): Ask 1-2 specific follow-up questions to get more detail
+5. Before asking ANY question, you MUST call ask_question tool to verify it hasn't been asked before
+6. Keep this stage SHORT (2-3 minutes maximum)
 
-TIMING RULES (CRITICAL):
-- After hearing their introduction (about 1-2 minutes of them speaking), ask ONE follow-up
-- After they answer that follow-up, IMMEDIATELY call transition_stage
-- Do NOT ask multiple follow-ups
-- Do NOT extend this stage beyond 2-3 minutes
+CRITICAL RULES:
+- Call assess_response AFTER EVERY candidate response to determine next action
+- Call ask_question BEFORE asking ANY question to prevent repetition
+- Do NOT ask repetitive or similar questions
+- Do NOT transition until you have adequate context (assessed depth >= 3)
+- Maximum 3 questions total in this stage (including initial introduction request)
 
 When to transition:
-- They've shared their background
-- You've asked ONE follow-up and they've answered
-- Call transition_stage with reason: "Candidate provided introduction"
+- Candidate has provided adequate introduction (assessed at depth >= 3)
+- You've asked clarifying questions based on assessment
+- Call transition_stage with reason: "Candidate provided sufficient introduction"
 
 Guidelines:
-- Be encouraging but brief
-- Focus on moving forward efficiently
+- Be encouraging and supportive
+- Show genuine interest in their background
+- Focus on understanding their experience relevant to the role
+- Keep questions focused and avoid repetition
 """,
 
     InterviewStage.PAST_EXPERIENCE: """
 You are now discussing the candidate's past experience in detail.
 
 Your task:
-- Reference something specific from their introduction
-- Ask about ONE specific project or experience
-- Let them explain the project, challenges, and solutions
-- Keep this stage focused (3-4 minutes maximum)
+1. Reference something specific from their introduction
+2. Ask about ONE specific project or experience that's relevant to the role they're applying for
+3. Let them explain the project, their role, challenges faced, and solutions implemented
+4. IMPORTANT: After they respond, call assess_response to evaluate the depth and detail of their explanation
+5. Based on the assessment result:
+   - If detailed (depth >= 4): Ask ONE final question about impact/results, then call transition_stage
+   - If surface-level (depth 2-3): Ask follow-up about their role, challenges, or technical decisions
+   - If vague (depth < 2): Ask detailed STAR method question to probe deeper
+6. Before asking ANY question, you MUST call ask_question tool to verify it hasn't been asked before
+7. Keep this stage focused (3-4 minutes maximum)
 
-TIMING RULES (CRITICAL):
-- Ask about ONE project/experience
-- Listen to their full explanation
-- Ask ONE clarifying or follow-up question
-- After they answer, IMMEDIATELY call transition_stage
-- Do NOT ask about multiple projects
-- Do NOT extend beyond 4 minutes
+CRITICAL RULES:
+- Call assess_response AFTER EVERY candidate response to determine next action
+- Call ask_question BEFORE asking ANY question to prevent repetition
+- Do NOT ask repetitive or generic questions
+- Do NOT transition until adequate detail is provided (assessed depth >= 4)
+- Maximum 3 questions total in this stage (including initial project question)
+- Use STAR method (Situation, Task, Action, Result) to probe depth when needed
 
 When to transition:
-- They've described one project in detail
-- They've explained challenges and solutions
-- Call transition_stage with reason: "Candidate shared project experience"
+- Candidate has explained ONE project in sufficient detail (assessed depth >= 4)
+- They've covered their role, challenges, approach, and results
+- Call transition_stage with reason: "Candidate shared detailed project experience"
 
 Guidelines:
-- Use STAR method prompts (Situation, Task, Action, Result)
-- Focus on ONE specific example
-- Be efficient with time
+- Be genuinely curious about their work
+- Reference the specific role they're applying for
+- Probe technical details and decision-making when relevant
+- Focus on understanding one project deeply, not multiple projects superficially
+- Show appreciation for detailed explanations
 """,
 
     InterviewStage.CLOSING: """
@@ -206,11 +221,23 @@ class InterviewAgent(Agent):
             # Execute transition
             ctx.userdata.transition_to(next_stage, forced=False)
 
-            # Personalize instructions with candidate name
+            # Get base stage instructions
             stage_instructions = INSTRUCTIONS[next_stage]
 
-            # Add consistent personality note to all stages
-            personality_note = f"\n\nIMPORTANT: The candidate's name is {self.candidate_name}. Use their name naturally during the conversation. Maintain a warm, professional tone consistent with Alex the AI interviewer. Be encouraging and supportive."
+            # Add role-specific context guidance
+            role_context = self._get_role_context(ctx.userdata)
+
+            # Add consistent personality note with role/level context
+            personality_note = f"""
+
+IMPORTANT: The candidate's name is {self.candidate_name}.
+They are applying for: {ctx.userdata.job_role or 'a technical position'}
+Experience level: {ctx.userdata.experience_level or 'mid-level'}
+
+{role_context}
+
+Use their name naturally during the conversation. Maintain a warm, professional tone consistent with Alex the AI interviewer. Be encouraging and supportive.
+"""
 
             personalized_instructions = stage_instructions + personality_note
 
@@ -276,6 +303,181 @@ class InterviewAgent(Agent):
         except Exception as e:
             logger.error(f"[AGENT] Record response error: {e}", exc_info=True)
             return "Error recording response"
+
+    @function_tool
+    async def ask_question(
+        self,
+        ctx: RunContext[InterviewState],
+        question: Annotated[str, Field(description="The exact question you want to ask the candidate")]
+    ) -> str:
+        """
+        Validate and track questions before asking to prevent repetition.
+
+        This tool MUST be called before asking any question to the candidate.
+        Returns approval if question is new, or rejection if similar question was already asked.
+        """
+        try:
+            # Normalize for comparison (case-insensitive, ignore punctuation)
+            normalized = question.lower().strip().rstrip('?.,!')
+
+            # Check if similar question already asked
+            for asked in ctx.userdata.questions_asked:
+                asked_normalized = asked.lower().strip().rstrip('?.,!')
+
+                # Check for exact match
+                if normalized == asked_normalized:
+                    logger.warning(f"[AGENT] Rejected duplicate question: '{question}'")
+                    return f"You already asked this exact question: '{asked}'. Please ask something different to avoid repetition."
+
+                # Check if new question is substring of previous (too similar)
+                if normalized in asked_normalized or asked_normalized in normalized:
+                    logger.warning(f"[AGENT] Rejected similar question: '{question}' (similar to: '{asked}')")
+                    return f"You already asked a very similar question: '{asked}'. Please ask something different."
+
+            # Question is unique - track it
+            ctx.userdata.questions_asked.append(question)
+            logger.info(f"[AGENT] Approved question #{len(ctx.userdata.questions_asked)}: {question}")
+
+            return f"Question approved. You may now ask the candidate: '{question}'"
+
+        except Exception as e:
+            logger.error(f"[AGENT] Question validation error: {e}", exc_info=True)
+            return "Error validating question. Please try again."
+
+    @function_tool
+    async def assess_response(
+        self,
+        ctx: RunContext[InterviewState],
+        depth_score: Annotated[int, Field(description="Response depth rating: 1=very vague, 2=surface-level, 3=adequate, 4=detailed, 5=comprehensive")],
+        key_points_covered: Annotated[list[str], Field(description="List of key points mentioned by candidate in their response")]
+    ) -> str:
+        """
+        Assess the quality and depth of candidate's response to determine next action.
+
+        Use this tool AFTER the candidate responds to evaluate if you need follow-up questions
+        or if you can proceed to the next stage.
+
+        Returns guidance on whether to ask follow-up questions or transition stages.
+        """
+        try:
+            current_stage = ctx.userdata.stage
+
+            # Store response summary for analysis
+            response_summary = f"Depth: {depth_score}/5. Key points: {', '.join(key_points_covered)}"
+            ctx.userdata.experience_responses.append(response_summary)
+
+            logger.info(
+                f"[AGENT] Response assessment - Stage: {current_stage.value}, "
+                f"Depth: {depth_score}/5, Points: {len(key_points_covered)}"
+            )
+
+            # Decision logic based on stage and quality
+            if current_stage == InterviewStage.SELF_INTRO:
+                if depth_score >= 3:
+                    # Adequate introduction - can transition after one brief follow-up
+                    return (
+                        "Response was adequate (depth 3+). The candidate provided sufficient context. "
+                        "Ask ONE brief clarifying question to show engagement, then call transition_stage."
+                    )
+                elif depth_score == 2:
+                    # Surface-level - need one focused follow-up
+                    return (
+                        "Response was surface-level (depth 2). Ask ONE specific follow-up question "
+                        "to get more detail about their background, key skills, or career goals. "
+                        "Do NOT transition yet."
+                    )
+                else:  # depth_score == 1
+                    # Very vague - need detailed follow-up
+                    return (
+                        "Response was too vague (depth 1). Ask ONE detailed question to understand "
+                        "their background, education, or current role better. Do NOT transition yet."
+                    )
+
+            elif current_stage == InterviewStage.PAST_EXPERIENCE:
+                if depth_score >= 4:
+                    # Detailed project explanation - can transition
+                    return (
+                        "Response was detailed (depth 4+). Ask ONE final clarifying question "
+                        "about the impact or results of their work, then call transition_stage."
+                    )
+                elif depth_score == 3:
+                    # Adequate but could use more depth
+                    return (
+                        "Response was adequate (depth 3) but could be deeper. Ask ONE follow-up "
+                        "about their specific role, challenges they faced, or technical decisions made. "
+                        "Do NOT transition yet."
+                    )
+                elif depth_score == 2:
+                    # Surface-level - need STAR method prompting
+                    return (
+                        "Response was surface-level (depth 2). Ask ONE detailed question using STAR "
+                        "method to probe their role (Task), the challenges (Situation), their approach "
+                        "(Action), and outcomes (Result). Do NOT transition yet."
+                    )
+                else:  # depth_score == 1
+                    # Very vague - need much more detail
+                    return (
+                        "Response was too vague (depth 1). Ask a detailed question about a specific "
+                        "project: What was the project? What was your role? What challenges did you face? "
+                        "Do NOT transition yet."
+                    )
+
+            # Default for other stages
+            return "Assessment recorded. Continue with the interview naturally."
+
+        except Exception as e:
+            logger.error(f"[AGENT] Response assessment error: {e}", exc_info=True)
+            return "Error assessing response. Continue with the interview."
+
+    def _get_role_context(self, state: InterviewState) -> str:
+        """
+        Generate role-specific interview guidance based on job role and experience level.
+
+        Returns a formatted string with focus areas and expectations for the specific role/level.
+        """
+        role = state.job_role.lower() if state.job_role else ""
+        level = state.experience_level.lower() if state.experience_level else "mid"
+
+        # Role-specific focus areas (what to probe in questions)
+        role_keywords = {
+            'engineer': 'technical skills, problem-solving approaches, system design decisions',
+            'developer': 'coding practices, frameworks/tools used, debugging and optimization',
+            'software': 'technical architecture, development process, code quality practices',
+            'manager': 'team leadership, project planning, stakeholder communication, conflict resolution',
+            'product': 'product strategy, user research, roadmap prioritization, cross-functional collaboration',
+            'designer': 'design process, user research methods, collaboration with engineers, design systems',
+            'analyst': 'data analysis techniques, business insights, technical tools proficiency, reporting',
+            'qa': 'testing strategies, automation, bug tracking, quality assurance processes',
+            'devops': 'infrastructure, CI/CD pipelines, monitoring, cloud platforms, automation',
+        }
+
+        # Level-specific expectations (depth and scope of questions)
+        level_expectations = {
+            'entry': 'Focus on learning approach, academic/personal projects, foundational skills, and willingness to learn.',
+            'junior': 'Focus on recent projects, technical growth, mentorship received, and hands-on experience.',
+            'mid': 'Focus on independent project ownership, technical decisions, collaboration, and problem-solving.',
+            'senior': 'Focus on system design, mentoring others, technical leadership, and architectural decisions.',
+            'lead': 'Focus on architecture strategy, team guidance, cross-team impact, and technical vision.',
+            'staff': 'Focus on organization-wide impact, technical strategy, mentoring leads, and long-term planning.',
+        }
+
+        # Find matching role guidance
+        role_focus = "technical experience and problem-solving approaches"
+        for key, focus in role_keywords.items():
+            if key in role:
+                role_focus = focus
+                break
+
+        # Get level guidance
+        level_guidance = level_expectations.get(level, level_expectations['mid'])
+
+        return f"""
+For this {state.job_role or 'position'} role ({level} level):
+- Key focus areas: {role_focus}
+- {level_guidance}
+- Tailor your questions to probe relevant experience for this specific role and level.
+- Reference their role and level naturally in questions when appropriate.
+"""
 
     async def on_enter(self):
         """Called when agent becomes active - trigger the greeting."""
@@ -356,17 +558,39 @@ async def entrypoint(ctx: JobContext):
         room_parts = ctx.room.name.split('-')
         candidate_name = ' '.join(room_parts[1:-1]).title() if len(room_parts) > 2 else "Candidate"
 
-        # Get additional info from room metadata if available
+        # Try to get candidate info from remote participant attributes
+        # Wait a moment for participant to join if not already present
+        role = 'this position'
+        level = 'mid'
+        email = ''
+
+        if ctx.room.remote_participants:
+            # Get first remote participant (should be the candidate)
+            participant = list(ctx.room.remote_participants.values())[0]
+            if hasattr(participant, 'attributes') and participant.attributes:
+                role = participant.attributes.get('role', 'this position')
+                level = participant.attributes.get('level', 'mid')
+                email = participant.attributes.get('email', '')
+                logger.info(f"[SESSION] Retrieved candidate metadata - Role: {role}, Level: {level}")
+            else:
+                logger.warning("[SESSION] Participant has no attributes, using defaults")
+        else:
+            logger.warning("[SESSION] No remote participants yet, using defaults")
+
+        # Create candidate info dict
         candidate_info = {
             'name': candidate_name,
-            'role': 'this position'  # Default, can be enhanced later
+            'role': role
         }
 
-        logger.info(f"[SESSION] Candidate: {candidate_name}")
+        logger.info(f"[SESSION] Candidate: {candidate_name} (Role: {role}, Level: {level})")
 
-        # Initialize interview state
+        # Initialize interview state with full candidate context
         interview_state = InterviewState()
         interview_state.candidate_name = candidate_name
+        interview_state.candidate_email = email
+        interview_state.job_role = role
+        interview_state.experience_level = level
         interview_state.transition_to(InterviewStage.GREETING)
 
         # Log room participants
