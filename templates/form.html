@@ -13,86 +13,312 @@
 <body>
     <div class="form-page">
         <div class="form-container">
-            <div class="form-header">
-                <h2>Let's get started</h2>
-                <p class="form-subtitle">Tell us about yourself to personalize your interview</p>
+            <div class="form-main">
+                <div class="form-header">
+                    <h2>Let's get started</h2>
+                    <p class="form-subtitle">Tell us about yourself to personalize your interview</p>
+                </div>
+
+                <form id="candidateForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="name">Full Name</label>
+                            <input
+                                type="text"
+                                id="name"
+                                name="name"
+                                placeholder="Jane Smith"
+                                required
+                                class="form-input"
+                                autocomplete="name"
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="email">Email Address</label>
+                            <input
+                                type="email"
+                                id="email"
+                                name="email"
+                                placeholder="jane@example.com"
+                                required
+                                class="form-input"
+                                autocomplete="email"
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="role">Target Role</label>
+                            <input
+                                type="text"
+                                id="role"
+                                name="role"
+                                placeholder="Software Engineer, PM..."
+                                required
+                                class="form-input"
+                            >
+                        </div>
+
+                        <div class="form-group">
+                            <label for="level">Experience Level</label>
+                            <select id="level" name="level" required class="form-input">
+                                <option value="">Select level</option>
+                                <option value="entry">Entry (0-2 yrs)</option>
+                                <option value="mid">Mid (3-5 yrs)</option>
+                                <option value="senior">Senior (6+ yrs)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label for="companyUrl">Company URL <span style="color: var(--text-light); font-weight: 400;">(optional)</span></label>
+                            <input
+                                type="url"
+                                id="companyUrl"
+                                name="companyUrl"
+                                placeholder="https://company.com"
+                                class="form-input"
+                            >
+                            <p class="form-helper">URL of the company you're interviewing for</p>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label for="jobDescription">Job Description <span style="color: var(--text-light); font-weight: 400;">(optional)</span></label>
+                            <textarea
+                                id="jobDescription"
+                                name="jobDescription"
+                                placeholder="Paste the job description here to tailor your interview..."
+                                class="form-input"
+                                rows="3"
+                            ></textarea>
+                        </div>
+                    </div>
+
+                    <div class="loading" id="loadingIndicator">
+                        <span class="loading-spinner"></span>
+                        Connecting to interview room...
+                    </div>
+                </form>
+
+                <div class="interview-info">
+                    <h3>What to expect</h3>
+                    <ul>
+                        <li><strong>Stage 1:</strong> Self-introduction (3-4 min)</li>
+                        <li><strong>Stage 2:</strong> Experience discussion (5-7 min)</li>
+                        <li>Speak naturally - real-time AI responses</li>
+                    </ul>
+                </div>
             </div>
 
-            <form id="candidateForm">
-                <div class="form-group">
-                    <label for="name">Full Name</label>
-                    <input
-                        type="text"
-                        id="name"
-                        name="name"
-                        placeholder="Jane Smith"
-                        required
-                        class="form-input"
-                        autocomplete="name"
-                    >
-                </div>
-
-                <div class="form-group">
-                    <label for="email">Email Address</label>
-                    <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        placeholder="jane@example.com"
-                        required
-                        class="form-input"
-                        autocomplete="email"
-                    >
-                </div>
-
-                <div class="form-group">
-                    <label for="role">Target Role</label>
-                    <input
-                        type="text"
-                        id="role"
-                        name="role"
-                        placeholder="Software Engineer, Product Manager..."
-                        required
-                        class="form-input"
-                    >
-                </div>
-
-                <div class="form-group">
-                    <label for="level">Experience Level</label>
-                    <select id="level" name="level" required class="form-input">
-                        <option value="">Select your level</option>
-                        <option value="entry">Entry Level (0-2 years)</option>
-                        <option value="mid">Mid Level (3-5 years)</option>
-                        <option value="senior">Senior Level (6+ years)</option>
-                    </select>
-                </div>
-
-                <button type="submit" class="btn-primary" style="width: 100%; justify-content: center;">
-                    Begin Interview
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                        <line x1="5" y1="12" x2="19" y2="12"/>
-                        <polyline points="12 5 19 12 12 19"/>
-                    </svg>
+            <div class="form-sidebar">
+                <button type="submit" form="candidateForm" class="btn-form-game" id="submitBtn">
+                    <div class="btn-form-game-icon">
+                        <!-- Inactive: Writing on form icon -->
+                        <svg class="icon-inactive" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <!-- Clipboard -->
+                            <rect x="5" y="2" width="14" height="20" rx="2"/>
+                            <!-- Clip at top -->
+                            <path d="M9 2v2h6V2"/>
+                            <!-- Writing lines -->
+                            <line x1="8" y1="8" x2="16" y2="8"/>
+                            <line x1="8" y1="12" x2="16" y2="12"/>
+                            <line x1="8" y1="16" x2="12" y2="16"/>
+                            <!-- Pencil -->
+                            <path d="M18 14l-4 4"/>
+                            <path d="M14 18l1.5 1.5"/>
+                        </svg>
+                        <!-- Active: Handshake icon -->
+                        <svg class="icon-active" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <!-- Left hand -->
+                            <path d="M2 14l4-4 4 4"/>
+                            <path d="M6 10v8"/>
+                            <!-- Right hand -->
+                            <path d="M22 14l-4-4-4 4"/>
+                            <path d="M18 10v8"/>
+                            <!-- Handshake center -->
+                            <path d="M9 12h6"/>
+                            <path d="M12 9v6"/>
+                            <!-- Connection -->
+                            <circle cx="12" cy="12" r="2"/>
+                        </svg>
+                    </div>
+                    <span class="btn-form-game-label">Begin Interview</span>
                 </button>
-
-                <div class="loading" id="loadingIndicator">
-                    <span class="loading-spinner"></span>
-                    Connecting to interview room...
-                </div>
-            </form>
-
-            <div class="interview-info">
-                <h3>What to expect</h3>
-                <ul>
-                    <li><strong>Stage 1:</strong> Self-introduction (3-4 minutes)</li>
-                    <li><strong>Stage 2:</strong> Past experience discussion (5-7 minutes)</li>
-                    <li>Speak naturally - the AI responds in real-time</li>
-                    <li>You can interrupt anytime, just like a real conversation</li>
-                </ul>
             </div>
         </div>
     </div>
 
-    <script src="/static/script.js"></script>
+    <script>
+    (function() {
+        'use strict';
+        
+        document.addEventListener('DOMContentLoaded', init);
+        
+        function init() {
+            initFormHandler();
+            initInputValidation();
+            updateButtonState();
+        }
+        
+        function initFormHandler() {
+            var form = document.getElementById('candidateForm');
+            var submitBtn = document.getElementById('submitBtn');
+            if (!form) return;
+            
+            // Handle form submission
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                handleSubmit();
+            });
+            
+            // Also handle button click directly since button is outside form
+            if (submitBtn) {
+                submitBtn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    if (!submitBtn.classList.contains('active')) {
+                        console.log('[FORM] Button not active - fill all required fields');
+                        return;
+                    }
+                    handleSubmit();
+                });
+            }
+        }
+        
+        function handleSubmit() {
+            var form = document.getElementById('candidateForm');
+            var submitBtn = document.getElementById('submitBtn');
+            
+            if (!form) return;
+            
+            // Check if button is active
+            if (submitBtn && !submitBtn.classList.contains('active')) {
+                console.log('[FORM] Cannot submit - not all required fields filled');
+                return;
+            }
+            
+            var formData = new FormData(form);
+            var data = {
+                name: formData.get('name'),
+                email: formData.get('email'),
+                role: formData.get('role'),
+                level: formData.get('level'),
+                companyUrl: formData.get('companyUrl') || '',
+                jobDescription: formData.get('jobDescription') || ''
+            };
+            
+            // Validate required fields
+            var isValid = true;
+            var inputs = form.querySelectorAll('.form-input[required]');
+            inputs.forEach(function(input) {
+                if (!validateInput(input)) {
+                    isValid = false;
+                }
+            });
+            
+            if (!isValid) {
+                console.log('[FORM] Validation failed');
+                return;
+            }
+            
+            console.log('[FORM] Submitting with data:', data);
+            
+            var loadingEl = document.getElementById('loadingIndicator');
+            
+            if (loadingEl) {
+                loadingEl.classList.add('visible');
+            }
+            
+            if (submitBtn) {
+                submitBtn.disabled = true;
+            }
+            
+            try {
+                // Build URL params and redirect
+                var params = new URLSearchParams({
+                    name: data.name,
+                    email: data.email,
+                    role: data.role,
+                    level: data.level,
+                    companyUrl: data.companyUrl
+                });
+                
+                console.log('[FORM] Redirecting to interview page');
+                window.location.href = '/interview?' + params.toString();
+                
+            } catch (err) {
+                console.error('[FORM] Submission error:', err);
+                
+                if (loadingEl) {
+                    loadingEl.classList.remove('visible');
+                }
+                
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                }
+            }
+        }
+        
+        function initInputValidation() {
+            var inputs = document.querySelectorAll('.form-input');
+            
+            inputs.forEach(function(input) {
+                input.addEventListener('blur', function() {
+                    if (this.hasAttribute('required')) {
+                        validateInput(this);
+                    }
+                });
+                
+                input.addEventListener('input', function() {
+                    this.classList.remove('input-error');
+                    updateButtonState();
+                });
+                
+                input.addEventListener('change', function() {
+                    updateButtonState();
+                });
+            });
+        }
+        
+        function validateInput(input) {
+            var value = input.value.trim();
+            
+            if (input.type === 'email' && value) {
+                var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(value)) {
+                    input.classList.add('input-error');
+                    return false;
+                }
+            }
+            
+            if (input.hasAttribute('required') && !value) {
+                input.classList.add('input-error');
+                return false;
+            }
+            
+            input.classList.remove('input-error');
+            return true;
+        }
+        
+        function updateButtonState() {
+            var form = document.getElementById('candidateForm');
+            var submitBtn = document.getElementById('submitBtn');
+            if (!form || !submitBtn) return;
+            
+            var requiredInputs = form.querySelectorAll('.form-input[required]');
+            var allFilled = true;
+            
+            requiredInputs.forEach(function(input) {
+                if (!input.value.trim()) {
+                    allFilled = false;
+                }
+            });
+            
+            if (allFilled) {
+                submitBtn.classList.add('active');
+            } else {
+                submitBtn.classList.remove('active');
+            }
+        }
+    })();
+    </script>
 </body>
 </html>

@@ -61,16 +61,21 @@
             <div class="agent-side">
                 <span class="agent-label">AI Interviewer</span>
                 
-                <div class="agent-soul" id="agentSoul">
-                    <!-- Audio Waves -->
-                    <div class="soul-waves" id="soulWaves">
-                        <div class="wave-ring"></div>
-                        <div class="wave-ring"></div>
-                        <div class="wave-ring"></div>
-                        <div class="wave-ring"></div>
+                <!-- Circular Visualizer with Eyes -->
+                <div class="agent-visualizer" id="agentVisualizer">
+                    <div class="agent-circle-container">
+                        <svg class="agent-circle-svg" viewBox="0 0 200 200" id="agentCircleSvg">
+                            <!-- Background circle -->
+                            <circle class="agent-circle-bg" cx="100" cy="100" r="85"/>
+                            <!-- Audio bars will be generated dynamically -->
+                            <g id="agentBarsGroup"></g>
+                        </svg>
                     </div>
-                    <!-- Core -->
-                    <div class="soul-core"></div>
+                    <!-- Eyes -->
+                    <div class="agent-eyes" id="agentEyes">
+                        <div class="agent-eye"></div>
+                        <div class="agent-eye"></div>
+                    </div>
                 </div>
                 
                 <!-- Agent Caption -->
@@ -84,17 +89,58 @@
                 <span class="candidate-label">Candidate</span>
                 
                 <div class="candidate-card">
-                    <div class="candidate-info">
-                        <h3 class="candidate-name" id="candidateName">Loading...</h3>
-                        <p class="candidate-role" id="candidateRole">-</p>
-                        <span class="candidate-level" id="candidateLevel">-</span>
+                    <!-- Video Feed -->
+                    <div class="candidate-video-container" id="videoContainer">
+                        <video class="candidate-video" id="candidateVideo" autoplay muted playsinline></video>
+                        <div class="video-placeholder">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                            <span>Camera Off</span>
+                        </div>
+                        <button class="video-toggle" id="videoToggle" title="Toggle Camera">
+                            <svg class="icon-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M23 7l-7 5 7 5V7z"/>
+                                <rect x="1" y="5" width="15" height="14" rx="2"/>
+                            </svg>
+                            <svg class="icon-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"/>
+                                <line x1="1" y1="1" x2="23" y2="23"/>
+                            </svg>
+                        </button>
                     </div>
                     
-                    <!-- Audio Waveform Box -->
-                    <div class="audio-waveform-box">
-                        <svg class="waveform-canvas" id="waveformCanvas" viewBox="0 0 300 40" preserveAspectRatio="none">
-                            <path class="waveform-line" id="waveformPath" d="M0,20 L300,20"></path>
-                        </svg>
+                    <!-- Info Row -->
+                    <div class="candidate-info-row">
+                        <div class="candidate-info-top">
+                            <h3 class="candidate-name" id="candidateName">Loading...</h3>
+                            <p class="candidate-role" id="candidateRole">-</p>
+                        </div>
+                        <div class="candidate-meta">
+                            <span class="candidate-level" id="candidateLevel">-</span>
+                            <div class="candidate-company" id="candidateCompany" style="display: none;">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                                    <polyline points="9 22 9 12 15 12 15 22"/>
+                                </svg>
+                                <a href="#" id="companyLink" target="_blank" rel="noopener">Company</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Spikey Audio Visualizer -->
+                    <div class="audio-spikes-box" id="audioSpikesBox">
+                        <div class="spikes-container" id="spikesContainer">
+                            <!-- Bars will be generated dynamically -->
+                        </div>
+                        
+                        <!-- Noise Warning (positioned outside on right) -->
+                        <div class="noise-warning" id="noiseWarning">
+                            <p class="noise-warning-text">High background noise detected. Consider using headphones or moving to a quieter location.</p>
+                        </div>
                     </div>
                 </div>
                 
@@ -144,7 +190,6 @@
     <!-- LiveKit Client -->
     <script src="https://unpkg.com/livekit-client@2.5.0/dist/livekit-client.umd.min.js"></script>
     <script>
-        // Fallback CDN
         if (typeof LivekitClient === 'undefined' && typeof LiveKit === 'undefined') {
             document.write('<script src="https://cdn.jsdelivr.net/npm/livekit-client@2.5.0/dist/livekit-client.umd.min.js"><\/script>');
         }
@@ -154,57 +199,83 @@
     (function() {
         'use strict';
         
-        // Wait for DOM and LiveKit to load
+        console.log('[INTERVIEW] Script loaded, waiting for page load...');
+        
         window.addEventListener('load', initInterview);
         
         function initInterview() {
-            const LK = window.LivekitClient || window.LiveKit;
+            console.log('[INTERVIEW] Page loaded, initializing...');
+            
+            var LK = window.LivekitClient || window.LiveKit;
+            console.log('[INTERVIEW] LiveKit client:', LK ? 'loaded' : 'NOT FOUND');
+            
             if (!LK) {
                 console.error('[INIT] LiveKit client not loaded');
-                updateStatus('Failed to load required libraries', 'error');
+                document.getElementById('statusText').textContent = 'Failed to load required libraries';
+                document.getElementById('statusIndicator').className = 'status-indicator error';
                 return;
             }
             
-            // Get candidate info from URL
-            const params = new URLSearchParams(window.location.search);
-            const candidate = {
+            console.log('[INTERVIEW] Parsing URL params...');
+            var params = new URLSearchParams(window.location.search);
+            var candidate = {
                 name: params.get('name') || 'Candidate',
                 email: params.get('email') || '',
                 role: params.get('role') || 'Position',
-                level: params.get('level') || 'entry'
+                level: params.get('level') || 'entry',
+                companyUrl: params.get('companyUrl') || ''
             };
+            console.log('[INTERVIEW] Candidate:', candidate);
             
-            // Update UI with candidate info
             document.getElementById('candidateName').textContent = candidate.name;
             document.getElementById('candidateRole').textContent = candidate.role;
             document.getElementById('candidateLevel').textContent = formatLevel(candidate.level);
             
-            // State management
-            const state = {
+            // Show company URL if provided
+            if (candidate.companyUrl) {
+                var companyEl = document.getElementById('candidateCompany');
+                var companyLink = document.getElementById('companyLink');
+                if (companyEl && companyLink) {
+                    try {
+                        var url = new URL(candidate.companyUrl);
+                        companyLink.href = candidate.companyUrl;
+                        companyLink.textContent = url.hostname.replace('www.', '');
+                        companyEl.style.display = 'flex';
+                    } catch (e) {
+                        console.log('[INFO] Invalid company URL provided');
+                    }
+                }
+            }
+            
+            var state = {
                 currentStage: 'greeting',
                 isMuted: false,
                 isConnected: false,
+                isVideoOn: true,
                 room: null,
                 audioContext: null,
                 analyser: null,
-                waveformHistory: new Array(40).fill(0),
-                peakValue: 0,
-                peakDecay: 0.85,
-                maxSeenLevel: 0.01,
-                noiseFloor: 0.005,
-                interviewStartTime: Date.now(),  // Global interview start time
+                interviewStartTime: Date.now(),
                 stageStartTime: Date.now(),
-                timerInterval: null
+                timerInterval: null,
+                blinkInterval: null,
+                noiseCheckCount: 0,
+                noiseThreshold: 0.15,
+                noiseWarningShown: false,
+                noiseWarningTimeout: null,
+                agentAudioAnalyser: null,
+                agentAudioContext: null
             };
             
-            // DOM Elements
-            const elements = {
+            var elements = {
                 statusIndicator: document.getElementById('statusIndicator'),
                 statusText: document.getElementById('statusText'),
-                agentSoul: document.getElementById('agentSoul'),
+                agentVisualizer: document.getElementById('agentVisualizer'),
+                agentBarsGroup: document.getElementById('agentBarsGroup'),
+                agentEyes: document.getElementById('agentEyes'),
                 agentCaption: document.getElementById('agentCaption'),
                 candidateCaption: document.getElementById('candidateCaption'),
-                waveformPath: document.getElementById('waveformPath'),
+                spikesContainer: document.getElementById('spikesContainer'),
                 stageTimer: document.getElementById('stageTimer'),
                 progressFill: document.getElementById('progressFill'),
                 stateFlash: document.getElementById('stateFlash'),
@@ -213,29 +284,67 @@
                 endBtn: document.getElementById('endBtn'),
                 modalOverlay: document.getElementById('modalOverlay'),
                 modalCancel: document.getElementById('modalCancel'),
-                modalConfirm: document.getElementById('modalConfirm')
+                modalConfirm: document.getElementById('modalConfirm'),
+                videoContainer: document.getElementById('videoContainer'),
+                candidateVideo: document.getElementById('candidateVideo'),
+                videoToggle: document.getElementById('videoToggle'),
+                noiseWarning: document.getElementById('noiseWarning')
             };
             
-            // Stage configuration
-            const stages = ['greeting', 'self_intro', 'past_experience', 'closing'];
-            const stageProgress = { greeting: 0, self_intro: 33, past_experience: 66, closing: 100 };
+            var stages = ['greeting', 'self_intro', 'past_experience', 'closing'];
+            var stageProgress = { greeting: 0, self_intro: 33, past_experience: 66, closing: 100 };
             
-            // Initialize timer
+            // Variables needed by visualizers - must be declared before functions are called
+            var agentBarCount = 64;
+            var agentBarHeights = new Array(agentBarCount).fill(3);
+            var spikeCount = 50;
+            var spikeHeights = new Array(spikeCount).fill(3);
+            var noiseBaseline = [];
+            var demoAnimationId = null;
+            var demoCandidateAnimationId = null;
+            
+            // Initialize components
+            console.log('[INIT] Starting initialization...');
+            
+            try {
+                initAgentCircularVisualizer();
+                console.log('[INIT] Agent visualizer initialized');
+            } catch (err) {
+                console.error('[INIT] Agent visualizer error:', err);
+            }
+            
+            try {
+                initCandidateSpikes();
+                console.log('[INIT] Candidate spikes initialized');
+            } catch (err) {
+                console.error('[INIT] Candidate spikes error:', err);
+            }
+            
+            try {
+                initVideoFeed();
+                console.log('[INIT] Video feed initialized');
+            } catch (err) {
+                console.error('[INIT] Video feed error:', err);
+            }
+            
             startTimer();
+            startBlinkAnimation();
+            startDemoAnimations();
             
-            // Connect to LiveKit
+            console.log('[INIT] Calling connectToRoom...');
             connectToRoom();
             
             // Event listeners
             elements.muteBtn.addEventListener('click', toggleMute);
-            elements.endBtn.addEventListener('click', () => showModal('end'));
+            elements.endBtn.addEventListener('click', function() { showModal('end'); });
             elements.modalCancel.addEventListener('click', hideModal);
             elements.modalConfirm.addEventListener('click', confirmEndInterview);
+            elements.videoToggle.addEventListener('click', toggleVideo);
             
             // ==================== FUNCTIONS ====================
             
             function formatLevel(level) {
-                const levels = {
+                var levels = {
                     entry: 'Entry Level',
                     mid: 'Mid Level',
                     senior: 'Senior Level'
@@ -251,20 +360,17 @@
             function updateStage(newStage) {
                 if (newStage === state.currentStage) return;
 
-                const oldStage = state.currentStage;
+                var oldStage = state.currentStage;
                 state.currentStage = newStage;
 
-                // Flash effect
                 elements.stateFlash.classList.add('active');
-                setTimeout(() => elements.stateFlash.classList.remove('active'), 600);
+                setTimeout(function() { elements.stateFlash.classList.remove('active'); }, 600);
 
-                // Update progress bar
                 elements.progressFill.style.width = stageProgress[newStage] + '%';
 
-                // Update stage dots
-                stages.forEach((stage, index) => {
-                    const dot = document.querySelector(`[data-stage="${stage}"]`);
-                    const currentIndex = stages.indexOf(newStage);
+                stages.forEach(function(stage, index) {
+                    var dot = document.querySelector('[data-stage="' + stage + '"]');
+                    var currentIndex = stages.indexOf(newStage);
 
                     dot.classList.remove('active', 'completed');
                     if (index < currentIndex) {
@@ -274,37 +380,291 @@
                     }
                 });
 
-                // Update stage start time for tracking, but don't reset global timer
                 state.stageStartTime = Date.now();
-
                 console.log('[STAGE] Transition:', oldStage, '->', newStage);
             }
 
             function startTimer() {
-                // Show total interview time from start
-                state.timerInterval = setInterval(() => {
-                    const elapsed = Math.floor((Date.now() - state.interviewStartTime) / 1000);
-                    const minutes = Math.floor(elapsed / 60);
-                    const seconds = elapsed % 60;
+                state.timerInterval = setInterval(function() {
+                    var elapsed = Math.floor((Date.now() - state.interviewStartTime) / 1000);
+                    var minutes = Math.floor(elapsed / 60);
+                    var seconds = elapsed % 60;
                     elements.stageTimer.textContent = minutes + ':' + seconds.toString().padStart(2, '0');
                 }, 1000);
             }
             
-            function setAgentSpeaking(speaking) {
-                if (speaking) {
-                    elements.agentSoul.classList.add('speaking');
-                } else {
-                    elements.agentSoul.classList.remove('speaking');
+            // ==================== AGENT CIRCULAR VISUALIZER ====================
+            
+            function initAgentCircularVisualizer() {
+                var group = elements.agentBarsGroup;
+                group.innerHTML = ''; // Clear any existing bars
+                
+                var centerX = 100;
+                var centerY = 100;
+                var radius = 75; // Slightly smaller to keep bars inside view
+                
+                for (var i = 0; i < agentBarCount; i++) {
+                    var angle = (i / agentBarCount) * 2 * Math.PI - Math.PI / 2; // Start from top
+                    
+                    // Calculate position on circle
+                    var x = centerX + Math.cos(angle) * radius;
+                    var y = centerY + Math.sin(angle) * radius;
+                    
+                    // Create bar as a line/rect that will extend outward
+                    var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                    rect.setAttribute('class', 'agent-bar');
+                    rect.setAttribute('data-index', i);
+                    rect.setAttribute('data-angle', angle);
+                    rect.setAttribute('width', '3');
+                    rect.setAttribute('height', '4');
+                    rect.setAttribute('rx', '1.5');
+                    rect.setAttribute('x', x - 1.5);
+                    rect.setAttribute('y', y);
+                    
+                    // Rotate bar to point outward from center
+                    var rotationDeg = (angle * 180 / Math.PI) + 90;
+                    rect.setAttribute('transform', 'rotate(' + rotationDeg + ' ' + x + ' ' + y + ')');
+                    
+                    group.appendChild(rect);
                 }
             }
             
-            let agentCaptionTimeout = null;
-            let candidateCaptionTimeout = null;
-            let agentTypewriterInterval = null;
-            let candidateTypewriterInterval = null;
+            function updateAgentVisualizer(audioData) {
+                var bars = elements.agentBarsGroup.querySelectorAll('.agent-bar');
+                var centerX = 100;
+                var centerY = 100;
+                var radius = 75;
+                
+                bars.forEach(function(bar, i) {
+                    var value = (audioData[i] || 0) / 128;
+                    var height = 4 + value * 28; // Min 4, max 32 for spikier look
+                    
+                    // Smooth transition
+                    agentBarHeights[i] = agentBarHeights[i] * 0.5 + height * 0.5;
+                    var finalHeight = Math.max(4, agentBarHeights[i]);
+                    
+                    var angle = (i / agentBarCount) * 2 * Math.PI - Math.PI / 2;
+                    var x = centerX + Math.cos(angle) * radius;
+                    var y = centerY + Math.sin(angle) * radius;
+                    
+                    bar.setAttribute('height', finalHeight);
+                    bar.setAttribute('x', x - 1.5);
+                    bar.setAttribute('y', y);
+                    
+                    // Keep rotation pointing outward
+                    var rotationDeg = (angle * 180 / Math.PI) + 90;
+                    bar.setAttribute('transform', 'rotate(' + rotationDeg + ' ' + x + ' ' + y + ')');
+                });
+            }
+            
+            function setAgentSpeaking(speaking) {
+                if (speaking) {
+                    elements.agentVisualizer.classList.add('speaking');
+                } else {
+                    elements.agentVisualizer.classList.remove('speaking');
+                }
+            }
+            
+            // ==================== AGENT BLINK ANIMATION ====================
+            
+            function startBlinkAnimation() {
+                function blink() {
+                    elements.agentEyes.classList.add('blinking');
+                    setTimeout(function() {
+                        elements.agentEyes.classList.remove('blinking');
+                    }, 150);
+                }
+                
+                function scheduleNextBlink() {
+                    var delay = 2000 + Math.random() * 4000;
+                    state.blinkInterval = setTimeout(function() {
+                        blink();
+                        scheduleNextBlink();
+                    }, delay);
+                }
+                
+                scheduleNextBlink();
+            }
+            
+            // ==================== DEMO ANIMATIONS ====================
+            
+            function startDemoAnimations() {
+                // Demo animation for agent circular visualizer
+                var agentPhase = 0;
+                function animateAgentDemo() {
+                    if (state.agentAudioAnalyser) {
+                        // Real audio connected, stop demo
+                        return;
+                    }
+                    
+                    var demoData = new Uint8Array(agentBarCount);
+                    for (var i = 0; i < agentBarCount; i++) {
+                        // Create a gentle wave pattern around the circle
+                        var wave = Math.sin((i / agentBarCount) * Math.PI * 6 + agentPhase) * 0.3 + 0.2;
+                        var noise = Math.random() * 0.15;
+                        demoData[i] = (wave + noise) * 50;
+                    }
+                    agentPhase += 0.08;
+                    
+                    updateAgentVisualizer(demoData);
+                    demoAnimationId = requestAnimationFrame(animateAgentDemo);
+                }
+                
+                // Demo animation for candidate spikes
+                var candidatePhase = 0;
+                function animateCandidateDemo() {
+                    if (state.analyser) {
+                        // Real audio connected, stop demo
+                        return;
+                    }
+                    
+                    var demoData = new Uint8Array(spikeCount);
+                    for (var i = 0; i < spikeCount; i++) {
+                        // Create subtle idle animation
+                        var wave = Math.sin((i / spikeCount) * Math.PI * 2 + candidatePhase) * 0.15 + 0.1;
+                        var noise = Math.random() * 0.08;
+                        demoData[i] = (wave + noise) * 35;
+                    }
+                    candidatePhase += 0.04;
+                    
+                    updateCandidateSpikes(demoData);
+                    demoCandidateAnimationId = requestAnimationFrame(animateCandidateDemo);
+                }
+                
+                animateAgentDemo();
+                animateCandidateDemo();
+            }
+            
+            function stopDemoAnimations() {
+                if (demoAnimationId) {
+                    cancelAnimationFrame(demoAnimationId);
+                    demoAnimationId = null;
+                }
+                if (demoCandidateAnimationId) {
+                    cancelAnimationFrame(demoCandidateAnimationId);
+                    demoCandidateAnimationId = null;
+                }
+            }
+            
+            // ==================== CANDIDATE SPIKEY VISUALIZER ====================
+            
+            function initCandidateSpikes() {
+                var container = elements.spikesContainer;
+                container.innerHTML = '';
+                
+                for (var i = 0; i < spikeCount; i++) {
+                    var spike = document.createElement('div');
+                    spike.className = 'spike-bar';
+                    spike.style.height = '3px';
+                    container.appendChild(spike);
+                }
+            }
+            
+            function updateCandidateSpikes(audioData) {
+                var spikes = elements.spikesContainer.querySelectorAll('.spike-bar');
+                var sum = 0;
+                
+                spikes.forEach(function(spike, i) {
+                    var value = audioData[i] || 0;
+                    var normalized = value / 128; // Normalize to 0-1 range
+                    sum += normalized;
+                    
+                    // Create spikey effect - taller spikes for louder audio
+                    var height = 3 + normalized * 35;
+                    
+                    // Smooth the transition
+                    spikeHeights[i] = spikeHeights[i] * 0.6 + height * 0.4;
+                    spike.style.height = Math.max(3, spikeHeights[i]) + 'px';
+                });
+                
+                var avgLevel = sum / spikeCount;
+                checkNoiseLevel(avgLevel);
+            }
+            
+            function checkNoiseLevel(avgLevel) {
+                if (state.noiseWarningShown) return;
+                
+                noiseBaseline.push(avgLevel);
+                if (noiseBaseline.length > 30) {
+                    noiseBaseline.shift();
+                }
+                
+                if (noiseBaseline.length >= 20) {
+                    var baselineAvg = noiseBaseline.reduce(function(a, b) { return a + b; }, 0) / noiseBaseline.length;
+                    
+                    if (baselineAvg > state.noiseThreshold) {
+                        state.noiseCheckCount++;
+                        
+                        if (state.noiseCheckCount >= 5) {
+                            showNoiseWarning();
+                        }
+                    } else {
+                        state.noiseCheckCount = Math.max(0, state.noiseCheckCount - 1);
+                    }
+                }
+            }
+            
+            function showNoiseWarning() {
+                if (state.noiseWarningShown) return;
+                
+                state.noiseWarningShown = true;
+                elements.noiseWarning.classList.add('visible');
+                console.log('[NOISE] Warning displayed - high background noise detected');
+                
+                state.noiseWarningTimeout = setTimeout(function() {
+                    elements.noiseWarning.classList.remove('visible');
+                }, 10000);
+            }
+            
+            // ==================== VIDEO FEED ====================
+            
+            function initVideoFeed() {
+                navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+                    .then(function(stream) {
+                        elements.candidateVideo.srcObject = stream;
+                        console.log('[VIDEO] Camera initialized');
+                    })
+                    .catch(function(err) {
+                        console.error('[VIDEO] Camera access error:', err);
+                        elements.videoContainer.classList.add('video-off');
+                        elements.videoToggle.classList.add('off');
+                        state.isVideoOn = false;
+                    });
+            }
+            
+            function toggleVideo() {
+                state.isVideoOn = !state.isVideoOn;
+                
+                if (state.isVideoOn) {
+                    navigator.mediaDevices.getUserMedia({ video: true, audio: false })
+                        .then(function(stream) {
+                            elements.candidateVideo.srcObject = stream;
+                            elements.videoContainer.classList.remove('video-off');
+                            elements.videoToggle.classList.remove('off');
+                        })
+                        .catch(function(err) {
+                            console.error('[VIDEO] Camera re-enable error:', err);
+                            state.isVideoOn = false;
+                        });
+                } else {
+                    var stream = elements.candidateVideo.srcObject;
+                    if (stream) {
+                        stream.getTracks().forEach(function(track) { track.stop(); });
+                    }
+                    elements.candidateVideo.srcObject = null;
+                    elements.videoContainer.classList.add('video-off');
+                    elements.videoToggle.classList.add('off');
+                }
+            }
+            
+            // ==================== CAPTIONS ====================
+            
+            var agentCaptionTimeout = null;
+            var candidateCaptionTimeout = null;
+            var agentTypewriterInterval = null;
+            var candidateTypewriterInterval = null;
 
             function updateAgentCaption(text) {
-                // Clear any existing typewriter effect
                 if (agentTypewriterInterval) {
                     clearInterval(agentTypewriterInterval);
                     agentTypewriterInterval = null;
@@ -322,11 +682,10 @@
 
                 elements.agentCaption.classList.remove('empty');
 
-                // Typewriter effect - display character by character
-                let currentIndex = 0;
+                var currentIndex = 0;
                 elements.agentCaption.textContent = '';
 
-                agentTypewriterInterval = setInterval(() => {
+                agentTypewriterInterval = setInterval(function() {
                     if (currentIndex < text.length) {
                         elements.agentCaption.textContent += text[currentIndex];
                         currentIndex++;
@@ -334,21 +693,18 @@
                         clearInterval(agentTypewriterInterval);
                         agentTypewriterInterval = null;
 
-                        // Calculate timeout based on text length (min 10s, max 30s, ~250 words per minute reading speed)
-                        const wordsCount = text.split(' ').length;
-                        const readingTimeMs = Math.max(10000, Math.min(30000, (wordsCount / 250) * 60 * 1000 + 5000));
+                        var wordsCount = text.split(' ').length;
+                        var readingTimeMs = Math.max(10000, Math.min(30000, (wordsCount / 250) * 60 * 1000 + 5000));
 
-                        // Auto-clear after reading time
-                        agentCaptionTimeout = setTimeout(() => {
+                        agentCaptionTimeout = setTimeout(function() {
                             elements.agentCaption.textContent = '';
                             elements.agentCaption.classList.add('empty');
                         }, readingTimeMs);
                     }
-                }, 15); // 15ms per character = ~67 chars/second
+                }, 15);
             }
 
             function updateCandidateCaption(text) {
-                // Clear any existing typewriter effect
                 if (candidateTypewriterInterval) {
                     clearInterval(candidateTypewriterInterval);
                     candidateTypewriterInterval = null;
@@ -366,11 +722,10 @@
 
                 elements.candidateCaption.classList.remove('empty');
 
-                // Typewriter effect - display character by character
-                let currentIndex = 0;
+                var currentIndex = 0;
                 elements.candidateCaption.textContent = '';
 
-                candidateTypewriterInterval = setInterval(() => {
+                candidateTypewriterInterval = setInterval(function() {
                     if (currentIndex < text.length) {
                         elements.candidateCaption.textContent += text[currentIndex];
                         currentIndex++;
@@ -378,143 +733,156 @@
                         clearInterval(candidateTypewriterInterval);
                         candidateTypewriterInterval = null;
 
-                        // Calculate timeout based on text length
-                        const wordsCount = text.split(' ').length;
-                        const readingTimeMs = Math.max(10000, Math.min(30000, (wordsCount / 250) * 60 * 1000 + 5000));
+                        var wordsCount = text.split(' ').length;
+                        var readingTimeMs = Math.max(10000, Math.min(30000, (wordsCount / 250) * 60 * 1000 + 5000));
 
-                        // Auto-clear after reading time
-                        candidateCaptionTimeout = setTimeout(() => {
+                        candidateCaptionTimeout = setTimeout(function() {
                             elements.candidateCaption.textContent = '';
                             elements.candidateCaption.classList.add('empty');
                         }, readingTimeMs);
                     }
-                }, 15); // 15ms per character = ~67 chars/second
+                }, 15);
             }
             
-            // Audio waveform visualization - Retro VU meter style with auto-gain
-            function initAudioVisualization(stream) {
+            // ==================== AUDIO VISUALIZATION ====================
+            
+            function initCandidateAudioVisualization(stream) {
                 try {
+                    stopDemoAnimations(); // Stop demo when real audio connects
+                    
+                    if (state.audioContext) {
+                        state.audioContext.close();
+                    }
+                    
                     state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    // Resume audio context (required for some browsers)
+                    if (state.audioContext.state === 'suspended') {
+                        state.audioContext.resume();
+                    }
+                    
                     state.analyser = state.audioContext.createAnalyser();
                     state.analyser.fftSize = 256;
                     state.analyser.smoothingTimeConstant = 0.3;
+                    state.analyser.minDecibels = -90;
+                    state.analyser.maxDecibels = -10;
                     
-                    const source = state.audioContext.createMediaStreamSource(stream);
+                    var source = state.audioContext.createMediaStreamSource(stream);
                     source.connect(state.analyser);
                     
-                    // Initialize waveform data
-                    state.waveformHistory = new Array(40).fill(0);
-                    state.peakValue = 0;
-                    state.peakDecay = 0.85;
-                    state.maxSeenLevel = 0.01;  // Auto-gain: track max level seen
-                    state.noiseFloor = 0.005;   // Ignore below this
-                    
-                    drawWaveform();
-                    console.log('[AUDIO] Visualization initialized');
+                    console.log('[AUDIO] Candidate visualization initialized, fftSize:', state.analyser.fftSize);
+                    drawCandidateWaveform();
                 } catch (err) {
-                    console.error('[AUDIO] Visualization error:', err);
+                    console.error('[AUDIO] Candidate visualization error:', err);
                 }
             }
             
-            function drawWaveform() {
-                if (!state.analyser) return;
+            function drawCandidateWaveform() {
+                if (!state.analyser) {
+                    console.log('[AUDIO] No analyser available');
+                    return;
+                }
                 
-                const bufferLength = state.analyser.fftSize;
-                const dataArray = new Uint8Array(bufferLength);
+                var bufferLength = state.analyser.frequencyBinCount;
+                var dataArray = new Uint8Array(bufferLength);
                 
                 function draw() {
                     requestAnimationFrame(draw);
                     
-                    // Use time domain data for RMS calculation (better for speech)
+                    // Use time domain data for better voice visualization
                     state.analyser.getByteTimeDomainData(dataArray);
                     
-                    // Calculate RMS (Root Mean Square) - the standard way to measure loudness
-                    let sumSquares = 0;
-                    for (let i = 0; i < bufferLength; i++) {
-                        // Convert from 0-255 to -1 to 1 (128 is center/silence)
-                        const sample = (dataArray[i] - 128) / 128;
-                        sumSquares += sample * sample;
-                    }
-                    const rms = Math.sqrt(sumSquares / bufferLength);
+                    // Convert time domain to amplitude
+                    var amplitudes = new Uint8Array(spikeCount);
+                    var samplesPerSpike = Math.floor(bufferLength / spikeCount);
                     
-                    // Skip if below noise floor
-                    if (rms < state.noiseFloor) {
-                        // Decay existing values
-                        state.peakValue *= state.peakDecay;
-                        state.waveformHistory.shift();
-                        state.waveformHistory.push(state.peakValue * 20);
-                        updateWaveformPath();
-                        return;
-                    }
-                    
-                    // Auto-gain: track max level and normalize
-                    // Slowly adapt to input level (like AGC in retro audio)
-                    if (rms > state.maxSeenLevel) {
-                        state.maxSeenLevel = rms;
-                    } else {
-                        // Slowly decay max level so it adapts to quieter speakers
-                        state.maxSeenLevel = state.maxSeenLevel * 0.999 + rms * 0.001;
-                    }
-                    
-                    // Normalize to 0-1 based on observed range
-                    let normalized = rms / Math.max(state.maxSeenLevel, 0.05);
-                    
-                    // Apply curve for more dramatic response
-                    // sqrt makes quiet sounds more visible (like dB scaling)
-                    normalized = Math.sqrt(normalized);
-                    
-                    // Clamp to 0-1
-                    normalized = Math.min(1, Math.max(0, normalized));
-                    
-                    // Peak hold with decay (retro VU meter feel)
-                    if (normalized > state.peakValue) {
-                        state.peakValue = normalized;
-                    } else {
-                        state.peakValue = state.peakValue * state.peakDecay + normalized * (1 - state.peakDecay);
-                    }
-                    
-                    // Convert to spike height (0-20 pixels from center)
-                    const spikeHeight = state.peakValue * 20;
-                    
-                    // Shift history and add new value
-                    state.waveformHistory.shift();
-                    state.waveformHistory.push(spikeHeight);
-                    
-                    updateWaveformPath();
-                }
-                
-                function updateWaveformPath() {
-                    const width = 300;
-                    const height = 40;
-                    const centerY = height / 2;
-                    const points = state.waveformHistory.length;
-                    const segmentWidth = width / points;
-                    
-                    let path = `M0,${centerY}`;
-                    
-                    for (let i = 0; i < points; i++) {
-                        const x = i * segmentWidth;
-                        const value = state.waveformHistory[i];
-                        
-                        if (value > 1) {
-                            // Sharp EKG-style spike when there's audio
-                            const peakX = x + segmentWidth * 0.5;
-                            path += ` L${x},${centerY}`;
-                            path += ` L${peakX - 1},${centerY}`;
-                            path += ` L${peakX},${centerY - value}`;  // Spike up
-                            path += ` L${peakX + 1},${centerY + value * 0.3}`;  // Small dip below
-                            path += ` L${peakX + 3},${centerY}`;
-                        } else {
-                            // Flat baseline
-                            path += ` L${x + segmentWidth},${centerY}`;
+                    for (var i = 0; i < spikeCount; i++) {
+                        var sum = 0;
+                        var startIdx = i * samplesPerSpike;
+                        for (var j = 0; j < samplesPerSpike; j++) {
+                            // Time domain data is centered at 128, deviation shows amplitude
+                            var sample = Math.abs(dataArray[startIdx + j] - 128);
+                            sum += sample;
                         }
+                        amplitudes[i] = (sum / samplesPerSpike) * 2; // Scale up
                     }
                     
-                    elements.waveformPath.setAttribute('d', path);
+                    updateCandidateSpikes(amplitudes);
                 }
                 
                 draw();
             }
+            
+            function initAgentAudioVisualization(track) {
+                try {
+                    if (state.agentAudioContext) {
+                        state.agentAudioContext.close();
+                    }
+                    
+                    state.agentAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    if (state.agentAudioContext.state === 'suspended') {
+                        state.agentAudioContext.resume();
+                    }
+                    
+                    state.agentAudioAnalyser = state.agentAudioContext.createAnalyser();
+                    state.agentAudioAnalyser.fftSize = 256;
+                    state.agentAudioAnalyser.smoothingTimeConstant = 0.3;
+                    state.agentAudioAnalyser.minDecibels = -90;
+                    state.agentAudioAnalyser.maxDecibels = -10;
+                    
+                    var source = state.agentAudioContext.createMediaStreamSource(track.mediaStream);
+                    source.connect(state.agentAudioAnalyser);
+                    
+                    console.log('[AUDIO] Agent visualization initialized');
+                    drawAgentWaveform();
+                } catch (err) {
+                    console.error('[AUDIO] Agent visualization error:', err);
+                }
+            }
+            
+            function drawAgentWaveform() {
+                if (!state.agentAudioAnalyser) {
+                    console.log('[AUDIO] No agent analyser available');
+                    return;
+                }
+                
+                var bufferLength = state.agentAudioAnalyser.frequencyBinCount;
+                var dataArray = new Uint8Array(bufferLength);
+                
+                function draw() {
+                    requestAnimationFrame(draw);
+                    
+                    state.agentAudioAnalyser.getByteTimeDomainData(dataArray);
+                    
+                    // Convert to amplitudes for circular visualizer
+                    var amplitudes = new Uint8Array(agentBarCount);
+                    var samplesPerBar = Math.floor(bufferLength / agentBarCount);
+                    
+                    var totalEnergy = 0;
+                    for (var i = 0; i < agentBarCount; i++) {
+                        var sum = 0;
+                        var startIdx = i * samplesPerBar;
+                        for (var j = 0; j < samplesPerBar && (startIdx + j) < bufferLength; j++) {
+                            var sample = Math.abs(dataArray[startIdx + j] - 128);
+                            sum += sample;
+                        }
+                        // Scale up for spikier effect
+                        amplitudes[i] = Math.min(128, (sum / Math.max(1, samplesPerBar)) * 3);
+                        totalEnergy += amplitudes[i];
+                    }
+                    
+                    updateAgentVisualizer(amplitudes);
+                    
+                    // Determine if speaking based on energy
+                    var avgEnergy = totalEnergy / agentBarCount;
+                    setAgentSpeaking(avgEnergy > 8);
+                }
+                
+                draw();
+            }
+            
+            // ==================== CONTROLS ====================
             
             function toggleMute() {
                 state.isMuted = !state.isMuted;
@@ -523,23 +891,11 @@
                     state.room.localParticipant.setMicrophoneEnabled(!state.isMuted);
                 }
                 
-                // Update icon
                 if (state.isMuted) {
-                    elements.muteIcon.innerHTML = `
-                        <line x1="1" y1="1" x2="23" y2="23"/>
-                        <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/>
-                        <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/>
-                        <line x1="12" y1="19" x2="12" y2="23"/>
-                        <line x1="8" y1="23" x2="16" y2="23"/>
-                    `;
+                    elements.muteIcon.innerHTML = '<line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>';
                     elements.muteBtn.classList.add('active');
                 } else {
-                    elements.muteIcon.innerHTML = `
-                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                        <line x1="12" y1="19" x2="12" y2="23"/>
-                        <line x1="8" y1="23" x2="16" y2="23"/>
-                    `;
+                    elements.muteIcon.innerHTML = '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>';
                     elements.muteBtn.classList.remove('active');
                 }
             }
@@ -559,26 +915,33 @@
                 }
             }
             
+            // ==================== LIVEKIT CONNECTION ====================
+            
             async function connectToRoom() {
+                console.log('[CONNECT] Starting room connection...');
+                console.log('[CONNECT] Candidate data:', candidate);
                 updateStatus('Requesting access...', 'connecting');
                 
                 try {
-                    // Get token from server
-                    const response = await fetch('/api/token', {
+                    console.log('[CONNECT] Fetching token from /api/token');
+                    var response = await fetch('/api/token', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(candidate)
                     });
                     
-                    const data = await response.json();
+                    console.log('[CONNECT] Token response status:', response.status);
+                    
+                    var data = await response.json();
+                    console.log('[CONNECT] Token response data:', data);
                     
                     if (data.error) {
                         throw new Error(data.error);
                     }
                     
+                    console.log('[CONNECT] Got token, connecting to room:', data.room);
                     updateStatus('Connecting to room...', 'connecting');
                     
-                    // Create room
                     state.room = new LK.Room({
                         adaptiveStream: true,
                         dynacast: true,
@@ -589,7 +952,6 @@
                         }
                     });
                     
-                    // Room events
                     state.room.on(LK.RoomEvent.Connected, onConnected);
                     state.room.on(LK.RoomEvent.Disconnected, onDisconnected);
                     state.room.on(LK.RoomEvent.TrackSubscribed, onTrackSubscribed);
@@ -598,8 +960,9 @@
                     state.room.on(LK.RoomEvent.ParticipantConnected, onParticipantConnected);
                     state.room.on(LK.RoomEvent.ActiveSpeakersChanged, onActiveSpeakersChanged);
                     
-                    // Connect
+                    console.log('[CONNECT] Connecting to LiveKit server:', data.url);
                     await state.room.connect(data.url, data.token);
+                    console.log('[CONNECT] Successfully connected to room');
                     
                 } catch (err) {
                     console.error('[CONNECT] Error:', err);
@@ -613,15 +976,13 @@
                 updateStatus('Connected', 'connected');
                 
                 try {
-                    // Enable microphone
                     await state.room.localParticipant.setMicrophoneEnabled(true);
                     console.log('[ROOM] Microphone enabled');
                     
-                    // Get local audio track for visualization
-                    const audioTracks = state.room.localParticipant.getTrackPublications();
-                    audioTracks.forEach(pub => {
+                    var audioTracks = state.room.localParticipant.getTrackPublications();
+                    audioTracks.forEach(function(pub) {
                         if (pub.track && pub.track.kind === 'audio' && pub.track.mediaStream) {
-                            initAudioVisualization(pub.track.mediaStream);
+                            initCandidateAudioVisualization(pub.track.mediaStream);
                         }
                     });
                     
@@ -642,20 +1003,18 @@
                     clearInterval(state.timerInterval);
                 }
                 
-                // Show completion modal
-                setTimeout(() => {
+                if (state.blinkInterval) {
+                    clearTimeout(state.blinkInterval);
+                }
+                
+                setTimeout(function() {
                     document.getElementById('modalTitle').textContent = 'Interview Complete';
                     document.getElementById('modalMessage').textContent = 'Thank you for participating in this mock interview.';
                     document.getElementById('modalIcon').className = 'modal-icon success';
-                    document.getElementById('modalIcon').innerHTML = `
-                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                            <polyline points="22 4 12 14.01 9 11.01"/>
-                        </svg>
-                    `;
+                    document.getElementById('modalIcon').innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
                     document.getElementById('modalCancel').style.display = 'none';
                     document.getElementById('modalConfirm').textContent = 'Return Home';
-                    document.getElementById('modalConfirm').onclick = () => window.location.href = '/';
+                    document.getElementById('modalConfirm').onclick = function() { window.location.href = '/'; };
                     showModal('complete');
                 }, 1000);
             }
@@ -664,11 +1023,14 @@
                 console.log('[TRACK] Subscribed:', track.kind, 'from', participant.identity);
                 
                 if (track.kind === LK.Track.Kind.Audio) {
-                    // Attach audio to DOM
-                    const audioElement = track.attach();
+                    var audioElement = track.attach();
                     audioElement.id = 'agent-audio-' + participant.sid;
                     audioElement.volume = 1.0;
                     document.body.appendChild(audioElement);
+                    
+                    if (track.mediaStream) {
+                        initAgentAudioVisualization(track);
+                    }
                     
                     console.log('[AUDIO] Agent audio attached');
                     updateAgentCaption('Agent connected');
@@ -677,20 +1039,18 @@
             
             function onTrackUnsubscribed(track, publication, participant) {
                 console.log('[TRACK] Unsubscribed:', track.kind);
-                track.detach().forEach(el => el.remove());
+                track.detach().forEach(function(el) { el.remove(); });
             }
             
             function onDataReceived(payload, participant) {
                 try {
-                    const data = JSON.parse(new TextDecoder().decode(payload));
+                    var data = JSON.parse(new TextDecoder().decode(payload));
                     console.log('[DATA] Received:', data);
                     
-                    // Handle stage changes from agent
                     if (data.type === 'stage_change' && data.stage) {
                         updateStage(data.stage);
                     }
                     
-                    // Handle captions
                     if (data.type === 'agent_caption') {
                         updateAgentCaption(data.text);
                     }
@@ -698,7 +1058,13 @@
                     if (data.type === 'user_caption') {
                         updateCandidateCaption(data.text);
                     }
-                    
+
+                    if (data.type === 'interview_ending') {
+                        console.log('[INTERVIEW] Ending notification received');
+                        updateAgentCaption('Thank you! The interview is now complete.');
+                        updateStatus('Interview Complete', 'connected');
+                    }
+
                 } catch (err) {
                     console.error('[DATA] Parse error:', err);
                 }
@@ -707,7 +1073,6 @@
             function onParticipantConnected(participant) {
                 console.log('[PARTICIPANT] Connected:', participant.identity);
                 
-                // Check if it's the agent
                 if (participant.identity.toLowerCase().includes('agent') || 
                     participant.identity.toLowerCase().includes('interview')) {
                     updateAgentCaption('Agent joined - preparing...');
@@ -715,10 +1080,9 @@
             }
             
             function onActiveSpeakersChanged(speakers) {
-                // Check if agent is speaking
-                const agentSpeaking = speakers.some(s => 
-                    !s.isLocal && s.audioTracks.size > 0
-                );
+                var agentSpeaking = speakers.some(function(s) {
+                    return !s.isLocal && s.audioTracks.size > 0;
+                });
                 setAgentSpeaking(agentSpeaking);
             }
         }

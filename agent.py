@@ -440,20 +440,27 @@ async def entrypoint(ctx: JobContext):
         # Event handlers for logging and caption emission
         @session.on("user_input_transcribed")
         def on_user_speech(event):
+            # Only process FINAL transcripts to avoid fragmentation
             if event.is_final:
                 import time
-                logger.info(f"[USER] {event.transcript}")
+                transcript = event.transcript.strip()
 
-                # Store user message in conversation history
+                # Skip empty transcripts
+                if not transcript:
+                    return
+
+                logger.info(f"[USER] {transcript}")
+
+                # Store user message in conversation history (only final, complete transcripts)
                 user_message = {
                     "index": len(conversation_history["user"]),
-                    "text": event.transcript,
+                    "text": transcript,
                     "timestamp": time.time()
                 }
                 conversation_history["user"].append(user_message)
 
                 # Emit user caption to UI
-                asyncio.create_task(emit_user_caption(ctx, event.transcript))
+                asyncio.create_task(emit_user_caption(ctx, transcript))
 
         @session.on("conversation_item_added")
         def on_conversation_item(event):
@@ -487,48 +494,83 @@ async def entrypoint(ctx: JobContext):
             except Exception as e:
                 logger.error(f"[CONVERSATION] Error processing conversation item: {e}", exc_info=True)
 
+        # Track closing stage speech timing
+        closing_speech_start = {"time": None, "has_spoken": False}
+
         @session.on("agent_state_changed")
         def on_state_change(event):
             old_state = getattr(event, 'old_state', 'unknown')
             new_state = getattr(event, 'new_state', 'unknown')
             logger.info(f"[SESSION] Agent state: {old_state} -> {new_state}")
 
-            # Auto-disconnect after agent finishes speaking in closing stage
+            # Track when agent starts speaking in closing stage
             if interview_state.stage == InterviewStage.CLOSING:
+                if new_state == 'speaking' and not closing_speech_start["has_spoken"]:
+                    import time
+                    closing_speech_start["time"] = time.time()
+                    closing_speech_start["has_spoken"] = True
+                    logger.info("[SESSION] Agent started closing remarks")
+
+            # Auto-disconnect after agent finishes speaking closing remarks
+            if interview_state.stage == InterviewStage.CLOSING and closing_speech_start["has_spoken"]:
                 if old_state == 'speaking' and new_state in ('idle', 'listening'):
-                    logger.info("[SESSION] Closing speech completed - scheduling disconnect in 2 seconds")
+                    import time
+                    speech_duration = time.time() - closing_speech_start["time"]
 
-                    # Save conversation history for analysis
-                    try:
-                        import json
-                        from datetime import datetime
+                    # Only disconnect if agent spoke for at least 3 seconds (to ensure full message was delivered)
+                    if speech_duration >= 3.0:
+                        logger.info(f"[SESSION] Closing speech completed (duration: {speech_duration:.1f}s) - scheduling disconnect in 3 seconds")
 
-                        history_data = {
-                            "candidate": candidate_name,
-                            "interview_date": datetime.now().isoformat(),
-                            "room_name": ctx.room.name,
-                            "conversation": conversation_history,
-                            "total_messages": {
-                                "agent": len(conversation_history['agent']),
-                                "user": len(conversation_history['user'])
+                        # Emit "interview ending" message to UI
+                        async def emit_interview_ending():
+                            try:
+                                import json
+                                data_payload = json.dumps({
+                                    "type": "interview_ending",
+                                    "message": "Interview Complete"
+                                })
+                                await ctx.room.local_participant.publish_data(
+                                    data_payload.encode('utf-8')
+                                )
+                                logger.info("[UI] Emitted interview ending notification")
+                            except Exception as e:
+                                logger.error(f"[UI] Failed to emit interview ending: {e}")
+
+                        asyncio.create_task(emit_interview_ending())
+
+                        # Save conversation history for analysis
+                        try:
+                            import json
+                            from datetime import datetime
+
+                            history_data = {
+                                "candidate": candidate_name,
+                                "interview_date": datetime.now().isoformat(),
+                                "room_name": ctx.room.name,
+                                "conversation": conversation_history,
+                                "total_messages": {
+                                    "agent": len(conversation_history['agent']),
+                                    "user": len(conversation_history['user'])
+                                }
                             }
-                        }
 
-                        # Save to interviews directory
-                        import os
-                        os.makedirs("interviews", exist_ok=True)
-                        filename = f"interviews/{candidate_name.lower().replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                            # Save to interviews directory
+                            import os
+                            os.makedirs("interviews", exist_ok=True)
+                            filename = f"interviews/{candidate_name.lower().replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
 
-                        with open(filename, 'w', encoding='utf-8') as f:
-                            json.dump(history_data, f, indent=2, ensure_ascii=False)
+                            with open(filename, 'w', encoding='utf-8') as f:
+                                json.dump(history_data, f, indent=2, ensure_ascii=False)
 
-                        logger.info(f"[HISTORY] Saved conversation to {filename}")
-                        logger.info(f"[HISTORY] Interview complete - Agent: {len(conversation_history['agent'])} messages, User: {len(conversation_history['user'])} messages")
-                    except Exception as e:
-                        logger.error(f"[HISTORY] Failed to save conversation: {e}", exc_info=True)
+                            logger.info(f"[HISTORY] Saved conversation to {filename}")
+                            logger.info(f"[HISTORY] Interview complete - Agent: {len(conversation_history['agent'])} messages, User: {len(conversation_history['user'])} messages")
+                        except Exception as e:
+                            logger.error(f"[HISTORY] Failed to save conversation: {e}", exc_info=True)
 
-                    # Give a brief moment for the audio to fully play out, then disconnect
-                    asyncio.create_task(delayed_disconnect(ctx.room, delay=2.0))
+                        # Give a brief moment for the audio to fully play out, then disconnect
+                        asyncio.create_task(delayed_disconnect(ctx.room, delay=3.0))
+                    else:
+                        logger.info(f"[SESSION] Closing speech too short ({speech_duration:.1f}s), waiting for complete message...")
 
         # Start fallback timer
         fallback_task = asyncio.create_task(

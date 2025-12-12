@@ -11,96 +11,148 @@
     function init() {
         initFormHandler();
         initInputValidation();
+        updateButtonState();
     }
     
     function initFormHandler() {
-        const form = document.getElementById('candidateForm');
+        var form = document.getElementById('candidateForm');
+        var submitBtn = document.getElementById('submitBtn');
         if (!form) return;
         
-        form.addEventListener('submit', async function(e) {
+        // Handle form submission
+        form.addEventListener('submit', function(e) {
             e.preventDefault();
-            
-            const formData = new FormData(e.target);
-            const data = {
-                name: formData.get('name'),
-                email: formData.get('email'),
-                role: formData.get('role'),
-                level: formData.get('level')
-            };
-            
-            // Validate all fields
-            let isValid = true;
-            const inputs = form.querySelectorAll('.form-input');
-            inputs.forEach(input => {
-                if (!validateInput(input)) {
-                    isValid = false;
+            handleSubmit();
+        });
+        
+        // Also handle button click directly since button may be outside form
+        if (submitBtn) {
+            submitBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (!submitBtn.classList.contains('active')) {
+                    console.log('[FORM] Button not active - fill all required fields');
+                    return;
                 }
+                handleSubmit();
+            });
+        }
+    }
+    
+    function handleSubmit() {
+        var form = document.getElementById('candidateForm');
+        var submitBtn = document.getElementById('submitBtn');
+        
+        if (!form) return;
+        
+        // Check if button is active
+        if (submitBtn && !submitBtn.classList.contains('active')) {
+            console.log('[FORM] Cannot submit - not all required fields filled');
+            return;
+        }
+        
+        var formData = new FormData(form);
+        var data = {
+            name: formData.get('name'),
+            email: formData.get('email'),
+            role: formData.get('role'),
+            level: formData.get('level'),
+            companyUrl: formData.get('companyUrl') || '',
+            jobDescription: formData.get('jobDescription') || ''
+        };
+        
+        // Validate required fields
+        var isValid = true;
+        var inputs = form.querySelectorAll('.form-input[required]');
+        inputs.forEach(function(input) {
+            if (!validateInput(input)) {
+                isValid = false;
+            }
+        });
+        
+        if (!isValid) {
+            console.log('[FORM] Validation failed');
+            return;
+        }
+        
+        console.log('[FORM] Submitting with data:', data);
+        
+        var loadingEl = document.getElementById('loadingIndicator');
+        
+        if (loadingEl) {
+            loadingEl.classList.add('visible');
+        }
+        
+        if (submitBtn) {
+            submitBtn.disabled = true;
+        }
+        
+        try {
+            // Build URL params and redirect
+            var params = new URLSearchParams({
+                name: data.name,
+                email: data.email,
+                role: data.role,
+                level: data.level,
+                companyUrl: data.companyUrl
             });
             
-            if (!isValid) {
-                return;
-            }
+            console.log('[FORM] Redirecting to interview page');
+            window.location.href = '/interview?' + params.toString();
             
-            // Show loading state
-            const loadingEl = document.getElementById('loadingIndicator');
-            const submitBtn = form.querySelector('button[type="submit"]');
+        } catch (err) {
+            console.error('[FORM] Submission error:', err);
             
             if (loadingEl) {
-                loadingEl.classList.add('visible');
+                loadingEl.classList.remove('visible');
             }
             
             if (submitBtn) {
-                submitBtn.disabled = true;
+                submitBtn.disabled = false;
             }
-            
-            try {
-                // Build URL params and redirect
-                const params = new URLSearchParams(data);
-                window.location.href = '/interview?' + params.toString();
-                
-            } catch (err) {
-                console.error('[FORM] Submission error:', err);
-                
-                // Reset loading state
-                if (loadingEl) {
-                    loadingEl.classList.remove('visible');
-                }
-                
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                }
-            }
-        });
+        }
     }
     
     function initInputValidation() {
-        const inputs = document.querySelectorAll('.form-input');
+        var inputs = document.querySelectorAll('.form-input');
         
-        inputs.forEach(input => {
+        inputs.forEach(function(input) {
             input.addEventListener('blur', function() {
-                validateInput(this);
+                if (this.hasAttribute('required')) {
+                    validateInput(this);
+                }
             });
             
             input.addEventListener('input', function() {
-                // Remove error on input
                 this.classList.remove('input-error');
+                updateButtonState();
+            });
+            
+            input.addEventListener('change', function() {
+                updateButtonState();
             });
         });
     }
     
     function validateInput(input) {
-        const value = input.value.trim();
+        var value = input.value.trim();
         
-        // Email validation
         if (input.type === 'email' && value) {
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             if (!emailRegex.test(value)) {
                 input.classList.add('input-error');
                 return false;
             }
         }
         
-        // Required field validation
+        if (input.type === 'url' && value) {
+            try {
+                new URL(value);
+            } catch (e) {
+                input.classList.add('input-error');
+                return false;
+            }
+        }
+        
         if (input.hasAttribute('required') && !value) {
             input.classList.add('input-error');
             return false;
@@ -108,5 +160,26 @@
         
         input.classList.remove('input-error');
         return true;
+    }
+    
+    function updateButtonState() {
+        var form = document.getElementById('candidateForm');
+        var submitBtn = document.getElementById('submitBtn');
+        if (!form || !submitBtn) return;
+        
+        var requiredInputs = form.querySelectorAll('.form-input[required]');
+        var allFilled = true;
+        
+        requiredInputs.forEach(function(input) {
+            if (!input.value.trim()) {
+                allFilled = false;
+            }
+        });
+        
+        if (allFilled) {
+            submitBtn.classList.add('active');
+        } else {
+            submitBtn.classList.remove('active');
+        }
     }
 })();

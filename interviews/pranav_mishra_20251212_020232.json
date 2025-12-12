@@ -1,0 +1,240 @@
+{
+  "candidate": "Pranav Mishra",
+  "interview_date": "2025-12-12T02:02:32.624065",
+  "room_name": "interview-pranav-mishra-1765522752",
+  "conversation": {
+    "agent": [
+      {
+        "index": 0,
+        "text": "Thank",
+        "timestamp": 1765522759.9909272,
+        "stage": "self_intro"
+      },
+      {
+        "index": 1,
+        "text": "Hello, Pranav! Thank you for joining me today. I'd love to hear your introduction—please share a bit about your background, education, and your current role.",
+        "timestamp": 1765522770.9269743,
+        "stage": "self_intro"
+      },
+      {
+        "index": 2,
+        "text": "That's great to hear, Pranav! It sounds like you have some solid experience in software engineering and AI/ML. What inspired you to pursue a master's in computer science?",
+        "timestamp": 1765522798.6622307,
+        "stage": "self_intro"
+      },
+      {
+        "index": 3,
+        "text": "That's a fascinating journey, Pranav! You mentioned working at Will Price as an AIML intern. Can you tell me about a specific project you worked on there? What was the situation, what tasks were you responsible for, what actions did you take, and what was the result of the project?",
+        "timestamp": 1765522875.6151304,
+        "stage": "past_experience"
+      },
+      {
+        "index": 4,
+        "text": "That sounds like a rich set of experiences, Pranav! Focusing on the blog site project you mentioned, what were some of the challenges you faced during its development, and how did you address those challenges?",
+        "timestamp": 1765522938.1642478,
+        "stage": "past_experience"
+      }
+    ],
+    "user": [
+      {
+        "index": 0,
+        "text": "Hello?",
+        "timestamp": 1765522759.970072
+      },
+      {
+        "index": 1,
+        "text": "Yeah. So",
+        "timestamp": 1765522775.6751342
+      },
+      {
+        "index": 2,
+        "text": "I am a UAC grad with a master's in computer science. I've been working as a",
+        "timestamp": 1765522778.1419308
+      },
+      {
+        "index": 3,
+        "text": "research software engineer at UIC.",
+        "timestamp": 1765522781.3945315
+      },
+      {
+        "index": 4,
+        "text": "And I've also worked at Will Price as an AIML intern.",
+        "timestamp": 1765522785.8300004
+      },
+      {
+        "index": 5,
+        "text": "Oh, uh, I actually like coding. I got into coding via games.",
+        "timestamp": 1765522806.4795382
+      },
+      {
+        "index": 6,
+        "text": "I used to play a lot of games in my channel with my brothers.",
+        "timestamp": 1765522809.6603801
+      },
+      {
+        "index": 7,
+        "text": "And I always had the thought that I could make games somehow.",
+        "timestamp": 1765522813.39088
+      },
+      {
+        "index": 8,
+        "text": "And even before I joined, uh, my bachelor's, I started out",
+        "timestamp": 1765522817.9574146
+      },
+      {
+        "index": 9,
+        "text": "with Unity and then testing on making a couple of mobile games.",
+        "timestamp": 1765522822.4099507
+      },
+      {
+        "index": 10,
+        "text": "And so on. That's how I got into coding.",
+        "timestamp": 1765522824.693038
+      },
+      {
+        "index": 11,
+        "text": "And after that, it was about in interest and the current trends",
+        "timestamp": 1765522828.4433558
+      },
+      {
+        "index": 12,
+        "text": "I was very much intrigued by AI and ML.",
+        "timestamp": 1765522831.4861982
+      },
+      {
+        "index": 13,
+        "text": "And games have been using AI and ML for the longest of time. So we have",
+        "timestamp": 1765522835.7214158
+      },
+      {
+        "index": 14,
+        "text": "navigation, all all the other stuff.",
+        "timestamp": 1765522837.6509748
+      },
+      {
+        "index": 15,
+        "text": "So with transformers, with GPT, it was another phase where",
+        "timestamp": 1765522842.1369143
+      },
+      {
+        "index": 16,
+        "text": "I could see that, uh, the whole industry was about to change.",
+        "timestamp": 1765522846.3441615
+      },
+      {
+        "index": 17,
+        "text": "And so I decided to study a little bit more, get",
+        "timestamp": 1765522849.6008797
+      },
+      {
+        "index": 18,
+        "text": "myself more into",
+        "timestamp": 1765522850.9894433
+      },
+      {
+        "index": 19,
+        "text": "the fundamentals and depth of",
+        "timestamp": 1765522852.8987188
+      },
+      {
+        "index": 20,
+        "text": "I want to do.",
+        "timestamp": 1765522853.7353628
+      },
+      {
+        "index": 21,
+        "text": "Yeah. So I mostly help",
+        "timestamp": 1765522879.5772495
+      },
+      {
+        "index": 22,
+        "text": "full stack responsibilities.",
+        "timestamp": 1765522879.9299014
+      },
+      {
+        "index": 23,
+        "text": "At first, we there was a need for development of a blog",
+        "timestamp": 1765522884.4470387
+      },
+      {
+        "index": 24,
+        "text": "site where we had a very popular",
+        "timestamp": 1765522887.5614107
+      },
+      {
+        "index": 25,
+        "text": "social media accounts, but we wanted to have something on the website so that",
+        "timestamp": 1765522891.7929688
+      },
+      {
+        "index": 26,
+        "text": "we can direct the users to our website where the actual money is made.",
+        "timestamp": 1765522895.511132
+      },
+      {
+        "index": 27,
+        "text": "So we decided to develop a log system and",
+        "timestamp": 1765522899.1377366
+      },
+      {
+        "index": 28,
+        "text": "what I did was I used Ghost CMS, another CDN",
+        "timestamp": 1765522902.69589
+      },
+      {
+        "index": 29,
+        "text": "technologies to actually develop this and deploy. This was done in two weeks and",
+        "timestamp": 1765522908.0820832
+      },
+      {
+        "index": 30,
+        "text": "we basically had a",
+        "timestamp": 1765522909.7294314
+      },
+      {
+        "index": 31,
+        "text": "a automatic way to",
+        "timestamp": 1765522911.4851131
+      },
+      {
+        "index": 32,
+        "text": "un",
+        "timestamp": 1765522912.5695393
+      },
+      {
+        "index": 33,
+        "text": "convert the post into blog posts. Later on, I also worked on a chat app",
+        "timestamp": 1765522916.8888462
+      },
+      {
+        "index": 34,
+        "text": "for a one gable chat assistant kind of a recruitment assistant.",
+        "timestamp": 1765522921.2220821
+      },
+      {
+        "index": 35,
+        "text": "And I also worked on a computer vision pipeline project.",
+        "timestamp": 1765522924.1441376
+      },
+      {
+        "index": 36,
+        "text": "For the blog post, I think there were some slight challenges where we couldn't see the",
+        "timestamp": 1765522945.2296195
+      },
+      {
+        "index": 37,
+        "text": "traffic on the blog URL.",
+        "timestamp": 1765522946.6482155
+      },
+      {
+        "index": 38,
+        "text": "And then we had to have",
+        "timestamp": 1765522948.3397617
+      }
+    ]
+  },
+  "total_messages": {
+    "agent": 5,
+    "user": 39
+  }
+}
