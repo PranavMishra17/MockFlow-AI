@@ -67,23 +67,14 @@ server = AgentServer()
 # Stage-specific instructions for the LLM
 INSTRUCTIONS = {
     InterviewStage.GREETING: """
-You are a friendly and professional interviewer named Alex conducting a mock interview.
+You are a friendly interviewer named Alex.
 
-Your task right now:
-1. Greet the candidate warmly
-2. Introduce yourself as Alex, an AI interviewer
-3. EXPLAIN THE INTERVIEW STRUCTURE:
-   - "This interview has 3 main stages:"
-   - "Stage 1: Self-introduction - tell me about yourself (2-3 minutes)"
-   - "Stage 2: Past experience - discuss your projects and work (3-4 minutes)"
-   - "Stage 3: Closing - wrap up and next steps (1 minute)"
-4. Ask if they're ready to begin
-5. Once they confirm, transition immediately to self_intro stage using the transition_stage tool
+STEP 1: Say EXACTLY this greeting (nothing more):
+"Hello! This interview will be divided into 2 stages: self-introduction and past experiences. Let's begin - tell me about yourself."
 
-Keep this entire greeting under 45 seconds. Be concise and clear.
+STEP 2: After you finish speaking the greeting, IMMEDIATELY call transition_stage to move to self_intro.
 
-IMPORTANT: As soon as the candidate says they're ready (e.g., "yes", "sure", "let's start", "I'm ready"),
-call transition_stage immediately to move to self_intro.
+Do NOT wait for the candidate's response before calling transition_stage.
 """,
 
     InterviewStage.SELF_INTRO: """
@@ -146,8 +137,10 @@ Your task:
 - Thank the candidate sincerely for their time
 - Provide brief positive feedback on 1-2 strengths you noticed
 - Let them know next steps will be communicated via email
-- Wish them well
-- Keep this brief (under 1 minute)
+- Say a warm goodbye: "Thank you again, and best of luck!"
+- Keep this VERY brief (under 30 seconds)
+
+After saying goodbye, the interview will automatically end.
 
 Style: Warm, professional, encouraging.
 """
@@ -159,12 +152,24 @@ class InterviewAgent(Agent):
     Mock interview agent with FSM-based stage management.
     """
 
-    def __init__(self):
+    def __init__(self, room=None, candidate_info=None):
         """Initialize agent with greeting stage instructions."""
+        # Store candidate info
+        self.candidate_info = candidate_info or {}
+        self.candidate_name = self.candidate_info.get('name', 'Candidate')
+        self.candidate_role = self.candidate_info.get('role', 'this position')
+
+        # Build personalized greeting instruction
+        personalized_greeting = INSTRUCTIONS[InterviewStage.GREETING].replace(
+            "tell me about yourself",
+            f"tell me about yourself, {self.candidate_name}"
+        )
+
         super().__init__(
-            instructions=INSTRUCTIONS[InterviewStage.GREETING]
+            instructions=personalized_greeting
             # Tools are auto-registered via @function_tool decorator
         )
+        self.room = room  # Store room reference for data emission
 
     @function_tool
     async def transition_stage(
@@ -186,7 +191,7 @@ class InterviewAgent(Agent):
 
             # Minimum time gates (prevent rushing) - reduced for faster interviews
             MIN_TIMES = {
-                InterviewStage.GREETING: 10,   # Reduced from 15
+                InterviewStage.GREETING: 0,   # No minimum - transition immediately after greeting
                 InterviewStage.SELF_INTRO: 45,  # Reduced from 60
                 InterviewStage.PAST_EXPERIENCE: 60,  # Reduced from 120
             }
@@ -201,8 +206,16 @@ class InterviewAgent(Agent):
             # Execute transition
             ctx.userdata.transition_to(next_stage, forced=False)
 
+            # Personalize instructions with candidate name
+            stage_instructions = INSTRUCTIONS[next_stage]
+
+            # Add consistent personality note to all stages
+            personality_note = f"\n\nIMPORTANT: The candidate's name is {self.candidate_name}. Use their name naturally during the conversation. Maintain a warm, professional tone consistent with Alex the AI interviewer. Be encouraging and supportive."
+
+            personalized_instructions = stage_instructions + personality_note
+
             # Update agent instructions for new stage
-            await self.update_instructions(INSTRUCTIONS[next_stage])
+            await self.update_instructions(personalized_instructions)
 
             logger.info(
                 f"[AGENT] Stage transition: {current_stage.value} -> {next_stage.value} "
@@ -212,13 +225,17 @@ class InterviewAgent(Agent):
             # Emit stage change to UI
             await self._emit_stage_change(ctx, next_stage)
 
-            transition_messages = {
-                InterviewStage.SELF_INTRO: "Great, let's dive into your background and experience.",
-                InterviewStage.PAST_EXPERIENCE: "Excellent introduction. Now I'd like to hear more about your past work experience.",
-                InterviewStage.CLOSING: "Thank you for sharing your experiences with me.",
+            # Trigger agent to speak based on new stage instructions
+            transition_prompts = {
+                InterviewStage.SELF_INTRO: f"Stage transitioned successfully. The greeting has been said. Now immediately respond by acknowledging {self.candidate_name}'s upcoming introduction. You don't need to ask them to introduce themselves again - they are already speaking or about to speak.",
+                InterviewStage.PAST_EXPERIENCE: f"Stage transitioned successfully. Now immediately ask {self.candidate_name} about ONE specific project or experience they mentioned in their introduction. Be specific and reference something they said.",
+                InterviewStage.CLOSING: f"Stage transitioned successfully. Now immediately thank {self.candidate_name} warmly, provide 1-2 specific positive observations from the interview, and say goodbye.",
             }
 
-            return transition_messages.get(next_stage, f"Transitioned to {next_stage.value}")
+            prompt = transition_prompts.get(next_stage, "Continue with the interview.")
+
+            # Return prompt to trigger agent response
+            return prompt
 
         except Exception as e:
             logger.error(f"[AGENT] Transition error: {e}", exc_info=True)
@@ -234,10 +251,9 @@ class InterviewAgent(Agent):
                 "stage": new_stage.value
             })
 
-            # Access room through the session
-            room = ctx.session.room if hasattr(ctx.session, 'room') else None
-            if room and room.local_participant:
-                await room.local_participant.publish_data(
+            # Use room stored in agent instance
+            if self.room and self.room.local_participant:
+                await self.room.local_participant.publish_data(
                     data_payload.encode('utf-8')
                 )
                 logger.info(f"[UI] Emitted stage change: {new_stage.value}")
@@ -263,10 +279,10 @@ class InterviewAgent(Agent):
 
     async def on_enter(self):
         """Called when agent becomes active - trigger the greeting."""
-        logger.info("[AGENT] Agent activated - generating greeting")
+        logger.info(f"[AGENT] Agent activated - greeting {self.candidate_name}")
         # This triggers the LLM to generate a greeting based on instructions
         self.session.generate_reply(
-            instructions="Greet the candidate warmly. Introduce yourself as Alex, an AI interviewer. Ask them to introduce themselves and tell you about their background."
+            instructions=f"Say: 'Hello! This interview will be divided into 2 stages: self-introduction and past experiences. Let's begin - tell me about yourself, {self.candidate_name}.' Then immediately call transition_stage."
         )
 
     async def on_exit(self):
@@ -303,13 +319,25 @@ async def emit_agent_caption(ctx: JobContext, text: str):
             "text": text
         })
 
+        logger.info(f"[UI] Attempting to emit agent caption: {text[:50]}...")
+
         await ctx.room.local_participant.publish_data(
             data_payload.encode('utf-8')
         )
 
-        logger.debug(f"[UI] Emitted agent caption: {text[:50]}...")
+        logger.info(f"[UI] Successfully emitted agent caption")
     except Exception as e:
-        logger.error(f"[UI] Failed to emit agent caption: {e}")
+        logger.error(f"[UI] Failed to emit agent caption: {e}", exc_info=True)
+
+
+async def delayed_disconnect(room, delay: float = 2.0):
+    """Disconnect from the room after a brief delay."""
+    try:
+        await asyncio.sleep(delay)
+        logger.info(f"[SESSION] Disconnecting after {delay}s delay")
+        await room.disconnect()
+    except Exception as e:
+        logger.error(f"[SESSION] Error during delayed disconnect: {e}", exc_info=True)
 
 
 @server.rtc_session()
@@ -318,14 +346,27 @@ async def entrypoint(ctx: JobContext):
     Main entry point for LiveKit agent.
     """
     fallback_task = None
-    
+
     try:
         # Connect to room
         await ctx.connect()
         logger.info(f"[SESSION] Connected to room: {ctx.room.name}")
 
+        # Extract candidate info from room name (format: interview-name-timestamp)
+        room_parts = ctx.room.name.split('-')
+        candidate_name = ' '.join(room_parts[1:-1]).title() if len(room_parts) > 2 else "Candidate"
+
+        # Get additional info from room metadata if available
+        candidate_info = {
+            'name': candidate_name,
+            'role': 'this position'  # Default, can be enhanced later
+        }
+
+        logger.info(f"[SESSION] Candidate: {candidate_name}")
+
         # Initialize interview state
         interview_state = InterviewState()
+        interview_state.candidate_name = candidate_name
         interview_state.transition_to(InterviewStage.GREETING)
 
         # Log room participants
@@ -373,8 +414,8 @@ async def entrypoint(ctx: JobContext):
             logger.error(f"[SESSION] Silero VAD init error: {e}")
             raise
 
-        # Create agent
-        agent = InterviewAgent()
+        # Create agent with room reference and candidate info
+        agent = InterviewAgent(room=ctx.room, candidate_info=candidate_info)
 
         # Create agent session
         session = AgentSession(
@@ -390,26 +431,104 @@ async def entrypoint(ctx: JobContext):
 
         logger.info("[SESSION] AgentSession created")
 
+        # Conversation history storage for analysis
+        conversation_history = {
+            "agent": [],  # List of agent messages: [{"index": 0, "text": "...", "timestamp": ...}, ...]
+            "user": [],   # List of user messages: [{"index": 0, "text": "...", "timestamp": ...}, ...]
+        }
+
         # Event handlers for logging and caption emission
         @session.on("user_input_transcribed")
         def on_user_speech(event):
             if event.is_final:
+                import time
                 logger.info(f"[USER] {event.transcript}")
+
+                # Store user message in conversation history
+                user_message = {
+                    "index": len(conversation_history["user"]),
+                    "text": event.transcript,
+                    "timestamp": time.time()
+                }
+                conversation_history["user"].append(user_message)
+
                 # Emit user caption to UI
                 asyncio.create_task(emit_user_caption(ctx, event.transcript))
 
-        @session.on("agent_speech_committed")
-        def on_agent_speech(event):
-            text = getattr(event, 'text', str(event))
-            logger.info(f"[AGENT SPEECH] {text[:150]}...")
-            # Emit agent caption to UI
-            asyncio.create_task(emit_agent_caption(ctx, text))
+        @session.on("conversation_item_added")
+        def on_conversation_item(event):
+            """Handle both user and agent messages from the conversation."""
+            try:
+                import time
+                message = event.item
+
+                # Only process agent messages (skip user messages as they're handled by user_input_transcribed)
+                if hasattr(message, 'role') and message.role == "assistant":
+                    # Get agent's text using text_content property
+                    agent_text = message.text_content if hasattr(message, 'text_content') else None
+
+                    if agent_text:
+                        logger.info(f"[AGENT] {agent_text[:150]}...")
+
+                        # Store agent message in conversation history
+                        agent_message = {
+                            "index": len(conversation_history["agent"]),
+                            "text": agent_text,
+                            "timestamp": time.time(),
+                            "stage": interview_state.stage.value
+                        }
+                        conversation_history["agent"].append(agent_message)
+
+                        # Emit agent caption to UI (this happens after speech is generated)
+                        asyncio.create_task(emit_agent_caption(ctx, agent_text))
+                        logger.info(f"[HISTORY] Stored agent message #{agent_message['index']} ({len(agent_text)} chars)")
+                    else:
+                        logger.warning("[AGENT] No text_content in message")
+            except Exception as e:
+                logger.error(f"[CONVERSATION] Error processing conversation item: {e}", exc_info=True)
 
         @session.on("agent_state_changed")
         def on_state_change(event):
             old_state = getattr(event, 'old_state', 'unknown')
             new_state = getattr(event, 'new_state', 'unknown')
             logger.info(f"[SESSION] Agent state: {old_state} -> {new_state}")
+
+            # Auto-disconnect after agent finishes speaking in closing stage
+            if interview_state.stage == InterviewStage.CLOSING:
+                if old_state == 'speaking' and new_state in ('idle', 'listening'):
+                    logger.info("[SESSION] Closing speech completed - scheduling disconnect in 2 seconds")
+
+                    # Save conversation history for analysis
+                    try:
+                        import json
+                        from datetime import datetime
+
+                        history_data = {
+                            "candidate": candidate_name,
+                            "interview_date": datetime.now().isoformat(),
+                            "room_name": ctx.room.name,
+                            "conversation": conversation_history,
+                            "total_messages": {
+                                "agent": len(conversation_history['agent']),
+                                "user": len(conversation_history['user'])
+                            }
+                        }
+
+                        # Save to interviews directory
+                        import os
+                        os.makedirs("interviews", exist_ok=True)
+                        filename = f"interviews/{candidate_name.lower().replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+
+                        with open(filename, 'w', encoding='utf-8') as f:
+                            json.dump(history_data, f, indent=2, ensure_ascii=False)
+
+                        logger.info(f"[HISTORY] Saved conversation to {filename}")
+                        logger.info(f"[HISTORY] Interview complete - Agent: {len(conversation_history['agent'])} messages, User: {len(conversation_history['user'])} messages")
+                    except Exception as e:
+                        logger.error(f"[HISTORY] Failed to save conversation: {e}", exc_info=True)
+
+                    # Give a brief moment for the audio to fully play out, then disconnect
+                    asyncio.create_task(delayed_disconnect(ctx.room, delay=2.0))
 
         # Start fallback timer
         fallback_task = asyncio.create_task(
@@ -450,7 +569,7 @@ async def stage_fallback_timer(session: AgentSession, state: InterviewState, ctx
         InterviewStage.GREETING: 60,   # Reduced from 90 - should transition quickly after explaining
         InterviewStage.SELF_INTRO: 180,  # Reduced from 360 - 3 minutes max
         InterviewStage.PAST_EXPERIENCE: 240,  # Reduced from 480 - 4 minutes max
-        InterviewStage.CLOSING: 90,   # Reduced from 120
+        InterviewStage.CLOSING: 60,   # 1 minute for closing, then auto-disconnect
     }
 
     WARNING_THRESHOLD = 0.75  # Warn earlier (75% instead of 80%)

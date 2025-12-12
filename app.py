@@ -9,7 +9,7 @@ import os
 import time
 import logging
 from pathlib import Path
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_cors import CORS
 from livekit import api
 from dotenv import load_dotenv
@@ -44,6 +44,18 @@ if not all([LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET]):
     )
 
 logger.info(f"[CONFIG] LiveKit URL: {LIVEKIT_URL}")
+
+
+# Serve the site favicon from the `public` directory so browsers show the tab icon
+@app.route('/favicon.ico')
+def favicon():
+    """Serve the PNG icon at /favicon.ico (served from `public/icon.png`)."""
+    try:
+        public_dir = os.path.join(app.root_path, 'public')
+        return send_from_directory(public_dir, 'icon.png', mimetype='image/png')
+    except Exception:
+        # Fallback to 404 if not present
+        return ('', 404)
 
 
 @app.route('/')

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interview - MockFlow-AI</title>
+    <link rel="icon" href="/favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -191,6 +192,7 @@
                 peakDecay: 0.85,
                 maxSeenLevel: 0.01,
                 noiseFloor: 0.005,
+                interviewStartTime: Date.now(),  // Global interview start time
                 stageStartTime: Date.now(),
                 timerInterval: null
             };
@@ -248,22 +250,22 @@
             
             function updateStage(newStage) {
                 if (newStage === state.currentStage) return;
-                
+
                 const oldStage = state.currentStage;
                 state.currentStage = newStage;
-                
+
                 // Flash effect
                 elements.stateFlash.classList.add('active');
                 setTimeout(() => elements.stateFlash.classList.remove('active'), 600);
-                
+
                 // Update progress bar
                 elements.progressFill.style.width = stageProgress[newStage] + '%';
-                
+
                 // Update stage dots
                 stages.forEach((stage, index) => {
                     const dot = document.querySelector(`[data-stage="${stage}"]`);
                     const currentIndex = stages.indexOf(newStage);
-                    
+
                     dot.classList.remove('active', 'completed');
                     if (index < currentIndex) {
                         dot.classList.add('completed');
@@ -271,16 +273,17 @@
                         dot.classList.add('active');
                     }
                 });
-                
-                // Reset timer
+
+                // Update stage start time for tracking, but don't reset global timer
                 state.stageStartTime = Date.now();
-                
+
                 console.log('[STAGE] Transition:', oldStage, '->', newStage);
             }
-            
+
             function startTimer() {
+                // Show total interview time from start
                 state.timerInterval = setInterval(() => {
-                    const elapsed = Math.floor((Date.now() - state.stageStartTime) / 1000);
+                    const elapsed = Math.floor((Date.now() - state.interviewStartTime) / 1000);
                     const minutes = Math.floor(elapsed / 60);
                     const seconds = elapsed % 60;
                     elements.stageTimer.textContent = minutes + ':' + seconds.toString().padStart(2, '0');
@@ -295,14 +298,97 @@
                 }
             }
             
+            let agentCaptionTimeout = null;
+            let candidateCaptionTimeout = null;
+            let agentTypewriterInterval = null;
+            let candidateTypewriterInterval = null;
+
             function updateAgentCaption(text) {
-                elements.agentCaption.textContent = text || '';
-                elements.agentCaption.classList.toggle('empty', !text);
+                // Clear any existing typewriter effect
+                if (agentTypewriterInterval) {
+                    clearInterval(agentTypewriterInterval);
+                    agentTypewriterInterval = null;
+                }
+                if (agentCaptionTimeout) {
+                    clearTimeout(agentCaptionTimeout);
+                    agentCaptionTimeout = null;
+                }
+
+                if (!text) {
+                    elements.agentCaption.textContent = '';
+                    elements.agentCaption.classList.add('empty');
+                    return;
+                }
+
+                elements.agentCaption.classList.remove('empty');
+
+                // Typewriter effect - display character by character
+                let currentIndex = 0;
+                elements.agentCaption.textContent = '';
+
+                agentTypewriterInterval = setInterval(() => {
+                    if (currentIndex < text.length) {
+                        elements.agentCaption.textContent += text[currentIndex];
+                        currentIndex++;
+                    } else {
+                        clearInterval(agentTypewriterInterval);
+                        agentTypewriterInterval = null;
+
+                        // Calculate timeout based on text length (min 10s, max 30s, ~250 words per minute reading speed)
+                        const wordsCount = text.split(' ').length;
+                        const readingTimeMs = Math.max(10000, Math.min(30000, (wordsCount / 250) * 60 * 1000 + 5000));
+
+                        // Auto-clear after reading time
+                        agentCaptionTimeout = setTimeout(() => {
+                            elements.agentCaption.textContent = '';
+                            elements.agentCaption.classList.add('empty');
+                        }, readingTimeMs);
+                    }
+                }, 15); // 15ms per character = ~67 chars/second
             }
-            
+
             function updateCandidateCaption(text) {
-                elements.candidateCaption.textContent = text || '';
-                elements.candidateCaption.classList.toggle('empty', !text);
+                // Clear any existing typewriter effect
+                if (candidateTypewriterInterval) {
+                    clearInterval(candidateTypewriterInterval);
+                    candidateTypewriterInterval = null;
+                }
+                if (candidateCaptionTimeout) {
+                    clearTimeout(candidateCaptionTimeout);
+                    candidateCaptionTimeout = null;
+                }
+
+                if (!text) {
+                    elements.candidateCaption.textContent = '';
+                    elements.candidateCaption.classList.add('empty');
+                    return;
+                }
+
+                elements.candidateCaption.classList.remove('empty');
+
+                // Typewriter effect - display character by character
+                let currentIndex = 0;
+                elements.candidateCaption.textContent = '';
+
+                candidateTypewriterInterval = setInterval(() => {
+                    if (currentIndex < text.length) {
+                        elements.candidateCaption.textContent += text[currentIndex];
+                        currentIndex++;
+                    } else {
+                        clearInterval(candidateTypewriterInterval);
+                        candidateTypewriterInterval = null;
+
+                        // Calculate timeout based on text length
+                        const wordsCount = text.split(' ').length;
+                        const readingTimeMs = Math.max(10000, Math.min(30000, (wordsCount / 250) * 60 * 1000 + 5000));
+
+                        // Auto-clear after reading time
+                        candidateCaptionTimeout = setTimeout(() => {
+                            elements.candidateCaption.textContent = '';
+                            elements.candidateCaption.classList.add('empty');
+                        }, readingTimeMs);
+                    }
+                }, 15); // 15ms per character = ~67 chars/second
             }
             
             // Audio waveform visualization - Retro VU meter style with auto-gain
