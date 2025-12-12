@@ -63,18 +63,16 @@
                 
                 <!-- Circular Visualizer with Eyes -->
                 <div class="agent-visualizer" id="agentVisualizer">
-                    <div class="agent-circle-container">
-                        <svg class="agent-circle-svg" viewBox="0 0 200 200" id="agentCircleSvg">
-                            <!-- Background circle -->
-                            <circle class="agent-circle-bg" cx="100" cy="100" r="85"/>
-                            <!-- Audio bars will be generated dynamically -->
-                            <g id="agentBarsGroup"></g>
-                        </svg>
-                    </div>
-                    <!-- Eyes -->
-                    <div class="agent-eyes" id="agentEyes">
-                        <div class="agent-eye"></div>
-                        <div class="agent-eye"></div>
+                    <div class="voice-circle">
+                        <!-- Background circle -->
+                        <div class="voice-circle-bg"></div>
+                        <!-- Audio bars container -->
+                        <div class="bars-container" id="agentBarsContainer"></div>
+                        <!-- Eyes in center -->
+                        <div class="agent-eyes" id="agentEyes">
+                            <div class="agent-eye"></div>
+                            <div class="agent-eye"></div>
+                        </div>
                     </div>
                 </div>
                 
@@ -271,7 +269,7 @@
                 statusIndicator: document.getElementById('statusIndicator'),
                 statusText: document.getElementById('statusText'),
                 agentVisualizer: document.getElementById('agentVisualizer'),
-                agentBarsGroup: document.getElementById('agentBarsGroup'),
+                agentBarsContainer: document.getElementById('agentBarsContainer'),
                 agentEyes: document.getElementById('agentEyes'),
                 agentCaption: document.getElementById('agentCaption'),
                 candidateCaption: document.getElementById('candidateCaption'),
@@ -395,65 +393,50 @@
             
             // ==================== AGENT CIRCULAR VISUALIZER ====================
             
+            var AGENT_RADIUS = 75; // Radius of the circle
+            var agentBars = []; // Store references to bar elements
+            
             function initAgentCircularVisualizer() {
-                var group = elements.agentBarsGroup;
-                group.innerHTML = ''; // Clear any existing bars
+                var container = elements.agentBarsContainer;
+                container.innerHTML = ''; // Clear any existing bars
+                agentBars = [];
                 
-                var centerX = 100;
-                var centerY = 100;
-                var radius = 75; // Slightly smaller to keep bars inside view
-                
+                // Create bars
                 for (var i = 0; i < agentBarCount; i++) {
-                    var angle = (i / agentBarCount) * 2 * Math.PI - Math.PI / 2; // Start from top
-                    
-                    // Calculate position on circle
-                    var x = centerX + Math.cos(angle) * radius;
-                    var y = centerY + Math.sin(angle) * radius;
-                    
-                    // Create bar as a line/rect that will extend outward
-                    var rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-                    rect.setAttribute('class', 'agent-bar');
-                    rect.setAttribute('data-index', i);
-                    rect.setAttribute('data-angle', angle);
-                    rect.setAttribute('width', '3');
-                    rect.setAttribute('height', '4');
-                    rect.setAttribute('rx', '1.5');
-                    rect.setAttribute('x', x - 1.5);
-                    rect.setAttribute('y', y);
-                    
-                    // Rotate bar to point outward from center
-                    var rotationDeg = (angle * 180 / Math.PI) + 90;
-                    rect.setAttribute('transform', 'rotate(' + rotationDeg + ' ' + x + ' ' + y + ')');
-                    
-                    group.appendChild(rect);
+                    var bar = document.createElement('div');
+                    bar.className = 'agent-bar';
+                    container.appendChild(bar);
+                    agentBars.push(bar);
                 }
+                
+                // Position bars around the circle
+                agentBars.forEach(function(bar, i) {
+                    var angle = (i / agentBarCount) * Math.PI * 2 - Math.PI / 2; // Start at top
+                    var x = Math.cos(angle) * AGENT_RADIUS;
+                    var y = Math.sin(angle) * AGENT_RADIUS;
+                    
+                    // Position from center (container is 200x200, center is 100,100)
+                    bar.style.left = (100 + x) + 'px';
+                    bar.style.top = (100 + y) + 'px';
+                    
+                    // Rotate to point outward from center
+                    var deg = (angle * 180 / Math.PI) + 90;
+                    bar.style.transform = 'rotate(' + deg + 'deg)';
+                });
+                
+                console.log('[VISUALIZER] Agent circular visualizer initialized with', agentBarCount, 'bars');
             }
             
             function updateAgentVisualizer(audioData) {
-                var bars = elements.agentBarsGroup.querySelectorAll('.agent-bar');
-                var centerX = 100;
-                var centerY = 100;
-                var radius = 75;
-                
-                bars.forEach(function(bar, i) {
-                    var value = (audioData[i] || 0) / 128;
-                    var height = 4 + value * 28; // Min 4, max 32 for spikier look
+                agentBars.forEach(function(bar, i) {
+                    var value = (audioData[i] || 0) / 128; // Normalize 0-1
+                    var height = 4 + value * 35; // Min 4px, max ~39px for spiky look
                     
                     // Smooth transition
-                    agentBarHeights[i] = agentBarHeights[i] * 0.5 + height * 0.5;
+                    agentBarHeights[i] = agentBarHeights[i] * 0.4 + height * 0.6;
                     var finalHeight = Math.max(4, agentBarHeights[i]);
                     
-                    var angle = (i / agentBarCount) * 2 * Math.PI - Math.PI / 2;
-                    var x = centerX + Math.cos(angle) * radius;
-                    var y = centerY + Math.sin(angle) * radius;
-                    
-                    bar.setAttribute('height', finalHeight);
-                    bar.setAttribute('x', x - 1.5);
-                    bar.setAttribute('y', y);
-                    
-                    // Keep rotation pointing outward
-                    var rotationDeg = (angle * 180 / Math.PI) + 90;
-                    bar.setAttribute('transform', 'rotate(' + rotationDeg + ' ' + x + ' ' + y + ')');
+                    bar.style.height = finalHeight + 'px';
                 });
             }
             
@@ -848,27 +831,28 @@
                 }
                 
                 var bufferLength = state.agentAudioAnalyser.frequencyBinCount;
-                var dataArray = new Uint8Array(bufferLength);
+                var frequencyData = new Uint8Array(bufferLength);
                 
                 function draw() {
                     requestAnimationFrame(draw);
                     
-                    state.agentAudioAnalyser.getByteTimeDomainData(dataArray);
+                    // Use frequency data for more dramatic, spiky visualization
+                    state.agentAudioAnalyser.getByteFrequencyData(frequencyData);
                     
-                    // Convert to amplitudes for circular visualizer
+                    // Map frequency bins to bar count
                     var amplitudes = new Uint8Array(agentBarCount);
-                    var samplesPerBar = Math.floor(bufferLength / agentBarCount);
+                    var binsPerBar = Math.floor(bufferLength / agentBarCount);
                     
                     var totalEnergy = 0;
                     for (var i = 0; i < agentBarCount; i++) {
                         var sum = 0;
-                        var startIdx = i * samplesPerBar;
-                        for (var j = 0; j < samplesPerBar && (startIdx + j) < bufferLength; j++) {
-                            var sample = Math.abs(dataArray[startIdx + j] - 128);
-                            sum += sample;
+                        var startIdx = i * binsPerBar;
+                        for (var j = 0; j < binsPerBar && (startIdx + j) < bufferLength; j++) {
+                            sum += frequencyData[startIdx + j];
                         }
-                        // Scale up for spikier effect
-                        amplitudes[i] = Math.min(128, (sum / Math.max(1, samplesPerBar)) * 3);
+                        // Average and scale - frequency data is already 0-255
+                        var avg = sum / Math.max(1, binsPerBar);
+                        amplitudes[i] = Math.min(128, avg * 0.6);
                         totalEnergy += amplitudes[i];
                     }
                     
@@ -876,7 +860,7 @@
                     
                     // Determine if speaking based on energy
                     var avgEnergy = totalEnergy / agentBarCount;
-                    setAgentSpeaking(avgEnergy > 8);
+                    setAgentSpeaking(avgEnergy > 10);
                 }
                 
                 draw();
@@ -1058,13 +1042,7 @@
                     if (data.type === 'user_caption') {
                         updateCandidateCaption(data.text);
                     }
-
-                    if (data.type === 'interview_ending') {
-                        console.log('[INTERVIEW] Ending notification received');
-                        updateAgentCaption('Thank you! The interview is now complete.');
-                        updateStatus('Interview Complete', 'connected');
-                    }
-
+                    
                 } catch (err) {
                     console.error('[DATA] Parse error:', err);
                 }

@@ -909,46 +909,64 @@ select.form-input {
     justify-content: center;
 }
 
-.agent-circle-container {
+/* Voice circle container */
+.voice-circle {
     position: relative;
-    width: 100%;
-    height: 100%;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
 }
 
-.agent-circle-svg {
-    width: 100%;
-    height: 100%;
-    transform: rotate(-90deg);
+/* Background circle outline */
+.voice-circle-bg {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    border: 2px solid var(--bg-soft);
+    pointer-events: none;
 }
 
-.agent-circle-bg {
-    fill: none;
-    stroke: var(--bg-soft);
-    stroke-width: 2;
+/* Container for bars */
+.bars-container {
+    position: absolute;
+    width: 200px;
+    height: 200px;
+    top: 0;
+    left: 0;
 }
 
+/* Individual audio bar */
 .agent-bar {
-    fill: var(--accent-green-deep);
-    transform-origin: center top;
-    transition: height 0.08s ease-out;
+    position: absolute;
+    width: 4px;
+    height: 4px;
+    background: var(--accent-green-deep);
+    bottom: 50%;
+    transform-origin: bottom center;
+    border-radius: 2px;
+    transition: height 0.07s ease-out;
 }
 
-/* When agent is speaking - more vibrant bars */
+/* Glow effect when speaking */
 .agent-visualizer.speaking .agent-bar {
-    fill: var(--accent-green-deep);
-    filter: drop-shadow(0 0 3px var(--soul-glow));
+    box-shadow: 0 0 6px var(--soul-glow);
 }
 
 /* Agent Eyes Container */
 .agent-eyes {
     position: absolute;
-    top: 40%;
+    top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
     display: flex;
     gap: 24px;
     align-items: center;
     justify-content: center;
+    z-index: 10;
 }
 
 .agent-eye {
@@ -1562,6 +1580,21 @@ footer a:hover {
     }
     
     .agent-visualizer {
+        width: 160px;
+        height: 160px;
+    }
+    
+    .voice-circle {
+        width: 160px;
+        height: 160px;
+    }
+    
+    .voice-circle-bg {
+        width: 120px;
+        height: 120px;
+    }
+    
+    .bars-container {
         width: 160px;
         height: 160px;
     }

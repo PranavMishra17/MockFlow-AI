@@ -49,10 +49,13 @@ logger.info(f"[CONFIG] LiveKit URL: {LIVEKIT_URL}")
 # Serve the site favicon from the `public` directory so browsers show the tab icon
 @app.route('/favicon.ico')
 def favicon():
-    """Serve the PNG icon at /favicon.ico (served from `public/icon.png`)."""
+    """Serve the ICO favicon at /favicon.ico (served from `public/favicon.ico`)."""
     try:
         public_dir = os.path.join(app.root_path, 'public')
-        return send_from_directory(public_dir, 'icon.png', mimetype='image/png')
+        response = send_from_directory(public_dir, 'favicon.ico', mimetype='image/x-icon')
+        # Add cache headers to ensure browser caches the favicon for 1 week
+        response.headers['Cache-Control'] = 'public, max-age=604800'
+        return response
     except Exception:
         # Fallback to 404 if not present
         return ('', 404)
