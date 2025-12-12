@@ -930,7 +930,7 @@ select.form-input {
     pointer-events: none;
 }
 
-/* Container for bars */
+/* Container for bars - must be positioned to allow absolute children */
 .bars-container {
     position: absolute;
     width: 200px;
@@ -939,21 +939,24 @@ select.form-input {
     left: 0;
 }
 
-/* Individual audio bar */
+/* Individual audio bar - uses transform-based positioning for proper outward growth */
 .agent-bar {
     position: absolute;
     width: 4px;
     height: 4px;
     background: var(--accent-green-deep);
-    bottom: 50%;
-    transform-origin: bottom center;
+    left: 50%;
+    top: 50%;
+    margin-left: -2px;
+    transform-origin: center top;
     border-radius: 2px;
     transition: height 0.07s ease-out;
+    box-shadow: 0 0 6px var(--soul-glow);
 }
 
-/* Glow effect when speaking */
+/* Enhanced glow effect when speaking */
 .agent-visualizer.speaking .agent-bar {
-    box-shadow: 0 0 6px var(--soul-glow);
+    box-shadow: 0 0 10px var(--accent-green-deep), 0 0 20px var(--soul-glow);
 }
 
 /* Agent Eyes Container */
@@ -999,8 +1002,6 @@ select.form-input {
 .agent-eyes.blinking .agent-eye::after {
     opacity: 0;
 }
-
-/* Speaking animation - handled via JS audio data */
 
 /* Agent Caption */
 .agent-caption {
