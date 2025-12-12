@@ -199,12 +199,6 @@ def health_check():
     })
 
 
-@app.route('/healthz')
-def healthz():
-    """Render health check endpoint."""
-    return 'OK', 200
-
-
 @app.errorhandler(404)
 def not_found(e):
     """Custom 404 handler."""
