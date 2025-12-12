@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: mockflow-ai
+    runtime: python
+    plan: starter
+    buildCommand: pip install -r requirements.txt && chmod +x start.sh
+    startCommand: ./start.sh
+    healthCheckPath: /healthz
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+    autoDeploy: true

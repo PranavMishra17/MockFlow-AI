@@ -229,7 +229,6 @@
             document.getElementById('candidateRole').textContent = candidate.role;
             document.getElementById('candidateLevel').textContent = formatLevel(candidate.level);
             
-            // Show company URL if provided
             if (candidate.companyUrl) {
                 var companyEl = document.getElementById('candidateCompany');
                 var companyLink = document.getElementById('companyLink');
@@ -292,13 +291,19 @@
             var stages = ['greeting', 'self_intro', 'past_experience', 'closing'];
             var stageProgress = { greeting: 0, self_intro: 33, past_experience: 66, closing: 100 };
             
-            // Variables needed by visualizers - must be declared before functions are called
-            var agentBarCount = 64;
-            var agentBarHeights = new Array(agentBarCount).fill(3);
-            var spikeCount = 50;
-            var spikeHeights = new Array(spikeCount).fill(3);
+            // Agent circular visualizer configuration
+            var AGENT_BAR_COUNT = 64;
+            var AGENT_RADIUS = 75;
+            var agentBars = [];
+            var agentBarHeights = new Array(AGENT_BAR_COUNT).fill(4);
+            
+            // Candidate spike visualizer configuration
+            var SPIKE_COUNT = 50;
+            var spikeHeights = new Array(SPIKE_COUNT).fill(3);
             var noiseBaseline = [];
-            var demoAnimationId = null;
+            
+            // Demo animation IDs
+            var demoAgentAnimationId = null;
             var demoCandidateAnimationId = null;
             
             // Initialize components
@@ -392,48 +397,47 @@
             }
             
             // ==================== AGENT CIRCULAR VISUALIZER ====================
-            
-            var AGENT_RADIUS = 75; // Radius of the circle
-            var agentBars = []; // Store references to bar elements
+            // Bars arranged in a full circle around the center (like sun rays)
+            // Using transform-based positioning so bars always grow OUTWARD
             
             function initAgentCircularVisualizer() {
                 var container = elements.agentBarsContainer;
-                container.innerHTML = ''; // Clear any existing bars
+                container.innerHTML = '';
                 agentBars = [];
                 
                 // Create bars
-                for (var i = 0; i < agentBarCount; i++) {
+                for (var i = 0; i < AGENT_BAR_COUNT; i++) {
                     var bar = document.createElement('div');
                     bar.className = 'agent-bar';
                     container.appendChild(bar);
                     agentBars.push(bar);
                 }
                 
-                // Position bars around the circle
+                // Position bars around the full circle using transform
+                // Each bar starts at center, rotates to point outward, then translates to circle edge
                 agentBars.forEach(function(bar, i) {
-                    var angle = (i / agentBarCount) * Math.PI * 2 - Math.PI / 2; // Start at top
-                    var x = Math.cos(angle) * AGENT_RADIUS;
-                    var y = Math.sin(angle) * AGENT_RADIUS;
+                    // Calculate angle for this bar (full 360 degrees, starting from top)
+                    var angle = (i / AGENT_BAR_COUNT) * 360 - 90; // -90 to start at top
                     
-                    // Position from center (container is 200x200, center is 100,100)
-                    bar.style.left = (100 + x) + 'px';
-                    bar.style.top = (100 + y) + 'px';
-                    
-                    // Rotate to point outward from center
-                    var deg = (angle * 180 / Math.PI) + 90;
-                    bar.style.transform = 'rotate(' + deg + 'deg)';
+                    // Transform: rotate to point outward, then translate to circle edge
+                    // translateY is negative because we want to move "up" in the rotated space (outward)
+                    bar.style.transform = 'rotate(' + angle + 'deg) translateY(-' + AGENT_RADIUS + 'px)';
                 });
                 
-                console.log('[VISUALIZER] Agent circular visualizer initialized with', agentBarCount, 'bars');
+                console.log('[VISUALIZER] Agent circular visualizer initialized with', AGENT_BAR_COUNT, 'bars in full circle (transform-based)');
             }
             
             function updateAgentVisualizer(audioData) {
                 agentBars.forEach(function(bar, i) {
-                    var value = (audioData[i] || 0) / 128; // Normalize 0-1
-                    var height = 4 + value * 35; // Min 4px, max ~39px for spiky look
+                    // Map audio data to bar index
+                    var dataIndex = Math.floor((i / AGENT_BAR_COUNT) * audioData.length);
+                    var value = (audioData[dataIndex] || 0) / 255; // Normalize 0-1
+                    
+                    // Calculate target height with spikey effect
+                    var targetHeight = 4 + value * 35;
                     
                     // Smooth transition
-                    agentBarHeights[i] = agentBarHeights[i] * 0.4 + height * 0.6;
+                    agentBarHeights[i] = agentBarHeights[i] * 0.4 + targetHeight * 0.6;
                     var finalHeight = Math.max(4, agentBarHeights[i]);
                     
                     bar.style.height = finalHeight + 'px';
@@ -476,35 +480,33 @@
                 var agentPhase = 0;
                 function animateAgentDemo() {
                     if (state.agentAudioAnalyser) {
-                        // Real audio connected, stop demo
-                        return;
+                        return; // Real audio connected, stop demo
                     }
                     
-                    var demoData = new Uint8Array(agentBarCount);
-                    for (var i = 0; i < agentBarCount; i++) {
-                        // Create a gentle wave pattern around the circle
-                        var wave = Math.sin((i / agentBarCount) * Math.PI * 6 + agentPhase) * 0.3 + 0.2;
+                    var demoData = new Uint8Array(AGENT_BAR_COUNT);
+                    for (var i = 0; i < AGENT_BAR_COUNT; i++) {
+                        // Create a gentle wave pattern around the full circle
+                        var wave = Math.sin((i / AGENT_BAR_COUNT) * Math.PI * 4 + agentPhase) * 0.3 + 0.25;
                         var noise = Math.random() * 0.15;
-                        demoData[i] = (wave + noise) * 50;
+                        demoData[i] = (wave + noise) * 80;
                     }
-                    agentPhase += 0.08;
+                    agentPhase += 0.06;
                     
                     updateAgentVisualizer(demoData);
-                    demoAnimationId = requestAnimationFrame(animateAgentDemo);
+                    demoAgentAnimationId = requestAnimationFrame(animateAgentDemo);
                 }
                 
                 // Demo animation for candidate spikes
                 var candidatePhase = 0;
                 function animateCandidateDemo() {
                     if (state.analyser) {
-                        // Real audio connected, stop demo
-                        return;
+                        return; // Real audio connected, stop demo
                     }
                     
-                    var demoData = new Uint8Array(spikeCount);
-                    for (var i = 0; i < spikeCount; i++) {
+                    var demoData = new Uint8Array(SPIKE_COUNT);
+                    for (var i = 0; i < SPIKE_COUNT; i++) {
                         // Create subtle idle animation
-                        var wave = Math.sin((i / spikeCount) * Math.PI * 2 + candidatePhase) * 0.15 + 0.1;
+                        var wave = Math.sin((i / SPIKE_COUNT) * Math.PI * 2 + candidatePhase) * 0.15 + 0.1;
                         var noise = Math.random() * 0.08;
                         demoData[i] = (wave + noise) * 35;
                     }
@@ -519,9 +521,9 @@
             }
             
             function stopDemoAnimations() {
-                if (demoAnimationId) {
-                    cancelAnimationFrame(demoAnimationId);
-                    demoAnimationId = null;
+                if (demoAgentAnimationId) {
+                    cancelAnimationFrame(demoAgentAnimationId);
+                    demoAgentAnimationId = null;
                 }
                 if (demoCandidateAnimationId) {
                     cancelAnimationFrame(demoCandidateAnimationId);
@@ -535,7 +537,7 @@
                 var container = elements.spikesContainer;
                 container.innerHTML = '';
                 
-                for (var i = 0; i < spikeCount; i++) {
+                for (var i = 0; i < SPIKE_COUNT; i++) {
                     var spike = document.createElement('div');
                     spike.className = 'spike-bar';
                     spike.style.height = '3px';
@@ -549,18 +551,16 @@
                 
                 spikes.forEach(function(spike, i) {
                     var value = audioData[i] || 0;
-                    var normalized = value / 128; // Normalize to 0-1 range
+                    var normalized = value / 128;
                     sum += normalized;
                     
-                    // Create spikey effect - taller spikes for louder audio
                     var height = 3 + normalized * 35;
                     
-                    // Smooth the transition
                     spikeHeights[i] = spikeHeights[i] * 0.6 + height * 0.4;
                     spike.style.height = Math.max(3, spikeHeights[i]) + 'px';
                 });
                 
-                var avgLevel = sum / spikeCount;
+                var avgLevel = sum / SPIKE_COUNT;
                 checkNoiseLevel(avgLevel);
             }
             
@@ -731,7 +731,7 @@
             
             function initCandidateAudioVisualization(stream) {
                 try {
-                    stopDemoAnimations(); // Stop demo when real audio connects
+                    stopDemoAnimations();
                     
                     if (state.audioContext) {
                         state.audioContext.close();
@@ -739,7 +739,6 @@
                     
                     state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
                     
-                    // Resume audio context (required for some browsers)
                     if (state.audioContext.state === 'suspended') {
                         state.audioContext.resume();
                     }
@@ -772,22 +771,19 @@
                 function draw() {
                     requestAnimationFrame(draw);
                     
-                    // Use time domain data for better voice visualization
                     state.analyser.getByteTimeDomainData(dataArray);
                     
-                    // Convert time domain to amplitude
-                    var amplitudes = new Uint8Array(spikeCount);
-                    var samplesPerSpike = Math.floor(bufferLength / spikeCount);
+                    var amplitudes = new Uint8Array(SPIKE_COUNT);
+                    var samplesPerSpike = Math.floor(bufferLength / SPIKE_COUNT);
                     
-                    for (var i = 0; i < spikeCount; i++) {
+                    for (var i = 0; i < SPIKE_COUNT; i++) {
                         var sum = 0;
                         var startIdx = i * samplesPerSpike;
                         for (var j = 0; j < samplesPerSpike; j++) {
-                            // Time domain data is centered at 128, deviation shows amplitude
                             var sample = Math.abs(dataArray[startIdx + j] - 128);
                             sum += sample;
                         }
-                        amplitudes[i] = (sum / samplesPerSpike) * 2; // Scale up
+                        amplitudes[i] = (sum / samplesPerSpike) * 2;
                     }
                     
                     updateCandidateSpikes(amplitudes);
@@ -817,7 +813,7 @@
                     var source = state.agentAudioContext.createMediaStreamSource(track.mediaStream);
                     source.connect(state.agentAudioAnalyser);
                     
-                    console.log('[AUDIO] Agent visualization initialized');
+                    console.log('[AUDIO] Agent visualization initialized with frequency data');
                     drawAgentWaveform();
                 } catch (err) {
                     console.error('[AUDIO] Agent visualization error:', err);
@@ -836,31 +832,18 @@
                 function draw() {
                     requestAnimationFrame(draw);
                     
-                    // Use frequency data for more dramatic, spiky visualization
+                    // Use frequency data for more dramatic, spikey visualization
                     state.agentAudioAnalyser.getByteFrequencyData(frequencyData);
                     
-                    // Map frequency bins to bar count
-                    var amplitudes = new Uint8Array(agentBarCount);
-                    var binsPerBar = Math.floor(bufferLength / agentBarCount);
-                    
                     var totalEnergy = 0;
-                    for (var i = 0; i < agentBarCount; i++) {
-                        var sum = 0;
-                        var startIdx = i * binsPerBar;
-                        for (var j = 0; j < binsPerBar && (startIdx + j) < bufferLength; j++) {
-                            sum += frequencyData[startIdx + j];
-                        }
-                        // Average and scale - frequency data is already 0-255
-                        var avg = sum / Math.max(1, binsPerBar);
-                        amplitudes[i] = Math.min(128, avg * 0.6);
-                        totalEnergy += amplitudes[i];
+                    for (var i = 0; i < frequencyData.length; i++) {
+                        totalEnergy += frequencyData[i];
                     }
                     
-                    updateAgentVisualizer(amplitudes);
+                    updateAgentVisualizer(frequencyData);
                     
-                    // Determine if speaking based on energy
-                    var avgEnergy = totalEnergy / agentBarCount;
-                    setAgentSpeaking(avgEnergy > 10);
+                    var avgEnergy = totalEnergy / bufferLength;
+                    setAgentSpeaking(avgEnergy > 15);
                 }
                 
                 draw();
@@ -1041,6 +1024,23 @@
                     
                     if (data.type === 'user_caption') {
                         updateCandidateCaption(data.text);
+                    }
+                    
+                    if (data.type === 'interview_ending') {
+                        console.log('[INTERVIEW] Ending notification received - showing completion modal');
+                        updateAgentCaption('Thank you! The interview is now complete.');
+                        updateStatus('Interview Complete', 'connected');
+                        
+                        setTimeout(function() {
+                            document.getElementById('modalTitle').textContent = 'Interview Complete';
+                            document.getElementById('modalMessage').textContent = 'Thank you for participating in this mock interview.';
+                            document.getElementById('modalIcon').className = 'modal-icon success';
+                            document.getElementById('modalIcon').innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+                            document.getElementById('modalCancel').style.display = 'none';
+                            document.getElementById('modalConfirm').textContent = 'Return Home';
+                            document.getElementById('modalConfirm').onclick = function() { window.location.href = '/'; };
+                            showModal('complete');
+                        }, 2000);
                     }
                     
                 } catch (err) {
