@@ -4,99 +4,91 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Start Interview - MockFlow-AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-    <div class="form-container">
-        <div class="form-header">
-            <h2>Tell us about yourself</h2>
-            <p class="form-subtitle">Let's personalize your mock interview experience</p>
-        </div>
-
-        <form id="candidateForm">
-            <div class="form-group">
-                <label for="name">Full Name</label>
-                <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    placeholder="John Doe"
-                    required
-                    class="form-input"
-                >
+    <div class="form-page">
+        <div class="form-container">
+            <div class="form-header">
+                <h2>Let's get started</h2>
+                <p class="form-subtitle">Tell us about yourself to personalize your interview</p>
             </div>
 
-            <div class="form-group">
-                <label for="email">Email Address</label>
-                <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    placeholder="john.doe@example.com"
-                    required
-                    class="form-input"
-                >
+            <form id="candidateForm">
+                <div class="form-group">
+                    <label for="name">Full Name</label>
+                    <input
+                        type="text"
+                        id="name"
+                        name="name"
+                        placeholder="Jane Smith"
+                        required
+                        class="form-input"
+                        autocomplete="name"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input
+                        type="email"
+                        id="email"
+                        name="email"
+                        placeholder="jane@example.com"
+                        required
+                        class="form-input"
+                        autocomplete="email"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="role">Target Role</label>
+                    <input
+                        type="text"
+                        id="role"
+                        name="role"
+                        placeholder="Software Engineer, Product Manager..."
+                        required
+                        class="form-input"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="level">Experience Level</label>
+                    <select id="level" name="level" required class="form-input">
+                        <option value="">Select your level</option>
+                        <option value="entry">Entry Level (0-2 years)</option>
+                        <option value="mid">Mid Level (3-5 years)</option>
+                        <option value="senior">Senior Level (6+ years)</option>
+                    </select>
+                </div>
+
+                <button type="submit" class="btn-primary" style="width: 100%; justify-content: center;">
+                    Begin Interview
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                        <polyline points="12 5 19 12 12 19"/>
+                    </svg>
+                </button>
+
+                <div class="loading" id="loadingIndicator">
+                    <span class="loading-spinner"></span>
+                    Connecting to interview room...
+                </div>
+            </form>
+
+            <div class="interview-info">
+                <h3>What to expect</h3>
+                <ul>
+                    <li><strong>Stage 1:</strong> Self-introduction (3-4 minutes)</li>
+                    <li><strong>Stage 2:</strong> Past experience discussion (5-7 minutes)</li>
+                    <li>Speak naturally - the AI responds in real-time</li>
+                    <li>You can interrupt anytime, just like a real conversation</li>
+                </ul>
             </div>
-
-            <div class="form-group">
-                <label for="role">Target Job Role</label>
-                <input
-                    type="text"
-                    id="role"
-                    name="role"
-                    placeholder="e.g., Software Engineer, Product Manager"
-                    required
-                    class="form-input"
-                >
-            </div>
-
-            <div class="form-group">
-                <label for="level">Experience Level</label>
-                <select id="level" name="level" required class="form-input">
-                    <option value="">Select your experience level</option>
-                    <option value="entry">Entry Level (0-2 years)</option>
-                    <option value="mid">Mid Level (3-5 years)</option>
-                    <option value="senior">Senior Level (6+ years)</option>
-                </select>
-            </div>
-
-            <!-- Future: Resume upload section (currently hidden) -->
-            <div class="upload-section" style="display: none;">
-                <label>Upload Resume/Portfolio (Optional)</label>
-                <input type="file" name="resume" accept=".pdf" class="form-input">
-                <p class="form-helper">Future feature: Upload your resume for personalized questions</p>
-            </div>
-
-            <!-- Future: Job description section (currently hidden) -->
-            <div class="upload-section" style="display: none;">
-                <label>Job Description (Optional)</label>
-                <textarea
-                    name="job_desc"
-                    rows="4"
-                    placeholder="Paste the job description here..."
-                    class="form-input"
-                ></textarea>
-                <p class="form-helper">Future feature: Tailored questions based on job requirements</p>
-            </div>
-
-            <button type="submit" class="btn-primary">
-                Start Interview
-            </button>
-
-            <p class="loading" style="display: none;">
-                <span class="loading-spinner"></span>
-                Connecting to interview room...
-            </p>
-        </form>
-
-        <div class="interview-info">
-            <h3>What to expect:</h3>
-            <ul>
-                <li><strong>Stage 1:</strong> Self-introduction (3-4 minutes)</li>
-                <li><strong>Stage 2:</strong> Past experience discussion (5-7 minutes)</li>
-                <li><strong>Natural conversation:</strong> Speak naturally, the AI will respond</li>
-                <li><strong>Interruptions allowed:</strong> You can interrupt the AI anytime</li>
-            </ul>
         </div>
     </div>
 

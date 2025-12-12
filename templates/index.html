@@ -4,36 +4,87 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MockFlow-AI - AI-Powered Mock Interviews</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
     <div class="hero">
         <div class="hero-content">
-            <h1>MockFlow-AI</h1>
-            <p class="tagline">Master your interviews with AI-powered practice</p>
+            <div class="logo-mark">
+                <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="24" cy="24" r="20" fill="#C8E6C9"/>
+                    <circle cx="24" cy="24" r="12" fill="#81C784"/>
+                    <circle cx="24" cy="24" r="6" fill="#4CAF50"/>
+                </svg>
+            </div>
+            
+            <h1>MockFlow.ai</h1>
+            <p class="tagline">Practice interviews with an AI that listens, responds, and helps you improve. Real conversations, real feedback.</p>
 
             <ul class="features">
-                <li>Real-time voice conversation with AI interviewer</li>
-                <li>Two-stage intelligent interview process</li>
-                <li>Natural conversation flow with adaptive questioning</li>
-                <li>Instant practice without scheduling</li>
+                <li>
+                    <span class="feature-icon green">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                            <line x1="12" y1="19" x2="12" y2="23"/>
+                            <line x1="8" y1="23" x2="16" y2="23"/>
+                        </svg>
+                    </span>
+                    <span>Real-time voice conversation with natural speech</span>
+                </li>
+                <li>
+                    <span class="feature-icon pink">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <polyline points="22 4 12 14.01 9 11.01"/>
+                        </svg>
+                    </span>
+                    <span>Two-stage interview: intro and experience deep-dive</span>
+                </li>
+                <li>
+                    <span class="feature-icon purple">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <circle cx="12" cy="12" r="10"/>
+                            <polyline points="12 6 12 12 16 14"/>
+                        </svg>
+                    </span>
+                    <span>Instant practice - no scheduling required</span>
+                </li>
+                <li>
+                    <span class="feature-icon green">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                    </span>
+                    <span>Adaptive questions based on your responses</span>
+                </li>
             </ul>
 
-            <a href="/start" class="btn-primary">Start Mock Interview</a>
+            <a href="/start" class="btn-primary">
+                Start Interview
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                    <polyline points="12 5 19 12 12 19"/>
+                </svg>
+            </a>
 
             <div class="tech-stack">
                 <p class="tech-label">Powered by</p>
                 <div class="tech-badges">
                     <span class="badge">LiveKit</span>
-                    <span class="badge">OpenAI GPT-4</span>
+                    <span class="badge">GPT-4o</span>
                     <span class="badge">Deepgram</span>
+                    <span class="badge">OpenAI TTS</span>
                 </div>
             </div>
         </div>
     </div>
 
     <footer>
-        <p>MockFlow-AI - Practice makes perfect</p>
+        <p>MockFlow-AI &middot; Practice makes confidence</p>
     </footer>
 </body>
 </html>

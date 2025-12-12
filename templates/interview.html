@@ -3,311 +3,640 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interview in Progress - MockFlow-AI</title>
+    <title>Interview - MockFlow-AI</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/styles.css">
 </head>
 <body>
-    <!-- Load LiveKit Client Library -->
-    <script src="https://unpkg.com/livekit-client@2.5.0/dist/livekit-client.umd.min.js" onerror="console.error('Failed to load LiveKit from unpkg')"></script>
-    <!-- Fallback to jsdelivr CDN -->
-    <script>
-        if (typeof LiveKit === 'undefined' && typeof LivekitClient === 'undefined') {
-            console.log('Trying fallback CDN...');
-            document.write('<script src="https://cdn.jsdelivr.net/npm/livekit-client@2.5.0/dist/livekit-client.umd.min.js"><\/script>');
-        }
-    </script>
-    <div class="interview-room">
-        <!-- Stage Indicator -->
-        <div id="stageIndicator" class="stage-indicator">
-            <div class="stage-info">
-                <span id="stageName" class="stage-name">Connecting...</span>
-                <span id="stageDescription" class="stage-description">Please wait</span>
+    <div class="interview-page">
+        <!-- State Transition Flash Effect -->
+        <div class="state-flash" id="stateFlash"></div>
+        
+        <!-- Progress Header with FSM States -->
+        <header class="progress-header">
+            <div class="progress-container">
+                <div class="progress-stages">
+                    <div class="progress-line">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    
+                    <div class="stage-dot active" data-stage="greeting" id="stageGreeting">
+                        <div class="stage-circle">1</div>
+                        <span class="stage-label">Welcome</span>
+                    </div>
+                    
+                    <div class="stage-dot" data-stage="self_intro" id="stageSelfIntro">
+                        <div class="stage-circle">2</div>
+                        <span class="stage-label">Introduction</span>
+                    </div>
+                    
+                    <div class="stage-dot" data-stage="past_experience" id="stagePastExp">
+                        <div class="stage-circle">3</div>
+                        <span class="stage-label">Experience</span>
+                    </div>
+                    
+                    <div class="stage-dot" data-stage="closing" id="stageClosing">
+                        <div class="stage-circle">4</div>
+                        <span class="stage-label">Closing</span>
+                    </div>
+                </div>
             </div>
-            <div class="stage-timer">
-                <span id="stageTimer">0:00</span>
-            </div>
-        </div>
-
+        </header>
+        
         <!-- Connection Status -->
-        <div id="status" class="status">
-            <span class="status-icon">●</span>
-            <span id="statusText">Connecting to interview room...</span>
+        <div class="connection-status" id="connectionStatus">
+            <span class="status-indicator connecting" id="statusIndicator"></span>
+            <span id="statusText">Connecting...</span>
         </div>
-
-        <!-- Audio Visualizer -->
-        <div class="audio-visualizer" id="audioViz">
-            <div class="pulse"></div>
-            <div class="pulse-ring"></div>
-        </div>
-
+        
+        <!-- Stage Timer -->
+        <div class="stage-timer-display" id="stageTimer">0:00</div>
+        
+        <!-- Main Interview Area -->
+        <main class="interview-main">
+            <!-- Agent Side (Left) -->
+            <div class="agent-side">
+                <span class="agent-label">AI Interviewer</span>
+                
+                <div class="agent-soul" id="agentSoul">
+                    <!-- Audio Waves -->
+                    <div class="soul-waves" id="soulWaves">
+                        <div class="wave-ring"></div>
+                        <div class="wave-ring"></div>
+                        <div class="wave-ring"></div>
+                        <div class="wave-ring"></div>
+                    </div>
+                    <!-- Core -->
+                    <div class="soul-core"></div>
+                </div>
+                
+                <!-- Agent Caption -->
+                <div class="agent-caption">
+                    <p class="caption-text empty" id="agentCaption">Waiting for agent...</p>
+                </div>
+            </div>
+            
+            <!-- Candidate Side (Right) -->
+            <div class="candidate-side">
+                <span class="candidate-label">Candidate</span>
+                
+                <div class="candidate-card">
+                    <div class="candidate-info">
+                        <h3 class="candidate-name" id="candidateName">Loading...</h3>
+                        <p class="candidate-role" id="candidateRole">-</p>
+                        <span class="candidate-level" id="candidateLevel">-</span>
+                    </div>
+                    
+                    <!-- Audio Waveform Box -->
+                    <div class="audio-waveform-box">
+                        <svg class="waveform-canvas" id="waveformCanvas" viewBox="0 0 300 40" preserveAspectRatio="none">
+                            <path class="waveform-line" id="waveformPath" d="M0,20 L300,20"></path>
+                        </svg>
+                    </div>
+                </div>
+                
+                <!-- Candidate Caption -->
+                <div class="candidate-caption">
+                    <p class="caption-text empty" id="candidateCaption">Speak to begin...</p>
+                </div>
+            </div>
+        </main>
+        
         <!-- Interview Controls -->
         <div class="interview-controls">
-            <button id="muteBtn" class="btn-control" style="display: none;">
-                <span id="muteIcon">🎤</span>
-                <span id="muteText">Mute</span>
+            <button class="btn-icon" id="muteBtn" title="Mute/Unmute">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="muteIcon">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                    <line x1="12" y1="19" x2="12" y2="23"/>
+                    <line x1="8" y1="23" x2="16" y2="23"/>
+                </svg>
             </button>
-
-            <button id="endBtn" class="btn-end" style="display: none;">
+            
+            <button class="btn-danger" id="endBtn">
                 End Interview
             </button>
         </div>
-
-        <!-- Transcript Display (optional, can be toggled) -->
-        <div id="transcriptContainer" class="transcript-container" style="display: none;">
-            <h3>Conversation Transcript</h3>
-            <div id="transcript" class="transcript">
-                <!-- Transcript messages will appear here -->
+        
+        <!-- Custom Modal -->
+        <div class="modal-overlay" id="modalOverlay">
+            <div class="modal-content">
+                <div class="modal-icon warning" id="modalIcon">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="8" x2="12" y2="12"/>
+                        <line x1="12" y1="16" x2="12.01" y2="16"/>
+                    </svg>
+                </div>
+                <h3 class="modal-title" id="modalTitle">End Interview?</h3>
+                <p class="modal-message" id="modalMessage">Are you sure you want to end the interview? Your progress will not be saved.</p>
+                <div class="modal-actions">
+                    <button class="btn-secondary" id="modalCancel">Cancel</button>
+                    <button class="btn-danger" id="modalConfirm">End Interview</button>
+                </div>
             </div>
-            <button id="toggleTranscript" class="btn-secondary">
-                Show Transcript
-            </button>
         </div>
     </div>
 
+    <!-- LiveKit Client -->
+    <script src="https://unpkg.com/livekit-client@2.5.0/dist/livekit-client.umd.min.js"></script>
     <script>
-        // Wait for LiveKit client to load
-        window.addEventListener('load', function() {
-            // Check if LiveKit client is loaded (try both LiveKit and LivekitClient)
-            const LK = window.LiveKit || window.LivekitClient;
-            if (typeof LK === 'undefined') {
-                console.error('LiveKit client failed to load');
-                console.log('Available globals:', Object.keys(window).filter(k => k.toLowerCase().includes('live')));
-                document.getElementById('statusText').textContent = 'Failed to load required libraries';
+        // Fallback CDN
+        if (typeof LivekitClient === 'undefined' && typeof LiveKit === 'undefined') {
+            document.write('<script src="https://cdn.jsdelivr.net/npm/livekit-client@2.5.0/dist/livekit-client.umd.min.js"><\/script>');
+        }
+    </script>
+    
+    <script>
+    (function() {
+        'use strict';
+        
+        // Wait for DOM and LiveKit to load
+        window.addEventListener('load', initInterview);
+        
+        function initInterview() {
+            const LK = window.LivekitClient || window.LiveKit;
+            if (!LK) {
+                console.error('[INIT] LiveKit client not loaded');
+                updateStatus('Failed to load required libraries', 'error');
                 return;
             }
-
-            // Use the detected LiveKit namespace
-            const LivekitClient = LK;
-
-            // Get candidate info from URL params
-            const urlParams = new URLSearchParams(window.location.search);
-            const candidateName = urlParams.get('name') || 'Candidate';
-            const candidateEmail = urlParams.get('email') || '';
-            const candidateRole = urlParams.get('role') || '';
-            const candidateLevel = urlParams.get('level') || '';
-
-        // UI elements
-        const statusEl = document.getElementById('statusText');
-        const stageNameEl = document.getElementById('stageName');
-        const stageDescEl = document.getElementById('stageDescription');
-        const stageTimerEl = document.getElementById('stageTimer');
-        const muteBtn = document.getElementById('muteBtn');
-        const endBtn = document.getElementById('endBtn');
-        const transcriptEl = document.getElementById('transcript');
-        const toggleTranscriptBtn = document.getElementById('toggleTranscript');
-
-        // Stage information
-        const stageInfo = {
-            'greeting': {
-                name: 'Welcome',
-                description: 'Introduction'
-            },
-            'self_intro': {
-                name: 'Stage 1',
-                description: 'Self-Introduction'
-            },
-            'past_experience': {
-                name: 'Stage 2',
-                description: 'Past Experience'
-            },
-            'closing': {
-                name: 'Closing',
-                description: 'Wrap-up'
-            }
-        };
-
-        // Stage timer
-        let stageStartTime = Date.now();
-        let timerInterval = null;
-
-        function updateTimer() {
-            const elapsed = Math.floor((Date.now() - stageStartTime) / 1000);
-            const minutes = Math.floor(elapsed / 60);
-            const seconds = elapsed % 60;
-            stageTimerEl.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-        }
-
-        function startTimer() {
-            if (timerInterval) clearInterval(timerInterval);
-            stageStartTime = Date.now();
-            timerInterval = setInterval(updateTimer, 1000);
-        }
-
-        function updateStage(stage) {
-            const info = stageInfo[stage] || { name: 'Interview', description: 'In Progress' };
-            stageNameEl.textContent = info.name;
-            stageDescEl.textContent = info.description;
+            
+            // Get candidate info from URL
+            const params = new URLSearchParams(window.location.search);
+            const candidate = {
+                name: params.get('name') || 'Candidate',
+                email: params.get('email') || '',
+                role: params.get('role') || 'Position',
+                level: params.get('level') || 'entry'
+            };
+            
+            // Update UI with candidate info
+            document.getElementById('candidateName').textContent = candidate.name;
+            document.getElementById('candidateRole').textContent = candidate.role;
+            document.getElementById('candidateLevel').textContent = formatLevel(candidate.level);
+            
+            // State management
+            const state = {
+                currentStage: 'greeting',
+                isMuted: false,
+                isConnected: false,
+                room: null,
+                audioContext: null,
+                analyser: null,
+                waveformHistory: new Array(40).fill(0),
+                peakValue: 0,
+                peakDecay: 0.85,
+                maxSeenLevel: 0.01,
+                noiseFloor: 0.005,
+                stageStartTime: Date.now(),
+                timerInterval: null
+            };
+            
+            // DOM Elements
+            const elements = {
+                statusIndicator: document.getElementById('statusIndicator'),
+                statusText: document.getElementById('statusText'),
+                agentSoul: document.getElementById('agentSoul'),
+                agentCaption: document.getElementById('agentCaption'),
+                candidateCaption: document.getElementById('candidateCaption'),
+                waveformPath: document.getElementById('waveformPath'),
+                stageTimer: document.getElementById('stageTimer'),
+                progressFill: document.getElementById('progressFill'),
+                stateFlash: document.getElementById('stateFlash'),
+                muteBtn: document.getElementById('muteBtn'),
+                muteIcon: document.getElementById('muteIcon'),
+                endBtn: document.getElementById('endBtn'),
+                modalOverlay: document.getElementById('modalOverlay'),
+                modalCancel: document.getElementById('modalCancel'),
+                modalConfirm: document.getElementById('modalConfirm')
+            };
+            
+            // Stage configuration
+            const stages = ['greeting', 'self_intro', 'past_experience', 'closing'];
+            const stageProgress = { greeting: 0, self_intro: 33, past_experience: 66, closing: 100 };
+            
+            // Initialize timer
             startTimer();
-        }
-
-        function updateStatus(text, type = 'info') {
-            statusEl.textContent = text;
-            const statusContainer = document.getElementById('status');
-            statusContainer.className = `status status-${type}`;
-        }
-
-        function addTranscript(speaker, text) {
-            const msgEl = document.createElement('div');
-            msgEl.className = `transcript-message transcript-${speaker.toLowerCase()}`;
-            msgEl.innerHTML = `
-                <span class="transcript-speaker">${speaker}:</span>
-                <span class="transcript-text">${text}</span>
-            `;
-            transcriptEl.appendChild(msgEl);
-            transcriptEl.scrollTop = transcriptEl.scrollHeight;
-        }
-
-        // Toggle transcript visibility
-        toggleTranscriptBtn.addEventListener('click', () => {
-            const container = document.getElementById('transcriptContainer');
-            if (container.style.display === 'none') {
-                container.style.display = 'block';
-                toggleTranscriptBtn.textContent = 'Hide Transcript';
-            } else {
-                container.style.display = 'none';
-                toggleTranscriptBtn.textContent = 'Show Transcript';
+            
+            // Connect to LiveKit
+            connectToRoom();
+            
+            // Event listeners
+            elements.muteBtn.addEventListener('click', toggleMute);
+            elements.endBtn.addEventListener('click', () => showModal('end'));
+            elements.modalCancel.addEventListener('click', hideModal);
+            elements.modalConfirm.addEventListener('click', confirmEndInterview);
+            
+            // ==================== FUNCTIONS ====================
+            
+            function formatLevel(level) {
+                const levels = {
+                    entry: 'Entry Level',
+                    mid: 'Mid Level',
+                    senior: 'Senior Level'
+                };
+                return levels[level] || level;
             }
-        });
-
-        // Connect to LiveKit
-        updateStatus('Requesting access token...', 'connecting');
-
-        fetch('/api/token', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                name: candidateName,
-                email: candidateEmail,
-                role: candidateRole,
-                level: candidateLevel
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.error) {
-                throw new Error(data.error);
+            
+            function updateStatus(text, type) {
+                elements.statusText.textContent = text;
+                elements.statusIndicator.className = 'status-indicator ' + type;
             }
-
-            updateStatus('Connecting to interview room...', 'connecting');
-
-            // Create LiveKit room
-            const room = new LivekitClient.Room({
-                adaptiveStream: true,
-                dynacast: true,
-                videoCaptureDefaults: {
-                    resolution: LivekitClient.VideoPresets.h720.resolution,
-                },
-            });
-
-            // Room connected
-            room.on(LivekitClient.RoomEvent.Connected, async () => {
-                updateStatus('Connected - Enabling microphone...', 'connected');
-                updateStage('greeting');
-
+            
+            function updateStage(newStage) {
+                if (newStage === state.currentStage) return;
+                
+                const oldStage = state.currentStage;
+                state.currentStage = newStage;
+                
+                // Flash effect
+                elements.stateFlash.classList.add('active');
+                setTimeout(() => elements.stateFlash.classList.remove('active'), 600);
+                
+                // Update progress bar
+                elements.progressFill.style.width = stageProgress[newStage] + '%';
+                
+                // Update stage dots
+                stages.forEach((stage, index) => {
+                    const dot = document.querySelector(`[data-stage="${stage}"]`);
+                    const currentIndex = stages.indexOf(newStage);
+                    
+                    dot.classList.remove('active', 'completed');
+                    if (index < currentIndex) {
+                        dot.classList.add('completed');
+                    } else if (index === currentIndex) {
+                        dot.classList.add('active');
+                    }
+                });
+                
+                // Reset timer
+                state.stageStartTime = Date.now();
+                
+                console.log('[STAGE] Transition:', oldStage, '->', newStage);
+            }
+            
+            function startTimer() {
+                state.timerInterval = setInterval(() => {
+                    const elapsed = Math.floor((Date.now() - state.stageStartTime) / 1000);
+                    const minutes = Math.floor(elapsed / 60);
+                    const seconds = elapsed % 60;
+                    elements.stageTimer.textContent = minutes + ':' + seconds.toString().padStart(2, '0');
+                }, 1000);
+            }
+            
+            function setAgentSpeaking(speaking) {
+                if (speaking) {
+                    elements.agentSoul.classList.add('speaking');
+                } else {
+                    elements.agentSoul.classList.remove('speaking');
+                }
+            }
+            
+            function updateAgentCaption(text) {
+                elements.agentCaption.textContent = text || '';
+                elements.agentCaption.classList.toggle('empty', !text);
+            }
+            
+            function updateCandidateCaption(text) {
+                elements.candidateCaption.textContent = text || '';
+                elements.candidateCaption.classList.toggle('empty', !text);
+            }
+            
+            // Audio waveform visualization - Retro VU meter style with auto-gain
+            function initAudioVisualization(stream) {
+                try {
+                    state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    state.analyser = state.audioContext.createAnalyser();
+                    state.analyser.fftSize = 256;
+                    state.analyser.smoothingTimeConstant = 0.3;
+                    
+                    const source = state.audioContext.createMediaStreamSource(stream);
+                    source.connect(state.analyser);
+                    
+                    // Initialize waveform data
+                    state.waveformHistory = new Array(40).fill(0);
+                    state.peakValue = 0;
+                    state.peakDecay = 0.85;
+                    state.maxSeenLevel = 0.01;  // Auto-gain: track max level seen
+                    state.noiseFloor = 0.005;   // Ignore below this
+                    
+                    drawWaveform();
+                    console.log('[AUDIO] Visualization initialized');
+                } catch (err) {
+                    console.error('[AUDIO] Visualization error:', err);
+                }
+            }
+            
+            function drawWaveform() {
+                if (!state.analyser) return;
+                
+                const bufferLength = state.analyser.fftSize;
+                const dataArray = new Uint8Array(bufferLength);
+                
+                function draw() {
+                    requestAnimationFrame(draw);
+                    
+                    // Use time domain data for RMS calculation (better for speech)
+                    state.analyser.getByteTimeDomainData(dataArray);
+                    
+                    // Calculate RMS (Root Mean Square) - the standard way to measure loudness
+                    let sumSquares = 0;
+                    for (let i = 0; i < bufferLength; i++) {
+                        // Convert from 0-255 to -1 to 1 (128 is center/silence)
+                        const sample = (dataArray[i] - 128) / 128;
+                        sumSquares += sample * sample;
+                    }
+                    const rms = Math.sqrt(sumSquares / bufferLength);
+                    
+                    // Skip if below noise floor
+                    if (rms < state.noiseFloor) {
+                        // Decay existing values
+                        state.peakValue *= state.peakDecay;
+                        state.waveformHistory.shift();
+                        state.waveformHistory.push(state.peakValue * 20);
+                        updateWaveformPath();
+                        return;
+                    }
+                    
+                    // Auto-gain: track max level and normalize
+                    // Slowly adapt to input level (like AGC in retro audio)
+                    if (rms > state.maxSeenLevel) {
+                        state.maxSeenLevel = rms;
+                    } else {
+                        // Slowly decay max level so it adapts to quieter speakers
+                        state.maxSeenLevel = state.maxSeenLevel * 0.999 + rms * 0.001;
+                    }
+                    
+                    // Normalize to 0-1 based on observed range
+                    let normalized = rms / Math.max(state.maxSeenLevel, 0.05);
+                    
+                    // Apply curve for more dramatic response
+                    // sqrt makes quiet sounds more visible (like dB scaling)
+                    normalized = Math.sqrt(normalized);
+                    
+                    // Clamp to 0-1
+                    normalized = Math.min(1, Math.max(0, normalized));
+                    
+                    // Peak hold with decay (retro VU meter feel)
+                    if (normalized > state.peakValue) {
+                        state.peakValue = normalized;
+                    } else {
+                        state.peakValue = state.peakValue * state.peakDecay + normalized * (1 - state.peakDecay);
+                    }
+                    
+                    // Convert to spike height (0-20 pixels from center)
+                    const spikeHeight = state.peakValue * 20;
+                    
+                    // Shift history and add new value
+                    state.waveformHistory.shift();
+                    state.waveformHistory.push(spikeHeight);
+                    
+                    updateWaveformPath();
+                }
+                
+                function updateWaveformPath() {
+                    const width = 300;
+                    const height = 40;
+                    const centerY = height / 2;
+                    const points = state.waveformHistory.length;
+                    const segmentWidth = width / points;
+                    
+                    let path = `M0,${centerY}`;
+                    
+                    for (let i = 0; i < points; i++) {
+                        const x = i * segmentWidth;
+                        const value = state.waveformHistory[i];
+                        
+                        if (value > 1) {
+                            // Sharp EKG-style spike when there's audio
+                            const peakX = x + segmentWidth * 0.5;
+                            path += ` L${x},${centerY}`;
+                            path += ` L${peakX - 1},${centerY}`;
+                            path += ` L${peakX},${centerY - value}`;  // Spike up
+                            path += ` L${peakX + 1},${centerY + value * 0.3}`;  // Small dip below
+                            path += ` L${peakX + 3},${centerY}`;
+                        } else {
+                            // Flat baseline
+                            path += ` L${x + segmentWidth},${centerY}`;
+                        }
+                    }
+                    
+                    elements.waveformPath.setAttribute('d', path);
+                }
+                
+                draw();
+            }
+            
+            function toggleMute() {
+                state.isMuted = !state.isMuted;
+                
+                if (state.room && state.room.localParticipant) {
+                    state.room.localParticipant.setMicrophoneEnabled(!state.isMuted);
+                }
+                
+                // Update icon
+                if (state.isMuted) {
+                    elements.muteIcon.innerHTML = `
+                        <line x1="1" y1="1" x2="23" y2="23"/>
+                        <path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/>
+                        <path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/>
+                        <line x1="12" y1="19" x2="12" y2="23"/>
+                        <line x1="8" y1="23" x2="16" y2="23"/>
+                    `;
+                    elements.muteBtn.classList.add('active');
+                } else {
+                    elements.muteIcon.innerHTML = `
+                        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                        <line x1="12" y1="19" x2="12" y2="23"/>
+                        <line x1="8" y1="23" x2="16" y2="23"/>
+                    `;
+                    elements.muteBtn.classList.remove('active');
+                }
+            }
+            
+            function showModal(type) {
+                elements.modalOverlay.classList.add('visible');
+            }
+            
+            function hideModal() {
+                elements.modalOverlay.classList.remove('visible');
+            }
+            
+            function confirmEndInterview() {
+                hideModal();
+                if (state.room) {
+                    state.room.disconnect();
+                }
+            }
+            
+            async function connectToRoom() {
+                updateStatus('Requesting access...', 'connecting');
+                
+                try {
+                    // Get token from server
+                    const response = await fetch('/api/token', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(candidate)
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    
+                    updateStatus('Connecting to room...', 'connecting');
+                    
+                    // Create room
+                    state.room = new LK.Room({
+                        adaptiveStream: true,
+                        dynacast: true,
+                        audioCaptureDefaults: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true
+                        }
+                    });
+                    
+                    // Room events
+                    state.room.on(LK.RoomEvent.Connected, onConnected);
+                    state.room.on(LK.RoomEvent.Disconnected, onDisconnected);
+                    state.room.on(LK.RoomEvent.TrackSubscribed, onTrackSubscribed);
+                    state.room.on(LK.RoomEvent.TrackUnsubscribed, onTrackUnsubscribed);
+                    state.room.on(LK.RoomEvent.DataReceived, onDataReceived);
+                    state.room.on(LK.RoomEvent.ParticipantConnected, onParticipantConnected);
+                    state.room.on(LK.RoomEvent.ActiveSpeakersChanged, onActiveSpeakersChanged);
+                    
+                    // Connect
+                    await state.room.connect(data.url, data.token);
+                    
+                } catch (err) {
+                    console.error('[CONNECT] Error:', err);
+                    updateStatus('Connection failed: ' + err.message, 'error');
+                }
+            }
+            
+            async function onConnected() {
+                console.log('[ROOM] Connected');
+                state.isConnected = true;
+                updateStatus('Connected', 'connected');
+                
                 try {
                     // Enable microphone
-                    await room.localParticipant.setMicrophoneEnabled(true);
-                    console.log('[LIVEKIT] Microphone enabled');
-
-                    updateStatus('Ready - Microphone active', 'connected');
-
-                    // Show controls
-                    muteBtn.style.display = 'inline-flex';
-                    endBtn.style.display = 'inline-block';
-
-                    setTimeout(() => {
-                        document.getElementById('status').style.display = 'none';
-                    }, 3000);
-                } catch (error) {
-                    console.error('[LIVEKIT] Failed to enable microphone:', error);
-                    updateStatus('Microphone access denied - Please allow microphone access', 'error');
+                    await state.room.localParticipant.setMicrophoneEnabled(true);
+                    console.log('[ROOM] Microphone enabled');
+                    
+                    // Get local audio track for visualization
+                    const audioTracks = state.room.localParticipant.getTrackPublications();
+                    audioTracks.forEach(pub => {
+                        if (pub.track && pub.track.kind === 'audio' && pub.track.mediaStream) {
+                            initAudioVisualization(pub.track.mediaStream);
+                        }
+                    });
+                    
+                    updateCandidateCaption('Microphone active - speak to begin');
+                    
+                } catch (err) {
+                    console.error('[ROOM] Microphone error:', err);
+                    updateStatus('Microphone access denied', 'error');
                 }
-            });
-
-            // Track subscribed (agent audio)
-            room.on(LivekitClient.RoomEvent.TrackSubscribed, (track, publication, participant) => {
-                if (track.kind === LivekitClient.Track.Kind.Audio) {
+            }
+            
+            function onDisconnected(reason) {
+                console.log('[ROOM] Disconnected:', reason);
+                state.isConnected = false;
+                updateStatus('Disconnected', 'disconnected');
+                
+                if (state.timerInterval) {
+                    clearInterval(state.timerInterval);
+                }
+                
+                // Show completion modal
+                setTimeout(() => {
+                    document.getElementById('modalTitle').textContent = 'Interview Complete';
+                    document.getElementById('modalMessage').textContent = 'Thank you for participating in this mock interview.';
+                    document.getElementById('modalIcon').className = 'modal-icon success';
+                    document.getElementById('modalIcon').innerHTML = `
+                        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <polyline points="22 4 12 14.01 9 11.01"/>
+                        </svg>
+                    `;
+                    document.getElementById('modalCancel').style.display = 'none';
+                    document.getElementById('modalConfirm').textContent = 'Return Home';
+                    document.getElementById('modalConfirm').onclick = () => window.location.href = '/';
+                    showModal('complete');
+                }, 1000);
+            }
+            
+            function onTrackSubscribed(track, publication, participant) {
+                console.log('[TRACK] Subscribed:', track.kind, 'from', participant.identity);
+                
+                if (track.kind === LK.Track.Kind.Audio) {
+                    // Attach audio to DOM
                     const audioElement = track.attach();
+                    audioElement.id = 'agent-audio-' + participant.sid;
                     audioElement.volume = 1.0;
                     document.body.appendChild(audioElement);
-
-                    console.log('[LIVEKIT] Agent audio track subscribed');
+                    
+                    console.log('[AUDIO] Agent audio attached');
+                    updateAgentCaption('Agent connected');
                 }
-            });
-
-            // Data received (for stage updates, if implemented)
-            room.on(LivekitClient.RoomEvent.DataReceived, (payload, participant) => {
+            }
+            
+            function onTrackUnsubscribed(track, publication, participant) {
+                console.log('[TRACK] Unsubscribed:', track.kind);
+                track.detach().forEach(el => el.remove());
+            }
+            
+            function onDataReceived(payload, participant) {
                 try {
                     const data = JSON.parse(new TextDecoder().decode(payload));
-                    if (data.type === 'stage_change') {
+                    console.log('[DATA] Received:', data);
+                    
+                    // Handle stage changes from agent
+                    if (data.type === 'stage_change' && data.stage) {
                         updateStage(data.stage);
-                        console.log('[LIVEKIT] Stage changed to:', data.stage);
                     }
-                } catch (e) {
-                    console.error('[LIVEKIT] Error parsing data:', e);
+                    
+                    // Handle captions
+                    if (data.type === 'agent_caption') {
+                        updateAgentCaption(data.text);
+                    }
+                    
+                    if (data.type === 'user_caption') {
+                        updateCandidateCaption(data.text);
+                    }
+                    
+                } catch (err) {
+                    console.error('[DATA] Parse error:', err);
                 }
-            });
-
-            // Disconnected
-            room.on(LivekitClient.RoomEvent.Disconnected, (reason) => {
-                updateStatus('Interview ended', 'disconnected');
-                if (timerInterval) clearInterval(timerInterval);
-                console.log('[LIVEKIT] Disconnected:', reason);
-
-                // Show completion message
-                setTimeout(() => {
-                    alert('Interview completed! Thank you for participating.');
-                    window.location.href = '/';
-                }, 2000);
-            });
-
-            // Connection quality changed
-            room.on(LivekitClient.RoomEvent.ConnectionQualityChanged, (quality, participant) => {
-                console.log('[LIVEKIT] Connection quality:', quality);
-            });
-
-            // Mute/unmute button
-            let isMuted = false;
-            muteBtn.addEventListener('click', async () => {
-                isMuted = !isMuted;
-                const localParticipant = room.localParticipant;
-
-                if (localParticipant) {
-                    await localParticipant.setMicrophoneEnabled(!isMuted);
-                    document.getElementById('muteIcon').textContent = isMuted ? '🔇' : '🎤';
-                    document.getElementById('muteText').textContent = isMuted ? 'Unmute' : 'Mute';
+            }
+            
+            function onParticipantConnected(participant) {
+                console.log('[PARTICIPANT] Connected:', participant.identity);
+                
+                // Check if it's the agent
+                if (participant.identity.toLowerCase().includes('agent') || 
+                    participant.identity.toLowerCase().includes('interview')) {
+                    updateAgentCaption('Agent joined - preparing...');
                 }
-            });
-
-            // End interview button
-            endBtn.addEventListener('click', () => {
-                if (confirm('Are you sure you want to end the interview?')) {
-                    room.disconnect();
-                }
-            });
-
-            // Connect to room with audio enabled
-            room.connect(data.url, data.token, {
-                autoSubscribe: true,
-                // Request microphone access on connect
-                audio: true,
-                video: false
-            })
-                .then(() => {
-                    console.log('[LIVEKIT] Successfully connected to room:', data.room);
-                })
-                .catch(error => {
-                    console.error('[LIVEKIT] Connection error:', error);
-                    updateStatus('Connection failed: ' + error.message, 'error');
-                });
-
-        })
-        .catch(error => {
-            console.error('[ERROR] Token generation failed:', error);
-            updateStatus('Failed to connect: ' + error.message, 'error');
-        });
-
-        }); // End window.addEventListener('load')
+            }
+            
+            function onActiveSpeakersChanged(speakers) {
+                // Check if agent is speaking
+                const agentSpeaking = speakers.some(s => 
+                    !s.isLocal && s.audioTracks.size > 0
+                );
+                setAgentSpeaking(agentSpeaking);
+            }
+        }
+    })();
     </script>
 </body>
 </html>
