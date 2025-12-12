@@ -30,20 +30,20 @@ logger = logging.getLogger("flask-app")
 app = Flask(__name__)
 CORS(app)  # Enable CORS for API endpoints
 
-# Configuration from environment
+# Configuration from environment (may be intentionally absent in production)
 LIVEKIT_URL = os.getenv('LIVEKIT_URL')
 LIVEKIT_API_KEY = os.getenv('LIVEKIT_API_KEY')
 LIVEKIT_API_SECRET = os.getenv('LIVEKIT_API_SECRET')
 
-# Validate configuration
+# Do not fail at import time when LiveKit credentials are intentionally
+# not provided (we support a deployment mode where clients supply keys).
 if not all([LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET]):
-    logger.error("[CONFIG] Missing required LiveKit environment variables")
-    raise ValueError(
-        "Missing required environment variables. "
-        "Please set LIVEKIT_URL, LIVEKIT_API_KEY, and LIVEKIT_API_SECRET"
+    logger.warning(
+        "[CONFIG] LiveKit environment variables are not set. "
+        "Token generation endpoint will be disabled."
     )
-
-logger.info(f"[CONFIG] LiveKit URL: {LIVEKIT_URL}")
+else:
+    logger.info(f"[CONFIG] LiveKit URL: {LIVEKIT_URL}")
 
 
 # Serve the site favicon from the `public` directory so browsers show the tab icon
@@ -124,6 +124,15 @@ def generate_token():
     }
     """
     try:
+        # If server-side LiveKit credentials are not configured, return a clear error
+        # instead of raising at import time. The front-end deployment mode for this
+        # project supports client-side keys, so server token generation is optional.
+        if not all([LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET]):
+            return jsonify({
+                'error': 'server_livekit_not_configured',
+                'message': 'Server-side LiveKit credentials are not set. Token generation is disabled.'
+            }), 501
+
         data = request.json
         name = data.get('name', 'Anonymous')
         email = data.get('email', '')

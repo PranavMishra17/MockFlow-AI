@@ -1,10 +1,8 @@
 # MockFlow-AI
-
+**AI-Powered Mock Interview Platform with Real-Time Voice Interaction**
 <div align="center">
 
 ![MockFlow-AI Banner](banner.png)
-
-**AI-Powered Mock Interview Platform with Real-Time Voice Interaction**
 
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
 [![LiveKit](https://img.shields.io/badge/LiveKit-Agents-00ADD8.svg)](https://docs.livekit.io/agents/)
