@@ -68,6 +68,12 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/healthz')
+def healthz():
+    """Simple health endpoint used by platform health checks."""
+    return 'OK', 200
+
+
 @app.route('/start')
 def start_form():
     """Candidate registration form."""
