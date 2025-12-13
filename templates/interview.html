@@ -926,6 +926,7 @@
                     state.room.on(LK.RoomEvent.DataReceived, onDataReceived);
                     state.room.on(LK.RoomEvent.ParticipantConnected, onParticipantConnected);
                     state.room.on(LK.RoomEvent.ActiveSpeakersChanged, onActiveSpeakersChanged);
+                    state.room.on(LK.RoomEvent.LocalTrackPublished, onLocalTrackPublished);
                     
                     console.log('[CONNECT] Connecting to LiveKit server:', data.url);
                     await state.room.connect(data.url, data.token);
@@ -941,26 +942,55 @@
                 console.log('[ROOM] Connected');
                 state.isConnected = true;
                 updateStatus('Connected', 'connected');
-                
+
                 try {
                     await state.room.localParticipant.setMicrophoneEnabled(true);
                     console.log('[ROOM] Microphone enabled');
-                    
+
                     var audioTracks = state.room.localParticipant.getTrackPublications();
+                    var visualizationInitialized = false;
+
                     audioTracks.forEach(function(pub) {
                         if (pub.track && pub.track.kind === 'audio' && pub.track.mediaStream) {
                             initCandidateAudioVisualization(pub.track.mediaStream);
+                            visualizationInitialized = true;
+                            console.log('[AUDIO] Candidate visualization initialized from existing track');
                         }
                     });
-                    
+
+                    if (!visualizationInitialized) {
+                        console.log('[AUDIO] Waiting for LocalTrackPublished event for visualization');
+                    }
+
                     updateCandidateCaption('Microphone active - speak to begin');
-                    
+
                 } catch (err) {
                     console.error('[ROOM] Microphone error:', err);
                     updateStatus('Microphone access denied', 'error');
                 }
             }
-            
+
+            function onLocalTrackPublished(publication, participant) {
+                console.log('[TRACK] Local track published:', publication.kind);
+
+                if (publication.kind === LK.Track.Kind.Audio && publication.track) {
+                    console.log('[AUDIO] Initializing candidate visualization with local audio track');
+
+                    // Get the MediaStream from the track
+                    if (publication.track.mediaStream) {
+                        initCandidateAudioVisualization(publication.track.mediaStream);
+                        console.log('[AUDIO] Candidate audio visualization started');
+                    } else if (publication.track.mediaStreamTrack) {
+                        // Fallback: create MediaStream from MediaStreamTrack
+                        var stream = new MediaStream([publication.track.mediaStreamTrack]);
+                        initCandidateAudioVisualization(stream);
+                        console.log('[AUDIO] Candidate audio visualization started (from MediaStreamTrack)');
+                    } else {
+                        console.warn('[AUDIO] No media stream available for candidate visualization');
+                    }
+                }
+            }
+
             function onDisconnected(reason) {
                 console.log('[ROOM] Disconnected:', reason);
                 state.isConnected = false;

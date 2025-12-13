@@ -51,6 +51,7 @@ class InterviewState:
     self_intro_summary: str = ""
     experience_responses: list[str] = field(default_factory=list)
     questions_asked: list[str] = field(default_factory=list)
+    questions_per_stage: dict[str, int] = field(default_factory=dict)  # Track questions per stage to enforce limits
 
     # Document context (for future RAG implementation)
     uploaded_resume_text: Optional[str] = None

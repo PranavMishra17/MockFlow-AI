@@ -311,12 +311,37 @@ Use their name naturally during the conversation. Maintain a warm, professional 
         question: Annotated[str, Field(description="The exact question you want to ask the candidate")]
     ) -> str:
         """
-        Validate and track questions before asking to prevent repetition.
+        Validate and track questions before asking to prevent repetition and enforce stage limits.
 
         This tool MUST be called before asking any question to the candidate.
-        Returns approval if question is new, or rejection if similar question was already asked.
+        Returns approval if question is new and within limits, or rejection otherwise.
         """
         try:
+            current_stage = ctx.userdata.stage.value
+            stage_questions = ctx.userdata.questions_per_stage.get(current_stage, 0)
+
+            # Define per-stage question limits
+            STAGE_QUESTION_LIMITS = {
+                'greeting': 1,  # Just the greeting, no questions
+                'self_intro': 3,  # Max 3 questions in introduction
+                'past_experience': 5,  # Max 5 questions in past experience
+                'closing': 0,  # No questions in closing
+            }
+
+            limit = STAGE_QUESTION_LIMITS.get(current_stage, 5)
+
+            # Check if stage question limit reached
+            if stage_questions >= limit:
+                logger.warning(
+                    f"[AGENT] Question limit reached in {current_stage}: "
+                    f"{stage_questions}/{limit} questions asked"
+                )
+                return (
+                    f"Question limit reached ({limit} questions in {current_stage} stage). "
+                    f"You MUST call transition_stage now, even if the response depth is not ideal. "
+                    f"Summarize what you've learned about the candidate and move to the next stage."
+                )
+
             # Normalize for comparison (case-insensitive, ignore punctuation)
             normalized = question.lower().strip().rstrip('?.,!')
 
@@ -334,9 +359,14 @@ Use their name naturally during the conversation. Maintain a warm, professional 
                     logger.warning(f"[AGENT] Rejected similar question: '{question}' (similar to: '{asked}')")
                     return f"You already asked a very similar question: '{asked}'. Please ask something different."
 
-            # Question is unique - track it
+            # Question is unique and within limits - approve and track it
             ctx.userdata.questions_asked.append(question)
-            logger.info(f"[AGENT] Approved question #{len(ctx.userdata.questions_asked)}: {question}")
+            ctx.userdata.questions_per_stage[current_stage] = stage_questions + 1
+
+            logger.info(
+                f"[AGENT] Approved question #{len(ctx.userdata.questions_asked)} "
+                f"({stage_questions + 1}/{limit} in {current_stage}): {question}"
+            )
 
             return f"Question approved. You may now ask the candidate: '{question}'"
 
@@ -832,10 +862,10 @@ async def stage_fallback_timer(session: AgentSession, state: InterviewState, ctx
     More aggressive timing for efficient interviews.
     """
     STAGE_LIMITS = {
-        InterviewStage.GREETING: 60,   # Reduced from 90 - should transition quickly after explaining
-        InterviewStage.SELF_INTRO: 180,  # Reduced from 360 - 3 minutes max
-        InterviewStage.PAST_EXPERIENCE: 240,  # Reduced from 480 - 4 minutes max
-        InterviewStage.CLOSING: 60,   # 1 minute for closing, then auto-disconnect
+        InterviewStage.GREETING: 60,   # 1 minute - should transition quickly after explaining
+        InterviewStage.SELF_INTRO: 75,  # 75 seconds max for introduction
+        InterviewStage.PAST_EXPERIENCE: 180,  # 3 minutes max for past experience
+        InterviewStage.CLOSING: 35,   # 35 seconds for closing, then auto-disconnect
     }
 
     WARNING_THRESHOLD = 0.75  # Warn earlier (75% instead of 80%)
