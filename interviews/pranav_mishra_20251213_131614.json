@@ -1,0 +1,249 @@
+{
+  "candidate": "Pranav Mishra",
+  "interview_date": "2025-12-13T13:16:14.874043",
+  "room_name": "interview-pranav-mishra-1765649571",
+  "conversation": {
+    "agent": [
+      {
+        "index": 0,
+        "text": "Great! I'm looking forward to learning more about you, Pranav Mishra. Please go ahead and tell me about yourself.",
+        "timestamp": 1765649585.6040418,
+        "stage": "self_intro"
+      },
+      {
+        "index": 1,
+        "text": "That sounds interesting, Pranav! Can you describe a specific project you worked on during your internship at Real Price? What was your role, and what were the outcomes?",
+        "timestamp": 1765649609.2841563,
+        "stage": "self_intro"
+      },
+      {
+        "index": 2,
+        "text": "Excellent introduction, thank you Pranav Mishra! Now let's shift gears and discuss your past work experience, particularly as it relates to the AI Engineer role. Can you walk me through a specific project or experience you're particularly proud of? \n\nThat sounds like a valuable project, Pranav! Can you explain the technical challenges you faced while building the recruitment assistant chatbot and how you overcame them?",
+        "timestamp": 1765649674.2833352,
+        "stage": "past_experience"
+      },
+      {
+        "index": 3,
+        "text": "That's fascinating, Pranav! Can you describe any specific outcomes or findings from your research on multi-agent systems in medical reasoning? How did it impact the project or the stakeholders involved?",
+        "timestamp": 1765649728.201496,
+        "stage": "past_experience"
+      }
+    ],
+    "user": [
+      {
+        "index": 0,
+        "text": "Yeah. Hi. I'm Pranav.",
+        "timestamp": 1765649590.3323424
+      },
+      {
+        "index": 1,
+        "text": "I'm a recent grad from UIC with a master's in computer science.",
+        "timestamp": 1765649592.0501819
+      },
+      {
+        "index": 2,
+        "text": "Uh, I've been working at Real Price as an AI ML intern.",
+        "timestamp": 1765649595.3381557
+      },
+      {
+        "index": 3,
+        "text": "Yeah. I majorly held full stack responsibilities.",
+        "timestamp": 1765649613.3650808
+      },
+      {
+        "index": 4,
+        "text": "Where I",
+        "timestamp": 1765649614.870154
+      },
+      {
+        "index": 5,
+        "text": "participated in building the block system",
+        "timestamp": 1765649618.29161
+      },
+      {
+        "index": 6,
+        "text": "like a vlog. We had a blog, so we had a social media",
+        "timestamp": 1765649621.9627914
+      },
+      {
+        "index": 7,
+        "text": "uh,",
+        "timestamp": 1765649622.6115654
+      },
+      {
+        "index": 8,
+        "text": "people who followed us. So we had a blog system for articles relating to",
+        "timestamp": 1765649627.5616388
+      },
+      {
+        "index": 9,
+        "text": "cars and wheels",
+        "timestamp": 1765649627.8993452
+      },
+      {
+        "index": 10,
+        "text": "And I also participated in the OTP verification system and the implementation of the",
+        "timestamp": 1765649632.8551981
+      },
+      {
+        "index": 11,
+        "text": "it. For AIML, I've been part of a recruitment assistant.",
+        "timestamp": 1765649637.3521287
+      },
+      {
+        "index": 12,
+        "text": "Which is a very simple MCP architecture chatbot.",
+        "timestamp": 1765649640.5995085
+      },
+      {
+        "index": 13,
+        "text": "For helping the users understand",
+        "timestamp": 1765649642.5295541
+      },
+      {
+        "index": 14,
+        "text": "if the wheels that they want to buy would fit on their car.",
+        "timestamp": 1765649645.3712301
+      },
+      {
+        "index": 15,
+        "text": "Yeah. For my past experiences, I would",
+        "timestamp": 1765649687.1848037
+      },
+      {
+        "index": 16,
+        "text": "say, uh, I've worked as a research software engineer at UIC.",
+        "timestamp": 1765649689.7948124
+      },
+      {
+        "index": 17,
+        "text": "Where",
+        "timestamp": 1765649690.881473
+      },
+      {
+        "index": 18,
+        "text": "uh, I",
+        "timestamp": 1765649691.9832857
+      },
+      {
+        "index": 19,
+        "text": "coordinated with professors and medical professionals to develop",
+        "timestamp": 1765649695.9892578
+      },
+      {
+        "index": 20,
+        "text": "a",
+        "timestamp": 1765649696.4226403
+      },
+      {
+        "index": 21,
+        "text": "applications and research applications in and around",
+        "timestamp": 1765649701.4961882
+      },
+      {
+        "index": 22,
+        "text": "health care as well as medical domain.",
+        "timestamp": 1765649701.6874077
+      },
+      {
+        "index": 23,
+        "text": "My research is mostly around multi agent systems",
+        "timestamp": 1765649706.720336
+      },
+      {
+        "index": 24,
+        "text": "and how teamwork components could help improve them",
+        "timestamp": 1765649707.6627
+      },
+      {
+        "index": 25,
+        "text": "in medical reasoning,",
+        "timestamp": 1765649709.2053988
+      },
+      {
+        "index": 26,
+        "text": "while keeping the cost efficiency same.",
+        "timestamp": 1765649711.8396478
+      },
+      {
+        "index": 27,
+        "text": "Yeah. So for now, it's just research, so it's not like it's being",
+        "timestamp": 1765649734.7071154
+      },
+      {
+        "index": 28,
+        "text": "applied in the real world in any sense.",
+        "timestamp": 1765649734.9250689
+      },
+      {
+        "index": 29,
+        "text": "But for in our research, we",
+        "timestamp": 1765649736.974299
+      },
+      {
+        "index": 30,
+        "text": "pretty clearly had better results in many benchmarks. We tested it against",
+        "timestamp": 1765649741.9867413
+      },
+      {
+        "index": 31,
+        "text": "eight benchmarks of",
+        "timestamp": 1765649742.5232463
+      },
+      {
+        "index": 32,
+        "text": "medical q and a datasets and as well as diagnosis datasets.",
+        "timestamp": 1765649746.5424132
+      },
+      {
+        "index": 33,
+        "text": "We also have image datasets in our mix.",
+        "timestamp": 1765649748.926479
+      },
+      {
+        "index": 34,
+        "text": "So the main problem is that in multilayer systems, the cost",
+        "timestamp": 1765649753.7300725
+      },
+      {
+        "index": 35,
+        "text": "efficiency and tokens consumed by the model per portioning",
+        "timestamp": 1765649758.7574487
+      },
+      {
+        "index": 36,
+        "text": "increases by a drastic measure, like 20 x",
+        "timestamp": 1765649759.2402203
+      },
+      {
+        "index": 37,
+        "text": "So using frontier models for a multi agent system doesn't seem right.",
+        "timestamp": 1765649763.5492554
+      },
+      {
+        "index": 38,
+        "text": "So we have",
+        "timestamp": 1765649765.2332876
+      },
+      {
+        "index": 39,
+        "text": "shifted our focus to use small language models",
+        "timestamp": 1765649769.135545
+      },
+      {
+        "index": 40,
+        "text": "to do the same.",
+        "timestamp": 1765649770.194727
+      },
+      {
+        "index": 41,
+        "text": "In that way, we can maintain the cost",
+        "timestamp": 1765649772.939292
+      }
+    ]
+  },
+  "total_messages": {
+    "agent": 4,
+    "user": 42
+  }
+}

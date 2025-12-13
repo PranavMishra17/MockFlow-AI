@@ -25,7 +25,7 @@ from livekit.agents import (
 )
 from livekit.plugins import openai, deepgram, silero
 
-from fsm import InterviewState, InterviewStage
+from fsm import InterviewState, InterviewStage, STAGE_TIME_LIMITS, STAGE_MIN_QUESTIONS
 
 # Load environment variables from .env file in project root
 env_path = Path(__file__).parent / '.env'
@@ -33,7 +33,7 @@ load_dotenv(dotenv_path=env_path)
 
 # Configure logging
 logging.basicConfig(
-    level=logging.DEBUG,  # Set to DEBUG for troubleshooting
+    level=logging.DEBUG,
     format='[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
@@ -85,28 +85,25 @@ Your task:
 2. After they respond, call assess_response to evaluate their response
 3. Use follow-up questions naturally to learn more about their background
 4. Before asking ANY question, you MUST call ask_question tool to verify it hasn't been asked before
-5. Engage in genuine conversation - aim for quality interaction, not just checking boxes
+5. Engage in genuine conversation - aim for quality interaction
 
 CRITICAL RULES:
 - Call assess_response AFTER EVERY candidate response
 - Call ask_question BEFORE asking ANY question to prevent repetition
 - Do NOT ask repetitive or similar questions
-- Aim for a MINIMUM of 2 questions, but feel free to ask more if the conversation is flowing well
+- You need at least 2 questions, but should transition once you have enough context
 - Focus on learning about their background, education, experience, and interests
-- Engage naturally - if they mention something interesting, explore it
 
-When to transition:
-- You feel you have a good understanding of their background
-- The conversation has naturally covered their introduction
-- You've asked at least 2 questions and received meaningful responses
-- Call transition_stage with reason describing what you learned about them
+TRANSITION GUIDANCE:
+- Once you have asked the minimum questions AND have a good understanding of their background, TRANSITION
+- Do not linger unnecessarily - keep the interview moving
+- When the tool tells you minimum is met, seriously consider transitioning
+- Call transition_stage with a brief reason describing what you learned
 
 Guidelines:
-- Be encouraging and supportive
-- Show genuine interest in their background
-- Focus on understanding their experience relevant to the role
-- Keep questions focused but let the conversation flow naturally
-- Don't rush - quality engagement is more important than speed
+- Be encouraging and supportive but efficient
+- Show genuine interest while being mindful of time
+- Quality over quantity - good responses mean you can transition sooner
 """,
 
     InterviewStage.PAST_EXPERIENCE: """
@@ -117,34 +114,29 @@ FIRST, acknowledge the topic change: "Great introduction! Now let's shift gears 
 Your task:
 1. Start by acknowledging the stage change and mentioning the role they're applying for
 2. Ask about specific past work experiences, projects, or accomplishments relevant to the [ROLE] role
-3. Encourage detailed explanations about their role, challenges faced, and solutions/outcomes
+3. Encourage detailed explanations using STAR method (Situation, Task, Action, Result)
 4. IMPORTANT: After they respond, call assess_response to evaluate their response
-5. Use follow-up questions naturally to deepen the conversation - you should aim for quality engagement, not just checking boxes
-6. Before asking ANY question, you MUST call ask_question tool to verify it hasn't been asked before
-7. This stage can be flexible in length - focus on quality conversation, not rigid time limits
+5. Before asking ANY question, you MUST call ask_question tool to verify it hasn't been asked before
 
 CRITICAL RULES:
 - Call assess_response AFTER EVERY candidate response
 - Call ask_question BEFORE asking ANY question to prevent repetition
 - Do NOT ask repetitive or generic questions
-- Focus on experiences relevant to the [ROLE] role they're applying for
-- Aim for a MINIMUM of 5 questions, but feel free to ask more if the conversation is flowing well
-- Use STAR method (Situation, Task, Action, Result) to encourage detailed responses
-- Engage naturally - if they mention something interesting, explore it further
+- You need at least 5 questions minimum
+- Focus on depth over breadth - understand a few experiences well
 
-When to transition:
-- You feel you have a solid understanding of their past work experience relevant to the [ROLE] role
-- The conversation has naturally run its course
-- You've asked at least 5 questions and received meaningful responses
-- Call transition_stage with reason describing what you learned about their experience
+TRANSITION GUIDANCE:
+- Once minimum questions are met AND you have solid understanding of their experience, TRANSITION
+- Pay attention to time remaining - don't let the stage run too long
+- When tool indicates minimum met and time is past 50%, strongly consider transitioning
+- Do not ask unnecessary follow-ups just to fill time
+- Call transition_stage when ready
 
 Guidelines:
-- Be genuinely curious about their work experience
-- Connect their past experience to the [ROLE] role they're applying for
-- Probe technical details, decision-making, and impact when relevant
-- Focus on depth over breadth - it's better to understand a few experiences well
-- Show appreciation for detailed and thoughtful responses
-- Let the conversation flow naturally - don't rush to transition
+- Be genuinely curious but time-conscious
+- Connect their experience to the role they're applying for
+- Probe technical details and impact when relevant
+- Move toward closing once you have enough signal
 """,
 
     InterviewStage.CLOSING: """
@@ -171,12 +163,10 @@ class InterviewAgent(Agent):
 
     def __init__(self, room=None, candidate_info=None):
         """Initialize agent with greeting stage instructions."""
-        # Store candidate info
         self.candidate_info = candidate_info or {}
         self.candidate_name = self.candidate_info.get('name', 'Candidate')
         self.candidate_role = self.candidate_info.get('role', 'this position')
 
-        # Build personalized greeting instruction
         personalized_greeting = INSTRUCTIONS[InterviewStage.GREETING].replace(
             "[CANDIDATE_NAME]",
             self.candidate_name
@@ -184,9 +174,8 @@ class InterviewAgent(Agent):
 
         super().__init__(
             instructions=personalized_greeting
-            # Tools are auto-registered via @function_tool decorator
         )
-        self.room = room  # Store room reference for data emission
+        self.room = room
 
     @function_tool
     async def transition_stage(
@@ -206,11 +195,11 @@ class InterviewAgent(Agent):
 
             time_in_stage = ctx.userdata.time_in_current_stage()
 
-            # Minimum time gates (prevent rushing) - reduced for faster interviews
+            # Minimum time gates (reduced for efficiency)
             MIN_TIMES = {
-                InterviewStage.GREETING: 0,   # No minimum - transition immediately after greeting
-                InterviewStage.SELF_INTRO: 45,  # Reduced from 60
-                InterviewStage.PAST_EXPERIENCE: 60,  # Reduced from 120
+                InterviewStage.GREETING: 0,
+                InterviewStage.SELF_INTRO: 30,
+                InterviewStage.PAST_EXPERIENCE: 45,
             }
 
             min_time = MIN_TIMES.get(current_stage, 0)
@@ -235,7 +224,6 @@ class InterviewAgent(Agent):
             # Add role-specific context guidance
             role_context = self._get_role_context(ctx.userdata)
 
-            # Add consistent personality note with role/level context
             personality_note = f"""
 
 IMPORTANT: The candidate's name is {self.candidate_name}.
@@ -249,7 +237,6 @@ Use their name naturally during the conversation. Maintain a warm, professional 
 
             personalized_instructions = stage_instructions + personality_note
 
-            # Update agent instructions for new stage
             await self.update_instructions(personalized_instructions)
 
             logger.info(
@@ -257,20 +244,55 @@ Use their name naturally during the conversation. Maintain a warm, professional 
                 f"(reason: {reason}, time_in_stage: {time_in_stage:.1f}s)"
             )
 
-            # Emit stage change to UI
             await self._emit_stage_change(ctx, next_stage)
 
-            # Trigger agent to speak based on new stage instructions
-            transition_prompts = {
-                InterviewStage.SELF_INTRO: f"Stage transitioned successfully. The greeting has been said. Now immediately respond by acknowledging {self.candidate_name}'s upcoming introduction. You don't need to ask them to introduce themselves again - they are already speaking or about to speak.",
-                InterviewStage.PAST_EXPERIENCE: f"Stage transitioned successfully. Now immediately acknowledge the topic change and mention the {ctx.userdata.job_role or 'role'} they're applying for, then ask about their past work experience. Follow the instructions for this stage.",
-                InterviewStage.CLOSING: f"Stage transitioned successfully. Now immediately thank {self.candidate_name} warmly, provide 1-2 specific positive observations from the interview, and say goodbye.",
+            # Define explicit transition acknowledgements
+            transition_acknowledgements = {
+                InterviewStage.SELF_INTRO: (
+                    f"Great! I'm looking forward to learning more about you, {self.candidate_name}. "
+                    f"Please go ahead and tell me about yourself."
+                ),
+                InterviewStage.PAST_EXPERIENCE: (
+                    f"Excellent introduction, thank you {self.candidate_name}! "
+                    f"Now let's shift gears and discuss your past work experience, "
+                    f"particularly as it relates to the {ctx.userdata.job_role or 'position'} role. "
+                    f"Can you walk me through a specific project or experience you're particularly proud of?"
+                ),
+                InterviewStage.CLOSING: (
+                    f"Thank you so much for sharing all of that, {self.candidate_name}. "
+                    f"I really enjoyed learning about your background and experience. "
+                    f"You've demonstrated great depth in your technical knowledge. "
+                    f"We'll be in touch with next steps via email. Thank you again, and best of luck!"
+                ),
             }
 
-            prompt = transition_prompts.get(next_stage, "Continue with the interview.")
+            acknowledgement = transition_acknowledgements.get(next_stage)
 
-            # Return prompt to trigger agent response
-            return prompt
+            # For CLOSING stage: Use session.say() directly since no tools will be called
+            # For other stages: Queue acknowledgement to be delivered via ask_question tool
+            if next_stage == InterviewStage.CLOSING:
+                # Mark that closing has been initiated - the closing speech will be said directly
+                ctx.userdata.closing_initiated = True
+                logger.info(f"[AGENT] Closing stage initiated - will speak closing remarks")
+                
+                return (
+                    f"Stage transitioned to closing. "
+                    f"You MUST now deliver your closing remarks. Say: '{acknowledgement}' "
+                    f"Do NOT ask any more questions. Just thank them and say goodbye."
+                )
+            
+            else:
+                # Queue the acknowledgement - it will be injected via ask_question tool
+                if acknowledgement:
+                    ctx.userdata.pending_acknowledgement = acknowledgement
+                    ctx.userdata.pending_ack_stage = next_stage.value
+                    logger.info(f"[AGENT] Queued transition acknowledgement for {next_stage.value}")
+
+                return (
+                    f"Stage transitioned to {next_stage.value}. "
+                    f"IMPORTANT: You MUST start your next response by acknowledging the stage change. "
+                    f"Say something like: '{acknowledgement}' before continuing with questions."
+                )
 
         except Exception as e:
             logger.error(f"[AGENT] Transition error: {e}", exc_info=True)
@@ -286,7 +308,6 @@ Use their name naturally during the conversation. Maintain a warm, professional 
                 "stage": new_stage.value
             })
 
-            # Use room stored in agent instance
             if self.room and self.room.local_participant:
                 await self.room.local_participant.publish_data(
                     data_payload.encode('utf-8')
@@ -320,54 +341,91 @@ Use their name naturally during the conversation. Maintain a warm, professional 
     ) -> str:
         """
         Validate and track questions before asking to prevent repetition.
-
-        This tool MUST be called before asking any question to the candidate.
-        Returns approval if question is new, or rejection if duplicate.
+        Returns approval with progress status including time remaining.
         """
         try:
             current_stage = ctx.userdata.stage.value
             stage_questions = ctx.userdata.questions_per_stage.get(current_stage, 0)
+            minimum = STAGE_MIN_QUESTIONS.get(current_stage, 2)
 
-            # Define per-stage MINIMUM question recommendations (not hard limits)
-            STAGE_MINIMUM_QUESTIONS = {
-                'greeting': 0,  # No questions needed in greeting
-                'self_intro': 2,  # Aim for at least 2 questions
-                'past_experience': 5,  # Aim for at least 5 questions
-                'closing': 0,  # No questions in closing
-            }
+            # Check for pending acknowledgement
+            # Clear it ONLY if we're asking a question in the pending stage (proves transition happened)
+            pending_ack = None
+            should_clear_ack = False
+            
+            if ctx.userdata.pending_acknowledgement and not ctx.userdata.transition_acknowledged:
+                pending_ack = ctx.userdata.pending_acknowledgement
+                pending_stage = ctx.userdata.pending_ack_stage
+                
+                # If asking question in the new stage, this is the acknowledgement moment
+                if current_stage == pending_stage:
+                    should_clear_ack = True
+                    logger.info(f"[AGENT] Acknowledgement will be delivered for {pending_stage} (question in new stage)")
+                else:
+                    logger.debug(f"[AGENT] Pending ack for {pending_stage}, but question in {current_stage}")
 
-            minimum = STAGE_MINIMUM_QUESTIONS.get(current_stage, 2)
+            # Get time status
+            time_status = ctx.userdata.get_time_status()
+            time_remaining_pct = time_status['remaining_pct']
+            remaining_sec = time_status['remaining_seconds']
 
-            # Normalize for comparison (case-insensitive, ignore punctuation)
+            # Normalize for comparison
             normalized = question.lower().strip().rstrip('?.,!')
 
-            # Check if similar question already asked
+            # Check duplicates
             for asked in ctx.userdata.questions_asked:
                 asked_normalized = asked.lower().strip().rstrip('?.,!')
 
-                # Check for exact match
                 if normalized == asked_normalized:
                     logger.warning(f"[AGENT] Rejected duplicate question: '{question}'")
-                    return f"You already asked this exact question: '{asked}'. Please ask something different to avoid repetition."
+                    return f"You already asked this exact question: '{asked}'. Please ask something different."
 
-                # Check if new question is substring of previous (too similar)
                 if normalized in asked_normalized or asked_normalized in normalized:
-                    logger.warning(f"[AGENT] Rejected similar question: '{question}' (similar to: '{asked}')")
+                    logger.warning(f"[AGENT] Rejected similar question: '{question}'")
                     return f"You already asked a very similar question: '{asked}'. Please ask something different."
 
-            # Question is unique - approve and track it
+            # Approve and track
             ctx.userdata.questions_asked.append(question)
             ctx.userdata.questions_per_stage[current_stage] = stage_questions + 1
+            new_count = stage_questions + 1
 
             logger.info(
                 f"[AGENT] Approved question #{len(ctx.userdata.questions_asked)} "
-                f"({stage_questions + 1} in {current_stage}, minimum: {minimum}): {question}"
+                f"({new_count}/{minimum} in {current_stage}, {time_remaining_pct:.0f}% time remaining)"
             )
 
-            # Provide gentle reminder about minimum questions
-            response = f"Question approved. You may now ask the candidate: '{question}'"
-            if stage_questions + 1 >= minimum:
-                response += f" (Note: You've reached the minimum of {minimum} questions for this stage, but feel free to ask more if the conversation is flowing well.)"
+            # Build response with progress info
+            response = f"Question approved ({new_count}/{minimum} questions). "
+            response += f"Time remaining: {time_remaining_pct:.0f}% ({remaining_sec:.0f}s). "
+
+            # Transition guidance based on progress
+            if new_count >= minimum:
+                if time_remaining_pct <= 25:
+                    response += "MINIMUM MET + TIME LOW. You SHOULD transition soon after this response. "
+                elif time_remaining_pct <= 50:
+                    response += "Minimum questions met. Consider transitioning after getting a good response. "
+                else:
+                    response += "Minimum met. You may ask more or transition when ready. "
+            else:
+                remaining_q = minimum - new_count
+                response += f"Need {remaining_q} more question(s) to meet minimum. "
+
+            response += f"Now ask: '{question}'"
+
+            # CRITICAL: If there's a pending acknowledgement, prepend it
+            if pending_ack:
+                response = (
+                    f"STAGE TRANSITION - You MUST first say this to acknowledge the new stage: "
+                    f"\"{pending_ack}\" "
+                    f"Then ask your question.\n\n{response}"
+                )
+                
+                # Clear the pending ack if this question is in the new stage
+                if should_clear_ack:
+                    ctx.userdata.transition_acknowledged = True
+                    ctx.userdata.pending_acknowledgement = None
+                    ctx.userdata.pending_ack_stage = None
+                    logger.info(f"[AGENT] Transition acknowledgement cleared - agent proceeding in new stage")
 
             return response
 
@@ -379,119 +437,154 @@ Use their name naturally during the conversation. Maintain a warm, professional 
     async def assess_response(
         self,
         ctx: RunContext[InterviewState],
-        depth_score: Annotated[int, Field(description="Response depth rating: 1=very vague, 2=surface-level, 3=adequate, 4=detailed, 5=comprehensive")],
-        key_points_covered: Annotated[list[str], Field(description="List of key points mentioned by candidate in their response")]
+        depth_score: Annotated[int, Field(description="Response depth: 1=vague, 2=surface, 3=adequate, 4=detailed, 5=comprehensive")],
+        key_points_covered: Annotated[list[str], Field(description="Key points mentioned by candidate")]
     ) -> str:
         """
-        Assess the quality and depth of candidate's response to guide conversation flow.
-
-        Use this tool AFTER the candidate responds to evaluate their response quality.
-        Provides guidance on potential follow-up areas, but does NOT force specific actions.
-
-        Returns conversational guidance based on response quality.
+        Assess response quality and provide guidance with time/progress context.
         """
         try:
             current_stage = ctx.userdata.stage
 
-            # Store response summary for analysis
+            # Store response
             response_summary = f"Depth: {depth_score}/5. Key points: {', '.join(key_points_covered)}"
             ctx.userdata.experience_responses.append(response_summary)
 
+            # Check for pending acknowledgement - DON'T clear it here
+            # It will be cleared when agent asks a question in the new stage
+            pending_ack = None
+            if ctx.userdata.pending_acknowledgement and not ctx.userdata.transition_acknowledged:
+                pending_ack = ctx.userdata.pending_acknowledgement
+                pending_stage = ctx.userdata.pending_ack_stage
+                logger.debug(f"[AGENT] Pending acknowledgement active for {pending_stage}")
+
+            # Get progress status
+            q_status = ctx.userdata.get_question_status()
+            time_status = ctx.userdata.get_time_status()
+
+            time_remaining_pct = time_status['remaining_pct']
+            remaining_sec = time_status['remaining_seconds']
+            met_minimum = q_status['met_minimum']
+            questions_asked = q_status['asked']
+            questions_min = q_status['minimum']
+
             logger.info(
                 f"[AGENT] Response assessment - Stage: {current_stage.value}, "
-                f"Depth: {depth_score}/5, Points: {len(key_points_covered)}"
+                f"Depth: {depth_score}/5, Questions: {questions_asked}/{questions_min}, "
+                f"Time: {time_remaining_pct:.0f}% remaining"
             )
 
-            # Provide conversational guidance based on response quality
-            if depth_score >= 4:
-                # Excellent, detailed response
-                return (
-                    f"Great response! Depth: {depth_score}/5. The candidate provided detailed information. "
-                    f"You can either explore this topic further if interesting, or move to another area. "
-                    f"Follow the natural flow of the conversation."
+            # Build status line
+            status_line = (
+                f"[STATUS] Questions: {questions_asked}/{questions_min} | "
+                f"Time: {time_remaining_pct:.0f}% ({remaining_sec:.0f}s remaining)"
+            )
+
+            # Determine transition urgency
+            should_transition_now = False
+            transition_hint = ""
+
+            if time_remaining_pct <= 10:
+                should_transition_now = True
+                transition_hint = "TIME CRITICAL: Must transition NOW. Call transition_stage immediately."
+            elif met_minimum and time_remaining_pct <= 25:
+                should_transition_now = True
+                transition_hint = "Minimum met + time running low. TRANSITION NOW."
+            elif met_minimum and depth_score >= 3:
+                transition_hint = "Good response + minimum met. Consider transitioning."
+            elif met_minimum:
+                transition_hint = "Minimum questions met. Can transition when ready."
+
+            # Build guidance based on depth
+            if should_transition_now:
+                guidance = f"{status_line}\n{transition_hint}"
+            elif depth_score >= 4:
+                guidance = (
+                    f"{status_line}\n"
+                    f"Excellent response (depth {depth_score}/5). "
+                    f"{transition_hint if transition_hint else 'You may explore further or transition.'}"
                 )
             elif depth_score == 3:
-                # Good, adequate response
-                return (
-                    f"Good response. Depth: {depth_score}/5. The candidate covered the basics. "
-                    f"Consider asking a follow-up to explore deeper, or continue to the next topic if appropriate. "
-                    f"Use your judgment on what feels natural."
+                guidance = (
+                    f"{status_line}\n"
+                    f"Good response (depth {depth_score}/5). "
+                    f"{transition_hint if transition_hint else 'Consider a brief follow-up or continue.'}"
                 )
             elif depth_score == 2:
-                # Surface-level response
-                return (
-                    f"Surface-level response. Depth: {depth_score}/5. "
-                    f"Consider asking a follow-up question to get more detail using the STAR method "
-                    f"(Situation, Task, Action, Result) if relevant. But don't force it if the conversation "
-                    f"should naturally move on."
+                if met_minimum and time_remaining_pct <= 40:
+                    guidance = (
+                        f"{status_line}\n"
+                        f"Surface response, but minimum met and time is limited. Consider transitioning."
+                    )
+                else:
+                    guidance = (
+                        f"{status_line}\n"
+                        f"Surface response. A follow-up using STAR method may help get more detail."
+                    )
+            else:
+                guidance = (
+                    f"{status_line}\n"
+                    f"Brief response. Ask a follow-up to get more context."
                 )
-            else:  # depth_score == 1
-                # Vague response
-                return (
-                    f"Brief response. Depth: {depth_score}/5. "
-                    f"A follow-up question would help get more context. Ask about specifics: "
-                    f"what they did, how they did it, what the outcome was. "
-                    f"But remain conversational and supportive."
+
+            # CRITICAL: If there's a pending acknowledgement, prepend it
+            if pending_ack:
+                guidance = (
+                    f"IMPORTANT - STAGE CHANGE: You MUST first acknowledge the stage transition. "
+                    f"Start your response by saying: \"{pending_ack}\" "
+                    f"Then proceed with your question.\n\n{guidance}"
                 )
+
+            return guidance
 
         except Exception as e:
             logger.error(f"[AGENT] Response assessment error: {e}", exc_info=True)
-            return "Error assessing response. Continue with the interview naturally."
+            return "Error assessing response. Continue naturally."
 
     def _get_role_context(self, state: InterviewState) -> str:
-        """
-        Generate role-specific interview guidance based on job role and experience level.
-
-        Returns a formatted string with focus areas and expectations for the specific role/level.
-        """
+        """Generate role-specific interview guidance."""
         role = state.job_role.lower() if state.job_role else ""
         level = state.experience_level.lower() if state.experience_level else "mid"
 
-        # Role-specific focus areas (what to probe in questions)
         role_keywords = {
             'engineer': 'technical skills, problem-solving approaches, system design decisions',
             'developer': 'coding practices, frameworks/tools used, debugging and optimization',
             'software': 'technical architecture, development process, code quality practices',
-            'manager': 'team leadership, project planning, stakeholder communication, conflict resolution',
-            'product': 'product strategy, user research, roadmap prioritization, cross-functional collaboration',
-            'designer': 'design process, user research methods, collaboration with engineers, design systems',
-            'analyst': 'data analysis techniques, business insights, technical tools proficiency, reporting',
-            'qa': 'testing strategies, automation, bug tracking, quality assurance processes',
-            'devops': 'infrastructure, CI/CD pipelines, monitoring, cloud platforms, automation',
+            'manager': 'team leadership, project planning, stakeholder communication',
+            'product': 'product strategy, user research, roadmap prioritization',
+            'designer': 'design process, user research methods, collaboration',
+            'analyst': 'data analysis techniques, business insights, technical tools',
+            'qa': 'testing strategies, automation, quality assurance processes',
+            'devops': 'infrastructure, CI/CD pipelines, monitoring, cloud platforms',
         }
 
-        # Level-specific expectations (depth and scope of questions)
         level_expectations = {
-            'entry': 'Focus on learning approach, academic/personal projects, foundational skills, and willingness to learn.',
-            'junior': 'Focus on recent projects, technical growth, mentorship received, and hands-on experience.',
-            'mid': 'Focus on independent project ownership, technical decisions, collaboration, and problem-solving.',
-            'senior': 'Focus on system design, mentoring others, technical leadership, and architectural decisions.',
-            'lead': 'Focus on architecture strategy, team guidance, cross-team impact, and technical vision.',
-            'staff': 'Focus on organization-wide impact, technical strategy, mentoring leads, and long-term planning.',
+            'entry': 'Focus on learning approach, academic/personal projects, foundational skills.',
+            'junior': 'Focus on recent projects, technical growth, hands-on experience.',
+            'mid': 'Focus on independent project ownership, technical decisions, collaboration.',
+            'senior': 'Focus on system design, mentoring others, technical leadership.',
+            'lead': 'Focus on architecture strategy, team guidance, cross-team impact.',
+            'staff': 'Focus on organization-wide impact, technical strategy, mentoring leads.',
         }
 
-        # Find matching role guidance
         role_focus = "technical experience and problem-solving approaches"
         for key, focus in role_keywords.items():
             if key in role:
                 role_focus = focus
                 break
 
-        # Get level guidance
         level_guidance = level_expectations.get(level, level_expectations['mid'])
 
         return f"""
 For this {state.job_role or 'position'} role ({level} level):
 - Key focus areas: {role_focus}
 - {level_guidance}
-- Tailor your questions to probe relevant experience for this specific role and level.
-- Reference their role and level naturally in questions when appropriate.
+- Tailor questions to probe relevant experience for this role and level.
 """
 
     async def on_enter(self):
         """Called when agent becomes active - trigger the greeting."""
         logger.info(f"[AGENT] Agent activated - greeting {self.candidate_name}")
-        # This triggers the LLM to generate a greeting based on instructions
         self.session.generate_reply(
             instructions=f"Say: 'Hello! This interview will be divided into 2 stages: self-introduction and past experiences. Let's begin - tell me about yourself, {self.candidate_name}.' Then immediately call transition_stage."
         )
@@ -530,15 +623,13 @@ async def emit_agent_caption(ctx: JobContext, text: str):
             "text": text
         })
 
-        logger.info(f"[UI] Attempting to emit agent caption: {text[:50]}...")
-
         await ctx.room.local_participant.publish_data(
             data_payload.encode('utf-8')
         )
 
-        logger.info(f"[UI] Successfully emitted agent caption")
+        logger.debug(f"[UI] Emitted agent caption: {text[:50]}...")
     except Exception as e:
-        logger.error(f"[UI] Failed to emit agent caption: {e}", exc_info=True)
+        logger.error(f"[UI] Failed to emit agent caption: {e}")
 
 
 async def delayed_disconnect(room, delay: float = 2.0):
@@ -557,36 +648,28 @@ async def entrypoint(ctx: JobContext):
     Main entry point for LiveKit agent.
     """
     fallback_task = None
+    interview_complete = asyncio.Event()
 
     try:
-        # Connect to room
         await ctx.connect()
         logger.info(f"[SESSION] Connected to room: {ctx.room.name}")
 
-        # Extract candidate info from room name (format: interview-name-timestamp)
+        # Extract candidate info
         room_parts = ctx.room.name.split('-')
         candidate_name = ' '.join(room_parts[1:-1]).title() if len(room_parts) > 2 else "Candidate"
 
-        # Try to get candidate info from remote participant attributes
-        # Wait a moment for participant to join if not already present
         role = 'this position'
         level = 'mid'
         email = ''
 
         if ctx.room.remote_participants:
-            # Get first remote participant (should be the candidate)
             participant = list(ctx.room.remote_participants.values())[0]
             if hasattr(participant, 'attributes') and participant.attributes:
                 role = participant.attributes.get('role', 'this position')
                 level = participant.attributes.get('level', 'mid')
                 email = participant.attributes.get('email', '')
                 logger.info(f"[SESSION] Retrieved candidate metadata - Role: {role}, Level: {level}")
-            else:
-                logger.warning("[SESSION] Participant has no attributes, using defaults")
-        else:
-            logger.warning("[SESSION] No remote participants yet, using defaults")
 
-        # Create candidate info dict
         candidate_info = {
             'name': candidate_name,
             'role': role
@@ -594,7 +677,7 @@ async def entrypoint(ctx: JobContext):
 
         logger.info(f"[SESSION] Candidate: {candidate_name} (Role: {role}, Level: {level})")
 
-        # Initialize interview state with full candidate context
+        # Initialize interview state
         interview_state = InterviewState()
         interview_state.candidate_name = candidate_name
         interview_state.candidate_email = email
@@ -602,10 +685,9 @@ async def entrypoint(ctx: JobContext):
         interview_state.experience_level = level
         interview_state.transition_to(InterviewStage.GREETING)
 
-        # Log room participants
         logger.info(f"[SESSION] Room participants: {[p.identity for p in ctx.room.remote_participants.values()]}")
 
-        # Create STT
+        # Initialize components
         try:
             stt = deepgram.STT(
                 model="nova-2",
@@ -617,7 +699,6 @@ async def entrypoint(ctx: JobContext):
             logger.error(f"[SESSION] Deepgram STT init error: {e}")
             raise
 
-        # Create LLM
         try:
             llm = openai.LLM(
                 model="gpt-4o-mini",
@@ -628,7 +709,6 @@ async def entrypoint(ctx: JobContext):
             logger.error(f"[SESSION] OpenAI LLM init error: {e}")
             raise
 
-        # Create TTS
         try:
             tts = openai.TTS(
                 voice="alloy",
@@ -639,7 +719,6 @@ async def entrypoint(ctx: JobContext):
             logger.error(f"[SESSION] OpenAI TTS init error: {e}")
             raise
 
-        # Create VAD
         try:
             vad = silero.VAD.load()
             logger.info("[SESSION] Silero VAD initialized")
@@ -647,10 +726,10 @@ async def entrypoint(ctx: JobContext):
             logger.error(f"[SESSION] Silero VAD init error: {e}")
             raise
 
-        # Create agent with room reference and candidate info
+        # Create agent
         agent = InterviewAgent(room=ctx.room, candidate_info=candidate_info)
 
-        # Create agent session
+        # Create session
         session = AgentSession(
             userdata=interview_state,
             stt=stt,
@@ -664,33 +743,26 @@ async def entrypoint(ctx: JobContext):
 
         logger.info("[SESSION] AgentSession created")
 
-        # Start fallback timer immediately - independent of session lifecycle
-        fallback_task = asyncio.create_task(
-            stage_fallback_timer(session, interview_state, ctx, agent)
-        )
-        logger.info("[TIMER] Fallback timer task created")
-
-        # Conversation history storage for analysis
+        # Conversation history
         conversation_history = {
-            "agent": [],  # List of agent messages: [{"index": 0, "text": "...", "timestamp": ...}, ...]
-            "user": [],   # List of user messages: [{"index": 0, "text": "...", "timestamp": ...}, ...]
+            "agent": [],
+            "user": [],
         }
 
-        # Event handlers for logging and caption emission
+        # Closing finalization tracking
+        closing_finalized = {"done": False}
+
+        # Event handlers
         @session.on("user_input_transcribed")
         def on_user_speech(event):
-            # Only process FINAL transcripts to avoid fragmentation
             if event.is_final:
                 import time
                 transcript = event.transcript.strip()
-
-                # Skip empty transcripts
                 if not transcript:
                     return
 
                 logger.info(f"[USER] {transcript}")
 
-                # Store user message in conversation history (only final, complete transcripts)
                 user_message = {
                     "index": len(conversation_history["user"]),
                     "text": transcript,
@@ -698,25 +770,20 @@ async def entrypoint(ctx: JobContext):
                 }
                 conversation_history["user"].append(user_message)
 
-                # Emit user caption to UI
                 asyncio.create_task(emit_user_caption(ctx, transcript))
 
         @session.on("conversation_item_added")
         def on_conversation_item(event):
-            """Handle both user and agent messages from the conversation."""
             try:
                 import time
                 message = event.item
 
-                # Only process agent messages (skip user messages as they're handled by user_input_transcribed)
                 if hasattr(message, 'role') and message.role == "assistant":
-                    # Get agent's text using text_content property
                     agent_text = message.text_content if hasattr(message, 'text_content') else None
 
                     if agent_text:
                         logger.info(f"[AGENT] {agent_text[:150]}...")
 
-                        # Store agent message in conversation history
                         agent_message = {
                             "index": len(conversation_history["agent"]),
                             "text": agent_text,
@@ -725,16 +792,91 @@ async def entrypoint(ctx: JobContext):
                         }
                         conversation_history["agent"].append(agent_message)
 
-                        # Emit agent caption to UI (this happens after speech is generated)
                         asyncio.create_task(emit_agent_caption(ctx, agent_text))
-                        logger.info(f"[HISTORY] Stored agent message #{agent_message['index']} ({len(agent_text)} chars)")
-                    else:
-                        logger.warning("[AGENT] No text_content in message")
+                        
+                        # Check for closing message delivery
+                        if interview_state.stage == InterviewStage.CLOSING and not closing_finalized["done"]:
+                            # Check if this is a proper closing message
+                            text_lower = agent_text.lower()
+                            closing_indicators = [
+                                "thank you" in text_lower and ("luck" in text_lower or "best" in text_lower),
+                                "good luck" in text_lower,
+                                "best of luck" in text_lower,
+                                "we'll be in touch" in text_lower,
+                                "next steps" in text_lower and "email" in text_lower,
+                            ]
+                            
+                            if any(closing_indicators) and len(agent_text) > 50:
+                                logger.info(f"[SESSION] Closing message detected ({len(agent_text)} chars)")
+                                interview_state.closing_message_delivered = True
+                                
+                                # Schedule finalization
+                                async def schedule_finalization():
+                                    if closing_finalized["done"]:
+                                        return
+                                    closing_finalized["done"] = True
+                                    
+                                    # Wait for TTS to finish speaking
+                                    await asyncio.sleep(5.0)
+                                    
+                                    logger.info("[SESSION] Finalizing interview after closing message")
+                                    await finalize_and_disconnect()
+                                
+                                asyncio.create_task(schedule_finalization())
+                        
             except Exception as e:
-                logger.error(f"[CONVERSATION] Error processing conversation item: {e}", exc_info=True)
+                logger.error(f"[CONVERSATION] Error processing item: {e}", exc_info=True)
 
-        # Track closing stage speech timing
-        closing_speech_start = {"time": None, "has_spoken": False}
+        async def finalize_and_disconnect():
+            """Finalize interview and disconnect."""
+            try:
+                import json
+                from datetime import datetime
+
+                # Emit ending notification
+                try:
+                    data_payload = json.dumps({
+                        "type": "interview_ending",
+                        "message": "Interview Complete"
+                    })
+                    await ctx.room.local_participant.publish_data(
+                        data_payload.encode('utf-8')
+                    )
+                    logger.info("[UI] Emitted interview ending notification")
+                except Exception as e:
+                    logger.warning(f"[UI] Failed to emit interview ending: {e}")
+
+                # Save conversation
+                history_data = {
+                    "candidate": candidate_name,
+                    "interview_date": datetime.now().isoformat(),
+                    "room_name": ctx.room.name,
+                    "conversation": conversation_history,
+                    "total_messages": {
+                        "agent": len(conversation_history['agent']),
+                        "user": len(conversation_history['user'])
+                    }
+                }
+
+                os.makedirs("interviews", exist_ok=True)
+                filename = f"interviews/{candidate_name.lower().replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+
+                with open(filename, 'w', encoding='utf-8') as f:
+                    import json as json_module
+                    json_module.dump(history_data, f, indent=2, ensure_ascii=False)
+
+                logger.info(f"[HISTORY] Saved conversation to {filename}")
+
+                # Signal interview complete
+                interview_complete.set()
+
+                # Disconnect after brief delay
+                await asyncio.sleep(2.0)
+                await ctx.room.disconnect()
+
+            except Exception as e:
+                logger.error(f"[FINALIZE] Error: {e}", exc_info=True)
+                interview_complete.set()
 
         @session.on("agent_state_changed")
         def on_state_change(event):
@@ -742,144 +884,170 @@ async def entrypoint(ctx: JobContext):
             new_state = getattr(event, 'new_state', 'unknown')
             logger.info(f"[SESSION] Agent state: {old_state} -> {new_state}")
 
-            # Track when agent starts speaking in closing stage
-            if interview_state.stage == InterviewStage.CLOSING:
-                if new_state == 'speaking' and not closing_speech_start["has_spoken"]:
-                    import time
-                    closing_speech_start["time"] = time.time()
-                    closing_speech_start["has_spoken"] = True
-                    logger.info("[SESSION] Agent started closing remarks")
+        # Handle room disconnect
+        @ctx.room.on("disconnected")
+        def on_room_disconnected():
+            logger.info("[ROOM] Room disconnected event")
+            interview_complete.set()
 
-            # Auto-disconnect after agent finishes speaking closing remarks
-            if interview_state.stage == InterviewStage.CLOSING and closing_speech_start["has_spoken"]:
-                if old_state == 'speaking' and new_state in ('idle', 'listening'):
-                    import time
-                    speech_duration = time.time() - closing_speech_start["time"]
-
-                    # Only disconnect if agent spoke for at least 3 seconds (to ensure full message was delivered)
-                    if speech_duration >= 3.0:
-                        logger.info(f"[SESSION] Closing speech completed (duration: {speech_duration:.1f}s) - scheduling disconnect in 3 seconds")
-
-                        # Emit "interview ending" message to UI
-                        async def emit_interview_ending():
-                            try:
-                                import json
-                                data_payload = json.dumps({
-                                    "type": "interview_ending",
-                                    "message": "Interview Complete"
-                                })
-                                await ctx.room.local_participant.publish_data(
-                                    data_payload.encode('utf-8')
-                                )
-                                logger.info("[UI] Emitted interview ending notification")
-                            except Exception as e:
-                                logger.error(f"[UI] Failed to emit interview ending: {e}")
-
-                        asyncio.create_task(emit_interview_ending())
-
-                        # Save conversation history for analysis
-                        try:
-                            import json
-                            from datetime import datetime
-
-                            history_data = {
-                                "candidate": candidate_name,
-                                "interview_date": datetime.now().isoformat(),
-                                "room_name": ctx.room.name,
-                                "conversation": conversation_history,
-                                "total_messages": {
-                                    "agent": len(conversation_history['agent']),
-                                    "user": len(conversation_history['user'])
-                                }
-                            }
-
-                            # Save to interviews directory
-                            import os
-                            os.makedirs("interviews", exist_ok=True)
-                            filename = f"interviews/{candidate_name.lower().replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-
-                            with open(filename, 'w', encoding='utf-8') as f:
-                                json.dump(history_data, f, indent=2, ensure_ascii=False)
-
-                            logger.info(f"[HISTORY] Saved conversation to {filename}")
-                            logger.info(f"[HISTORY] Interview complete - Agent: {len(conversation_history['agent'])} messages, User: {len(conversation_history['user'])} messages")
-                        except Exception as e:
-                            logger.error(f"[HISTORY] Failed to save conversation: {e}", exc_info=True)
-
-                        # Give a brief moment for the audio to fully play out, then disconnect
-                        asyncio.create_task(delayed_disconnect(ctx.room, delay=3.0))
-                    else:
-                        logger.info(f"[SESSION] Closing speech too short ({speech_duration:.1f}s), waiting for complete message...")
+        # Start fallback timer AFTER session setup but BEFORE session.start()
+        fallback_task = asyncio.create_task(
+            stage_fallback_timer(session, interview_state, ctx, agent, interview_complete)
+        )
+        logger.info("[TIMER] Fallback timer task created")
 
         logger.info("[SESSION] Starting agent session")
 
-        # Start the session - this MUST be awaited
-        # The agent's on_enter() will trigger the greeting via generate_reply()
+        # Start the session (non-blocking)
         await session.start(
-            agent=agent, 
+            agent=agent,
             room=ctx.room
         )
-        
-        logger.info("[SESSION] Session ended normally")
+
+        logger.info("[SESSION] Session started, waiting for interview completion...")
+
+        # CRITICAL: Wait for interview to actually complete
+        # This keeps the entrypoint alive and prevents timer cancellation
+        await interview_complete.wait()
+
+        logger.info("[SESSION] Interview complete signal received")
 
     except asyncio.CancelledError:
         logger.info("[SESSION] Session cancelled")
     except Exception as e:
         logger.error(f"[SESSION] Agent error: {e}", exc_info=True)
     finally:
-        if fallback_task:
+        if fallback_task and not fallback_task.done():
             fallback_task.cancel()
             try:
                 await fallback_task
             except asyncio.CancelledError:
                 pass
+            logger.info("[FALLBACK] Fallback timer cancelled")
         logger.info("[SESSION] Session cleanup complete")
 
 
-async def stage_fallback_timer(session: AgentSession, state: InterviewState, ctx: JobContext, agent):
+async def stage_fallback_timer(
+    session: AgentSession,
+    state: InterviewState,
+    ctx: JobContext,
+    agent: InterviewAgent,
+    interview_complete: asyncio.Event
+):
     """
-    Simple timer that forces stage transitions after hard time limits.
-    Checks every 5 seconds and logs progress.
+    Timer that monitors stage progress and forces transitions when limits are exceeded.
+    Only active for SELF_INTRO and PAST_EXPERIENCE stages.
     """
-    STAGE_LIMITS = {
-        InterviewStage.GREETING: 60,
-        InterviewStage.SELF_INTRO: 125,
-        InterviewStage.PAST_EXPERIENCE: 250,
-        InterviewStage.CLOSING: 35,
-    }
+    # Monitor these stages for time limits
+    MONITORED_STAGES = {InterviewStage.SELF_INTRO, InterviewStage.PAST_EXPERIENCE}
+    
+    # Closing stage has a separate safety timeout
+    CLOSING_TIMEOUT = 60  # Force disconnect after 60s in closing if message not delivered
 
-    # Track logged milestones per stage
-    logged_milestones = {}
+    logged_milestones = set()
     last_logged_stage = None
+    closing_timeout_logged = False
 
-    logger.info("[TIMER] Timer started")
+    logger.info("[TIMER] Fallback timer started - monitoring SELF_INTRO, PAST_EXPERIENCE, and CLOSING")
 
     try:
-        while True:
+        while not interview_complete.is_set():
             await asyncio.sleep(5)
 
-            current_stage = state.stage
-            elapsed = state.time_in_current_stage()
-            limit = STAGE_LIMITS.get(current_stage, 600)
-            pct = int((elapsed / limit) * 100) if limit > 0 else 0
+            # Check if interview is done
+            if interview_complete.is_set():
+                break
 
-            # New stage detected - log it
+            current_stage = state.stage
+            
+            # Special handling for CLOSING stage
+            if current_stage == InterviewStage.CLOSING:
+                elapsed = state.time_in_current_stage()
+                
+                if not closing_timeout_logged:
+                    logger.info(f"[TIMER] Stage 'closing' STARTED - Safety timeout: {CLOSING_TIMEOUT}s")
+                    closing_timeout_logged = True
+                
+                # Force finalization if closing takes too long
+                if elapsed > CLOSING_TIMEOUT and not state.closing_message_delivered:
+                    logger.warning(f"[FALLBACK] Closing stage timeout ({elapsed:.0f}s) - forcing finalization")
+                    
+                    # Try to say a brief closing message
+                    try:
+                        closing_msg = (
+                            f"Thank you for your time, {agent.candidate_name}. "
+                            f"We'll be in touch. Best of luck!"
+                        )
+                        await session.say(closing_msg, allow_interruptions=False)
+                        await asyncio.sleep(3.0)
+                    except Exception as e:
+                        logger.warning(f"[FALLBACK] Failed to say closing: {e}")
+                    
+                    # Signal completion
+                    interview_complete.set()
+                    
+                    try:
+                        await ctx.room.disconnect()
+                    except Exception as e:
+                        logger.warning(f"[FALLBACK] Disconnect error: {e}")
+                    
+                    break
+                
+                continue
+
+            # Only monitor specific stages for question/time limits
+            if current_stage not in MONITORED_STAGES:
+                if current_stage != last_logged_stage:
+                    logger.debug(f"[TIMER] Stage '{current_stage.value}' not monitored, skipping")
+                    last_logged_stage = current_stage
+                    logged_milestones = set()
+                continue
+
+            # Get progress info
+            time_status = state.get_time_status()
+            q_status = state.get_question_status()
+
+            elapsed = time_status['elapsed']
+            limit = time_status['limit']
+            elapsed_pct = time_status['elapsed_pct']
+            remaining_pct = time_status['remaining_pct']
+
+            # New stage detected
             if current_stage != last_logged_stage:
-                logger.info(f"[TIMER] Stage '{current_stage.value}' STARTED - 0/{limit}s (0%)")
+                logger.info(
+                    f"[TIMER] Stage '{current_stage.value}' STARTED - "
+                    f"Limit: {limit}s, Questions needed: {q_status['minimum']}"
+                )
                 logged_milestones = set()
                 last_logged_stage = current_stage
 
-            # Log milestones: 50%, 80%, 100%
-            if pct >= 50 and 50 not in logged_milestones:
-                logger.info(f"[TIMER] Stage '{current_stage.value}' at 50% - {elapsed:.0f}/{limit}s")
+            # Log milestones: 50%, 75%, 90%, 100%
+            if elapsed_pct >= 50 and 50 not in logged_milestones:
+                logger.info(
+                    f"[TIMER] Stage '{current_stage.value}' at 50% - "
+                    f"{elapsed:.0f}/{limit}s, Questions: {q_status['asked']}/{q_status['minimum']}"
+                )
                 logged_milestones.add(50)
 
-            if pct >= 80 and 80 not in logged_milestones:
-                logger.warning(f"[TIMER] Stage '{current_stage.value}' at 80% - {elapsed:.0f}/{limit}s (approaching limit)")
-                logged_milestones.add(80)
+            if elapsed_pct >= 75 and 75 not in logged_milestones:
+                logger.warning(
+                    f"[TIMER] Stage '{current_stage.value}' at 75% - "
+                    f"{elapsed:.0f}/{limit}s, Questions: {q_status['asked']}/{q_status['minimum']}"
+                )
+                logged_milestones.add(75)
 
-            if pct >= 100 and 100 not in logged_milestones:
-                logger.warning(f"[TIMER] Stage '{current_stage.value}' at 100% - {elapsed:.0f}/{limit}s (LIMIT EXCEEDED)")
+            if elapsed_pct >= 90 and 90 not in logged_milestones:
+                logger.warning(
+                    f"[TIMER] Stage '{current_stage.value}' at 90% - "
+                    f"{elapsed:.0f}/{limit}s - APPROACHING LIMIT"
+                )
+                logged_milestones.add(90)
+
+            if elapsed_pct >= 100 and 100 not in logged_milestones:
+                logger.warning(
+                    f"[TIMER] Stage '{current_stage.value}' at 100% - "
+                    f"LIMIT EXCEEDED ({elapsed:.0f}/{limit}s)"
+                )
                 logged_milestones.add(100)
 
             # Force transition if limit exceeded
@@ -888,29 +1056,23 @@ async def stage_fallback_timer(session: AgentSession, state: InterviewState, ctx
 
                 if next_stage:
                     logger.warning(
-                        f"[FALLBACK] FORCING stage transition: "
-                        f"{current_stage.value} -> {next_stage.value} "
-                        f"(exceeded {limit}s limit)"
+                        f"[FALLBACK] FORCING transition: {current_stage.value} -> {next_stage.value} "
+                        f"(exceeded {limit}s limit, Questions: {q_status['asked']}/{q_status['minimum']})"
                     )
 
-                    # Execute FSM state transition
+                    # Execute FSM transition
                     state.transition_to(next_stage, forced=True)
 
-                    # Update agent instructions to match new stage
+                    # Update agent instructions
                     try:
-                        # Get base stage instructions
                         stage_instructions = INSTRUCTIONS[next_stage]
-
-                        # Replace [ROLE] placeholder with actual role
                         stage_instructions = stage_instructions.replace(
                             "[ROLE]",
                             state.job_role or "this position"
                         )
 
-                        # Add role-specific context guidance
                         role_context = agent._get_role_context(state)
 
-                        # Add consistent personality note with role/level context
                         personality_note = f"""
 
 IMPORTANT: The candidate's name is {agent.candidate_name}.
@@ -919,17 +1081,15 @@ Experience level: {state.experience_level or 'mid-level'}
 
 {role_context}
 
-Use their name naturally during the conversation. Maintain a warm, professional tone consistent with Alex the AI interviewer. Be encouraging and supportive.
+Use their name naturally. Maintain a warm, professional tone.
 """
 
                         personalized_instructions = stage_instructions + personality_note
-
-                        # Update agent instructions for new stage
                         await agent.update_instructions(personalized_instructions)
 
                         logger.info(f"[FALLBACK] Updated agent instructions to {next_stage.value}")
                     except Exception as e:
-                        logger.error(f"[FALLBACK] Failed to update agent instructions: {e}", exc_info=True)
+                        logger.error(f"[FALLBACK] Failed to update instructions: {e}", exc_info=True)
 
                     # Emit stage change to UI
                     try:
@@ -946,31 +1106,57 @@ Use their name naturally during the conversation. Maintain a warm, professional 
 
                         logger.info(f"[UI] Emitted forced stage change: {next_stage.value}")
                     except Exception as e:
-                        logger.error(f"[UI] Failed to emit forced stage change: {e}")
+                        logger.error(f"[UI] Failed to emit stage change: {e}")
 
-                    # Announce transition and prompt agent
+                    # Queue acknowledgement for graceful delivery after user stops
+                    # This will be injected into the agent's next response via assess_response or ask_question
                     try:
-                        transition_announcements = {
-                            InterviewStage.SELF_INTRO: f"Alright {agent.candidate_name}, let's keep this moving. Please continue with your introduction.",
-                            InterviewStage.PAST_EXPERIENCE: f"Great! Now let's shift gears and talk about your past work experience, particularly as it relates to the {state.job_role or 'role'} you're applying for.",
-                            InterviewStage.CLOSING: f"Thank you {agent.candidate_name}. Let me wrap up our interview.",
+                        transition_acknowledgements = {
+                            InterviewStage.SELF_INTRO: (
+                                f"Alright {agent.candidate_name}, let's get started. "
+                                f"Please go ahead and introduce yourself."
+                            ),
+                            InterviewStage.PAST_EXPERIENCE: (
+                                f"Thank you for that introduction, {agent.candidate_name}! "
+                                f"Now let's shift gears and talk about your past work experience, "
+                                f"particularly as it relates to the {state.job_role or 'position'} role you're applying for. "
+                                f"Can you tell me about a specific project or accomplishment you're proud of?"
+                            ),
+                            InterviewStage.CLOSING: (
+                                f"Thank you for sharing all of that with me, {agent.candidate_name}. "
+                                f"I really appreciate you walking me through your experience. "
+                                f"Let me wrap up our interview now."
+                            ),
                         }
-                        announcement = transition_announcements.get(
-                            next_stage,
-                            "Let's continue to the next part."
-                        )
 
-                        # Use session.say to announce the transition
-                        await session.say(announcement)
+                        acknowledgement = transition_acknowledgements.get(next_stage)
 
-                        logger.info(f"[FALLBACK] Announced forced transition to {next_stage.value}")
+                        if acknowledgement:
+                            # Queue the acknowledgement - will be delivered on next agent turn
+                            state.pending_acknowledgement = acknowledgement
+                            state.pending_ack_stage = next_stage.value
+                            logger.info(f"[FALLBACK] Queued acknowledgement for {next_stage.value}")
+
+                            # Also try session.say as backup - if user is silent, this will work
+                            # If user is speaking, it will be interrupted but the queued ack will still fire
+                            try:
+                                await session.say(acknowledgement)
+                                logger.info(f"[FALLBACK] Announced forced transition to {next_stage.value}")
+                            except Exception as say_err:
+                                logger.warning(f"[FALLBACK] session.say failed (user may be speaking): {say_err}")
+                                # Acknowledgement is still queued, will be delivered via tool response
+
                     except Exception as e:
-                        logger.error(f"[FALLBACK] Error announcing transition: {e}", exc_info=True)
+                        logger.error(f"[FALLBACK] Error setting up transition acknowledgement: {e}", exc_info=True)
+
+                    # Reset milestones for new stage
+                    logged_milestones = set()
+                    last_logged_stage = next_stage
 
     except asyncio.CancelledError:
-        logger.info("[FALLBACK] Fallback timer cancelled")
+        logger.info("[TIMER] Fallback timer cancelled")
     except Exception as e:
-        logger.error(f"[FALLBACK] Fallback timer error: {e}", exc_info=True)
+        logger.error(f"[TIMER] Fallback timer error: {e}", exc_info=True)
 
 
 if __name__ == "__main__":

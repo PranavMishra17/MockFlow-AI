@@ -22,6 +22,23 @@ class InterviewStage(Enum):
     CLOSING = "closing"
 
 
+# Stage time limits (seconds) - centralized configuration
+STAGE_TIME_LIMITS = {
+    InterviewStage.GREETING: 60,
+    InterviewStage.SELF_INTRO: 120,
+    InterviewStage.PAST_EXPERIENCE: 240,
+    InterviewStage.CLOSING: 45,
+}
+
+# Minimum questions per stage
+STAGE_MIN_QUESTIONS = {
+    'greeting': 1,
+    'self_intro': 2,
+    'past_experience': 5,
+    'closing': 1,
+}
+
+
 @dataclass
 class InterviewState:
     """
@@ -51,7 +68,7 @@ class InterviewState:
     self_intro_summary: str = ""
     experience_responses: list[str] = field(default_factory=list)
     questions_asked: list[str] = field(default_factory=list)
-    questions_per_stage: dict[str, int] = field(default_factory=dict)  # Track questions per stage to enforce limits
+    questions_per_stage: dict[str, int] = field(default_factory=dict)
 
     # Document context (for future RAG implementation)
     uploaded_resume_text: Optional[str] = None
@@ -60,6 +77,23 @@ class InterviewState:
     # Transition tracking
     transition_count: int = 0
     forced_transitions: int = 0
+
+    # Pending transition (for graceful hard timer)
+    pending_transition: Optional[InterviewStage] = None
+    pending_transition_reason: Optional[str] = None
+
+    # Pending acknowledgement (queued when transition happens mid-user-speech)
+    pending_acknowledgement: Optional[str] = None
+    pending_ack_stage: Optional[str] = None
+    transition_acknowledged: bool = False  # Only True after agent asks question in new stage
+    
+    # Closing stage tracking
+    closing_initiated: bool = False
+    closing_message_delivered: bool = False
+
+    # Queued acknowledgement (to be spoken when user stops talking)
+    pending_acknowledgement: Optional[str] = None
+    pending_ack_stage: Optional[str] = None
 
     def transition_to(self, new_stage: InterviewStage, forced: bool = False) -> None:
         """
@@ -74,6 +108,18 @@ class InterviewState:
         self.stage_started_at = datetime.now()
         self.last_state_verification = datetime.now()
         self.transition_count += 1
+
+        # Clear pending transition
+        self.pending_transition = None
+        self.pending_transition_reason = None
+        
+        # Reset acknowledgement tracking for new transition
+        self.transition_acknowledged = False
+        
+        # Reset closing flags (in case transitioning to a new stage)
+        if new_stage != InterviewStage.CLOSING:
+            self.closing_initiated = False
+            self.closing_message_delivered = False
 
         if forced:
             self.forced_transitions += 1
@@ -142,6 +188,112 @@ class InterviewState:
         """
         return self.get_next_stage() is not None
 
+    def get_stage_time_limit(self) -> float:
+        """Get the time limit for current stage in seconds."""
+        return STAGE_TIME_LIMITS.get(self.stage, 600)
+
+    def get_time_elapsed_pct(self) -> float:
+        """
+        Get percentage of time elapsed in current stage.
+
+        Returns:
+            Percentage (0-100) of time elapsed
+        """
+        limit = self.get_stage_time_limit()
+        elapsed = self.time_in_current_stage()
+        return min(100.0, (elapsed / limit) * 100)
+
+    def get_time_remaining_pct(self) -> float:
+        """
+        Get percentage of time remaining in current stage.
+
+        Returns:
+            Percentage (0-100) of time remaining
+        """
+        return max(0.0, 100.0 - self.get_time_elapsed_pct())
+
+    def get_time_status(self) -> dict:
+        """
+        Get comprehensive time status for current stage.
+
+        Returns:
+            Dict with elapsed, limit, remaining_pct, elapsed_pct, remaining_seconds
+        """
+        limit = self.get_stage_time_limit()
+        elapsed = self.time_in_current_stage()
+        remaining = max(0, limit - elapsed)
+
+        return {
+            'elapsed': elapsed,
+            'limit': limit,
+            'remaining_seconds': remaining,
+            'remaining_pct': max(0.0, (remaining / limit) * 100),
+            'elapsed_pct': min(100.0, (elapsed / limit) * 100),
+            'is_overtime': elapsed > limit
+        }
+
+    def get_question_status(self) -> dict:
+        """
+        Get question count status for current stage.
+
+        Returns:
+            Dict with asked, minimum, met_minimum, remaining_to_min
+        """
+        stage_key = self.stage.value
+        asked = self.questions_per_stage.get(stage_key, 0)
+        minimum = STAGE_MIN_QUESTIONS.get(stage_key, 0)
+
+        return {
+            'asked': asked,
+            'minimum': minimum,
+            'met_minimum': asked >= minimum,
+            'remaining_to_min': max(0, minimum - asked)
+        }
+
+    def get_progress_summary(self) -> str:
+        """
+        Get a formatted progress summary for agent context injection.
+
+        Returns:
+            Formatted string with time and question progress
+        """
+        time_status = self.get_time_status()
+        q_status = self.get_question_status()
+
+        time_remaining_pct = time_status['remaining_pct']
+        remaining_sec = time_status['remaining_seconds']
+
+        # Determine urgency level
+        if time_remaining_pct <= 10:
+            urgency = "CRITICAL"
+        elif time_remaining_pct <= 25:
+            urgency = "HIGH"
+        elif time_remaining_pct <= 50:
+            urgency = "MODERATE"
+        else:
+            urgency = "LOW"
+
+        summary = (
+            f"[PROGRESS] Stage: {self.stage.value} | "
+            f"Questions: {q_status['asked']}/{q_status['minimum']} min | "
+            f"Time: {time_remaining_pct:.0f}% remaining ({remaining_sec:.0f}s) | "
+            f"Urgency: {urgency}"
+        )
+
+        return summary
+
+    def should_transition_soon(self) -> bool:
+        """
+        Check if agent should consider transitioning soon based on progress.
+
+        Returns:
+            True if minimum questions met AND time is past 50%
+        """
+        q_status = self.get_question_status()
+        time_status = self.get_time_status()
+
+        return q_status['met_minimum'] and time_status['elapsed_pct'] >= 50
+
     def to_dict(self) -> dict:
         """
         Convert state to dictionary for logging/debugging.
@@ -149,13 +301,19 @@ class InterviewState:
         Returns:
             Dictionary representation of state
         """
+        time_status = self.get_time_status()
+        q_status = self.get_question_status()
+
         return {
             "stage": self.stage.value,
             "candidate_name": self.candidate_name,
             "job_role": self.job_role,
-            "time_in_stage": self.time_in_current_stage(),
+            "time_in_stage": time_status['elapsed'],
+            "time_remaining_pct": time_status['remaining_pct'],
+            "questions_asked": q_status['asked'],
+            "questions_minimum": q_status['minimum'],
             "transition_count": self.transition_count,
             "forced_transitions": self.forced_transitions,
-            "questions_asked_count": len(self.questions_asked),
-            "responses_recorded": len(self.experience_responses)
+            "responses_recorded": len(self.experience_responses),
+            "pending_transition": self.pending_transition.value if self.pending_transition else None
         }
