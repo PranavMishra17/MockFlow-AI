@@ -785,6 +785,28 @@ select.form-input {
     position: relative;
     z-index: 100;
     flex-shrink: 0;
+    transition: background 0.5s ease, border-color 0.5s ease;
+}
+
+/* Stage-specific background colors */
+.progress-header[data-current-stage="greeting"] {
+    background: rgba(74, 222, 128, 0.08);
+    border-bottom-color: rgba(74, 222, 128, 0.2);
+}
+
+.progress-header[data-current-stage="self_intro"] {
+    background: rgba(251, 182, 206, 0.12);
+    border-bottom-color: rgba(251, 182, 206, 0.25);
+}
+
+.progress-header[data-current-stage="past_experience"] {
+    background: rgba(196, 181, 253, 0.12);
+    border-bottom-color: rgba(196, 181, 253, 0.25);
+}
+
+.progress-header[data-current-stage="closing"] {
+    background: rgba(220, 38, 38, 0.08);
+    border-bottom-color: rgba(220, 38, 38, 0.2);
 }
 
 .progress-container {
@@ -813,8 +835,25 @@ select.form-input {
 .progress-fill {
     height: 100%;
     background: var(--accent-green-deep);
-    transition: width 0.5s ease;
+    transition: width 0.5s ease, background 0.5s ease;
     width: 0%;
+}
+
+/* Stage-specific progress fill colors */
+.progress-header[data-current-stage="greeting"] .progress-fill {
+    background: rgb(74, 222, 128);
+}
+
+.progress-header[data-current-stage="self_intro"] .progress-fill {
+    background: rgb(251, 113, 133);
+}
+
+.progress-header[data-current-stage="past_experience"] .progress-fill {
+    background: rgb(167, 139, 250);
+}
+
+.progress-header[data-current-stage="closing"] .progress-fill {
+    background: rgb(220, 38, 38);
 }
 
 .stage-dot {
@@ -845,12 +884,58 @@ select.form-input {
     border-color: var(--accent-green-deep);
     background: var(--accent-green);
     color: var(--text-primary);
+    transition: all 0.3s ease;
 }
+/* Stage Progress Colors - Natural Progression */
+/* Green -> Teal -> Blue -> Indigo */
 
 .stage-dot.completed .stage-circle {
     border-color: var(--accent-green-deep);
     background: var(--accent-green-deep);
     color: white;
+    transition: all 0.3s ease;
+}
+
+/* Stage-specific active dot colors */
+.progress-header[data-current-stage="greeting"] .stage-dot.active .stage-circle {
+    border-color: rgb(34, 197, 94);
+    background: rgba(34, 197, 94, 0.15);
+}
+
+.progress-header[data-current-stage="self_intro"] .stage-dot.active .stage-circle {
+    border-color: rgb(20, 184, 166);
+    background: rgba(20, 184, 166, 0.15);
+}
+
+.progress-header[data-current-stage="past_experience"] .stage-dot.active .stage-circle {
+    border-color: rgb(59, 130, 246);
+    background: rgba(59, 130, 246, 0.15);
+}
+
+.progress-header[data-current-stage="closing"] .stage-dot.active .stage-circle {
+    border-color: rgb(99, 102, 241);
+    background: rgba(99, 102, 241, 0.15);
+}
+
+/* Stage-specific completed dot colors */
+.progress-header[data-current-stage="greeting"] .stage-dot.completed .stage-circle {
+    border-color: rgb(34, 197, 94);
+    background: rgb(34, 197, 94);
+}
+
+.progress-header[data-current-stage="self_intro"] .stage-dot.completed .stage-circle {
+    border-color: rgb(20, 184, 166);
+    background: rgb(20, 184, 166);
+}
+
+.progress-header[data-current-stage="past_experience"] .stage-dot.completed .stage-circle {
+    border-color: rgb(59, 130, 246);
+    background: rgb(59, 130, 246);
+}
+
+.progress-header[data-current-stage="closing"] .stage-dot.completed .stage-circle {
+    border-color: rgb(99, 102, 241);
+    background: rgb(99, 102, 241);
 }
 
 .stage-label {

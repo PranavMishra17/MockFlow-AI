@@ -1,0 +1,197 @@
+{
+  "candidate": "Pranav Mishra",
+  "interview_date": "2025-12-13T02:40:05.721096",
+  "room_name": "interview-pranav-mishra-1765611412",
+  "conversation": {
+    "agent": [
+      {
+        "index": 0,
+        "text": "Hello! I'm Alex, and I'll be conducting your interview today. This interview has two parts: first, you'll introduce yourself and share your background, and then we'll discuss your past experience in detail. Let's begin - Pranav Mishra, why don't you tell me a bit about yourself?",
+        "timestamp": 1765611436.993674,
+        "stage": "self_intro"
+      },
+      {
+        "index": 1,
+        "text": "I'm looking forward to hearing about your personal projects or interests, Pranav! What have you pursued outside of your academic and professional experiences in AI or technology?",
+        "timestamp": 1765611468.1844218,
+        "stage": "self_intro"
+      },
+      {
+        "index": 2,
+        "text": "Thank you for sharing that, Pranav! Now, let's delve deeper into your past experiences as they relate to the AI Engineer position you're applying for. You mentioned creating a reinforcement learning game agent called Snake AI MLOps. Could you walk me through that project? What were your goals, the technologies you used, and any challenges",
+        "timestamp": 1765611506.0327709,
+        "stage": "past_experience"
+      },
+      {
+        "index": 3,
+        "text": "I'm curious to hear about your selection process, Pranav! How did you choose the four reinforcement learning algorithms for your project, and what criteria did you use to evaluate their performance?",
+        "timestamp": 1765611538.1675012,
+        "stage": "past_experience"
+      },
+      {
+        "index": 4,
+        "text": "I'm eager",
+        "timestamp": 1765611569.0027487,
+        "stage": "past_experience"
+      },
+      {
+        "index": 5,
+        "text": "I'm",
+        "timestamp": 1765611575.0426915,
+        "stage": "past_experience"
+      },
+      {
+        "index": 6,
+        "text": "Thank you so much for sharing your experiences with me today, Pranav! I appreciate your insights into your projects, especially your work with reinforcement learning algorithms and your focus on healthcare applications. It's clear that you have a strong foundation in AI concepts, which is a great fit for the AI Engineer role. \n\nWishing you the best of luck in your job search, and I hope to see you succeed in your future endeavors! Goodbye!",
+        "timestamp": 1765611605.7171063,
+        "stage": "closing"
+      }
+    ],
+    "user": [
+      {
+        "index": 0,
+        "text": "Hi. I'm Pranav. I'm a recent grad from UIC with a master",
+        "timestamp": 1765611440.929288
+      },
+      {
+        "index": 1,
+        "text": "in computer science.",
+        "timestamp": 1765611442.0411212
+      },
+      {
+        "index": 2,
+        "text": "And I've been working as a research software engineer at UIC's BI labs.",
+        "timestamp": 1765611447.055075
+      },
+      {
+        "index": 3,
+        "text": "Building on health care applications.",
+        "timestamp": 1765611448.3773148
+      },
+      {
+        "index": 4,
+        "text": "Virtual reality applications in medical domain as well as multi agent research.",
+        "timestamp": 1765611452.845719
+      },
+      {
+        "index": 5,
+        "text": "I've had many",
+        "timestamp": 1765611472.0461748
+      },
+      {
+        "index": 6,
+        "text": "personal projects. I've made games, mobile games, computer games,",
+        "timestamp": 1765611474.9383283
+      },
+      {
+        "index": 7,
+        "text": "AI games. As well, I made a reinforcement learning game agent.",
+        "timestamp": 1765611478.5413852
+      },
+      {
+        "index": 8,
+        "text": "Called Snake AI MLOps.",
+        "timestamp": 1765611480.0330467
+      },
+      {
+        "index": 9,
+        "text": "Yeah. It was a project using c plus plus and",
+        "timestamp": 1765611506.0227394
+      },
+      {
+        "index": 10,
+        "text": "and. I made the models in Python, but then I converted them",
+        "timestamp": 1765611509.3938138
+      },
+      {
+        "index": 11,
+        "text": "to run inference",
+        "timestamp": 1765611511.033507
+      },
+      {
+        "index": 12,
+        "text": "on Libtash because it was a c plus plus game.",
+        "timestamp": 1765611513.8883278
+      },
+      {
+        "index": 13,
+        "text": "And it was basically a snake agent comparing four different",
+        "timestamp": 1765611518.8961842
+      },
+      {
+        "index": 14,
+        "text": "reinforcement learning algorithms and how they work.",
+        "timestamp": 1765611519.8450618
+      },
+      {
+        "index": 15,
+        "text": "I just use for legacy systems where",
+        "timestamp": 1765611542.9769695
+      },
+      {
+        "index": 16,
+        "text": "I've looked on the most",
+        "timestamp": 1765611544.7310216
+      },
+      {
+        "index": 17,
+        "text": "first most popular reinforcement learning technique, which was the",
+        "timestamp": 1765611548.1369956
+      },
+      {
+        "index": 18,
+        "text": "queue table. And then I did",
+        "timestamp": 1765611550.7869403
+      },
+      {
+        "index": 19,
+        "text": "deep queue as well as policy network.",
+        "timestamp": 1765611552.7863858
+      },
+      {
+        "index": 20,
+        "text": "And then some later on, like,",
+        "timestamp": 1765611554.7395153
+      },
+      {
+        "index": 21,
+        "text": "policy act.",
+        "timestamp": 1765611555.5329216
+      },
+      {
+        "index": 22,
+        "text": "Act act critic.",
+        "timestamp": 1765611556.440715
+      },
+      {
+        "index": 23,
+        "text": "And other.",
+        "timestamp": 1765611557.137162
+      },
+      {
+        "index": 24,
+        "text": "Stuff. So it was more of a",
+        "timestamp": 1765611559.5399632
+      },
+      {
+        "index": 25,
+        "text": "comparison tool. It was more of me learning the algorithms and the maths behind it.",
+        "timestamp": 1765611563.986195
+      },
+      {
+        "index": 26,
+        "text": "It.",
+        "timestamp": 1765611568.9871871
+      },
+      {
+        "index": 27,
+        "text": "Yep.",
+        "timestamp": 1765611575.0208213
+      }
+    ]
+  },
+  "total_messages": {
+    "agent": 7,
+    "user": 28
+  }
+}

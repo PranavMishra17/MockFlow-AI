@@ -144,7 +144,7 @@
                 
                 <!-- Candidate Caption -->
                 <div class="candidate-caption">
-                    <p class="caption-text empty" id="candidateCaption">Speak to begin...</p>
+                    <p class="caption-text empty" id="candidateCaption">Initiating...</p>
                 </div>
             </div>
         </main>
@@ -333,7 +333,13 @@
             startTimer();
             startBlinkAnimation();
             startDemoAnimations();
-            
+
+            // Set initial stage color
+            var progressHeader = document.querySelector('.progress-header');
+            if (progressHeader) {
+                progressHeader.setAttribute('data-current-stage', 'greeting');
+            }
+
             console.log('[INIT] Calling connectToRoom...');
             connectToRoom();
             
@@ -365,6 +371,12 @@
 
                 var oldStage = state.currentStage;
                 state.currentStage = newStage;
+
+                // Update data attribute for stage-specific styling
+                var progressHeader = document.querySelector('.progress-header');
+                if (progressHeader) {
+                    progressHeader.setAttribute('data-current-stage', newStage);
+                }
 
                 elements.stateFlash.classList.add('active');
                 setTimeout(function() { elements.stateFlash.classList.remove('active'); }, 600);
@@ -962,7 +974,7 @@
                         console.log('[AUDIO] Waiting for LocalTrackPublished event for visualization');
                     }
 
-                    updateCandidateCaption('Microphone active - speak to begin');
+                    updateCandidateCaption('Waiting for agent to join...');
 
                 } catch (err) {
                     console.error('[ROOM] Microphone error:', err);

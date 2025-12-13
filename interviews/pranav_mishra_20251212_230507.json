@@ -1,0 +1,238 @@
+{
+  "candidate": "Pranav Mishra",
+  "interview_date": "2025-12-12T23:05:07.427558",
+  "room_name": "interview-pranav-mishra-1765598545",
+  "conversation": {
+    "agent": [
+      {
+        "index": 0,
+        "text": "Great! I'm looking forward to hearing your introduction, Pranav Mishra. Please go ahead!",
+        "timestamp": 1765598557.8125212,
+        "stage": "self_intro"
+      },
+      {
+        "index": 1,
+        "text": "What specific challenges did you encounter while developing this user feature for the computer vision pipeline, and how did you overcome them?",
+        "timestamp": 1765598629.999718,
+        "stage": "past_experience"
+      },
+      {
+        "index": 2,
+        "text": "Thank you so much for your time today, Pranav Mishra. I was impressed by your problem-solving skills, especially how you tackled the latency issues in your projects. Your experience with multi-agent systems and computer vision is quite valuable for this role. \n\nNext steps will be communicated via email. Thank you again, and best of luck!",
+        "timestamp": 1765598707.4205282,
+        "stage": "closing"
+      }
+    ],
+    "user": [
+      {
+        "index": 0,
+        "text": "Yeah. Hi.",
+        "timestamp": 1765598560.4683962
+      },
+      {
+        "index": 1,
+        "text": "I'm Pranav.",
+        "timestamp": 1765598562.084961
+      },
+      {
+        "index": 2,
+        "text": "I'm a recent grad from UIC with a master's in computer science.",
+        "timestamp": 1765598565.9582987
+      },
+      {
+        "index": 3,
+        "text": "I've been working as a research software engineer at UIC.",
+        "timestamp": 1765598569.8755584
+      },
+      {
+        "index": 4,
+        "text": "At health care department, I've been working on multi agent research.",
+        "timestamp": 1765598573.4578164
+      },
+      {
+        "index": 5,
+        "text": "As well as",
+        "timestamp": 1765598574.7450147
+      },
+      {
+        "index": 6,
+        "text": "uh, some applications and research applications in health care domain.",
+        "timestamp": 1765598578.5763583
+      },
+      {
+        "index": 7,
+        "text": "Using multi agents or virtual avatars for the same.",
+        "timestamp": 1765598581.9650373
+      },
+      {
+        "index": 8,
+        "text": "Upon graduation, I joined WIL Price as an AI ML intern",
+        "timestamp": 1765598586.566726
+      },
+      {
+        "index": 9,
+        "text": "There, I have held full stack responsibilities",
+        "timestamp": 1765598589.9632523
+      },
+      {
+        "index": 10,
+        "text": "uh, contributing to block",
+        "timestamp": 1765598592.3021302
+      },
+      {
+        "index": 11,
+        "text": "block system,",
+        "timestamp": 1765598593.5478418
+      },
+      {
+        "index": 12,
+        "text": "of our web app as well as",
+        "timestamp": 1765598595.7893674
+      },
+      {
+        "index": 13,
+        "text": "OTPs and",
+        "timestamp": 1765598597.5519605
+      },
+      {
+        "index": 14,
+        "text": "spamming verifications.",
+        "timestamp": 1765598599.514075
+      },
+      {
+        "index": 15,
+        "text": "Other stuff.",
+        "timestamp": 1765598600.7354445
+      },
+      {
+        "index": 16,
+        "text": "Some chatbots, white label with assistance,",
+        "timestamp": 1765598604.494715
+      },
+      {
+        "index": 17,
+        "text": "as well as a computer vision",
+        "timestamp": 1765598606.4048665
+      },
+      {
+        "index": 18,
+        "text": "end to end pipeline.",
+        "timestamp": 1765598607.6508899
+      },
+      {
+        "index": 19,
+        "text": "For a user feature that helps them enhance",
+        "timestamp": 1765598610.7463994
+      },
+      {
+        "index": 20,
+        "text": "the",
+        "timestamp": 1765598612.1919339
+      },
+      {
+        "index": 21,
+        "text": "way",
+        "timestamp": 1765598613.2743049
+      },
+      {
+        "index": 22,
+        "text": "a wheel would look on their car.",
+        "timestamp": 1765598614.8095136
+      },
+      {
+        "index": 23,
+        "text": "Yeah. We had a",
+        "timestamp": 1765598632.1420343
+      },
+      {
+        "index": 24,
+        "text": "strong problem with the latency. It was more than, like, five seconds. So",
+        "timestamp": 1765598636.898704
+      },
+      {
+        "index": 25,
+        "text": "at first, we split the model to be a very small one, used a very small model.",
+        "timestamp": 1765598641.6775477
+      },
+      {
+        "index": 26,
+        "text": "We set up an EC two instance on AWS to solve the model.",
+        "timestamp": 1765598645.795106
+      },
+      {
+        "index": 27,
+        "text": "Upon that, it was about, uh, trying to get",
+        "timestamp": 1765598648.801643
+      },
+      {
+        "index": 28,
+        "text": "the system better.",
+        "timestamp": 1765598649.9644864
+      },
+      {
+        "index": 29,
+        "text": "So what we did was, uh,",
+        "timestamp": 1765598652.0720696
+      },
+      {
+        "index": 30,
+        "text": "we basically, it was an image",
+        "timestamp": 1765598654.7834005
+      },
+      {
+        "index": 31,
+        "text": "We used two images to make one image.",
+        "timestamp": 1765598657.1459835
+      },
+      {
+        "index": 32,
+        "text": "We were basically exchanging the wheels of the two image.",
+        "timestamp": 1765598660.3663406
+      },
+      {
+        "index": 33,
+        "text": "To make the feature. So what we did was we took the seller's image",
+        "timestamp": 1765598664.31789
+      },
+      {
+        "index": 34,
+        "text": "when the user was already in that particular page or window,",
+        "timestamp": 1765598667.9167528
+      },
+      {
+        "index": 35,
+        "text": "trying to see out the feature.",
+        "timestamp": 1765598669.6495762
+      },
+      {
+        "index": 36,
+        "text": "And we did that before the user could upload their",
+        "timestamp": 1765598672.708362
+      },
+      {
+        "index": 37,
+        "text": "photo of their car so that we already have that prepared. We already have the seller's speed",
+        "timestamp": 1765598677.7175488
+      },
+      {
+        "index": 38,
+        "text": "And upon upload, we just did one another",
+        "timestamp": 1765598680.6640077
+      },
+      {
+        "index": 39,
+        "text": "replacement of the wheels",
+        "timestamp": 1765598683.4386683
+      },
+      {
+        "index": 40,
+        "text": "we improved the latency.",
+        "timestamp": 1765598684.6578455
+      }
+    ]
+  },
+  "total_messages": {
+    "agent": 3,
+    "user": 41
+  }
+}
