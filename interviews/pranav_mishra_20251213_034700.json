@@ -1,0 +1,383 @@
+{
+  "candidate": "Pranav Mishra",
+  "interview_date": "2025-12-13T03:47:00.149883",
+  "room_name": "interview-pranav-mishra-1765615205",
+  "conversation": {
+    "agent": [
+      {
+        "index": 0,
+        "text": "Hi Pranav Mishra! I'm Alex. Welcome to your interview. This will be structured in two parts: first, you'll introduce yourself; then we'll discuss your past experiences in detail. Let's begin - please introduce yourself.",
+        "timestamp": 1765615225.9359186,
+        "stage": "self_intro"
+      },
+      {
+        "index": 1,
+        "text": "That's great to hear, Pranav! What inspired you to pursue a master's in computer science?",
+        "timestamp": 1765615240.041398,
+        "stage": "self_intro"
+      },
+      {
+        "index": 2,
+        "text": "That's fascinating, Pranav! Can you tell me more about any specific projects or research you undertook during your master's that involved predictions or image generation?",
+        "timestamp": 1765615281.0950303,
+        "stage": "self_intro"
+      },
+      {
+        "index": 3,
+        "text": "That sounds like impactful work, Pranav! What were some of the key findings or outcomes from your research on multi-agent systems in medical decision-making?",
+        "timestamp": 1765615312.3456187,
+        "stage": "self_intro"
+      },
+      {
+        "index": 4,
+        "text": "Achieving such impressive reductions in inference time sounds ambitious! How do you plan to achieve those significant reductions in inference time?",
+        "timestamp": 1765615360.631245,
+        "stage": "self_intro"
+      },
+      {
+        "index": 5,
+        "text": "That's an interesting direction for your research! What role do you see yourself playing in implementing these small language models in practical applications?",
+        "timestamp": 1765615379.0565834,
+        "stage": "self_intro"
+      },
+      {
+        "index": 6,
+        "text": "Can you explain what the mid gym app is and how it relates to your current benchmarks?",
+        "timestamp": 1765615419.8366802,
+        "stage": "self_intro"
+      },
+      {
+        "index": 7,
+        "text": "What specific features of the mid jima model are you evaluating in your benchmarks?",
+        "timestamp": 1765615439.2021961,
+        "stage": "self_intro"
+      },
+      {
+        "index": 8,
+        "text": "That sounds like a thorough approach, Pranav! How do you plan to analyze the results from these benchmarks once you complete your evaluations?",
+        "timestamp": 1765615463.3764887,
+        "stage": "self_intro"
+      },
+      {
+        "index": 9,
+        "text": "Thank you for your insights, Pranav! Let’s transition to discussing your past work experience, especially as it relates to the AI Engineer role you’re applying for. Could you share more about any previous roles or projects you've worked on that are relevant to this position?",
+        "timestamp": 1765615486.2457206,
+        "stage": "past_experience"
+      },
+      {
+        "index": 10,
+        "text": "Can you describe one of the AML internal projects you're working on and your specific contributions to it?",
+        "timestamp": 1765615522.3899038,
+        "stage": "past_experience"
+      },
+      {
+        "index": 11,
+        "text": "What challenges have you encountered while implementing the YOLO model in your pipeline, and how did you address them?",
+        "timestamp": 1765615592.2815042,
+        "stage": "past_experience"
+      },
+      {
+        "index": 12,
+        "text": "Thank you, Pranav Mishra, for your time today! I appreciated hearing about your work with the computer vision pipeline using the YOLO model and your contributions to the AIML projects at WeE Plice. Your passion for AI and dedication to your research truly stand out. Best of luck with your ongoing projects, and I hope to connect again in the future. Have a great day!",
+        "timestamp": 1765615620.1432884,
+        "stage": "closing"
+      }
+    ],
+    "user": [
+      {
+        "index": 0,
+        "text": "Hi, Alex.",
+        "timestamp": 1765615229.4523103
+      },
+      {
+        "index": 1,
+        "text": "I'm Pranav. I'm a recent grad with a master's in computer science.",
+        "timestamp": 1765615231.2487392
+      },
+      {
+        "index": 2,
+        "text": "I was always interested in computers. I played a lot of games when I was a kid. So before",
+        "timestamp": 1765615246.0047667
+      },
+      {
+        "index": 3,
+        "text": "doing my engineering, I started making games.",
+        "timestamp": 1765615248.6512473
+      },
+      {
+        "index": 4,
+        "text": "I used Unity.",
+        "timestamp": 1765615250.3597856
+      },
+      {
+        "index": 5,
+        "text": "To do so. I made a couple of mobile games.",
+        "timestamp": 1765615252.8542278
+      },
+      {
+        "index": 6,
+        "text": "And that that got me into coding. And from there, when I started studying,",
+        "timestamp": 1765615256.7532952
+      },
+      {
+        "index": 7,
+        "text": "YAML was the thing which I really liked.",
+        "timestamp": 1765615259.5067308
+      },
+      {
+        "index": 8,
+        "text": "About how it was predicting stuff and generating the images.",
+        "timestamp": 1765615263.4119601
+      },
+      {
+        "index": 9,
+        "text": "They wanted to go deeper, and that's why I pursued my masters.",
+        "timestamp": 1765615266.9491937
+      },
+      {
+        "index": 10,
+        "text": "Um, not event generation, but",
+        "timestamp": 1765615284.8940947
+      },
+      {
+        "index": 11,
+        "text": "I did research at UIC's labs where I worked as a research software engineer.",
+        "timestamp": 1765615289.3167036
+      },
+      {
+        "index": 12,
+        "text": "We researched on multi agent systems and how",
+        "timestamp": 1765615292.495044
+      },
+      {
+        "index": 13,
+        "text": "team of components can help this multi agent systems",
+        "timestamp": 1765615297.5273428
+      },
+      {
+        "index": 14,
+        "text": "into making better medical decisions.",
+        "timestamp": 1765615298.5988345
+      },
+      {
+        "index": 15,
+        "text": "We did, uh,",
+        "timestamp": 1765615315.0905702
+      },
+      {
+        "index": 16,
+        "text": "improve some benchmark scores",
+        "timestamp": 1765615317.1396663
+      },
+      {
+        "index": 17,
+        "text": "But the thing is these multi agent systems come at a cost of increased token",
+        "timestamp": 1765615322.0131762
+      },
+      {
+        "index": 18,
+        "text": "efficiency, so we need to be careful about",
+        "timestamp": 1765615324.4014277
+      },
+      {
+        "index": 19,
+        "text": "if the benchmark",
+        "timestamp": 1765615326.3383842
+      },
+      {
+        "index": 20,
+        "text": "improvements are even valid at that point.",
+        "timestamp": 1765615328.7476034
+      },
+      {
+        "index": 21,
+        "text": "So right now, we are pivoting the research to small language models wherein",
+        "timestamp": 1765615333.2567964
+      },
+      {
+        "index": 22,
+        "text": "we showcase how",
+        "timestamp": 1765615334.7978637
+      },
+      {
+        "index": 23,
+        "text": "vastly we can improve the small language models.",
+        "timestamp": 1765615337.501323
+      },
+      {
+        "index": 24,
+        "text": "And get it",
+        "timestamp": 1765615338.8012624
+      },
+      {
+        "index": 25,
+        "text": "to working at the rate of frontier models with",
+        "timestamp": 1765615342.166775
+      },
+      {
+        "index": 26,
+        "text": "10 x and 100 x less in inference time.",
+        "timestamp": 1765615345.54781
+      },
+      {
+        "index": 27,
+        "text": "Using small language models, like I said in the research.",
+        "timestamp": 1765615364.5473998
+      },
+      {
+        "index": 28,
+        "text": "I already did all this. I am one of the sole researcher on this paper.",
+        "timestamp": 1765615384.3466399
+      },
+      {
+        "index": 29,
+        "text": "I have a couple of professors I work with who help me guide",
+        "timestamp": 1765615387.711244
+      },
+      {
+        "index": 30,
+        "text": "on the experiments and the benchmarks we need to evaluate against.",
+        "timestamp": 1765615391.0580442
+      },
+      {
+        "index": 31,
+        "text": "But all the coding and the research and the writing, I did",
+        "timestamp": 1765615394.352488
+      },
+      {
+        "index": 32,
+        "text": "with myself, I've already implemented the systems.",
+        "timestamp": 1765615397.205568
+      },
+      {
+        "index": 33,
+        "text": "And as of right now, I'm running some benchmarks on the model of mid gym app.",
+        "timestamp": 1765615401.2141623
+      },
+      {
+        "index": 34,
+        "text": "4,000,000,000.",
+        "timestamp": 1765615402.40319
+      },
+      {
+        "index": 35,
+        "text": "Yeah.",
+        "timestamp": 1765615405.7014627
+      },
+      {
+        "index": 36,
+        "text": "No. I said mid mid jima.",
+        "timestamp": 1765615423.2431312
+      },
+      {
+        "index": 37,
+        "text": "It's a model. It's a medical SLM model from Google. Mid jima.",
+        "timestamp": 1765615427.009341
+      },
+      {
+        "index": 38,
+        "text": "We are evaluating",
+        "timestamp": 1765615443.0574384
+      },
+      {
+        "index": 39,
+        "text": "the model against some medical q and a benchmarks.",
+        "timestamp": 1765615446.7513013
+      },
+      {
+        "index": 40,
+        "text": "Some diagnosis benchmarks, as well as medical reasoning or medical questionnaire",
+        "timestamp": 1765615451.7496688
+      },
+      {
+        "index": 41,
+        "text": "Can you please move ahead? It's been four minutes.",
+        "timestamp": 1765615467.3941126
+      },
+      {
+        "index": 42,
+        "text": "Yeah.",
+        "timestamp": 1765615489.7249312
+      },
+      {
+        "index": 43,
+        "text": "Uh, upon graduation this last May, I joined WeE Plice,",
+        "timestamp": 1765615491.7022223
+      },
+      {
+        "index": 44,
+        "text": "as an AIML intern.",
+        "timestamp": 1765615493.2051268
+      },
+      {
+        "index": 45,
+        "text": "We Price is a start up",
+        "timestamp": 1765615494.9948044
+      },
+      {
+        "index": 46,
+        "text": "It's just four or five guys who work",
+        "timestamp": 1765615497.6531794
+      },
+      {
+        "index": 47,
+        "text": "and it's basically a marketplace for car enthusiasts.",
+        "timestamp": 1765615501.5061712
+      },
+      {
+        "index": 48,
+        "text": "To buy and sell wheels.",
+        "timestamp": 1765615503.2912483
+      },
+      {
+        "index": 49,
+        "text": "So I help full stack of responsibilities in that as well as",
+        "timestamp": 1765615507.2015567
+      },
+      {
+        "index": 50,
+        "text": "on some AML",
+        "timestamp": 1765615509.4941378
+      },
+      {
+        "index": 51,
+        "text": "internal projects that we are still working on.",
+        "timestamp": 1765615511.8056405
+      },
+      {
+        "index": 52,
+        "text": "Yeah. We are making a computer vision",
+        "timestamp": 1765615569.687875
+      },
+      {
+        "index": 53,
+        "text": "pipeline to help users visualize wheels",
+        "timestamp": 1765615572.593486
+      },
+      {
+        "index": 54,
+        "text": "that they want to buy on onto their cars.",
+        "timestamp": 1765615574.8542418
+      },
+      {
+        "index": 55,
+        "text": "We are, uh, using a YOLO model",
+        "timestamp": 1765615577.9533854
+      },
+      {
+        "index": 56,
+        "text": "and we are serving the model on AWS in an EC two instance.",
+        "timestamp": 1765615581.709794
+      },
+      {
+        "index": 57,
+        "text": "Uh, I don't have time right now. I I need to leave",
+        "timestamp": 1765615596.242139
+      }
+    ]
+  },
+  "total_messages": {
+    "agent": 13,
+    "user": 58
+  }
+}

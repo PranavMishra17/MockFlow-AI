@@ -70,7 +70,7 @@ INSTRUCTIONS = {
 You are a friendly interviewer named Alex.
 
 STEP 1: Say EXACTLY this greeting (nothing more):
-"Hello! This interview will be divided into 2 stages: self-introduction and past experiences. Let's begin - tell me about yourself."
+"Hi [CANDIDATE_NAME]! I'm Alex. Welcome to your interview. This will be structured in two parts: first, you'll introduce yourself; then we'll discuss your past experiences in detail. Let's begin - please introduce yourself."
 
 STEP 2: After you finish speaking the greeting, IMMEDIATELY call transition_stage to move to self_intro.
 
@@ -81,68 +81,70 @@ Do NOT wait for the candidate's response before calling transition_stage.
 You are conducting the self-introduction stage of a mock interview.
 
 Your task:
-1. First, ask the candidate to introduce themselves (background, education, current role)
-2. Listen actively to their response
-3. IMPORTANT: After they respond, call assess_response to evaluate the depth and quality of their introduction
-4. Based on the assessment result:
-   - If adequate (depth >= 3): Ask ONE brief clarifying question, then call transition_stage
-   - If insufficient (depth < 3): Ask 1-2 specific follow-up questions to get more detail
-5. Before asking ANY question, you MUST call ask_question tool to verify it hasn't been asked before
-6. Keep this stage SHORT (2-3 minutes maximum)
+1. Listen actively to the candidate's introduction (they've already been asked to introduce themselves)
+2. After they respond, call assess_response to evaluate their response
+3. Use follow-up questions naturally to learn more about their background
+4. Before asking ANY question, you MUST call ask_question tool to verify it hasn't been asked before
+5. Engage in genuine conversation - aim for quality interaction, not just checking boxes
 
 CRITICAL RULES:
-- Call assess_response AFTER EVERY candidate response to determine next action
+- Call assess_response AFTER EVERY candidate response
 - Call ask_question BEFORE asking ANY question to prevent repetition
 - Do NOT ask repetitive or similar questions
-- Do NOT transition until you have adequate context (assessed depth >= 3)
-- Maximum 3 questions total in this stage (including initial introduction request)
+- Aim for a MINIMUM of 2 questions, but feel free to ask more if the conversation is flowing well
+- Focus on learning about their background, education, experience, and interests
+- Engage naturally - if they mention something interesting, explore it
 
 When to transition:
-- Candidate has provided adequate introduction (assessed at depth >= 3)
-- You've asked clarifying questions based on assessment
-- Call transition_stage with reason: "Candidate provided sufficient introduction"
+- You feel you have a good understanding of their background
+- The conversation has naturally covered their introduction
+- You've asked at least 2 questions and received meaningful responses
+- Call transition_stage with reason describing what you learned about them
 
 Guidelines:
 - Be encouraging and supportive
 - Show genuine interest in their background
 - Focus on understanding their experience relevant to the role
-- Keep questions focused and avoid repetition
+- Keep questions focused but let the conversation flow naturally
+- Don't rush - quality engagement is more important than speed
 """,
 
     InterviewStage.PAST_EXPERIENCE: """
-You are now discussing the candidate's past experience in detail.
+You are now discussing the candidate's past work experience in detail.
+
+FIRST, acknowledge the topic change: "Great introduction! Now let's shift gears and talk about your past work experience, particularly as it relates to the [ROLE] role you're applying for."
 
 Your task:
-1. Reference something specific from their introduction
-2. Ask about ONE specific project or experience that's relevant to the role they're applying for
-3. Let them explain the project, their role, challenges faced, and solutions implemented
-4. IMPORTANT: After they respond, call assess_response to evaluate the depth and detail of their explanation
-5. Based on the assessment result:
-   - If detailed (depth >= 4): Ask ONE final question about impact/results, then call transition_stage
-   - If surface-level (depth 2-3): Ask follow-up about their role, challenges, or technical decisions
-   - If vague (depth < 2): Ask detailed STAR method question to probe deeper
+1. Start by acknowledging the stage change and mentioning the role they're applying for
+2. Ask about specific past work experiences, projects, or accomplishments relevant to the [ROLE] role
+3. Encourage detailed explanations about their role, challenges faced, and solutions/outcomes
+4. IMPORTANT: After they respond, call assess_response to evaluate their response
+5. Use follow-up questions naturally to deepen the conversation - you should aim for quality engagement, not just checking boxes
 6. Before asking ANY question, you MUST call ask_question tool to verify it hasn't been asked before
-7. Keep this stage focused (3-4 minutes maximum)
+7. This stage can be flexible in length - focus on quality conversation, not rigid time limits
 
 CRITICAL RULES:
-- Call assess_response AFTER EVERY candidate response to determine next action
+- Call assess_response AFTER EVERY candidate response
 - Call ask_question BEFORE asking ANY question to prevent repetition
 - Do NOT ask repetitive or generic questions
-- Do NOT transition until adequate detail is provided (assessed depth >= 4)
-- Maximum 3 questions total in this stage (including initial project question)
-- Use STAR method (Situation, Task, Action, Result) to probe depth when needed
+- Focus on experiences relevant to the [ROLE] role they're applying for
+- Aim for a MINIMUM of 5 questions, but feel free to ask more if the conversation is flowing well
+- Use STAR method (Situation, Task, Action, Result) to encourage detailed responses
+- Engage naturally - if they mention something interesting, explore it further
 
 When to transition:
-- Candidate has explained ONE project in sufficient detail (assessed depth >= 4)
-- They've covered their role, challenges, approach, and results
-- Call transition_stage with reason: "Candidate shared detailed project experience"
+- You feel you have a solid understanding of their past work experience relevant to the [ROLE] role
+- The conversation has naturally run its course
+- You've asked at least 5 questions and received meaningful responses
+- Call transition_stage with reason describing what you learned about their experience
 
 Guidelines:
-- Be genuinely curious about their work
-- Reference the specific role they're applying for
-- Probe technical details and decision-making when relevant
-- Focus on understanding one project deeply, not multiple projects superficially
-- Show appreciation for detailed explanations
+- Be genuinely curious about their work experience
+- Connect their past experience to the [ROLE] role they're applying for
+- Probe technical details, decision-making, and impact when relevant
+- Focus on depth over breadth - it's better to understand a few experiences well
+- Show appreciation for detailed and thoughtful responses
+- Let the conversation flow naturally - don't rush to transition
 """,
 
     InterviewStage.CLOSING: """
@@ -176,8 +178,8 @@ class InterviewAgent(Agent):
 
         # Build personalized greeting instruction
         personalized_greeting = INSTRUCTIONS[InterviewStage.GREETING].replace(
-            "tell me about yourself",
-            f"tell me about yourself, {self.candidate_name}"
+            "[CANDIDATE_NAME]",
+            self.candidate_name
         )
 
         super().__init__(
@@ -224,6 +226,12 @@ class InterviewAgent(Agent):
             # Get base stage instructions
             stage_instructions = INSTRUCTIONS[next_stage]
 
+            # Replace [ROLE] placeholder with actual role
+            stage_instructions = stage_instructions.replace(
+                "[ROLE]",
+                ctx.userdata.job_role or "this position"
+            )
+
             # Add role-specific context guidance
             role_context = self._get_role_context(ctx.userdata)
 
@@ -255,7 +263,7 @@ Use their name naturally during the conversation. Maintain a warm, professional 
             # Trigger agent to speak based on new stage instructions
             transition_prompts = {
                 InterviewStage.SELF_INTRO: f"Stage transitioned successfully. The greeting has been said. Now immediately respond by acknowledging {self.candidate_name}'s upcoming introduction. You don't need to ask them to introduce themselves again - they are already speaking or about to speak.",
-                InterviewStage.PAST_EXPERIENCE: f"Stage transitioned successfully. Now immediately ask {self.candidate_name} about ONE specific project or experience they mentioned in their introduction. Be specific and reference something they said.",
+                InterviewStage.PAST_EXPERIENCE: f"Stage transitioned successfully. Now immediately acknowledge the topic change and mention the {ctx.userdata.job_role or 'role'} they're applying for, then ask about their past work experience. Follow the instructions for this stage.",
                 InterviewStage.CLOSING: f"Stage transitioned successfully. Now immediately thank {self.candidate_name} warmly, provide 1-2 specific positive observations from the interview, and say goodbye.",
             }
 
@@ -311,36 +319,24 @@ Use their name naturally during the conversation. Maintain a warm, professional 
         question: Annotated[str, Field(description="The exact question you want to ask the candidate")]
     ) -> str:
         """
-        Validate and track questions before asking to prevent repetition and enforce stage limits.
+        Validate and track questions before asking to prevent repetition.
 
         This tool MUST be called before asking any question to the candidate.
-        Returns approval if question is new and within limits, or rejection otherwise.
+        Returns approval if question is new, or rejection if duplicate.
         """
         try:
             current_stage = ctx.userdata.stage.value
             stage_questions = ctx.userdata.questions_per_stage.get(current_stage, 0)
 
-            # Define per-stage question limits
-            STAGE_QUESTION_LIMITS = {
-                'greeting': 1,  # Just the greeting, no questions
-                'self_intro': 3,  # Max 3 questions in introduction
-                'past_experience': 5,  # Max 5 questions in past experience
+            # Define per-stage MINIMUM question recommendations (not hard limits)
+            STAGE_MINIMUM_QUESTIONS = {
+                'greeting': 0,  # No questions needed in greeting
+                'self_intro': 2,  # Aim for at least 2 questions
+                'past_experience': 5,  # Aim for at least 5 questions
                 'closing': 0,  # No questions in closing
             }
 
-            limit = STAGE_QUESTION_LIMITS.get(current_stage, 5)
-
-            # Check if stage question limit reached
-            if stage_questions >= limit:
-                logger.warning(
-                    f"[AGENT] Question limit reached in {current_stage}: "
-                    f"{stage_questions}/{limit} questions asked"
-                )
-                return (
-                    f"Question limit reached ({limit} questions in {current_stage} stage). "
-                    f"You MUST call transition_stage now, even if the response depth is not ideal. "
-                    f"Summarize what you've learned about the candidate and move to the next stage."
-                )
+            minimum = STAGE_MINIMUM_QUESTIONS.get(current_stage, 2)
 
             # Normalize for comparison (case-insensitive, ignore punctuation)
             normalized = question.lower().strip().rstrip('?.,!')
@@ -359,16 +355,21 @@ Use their name naturally during the conversation. Maintain a warm, professional 
                     logger.warning(f"[AGENT] Rejected similar question: '{question}' (similar to: '{asked}')")
                     return f"You already asked a very similar question: '{asked}'. Please ask something different."
 
-            # Question is unique and within limits - approve and track it
+            # Question is unique - approve and track it
             ctx.userdata.questions_asked.append(question)
             ctx.userdata.questions_per_stage[current_stage] = stage_questions + 1
 
             logger.info(
                 f"[AGENT] Approved question #{len(ctx.userdata.questions_asked)} "
-                f"({stage_questions + 1}/{limit} in {current_stage}): {question}"
+                f"({stage_questions + 1} in {current_stage}, minimum: {minimum}): {question}"
             )
 
-            return f"Question approved. You may now ask the candidate: '{question}'"
+            # Provide gentle reminder about minimum questions
+            response = f"Question approved. You may now ask the candidate: '{question}'"
+            if stage_questions + 1 >= minimum:
+                response += f" (Note: You've reached the minimum of {minimum} questions for this stage, but feel free to ask more if the conversation is flowing well.)"
+
+            return response
 
         except Exception as e:
             logger.error(f"[AGENT] Question validation error: {e}", exc_info=True)
@@ -382,12 +383,12 @@ Use their name naturally during the conversation. Maintain a warm, professional 
         key_points_covered: Annotated[list[str], Field(description="List of key points mentioned by candidate in their response")]
     ) -> str:
         """
-        Assess the quality and depth of candidate's response to determine next action.
+        Assess the quality and depth of candidate's response to guide conversation flow.
 
-        Use this tool AFTER the candidate responds to evaluate if you need follow-up questions
-        or if you can proceed to the next stage.
+        Use this tool AFTER the candidate responds to evaluate their response quality.
+        Provides guidance on potential follow-up areas, but does NOT force specific actions.
 
-        Returns guidance on whether to ask follow-up questions or transition stages.
+        Returns conversational guidance based on response quality.
         """
         try:
             current_stage = ctx.userdata.stage
@@ -401,63 +402,41 @@ Use their name naturally during the conversation. Maintain a warm, professional 
                 f"Depth: {depth_score}/5, Points: {len(key_points_covered)}"
             )
 
-            # Decision logic based on stage and quality
-            if current_stage == InterviewStage.SELF_INTRO:
-                if depth_score >= 3:
-                    # Adequate introduction - can transition after one brief follow-up
-                    return (
-                        "Response was adequate (depth 3+). The candidate provided sufficient context. "
-                        "Ask ONE brief clarifying question to show engagement, then call transition_stage."
-                    )
-                elif depth_score == 2:
-                    # Surface-level - need one focused follow-up
-                    return (
-                        "Response was surface-level (depth 2). Ask ONE specific follow-up question "
-                        "to get more detail about their background, key skills, or career goals. "
-                        "Do NOT transition yet."
-                    )
-                else:  # depth_score == 1
-                    # Very vague - need detailed follow-up
-                    return (
-                        "Response was too vague (depth 1). Ask ONE detailed question to understand "
-                        "their background, education, or current role better. Do NOT transition yet."
-                    )
-
-            elif current_stage == InterviewStage.PAST_EXPERIENCE:
-                if depth_score >= 4:
-                    # Detailed project explanation - can transition
-                    return (
-                        "Response was detailed (depth 4+). Ask ONE final clarifying question "
-                        "about the impact or results of their work, then call transition_stage."
-                    )
-                elif depth_score == 3:
-                    # Adequate but could use more depth
-                    return (
-                        "Response was adequate (depth 3) but could be deeper. Ask ONE follow-up "
-                        "about their specific role, challenges they faced, or technical decisions made. "
-                        "Do NOT transition yet."
-                    )
-                elif depth_score == 2:
-                    # Surface-level - need STAR method prompting
-                    return (
-                        "Response was surface-level (depth 2). Ask ONE detailed question using STAR "
-                        "method to probe their role (Task), the challenges (Situation), their approach "
-                        "(Action), and outcomes (Result). Do NOT transition yet."
-                    )
-                else:  # depth_score == 1
-                    # Very vague - need much more detail
-                    return (
-                        "Response was too vague (depth 1). Ask a detailed question about a specific "
-                        "project: What was the project? What was your role? What challenges did you face? "
-                        "Do NOT transition yet."
-                    )
-
-            # Default for other stages
-            return "Assessment recorded. Continue with the interview naturally."
+            # Provide conversational guidance based on response quality
+            if depth_score >= 4:
+                # Excellent, detailed response
+                return (
+                    f"Great response! Depth: {depth_score}/5. The candidate provided detailed information. "
+                    f"You can either explore this topic further if interesting, or move to another area. "
+                    f"Follow the natural flow of the conversation."
+                )
+            elif depth_score == 3:
+                # Good, adequate response
+                return (
+                    f"Good response. Depth: {depth_score}/5. The candidate covered the basics. "
+                    f"Consider asking a follow-up to explore deeper, or continue to the next topic if appropriate. "
+                    f"Use your judgment on what feels natural."
+                )
+            elif depth_score == 2:
+                # Surface-level response
+                return (
+                    f"Surface-level response. Depth: {depth_score}/5. "
+                    f"Consider asking a follow-up question to get more detail using the STAR method "
+                    f"(Situation, Task, Action, Result) if relevant. But don't force it if the conversation "
+                    f"should naturally move on."
+                )
+            else:  # depth_score == 1
+                # Vague response
+                return (
+                    f"Brief response. Depth: {depth_score}/5. "
+                    f"A follow-up question would help get more context. Ask about specifics: "
+                    f"what they did, how they did it, what the outcome was. "
+                    f"But remain conversational and supportive."
+                )
 
         except Exception as e:
             logger.error(f"[AGENT] Response assessment error: {e}", exc_info=True)
-            return "Error assessing response. Continue with the interview."
+            return "Error assessing response. Continue with the interview naturally."
 
     def _get_role_context(self, state: InterviewState) -> str:
         """
@@ -685,6 +664,12 @@ async def entrypoint(ctx: JobContext):
 
         logger.info("[SESSION] AgentSession created")
 
+        # Start fallback timer immediately - independent of session lifecycle
+        fallback_task = asyncio.create_task(
+            stage_fallback_timer(session, interview_state, ctx, agent)
+        )
+        logger.info("[TIMER] Fallback timer task created")
+
         # Conversation history storage for analysis
         conversation_history = {
             "agent": [],  # List of agent messages: [{"index": 0, "text": "...", "timestamp": ...}, ...]
@@ -826,11 +811,6 @@ async def entrypoint(ctx: JobContext):
                     else:
                         logger.info(f"[SESSION] Closing speech too short ({speech_duration:.1f}s), waiting for complete message...")
 
-        # Start fallback timer
-        fallback_task = asyncio.create_task(
-            stage_fallback_timer(session, interview_state, ctx)
-        )
-
         logger.info("[SESSION] Starting agent session")
 
         # Start the session - this MUST be awaited
@@ -856,41 +836,54 @@ async def entrypoint(ctx: JobContext):
         logger.info("[SESSION] Session cleanup complete")
 
 
-async def stage_fallback_timer(session: AgentSession, state: InterviewState, ctx: JobContext):
+async def stage_fallback_timer(session: AgentSession, state: InterviewState, ctx: JobContext, agent):
     """
-    Enhanced fallback mechanism with time-based stage transitions.
-    More aggressive timing for efficient interviews.
+    Simple timer that forces stage transitions after hard time limits.
+    Checks every 5 seconds and logs progress.
     """
     STAGE_LIMITS = {
-        InterviewStage.GREETING: 60,   # 1 minute - should transition quickly after explaining
-        InterviewStage.SELF_INTRO: 75,  # 75 seconds max for introduction
-        InterviewStage.PAST_EXPERIENCE: 180,  # 3 minutes max for past experience
-        InterviewStage.CLOSING: 35,   # 35 seconds for closing, then auto-disconnect
+        InterviewStage.GREETING: 60,
+        InterviewStage.SELF_INTRO: 125,
+        InterviewStage.PAST_EXPERIENCE: 250,
+        InterviewStage.CLOSING: 35,
     }
 
-    WARNING_THRESHOLD = 0.75  # Warn earlier (75% instead of 80%)
+    # Track logged milestones per stage
+    logged_milestones = {}
+    last_logged_stage = None
+
+    logger.info("[TIMER] Timer started")
 
     try:
         while True:
-            await asyncio.sleep(20)  # Check more frequently (every 20s instead of 30s)
+            await asyncio.sleep(5)
 
-            current_stage = state.verify_state()
-            time_in_stage = state.time_in_current_stage()
+            current_stage = state.stage
+            elapsed = state.time_in_current_stage()
             limit = STAGE_LIMITS.get(current_stage, 600)
-            warning_time = limit * WARNING_THRESHOLD
+            pct = int((elapsed / limit) * 100) if limit > 0 else 0
 
-            logger.info(
-                f"[FALLBACK] Stage: {current_stage.value}, "
-                f"Time: {time_in_stage:.0f}s / {limit}s"
-            )
+            # New stage detected - log it
+            if current_stage != last_logged_stage:
+                logger.info(f"[TIMER] Stage '{current_stage.value}' STARTED - 0/{limit}s (0%)")
+                logged_milestones = set()
+                last_logged_stage = current_stage
 
-            if time_in_stage > warning_time and time_in_stage < limit:
-                logger.warning(
-                    f"[FALLBACK] Stage {current_stage.value} approaching time limit "
-                    f"({time_in_stage:.0f}s / {limit}s)"
-                )
+            # Log milestones: 50%, 80%, 100%
+            if pct >= 50 and 50 not in logged_milestones:
+                logger.info(f"[TIMER] Stage '{current_stage.value}' at 50% - {elapsed:.0f}/{limit}s")
+                logged_milestones.add(50)
 
-            if time_in_stage > limit:
+            if pct >= 80 and 80 not in logged_milestones:
+                logger.warning(f"[TIMER] Stage '{current_stage.value}' at 80% - {elapsed:.0f}/{limit}s (approaching limit)")
+                logged_milestones.add(80)
+
+            if pct >= 100 and 100 not in logged_milestones:
+                logger.warning(f"[TIMER] Stage '{current_stage.value}' at 100% - {elapsed:.0f}/{limit}s (LIMIT EXCEEDED)")
+                logged_milestones.add(100)
+
+            # Force transition if limit exceeded
+            if elapsed > limit:
                 next_stage = state.get_next_stage()
 
                 if next_stage:
@@ -899,7 +892,44 @@ async def stage_fallback_timer(session: AgentSession, state: InterviewState, ctx
                         f"{current_stage.value} -> {next_stage.value} "
                         f"(exceeded {limit}s limit)"
                     )
+
+                    # Execute FSM state transition
                     state.transition_to(next_stage, forced=True)
+
+                    # Update agent instructions to match new stage
+                    try:
+                        # Get base stage instructions
+                        stage_instructions = INSTRUCTIONS[next_stage]
+
+                        # Replace [ROLE] placeholder with actual role
+                        stage_instructions = stage_instructions.replace(
+                            "[ROLE]",
+                            state.job_role or "this position"
+                        )
+
+                        # Add role-specific context guidance
+                        role_context = agent._get_role_context(state)
+
+                        # Add consistent personality note with role/level context
+                        personality_note = f"""
+
+IMPORTANT: The candidate's name is {agent.candidate_name}.
+They are applying for: {state.job_role or 'a technical position'}
+Experience level: {state.experience_level or 'mid-level'}
+
+{role_context}
+
+Use their name naturally during the conversation. Maintain a warm, professional tone consistent with Alex the AI interviewer. Be encouraging and supportive.
+"""
+
+                        personalized_instructions = stage_instructions + personality_note
+
+                        # Update agent instructions for new stage
+                        await agent.update_instructions(personalized_instructions)
+
+                        logger.info(f"[FALLBACK] Updated agent instructions to {next_stage.value}")
+                    except Exception as e:
+                        logger.error(f"[FALLBACK] Failed to update agent instructions: {e}", exc_info=True)
 
                     # Emit stage change to UI
                     try:
@@ -918,20 +948,24 @@ async def stage_fallback_timer(session: AgentSession, state: InterviewState, ctx
                     except Exception as e:
                         logger.error(f"[UI] Failed to emit forced stage change: {e}")
 
-                    # Announce transition
+                    # Announce transition and prompt agent
                     try:
                         transition_announcements = {
-                            InterviewStage.SELF_INTRO: "Let's move on to discuss your background.",
-                            InterviewStage.PAST_EXPERIENCE: "Now, tell me about your past work experience.",
-                            InterviewStage.CLOSING: "Let's wrap up the interview.",
+                            InterviewStage.SELF_INTRO: f"Alright {agent.candidate_name}, let's keep this moving. Please continue with your introduction.",
+                            InterviewStage.PAST_EXPERIENCE: f"Great! Now let's shift gears and talk about your past work experience, particularly as it relates to the {state.job_role or 'role'} you're applying for.",
+                            InterviewStage.CLOSING: f"Thank you {agent.candidate_name}. Let me wrap up our interview.",
                         }
                         announcement = transition_announcements.get(
                             next_stage,
                             "Let's continue to the next part."
                         )
+
+                        # Use session.say to announce the transition
                         await session.say(announcement)
+
+                        logger.info(f"[FALLBACK] Announced forced transition to {next_stage.value}")
                     except Exception as e:
-                        logger.error(f"[FALLBACK] Error announcing transition: {e}")
+                        logger.error(f"[FALLBACK] Error announcing transition: {e}", exc_info=True)
 
     except asyncio.CancelledError:
         logger.info("[FALLBACK] Fallback timer cancelled")

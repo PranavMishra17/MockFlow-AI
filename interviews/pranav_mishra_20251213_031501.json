@@ -1,0 +1,221 @@
+{
+  "candidate": "Pranav Mishra",
+  "interview_date": "2025-12-13T03:15:01.520629",
+  "room_name": "interview-pranav-mishra-1765613529",
+  "conversation": {
+    "agent": [
+      {
+        "index": 0,
+        "text": "Thank you for your introduction, Pranav! I'm looking forward to hearing more about your background and experiences.",
+        "timestamp": 1765613542.6355288,
+        "stage": "self_intro"
+      },
+      {
+        "index": 1,
+        "text": "What specific technologies or programming languages did you use while working on these healthcare applications?",
+        "timestamp": 1765613570.4583998,
+        "stage": "self_intro"
+      },
+      {
+        "index": 2,
+        "text": "Can you describe a specific challenge you faced while using NVIDIA Omniverse for real-time animation and how you overcame it?",
+        "timestamp": 1765613604.9564657,
+        "stage": "past_experience"
+      },
+      {
+        "index": 3,
+        "text": "Can you walk me through a specific project you worked on with NVIDIA Omniverse? Please describe the situation, your role, the tasks you were responsible for, the challenges",
+        "timestamp": 1765613626.44149,
+        "stage": "past_experience"
+      },
+      {
+        "index": 4,
+        "text": "Can you describe a specific situation where you had to collaborate with others while working on a project? What was your role in the project, and what actions did you take to ensure success? What was the outcome?",
+        "timestamp": 1765613649.8125923,
+        "stage": "past_experience"
+      },
+      {
+        "index": 5,
+        "text": "Thank you so much for your time today, Pranav! I appreciate your strong emphasis on collaboration and your proactive approach in ensuring the team's success. Next steps will be communicated via email. Thank you again, and best of luck!",
+        "timestamp": 1765613701.5136287,
+        "stage": "closing"
+      }
+    ],
+    "user": [
+      {
+        "index": 0,
+        "text": "Yeah. I'm. I'm a recent grad.",
+        "timestamp": 1765613546.7706661
+      },
+      {
+        "index": 1,
+        "text": "With a master's in computer science from UIC, Indianapolis, Chicago.",
+        "timestamp": 1765613550.7747276
+      },
+      {
+        "index": 2,
+        "text": "I worked as a research software engineer at UIC.",
+        "timestamp": 1765613554.1235738
+      },
+      {
+        "index": 3,
+        "text": "Working on multi agent systems, health care applications,",
+        "timestamp": 1765613556.9172392
+      },
+      {
+        "index": 4,
+        "text": "and virtual avatar applications in medical domain.",
+        "timestamp": 1765613560.572192
+      },
+      {
+        "index": 5,
+        "text": "I use Azure's console cloud as well as Azure's model",
+        "timestamp": 1765613576.2690327
+      },
+      {
+        "index": 6,
+        "text": "avatar models, vector space models.",
+        "timestamp": 1765613578.410122
+      },
+      {
+        "index": 7,
+        "text": "And its website",
+        "timestamp": 1765613580.0104325
+      },
+      {
+        "index": 8,
+        "text": "services. I also use unreal engine",
+        "timestamp": 1765613582.5628834
+      },
+      {
+        "index": 9,
+        "text": "c plus plus, and blueprints for some workflow applications.",
+        "timestamp": 1765613586.6758304
+      },
+      {
+        "index": 10,
+        "text": "I even use NVIDIA Omniverse for real time",
+        "timestamp": 1765613590.624298
+      },
+      {
+        "index": 11,
+        "text": "animation.",
+        "timestamp": 1765613591.5044668
+      },
+      {
+        "index": 12,
+        "text": "Generation.",
+        "timestamp": 1765613592.3154101
+      },
+      {
+        "index": 13,
+        "text": "No. Nothing comes to mind.",
+        "timestamp": 1765613608.0561295
+      },
+      {
+        "index": 14,
+        "text": "This was the only project I used, NVIDIA Omniverse",
+        "timestamp": 1765613626.435494
+      },
+      {
+        "index": 15,
+        "text": "for, and I didn't face any challenges",
+        "timestamp": 1765613628.310177
+      },
+      {
+        "index": 16,
+        "text": "that is, like,",
+        "timestamp": 1765613629.1222305
+      },
+      {
+        "index": 17,
+        "text": "to talk about. It was a straightforward.",
+        "timestamp": 1765613630.977363
+      },
+      {
+        "index": 18,
+        "text": "You just ask them something else?",
+        "timestamp": 1765613632.525787
+      },
+      {
+        "index": 19,
+        "text": "The goal of my project was",
+        "timestamp": 1765613655.5281029
+      },
+      {
+        "index": 20,
+        "text": "being the coordinator and",
+        "timestamp": 1765613655.717649
+      },
+      {
+        "index": 21,
+        "text": "the",
+        "timestamp": 1765613656.3638532
+      },
+      {
+        "index": 22,
+        "text": "most prominent coder because I'm impeccable.",
+        "timestamp": 1765613659.7099204
+      },
+      {
+        "index": 23,
+        "text": "And I handled the communication. I made sure that everyone was",
+        "timestamp": 1765613664.2151651
+      },
+      {
+        "index": 24,
+        "text": "on track",
+        "timestamp": 1765613665.616779
+      },
+      {
+        "index": 25,
+        "text": "and keeping",
+        "timestamp": 1765613666.7141173
+      },
+      {
+        "index": 26,
+        "text": "the flow of the project going.",
+        "timestamp": 1765613669.1178598
+      },
+      {
+        "index": 27,
+        "text": "I made sure everyone delivered.",
+        "timestamp": 1765613671.2136812
+      },
+      {
+        "index": 28,
+        "text": "And if not, I delivered from them.",
+        "timestamp": 1765613673.0678463
+      },
+      {
+        "index": 29,
+        "text": "I made sure to credit everyone for their work and hard work and",
+        "timestamp": 1765613677.2785242
+      },
+      {
+        "index": 30,
+        "text": "trying to",
+        "timestamp": 1765613679.1638248
+      },
+      {
+        "index": 31,
+        "text": "have your own",
+        "timestamp": 1765613680.6075697
+      },
+      {
+        "index": 32,
+        "text": "work.",
+        "timestamp": 1765613682.20744
+      },
+      {
+        "index": 33,
+        "text": "Promised.",
+        "timestamp": 1765613682.8797421
+      }
+    ]
+  },
+  "total_messages": {
+    "agent": 6,
+    "user": 34
+  }
+}
