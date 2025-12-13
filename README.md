@@ -117,11 +117,51 @@ MockFlow-AI follows a microservices architecture with clear separation of concer
 └─────────────────────────────────────────────────────────────┘
 ```
 
+### Current Architecture (Single-Worker Model)
+
+**Current Setup**: One shared agent worker handles all interview sessions via async concurrency.
+
+**How It Works**:
+- LiveKit dispatches a new coroutine per room connection
+- Each session gets isolated `InterviewState` instance
+- Worker process is multi-session via Python async/await
+
+**Limitations**:
+- Resource contention at scale (100+ concurrent interviews)
+- No cost isolation - server pays all API costs
+- Limited horizontal scaling capabilities
+
+### Production-Ready Architecture (Recommended)
+
+**Per-Session Worker with BYOK (Bring Your Own Keys)**:
+
+```
+[Frontend] → [LiveKit SFU] → [Worker Pool (K8s/Auto-scale)]
+    ↓ User API Keys              ↓ Per-room worker
+[Client Storage]            [Ephemeral Agent Worker]
+                                 ↓ Uses client keys
+                            [OpenAI API] [Deepgram API]
+```
+
+**Benefits**:
+- Cost isolation - each user pays for their API usage
+- Resource isolation - worker crash affects one session
+- Elastic scaling - auto-scale based on active rooms
+- Privacy - API keys never touch server logs
+
+**Implementation Notes**:
+- Frontend collects OpenAI + Deepgram keys (stored in session/local storage)
+- Keys passed via LiveKit participant attributes
+- Kubernetes HPA scales worker pods based on room count
+- Workers terminate after interview ends (ephemeral)
+
+See [AGENT_DESIGN.md](AGENT_DESIGN.md) for detailed production architecture design.
+
 ### Key Components
 
-1. **FSM Module (`fsm.py`)**: Defines interview stages and state transitions
-2. **Agent Module (`agent.py`)**: Implements voice agent with stage-specific instructions
-3. **Flask App (`app.py`)**: Web server for UI and token generation
+1. **FSM Module (`fsm.py`)**: Defines interview stages, state transitions, and progress tracking
+2. **Agent Module (`agent.py`)**: Implements voice agent with FSM-driven tools and fallback timers
+3. **Flask App (`app.py`)**: Web server for UI and LiveKit token generation
 4. **Document Processor (`document_processor.py`)**: Foundation for future RAG implementation
 
 ---
@@ -248,6 +288,7 @@ gunicorn -w 4 -b 0.0.0.0:5000 app:app
 
 ### Project Documentation
 
+- **[AGENT_DESIGN.md](AGENT_DESIGN.md)** - Complete system design, agent architecture, and design decisions
 - **[LIVEKIT_ANALYSIS.md](LIVEKIT_ANALYSIS.md)** - Complete analysis of LiveKit framework patterns
 - **[VOICE_AGENT_ARCHITECTURE.md](VOICE_AGENT_ARCHITECTURE.md)** - Industry best practices for voice agents
 - **[UPDATED_STARTER_GUIDE.md](UPDATED_STARTER_GUIDE.md)** - Implementation guide and architecture decisions
@@ -362,18 +403,89 @@ curl http://localhost:5000/api/health
 
 ### Upcoming Features
 
-- [ ] **Resume Upload & Analysis**: RAG-based context injection from candidate resumes
-- [ ] **Interview Reports**: Detailed feedback and performance analysis
+#### 1. Pluggable Interview Stages (Role-Driven or Custom)
+- [ ] **YAML/JSON Stage Configuration**: Define stages externally without code changes
+- [ ] **Dynamic FSM Generation**: Load and validate stage definitions at runtime
+- [ ] **Role-Specific Stages**: Automatically include SYSTEM_DESIGN for senior engineers, BEHAVIORAL for managers
+- [ ] **Multi-Round Interview Support**: PHONE_SCREEN → TECHNICAL → BEHAVIORAL → CULTURE_FIT workflows
+- [ ] **Admin UI**: Web interface to create and manage custom stage templates
+
+**Use Cases**:
+- Tailor interviews to specific roles (e.g., add CODING_CHALLENGE stage for developers)
+- Support company-specific interview formats
+- A/B test different question flows
+
+#### 2. Document Analysis (Resume/Portfolio Tailoring)
+- [ ] **Resume Upload**: PDF/DOCX parsing via `pypdf` or `python-docx`
+- [ ] **Portfolio Context Injection**: Extract projects, skills, and experience highlights
+- [ ] **Tailored Questioning**: Agent asks follow-ups about specific resume items
+  - Example: "You mentioned scaling to 10k concurrent users - how did you approach that?"
+- [ ] **Privacy-First**: Resume text deleted after interview ends
+
+**Implementation**:
+- `/api/upload-resume` endpoint stores parsed text in participant attributes
+- Agent retrieves via `InterviewState.uploaded_resume_text`
+- LLM summarizes resume highlights and injects into stage instructions
+
+#### 3. Job Description & Company Research (Web Search Integration)
+- [ ] **JD Analysis**: Extract key requirements (skills, experience, technologies)
+- [ ] **Company Research**: Automated web search for:
+  - Recent news (funding, product launches)
+  - Tech stack (from job postings, engineering blogs)
+  - Culture insights (Glassdoor, LinkedIn)
+- [ ] **Contextualized Questions**: Connect candidate's experience to company needs
+  - Example: "TechCorp uses Python and AWS - tell me about your experience with those."
+
+**Implementation**:
+- Use SerpAPI or Tavily for web search
+- `analyze_jd(jd_text)` helper extracts requirements
+- Cache company research in Redis (TTL: 1 hour)
+- Inject into agent instructions as COMPANY_CONTEXT
+
+#### 4. Actionable Feedback (Chat History Analysis)
+- [ ] **Response Quality Analysis**: Evaluate depth scores, STAR method usage, technical detail
+- [ ] **Communication Assessment**: Clarity, conciseness, active listening indicators
+- [ ] **Strengths Identification**: Highlight what candidate did well
+- [ ] **Improvement Pointers**: Specific, actionable tips per question
+  - Example: "Your response to the bug fix question was good, but consider mentioning debugging tools used."
+- [ ] **Feedback Delivery**: Email report, downloadable PDF, or in-app page
+
+**Example Feedback Structure**:
+```
+Strengths:
+- Detailed STAR-structured responses for 4 out of 5 experience questions
+- Strong technical depth when discussing microservices and scaling
+
+Areas for Improvement:
+- Responses to behavioral questions lacked specific metrics (try quantifying impact)
+- Consider pausing briefly before answering to organize thoughts
+
+Question-Specific Feedback:
+Q: "Tell me about a challenging bug you fixed."
+→ You described the bug well, but didn't mention debugging process or tools used.
+   Interviewers want to understand your problem-solving approach.
+```
+
+**Implementation**:
+- `/api/feedback` endpoint loads conversation JSON
+- GPT-4o analyzes transcript with structured prompt
+- Returns JSON with `strengths`, `improvements`, `question_feedback` arrays
+
+#### 5. Other Enhancements
 - [ ] **Custom Question Banks**: User-defined question sets for specific roles
-- [ ] **Multi-Language Support**: Interviews in multiple languages
-- [ ] **Recording & Playback**: Save and review interview sessions
+- [ ] **Multi-Language Support**: Interviews in Spanish, Mandarin, Hindi, etc.
+- [ ] **Recording & Playback**: Save and review interview sessions (audio + transcript)
+- [ ] **Advanced Analytics Dashboard**: Track performance trends across multiple practice sessions
+- [ ] **Team Collaboration**: Peer mock interviews with feedback exchange
+- [ ] **Integration with Job Boards**: Import JDs directly from LinkedIn, Indeed, etc.
 
-### Future Enhancements
+### Production-Ready Enhancements
 
-- WebSocket-based stage updates for real-time UI synchronization
-- Advanced analytics dashboard for interview performance
-- Team collaboration features for mock interview practice
-- Integration with job boards and ATS systems
+- [ ] **Per-Session Worker Architecture**: Kubernetes-based auto-scaling with BYOK
+- [ ] **Secure Key Management**: Client-side API key injection with encryption
+- [ ] **Real-Time UI Sync**: WebSocket-based stage/progress updates
+- [ ] **Monitoring & Observability**: Prometheus metrics, Grafana dashboards
+- [ ] **Cost Tracking**: Per-user API usage analytics for BYOK model
 
 ---
 
