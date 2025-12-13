@@ -1,0 +1,301 @@
+{
+  "candidate": "Pranav Mishra",
+  "interview_date": "2025-12-13T16:24:02.225067",
+  "room_name": "interview-pranav-mishra-1765660803",
+  "conversation": {
+    "agent": [
+      {
+        "index": 0,
+        "text": "Great! I'm looking forward to learning more about you, Pranav Mishra. Please go ahead and tell me about yourself.",
+        "timestamp": 1765660817.305327,
+        "stage": "self_intro"
+      },
+      {
+        "index": 1,
+        "text": "That's interesting, Pranav. What drew you to work in the health care and virtual reality domains?",
+        "timestamp": 1765660844.583763,
+        "stage": "self_intro"
+      },
+      {
+        "index": 2,
+        "text": "Excellent introduction, thank you, Pranav Mishra! Now let's shift gears and discuss your past work experience, particularly as it relates to the AI Engineer role. Can you walk me through a specific project or experience you're particularly proud of?",
+        "timestamp": 1765660895.183938,
+        "stage": "past_experience"
+      },
+      {
+        "index": 3,
+        "text": "That sounds like a valuable feature! What challenges did you encounter while developing the fitment assistant chatbot and the ML pipeline? How did you address those challenges?",
+        "timestamp": 1765660934.5379992,
+        "stage": "past_experience"
+      },
+      {
+        "index": 4,
+        "text": "I'm glad to hear that the implementation went smoothly overall! Can you share what specific strategies or tools you used that contributed to the success of the feature?",
+        "timestamp": 1765660986.0706334,
+        "stage": "past_experience"
+      },
+      {
+        "index": 5,
+        "text": "Thank you so much for sharing all of that, Pranav Mishra. I really enjoyed learning about your background and experience. You've demonstrated great depth in your technical knowledge. We'll be in touch with next steps via email. Thank you again, and best of luck!",
+        "timestamp": 1765661037.2157464,
+        "stage": "closing"
+      }
+    ],
+    "user": [
+      {
+        "index": 0,
+        "text": "Hi.",
+        "timestamp": 1765660818.6768074
+      },
+      {
+        "index": 1,
+        "text": "I'm Pranav. I'm a recent grad from UIC with a master's in computer science.",
+        "timestamp": 1765660822.5915287
+      },
+      {
+        "index": 2,
+        "text": "I've been working at UIC as a research software engineer.",
+        "timestamp": 1765660825.7560086
+      },
+      {
+        "index": 3,
+        "text": "Building applications for research,",
+        "timestamp": 1765660828.0458436
+      },
+      {
+        "index": 4,
+        "text": "in health care domain,",
+        "timestamp": 1765660829.4360888
+      },
+      {
+        "index": 5,
+        "text": "virtual reality,",
+        "timestamp": 1765660830.9376326
+      },
+      {
+        "index": 6,
+        "text": "avatars, as well as some multi agent research.",
+        "timestamp": 1765660833.5539746
+      },
+      {
+        "index": 7,
+        "text": "Well, I was interested in, uh, games. I started coding because I love games.",
+        "timestamp": 1765660850.1969035
+      },
+      {
+        "index": 8,
+        "text": "So I had some experience with Unity and Unreal Engine.",
+        "timestamp": 1765660853.3567204
+      },
+      {
+        "index": 9,
+        "text": "So that helped me land the job at VIRI Labs at UIC, where",
+        "timestamp": 1765660857.2106721
+      },
+      {
+        "index": 10,
+        "text": "the initial couple of projects we did was around",
+        "timestamp": 1765660860.3020852
+      },
+      {
+        "index": 11,
+        "text": "some simulations. We coordinated with medical professionals",
+        "timestamp": 1765660863.840125
+      },
+      {
+        "index": 12,
+        "text": "to build certain applications in Unreal Engine.",
+        "timestamp": 1765660866.796806
+      },
+      {
+        "index": 13,
+        "text": "And then later on, we also did a",
+        "timestamp": 1765660868.8819754
+      },
+      {
+        "index": 14,
+        "text": "custom rag avatar website.",
+        "timestamp": 1765660871.3888333
+      },
+      {
+        "index": 15,
+        "text": "That was deployed on Azure using Azure's",
+        "timestamp": 1765660874.0623708
+      },
+      {
+        "index": 16,
+        "text": "avatar models as well as text to speech and cognitive services models.",
+        "timestamp": 1765660878.2516658
+      },
+      {
+        "index": 17,
+        "text": "Yeah. Sure. So upon graduation, I've been",
+        "timestamp": 1765660901.2942164
+      },
+      {
+        "index": 18,
+        "text": "working as an AIML intern at RealPrice.",
+        "timestamp": 1765660902.389787
+      },
+      {
+        "index": 19,
+        "text": "So Wheel Price is a marketplace for car enthusiasts, and I've held",
+        "timestamp": 1765660906.2435882
+      },
+      {
+        "index": 20,
+        "text": "full stack responsibilities",
+        "timestamp": 1765660907.9921343
+      },
+      {
+        "index": 21,
+        "text": "as well as",
+        "timestamp": 1765660909.0864775
+      },
+      {
+        "index": 22,
+        "text": "uh, I'm working on some projects in the company, which are",
+        "timestamp": 1765660912.95007
+      },
+      {
+        "index": 23,
+        "text": "like, kind of a fitment assistant chatbot as well as a computer with an ML pipe",
+        "timestamp": 1765660918.273852
+      },
+      {
+        "index": 24,
+        "text": "and for a user feature.",
+        "timestamp": 1765660919.0120778
+      },
+      {
+        "index": 25,
+        "text": "Let me talk about the vision",
+        "timestamp": 1765660937.3060606
+      },
+      {
+        "index": 26,
+        "text": "pipeline that we have. So",
+        "timestamp": 1765660938.0775568
+      },
+      {
+        "index": 27,
+        "text": "I proposed this feature, which is basically a way",
+        "timestamp": 1765660941.097681
+      },
+      {
+        "index": 28,
+        "text": "to help users visualize the wheels that they want to",
+        "timestamp": 1765660944.1577876
+      },
+      {
+        "index": 29,
+        "text": "buy and how that would look on their car.",
+        "timestamp": 1765660946.347253
+      },
+      {
+        "index": 30,
+        "text": "It's basically an image to image operation where you take the",
+        "timestamp": 1765660949.958608
+      },
+      {
+        "index": 31,
+        "text": "wheel out of a seller's image and then put them on the cards of the user's image.",
+        "timestamp": 1765660954.314423
+      },
+      {
+        "index": 32,
+        "text": "And we used a we used a fine tune YOLO model for this.",
+        "timestamp": 1765660957.900157
+      },
+      {
+        "index": 33,
+        "text": "We have deployed it on an EC two instance on AWS, and we, uh, serve",
+        "timestamp": 1765660962.4046156
+      },
+      {
+        "index": 34,
+        "text": "from that.",
+        "timestamp": 1765660962.995554
+      },
+      {
+        "index": 35,
+        "text": "Some of the difficulties we had earlier on was regarding latency.",
+        "timestamp": 1765660966.8571608
+      },
+      {
+        "index": 36,
+        "text": "But other than that, it all real it was really a smooth",
+        "timestamp": 1765660971.7994568
+      },
+      {
+        "index": 37,
+        "text": "feature implementation.",
+        "timestamp": 1765660971.8556397
+      },
+      {
+        "index": 38,
+        "text": "Yeah. I think there was some, uh, like, design principles",
+        "timestamp": 1765660991.251484
+      },
+      {
+        "index": 39,
+        "text": "that we changed or on the way we",
+        "timestamp": 1765660993.188534
+      },
+      {
+        "index": 40,
+        "text": "somehow, uh, made it better.",
+        "timestamp": 1765660995.539334
+      },
+      {
+        "index": 41,
+        "text": "One was, uh,",
+        "timestamp": 1765660997.2341187
+      },
+      {
+        "index": 42,
+        "text": "we all we always had the seller's image of the rooms.",
+        "timestamp": 1765661000.2921665
+      },
+      {
+        "index": 43,
+        "text": "So we basically",
+        "timestamp": 1765661002.2838314
+      },
+      {
+        "index": 44,
+        "text": "already did half of the operation before the users uploaded their",
+        "timestamp": 1765661006.839058
+      },
+      {
+        "index": 45,
+        "text": "uh,",
+        "timestamp": 1765661007.6773736
+      },
+      {
+        "index": 46,
+        "text": "images of their car.",
+        "timestamp": 1765661008.9358146
+      },
+      {
+        "index": 47,
+        "text": "So that was one of the main major part by which we reduced the latency.",
+        "timestamp": 1765661013.7499692
+      },
+      {
+        "index": 48,
+        "text": "Other than that, uh, I would say it was about",
+        "timestamp": 1765661017.5304046
+      },
+      {
+        "index": 49,
+        "text": "uh, just handling the user interface.",
+        "timestamp": 1765661020.132168
+      }
+    ]
+  },
+  "total_messages": {
+    "agent": 6,
+    "user": 50
+  }
+}
