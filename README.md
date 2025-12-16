@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![MockFlow-AI Banner](banner.png)
+![MockFlow-AI Banner](static/mf1.png)
 
 **AI-Powered Mock Interview Platform with Real-Time Voice Interaction**
 
@@ -52,6 +52,10 @@ MockFlow-AI is a cutting-edge mock interview platform that leverages LiveKit's m
   - Deep dive into candidate's work history
   - STAR method questioning (Situation, Task, Action, Result)
   - Technical skill evaluation
+
+
+![MockFlow-AI screenshot](static/mf3.png)
+  - A screenshot from the interview room
 
 ### 🛡️ Robust State Management
 
