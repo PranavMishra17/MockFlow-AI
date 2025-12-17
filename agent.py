@@ -28,6 +28,16 @@ from livekit.agents import (
 from livekit.plugins import openai, deepgram, silero
 
 from fsm import InterviewState, InterviewStage, STAGE_TIME_LIMITS, STAGE_MIN_QUESTIONS
+from prompts import (
+    build_stage_instructions,
+    get_transition_ack,
+    get_fallback_ack,
+    build_role_context,
+    build_personality_note,
+    WELCOME,
+    SKIP_STAGE,
+    CLOSING_FALLBACK,
+)
 
 # Load environment variables
 env_path = Path(__file__).parent / '.env'
@@ -65,132 +75,6 @@ logger.info(f"[CONFIG] Deepgram API Key present: {bool(DEEPGRAM_API_KEY)}")
 # Create agent server
 server = AgentServer()
 
-# Stage-specific instructions for the LLM
-INSTRUCTIONS = {
-    InterviewStage.WELCOME: """
-You are a friendly interviewer named Alex.
-
-STEP 1: Say EXACTLY this greeting (nothing more):
-"Hi [CANDIDATE_NAME]! I'm Alex. Welcome to your mock interview. This will be structured in stages: you'll introduce yourself, we'll discuss your past experience, talk about company fit, and then wrap up. Let's begin - please introduce yourself."
-
-STEP 2: After you finish speaking the greeting, IMMEDIATELY call transition_stage to move to self_intro.
-
-Do NOT wait for the candidate's response before calling transition_stage.
-""",
-
-    InterviewStage.SELF_INTRO: """
-You are conducting the self-introduction stage of a mock interview.
-
-Your task:
-1. Listen actively to the candidate's introduction
-2. After they respond, call assess_response to evaluate
-3. Ask conversational follow-up questions about their background
-4. Before asking ANY question, call ask_question tool to verify it hasn't been asked
-5. Engage in genuine, natural conversation
-
-FOCUS AREAS:
-- Educational background (what they studied, why)
-- Current situation (what they're doing now)
-- Interests and motivations
-- Career aspirations
-
-DO NOT ASK ABOUT:
-- Specific past work experience details (save for next stage)
-- Technical deep-dives into previous roles
-
-CONVERSATION STYLE:
-- Be warm and conversational
-- Acknowledge interesting points naturally
-- Ask open-ended questions
-- DO NOT give live feedback on responses
-- DO NOT mention "STAR method"
-
-CRITICAL RULES:
-- Call assess_response AFTER EVERY candidate response
-- Call ask_question BEFORE asking ANY question
-- Need at least 2 questions before transitioning
-
-TRANSITION: Once you understand their background, call transition_stage.
-""",
-
-    InterviewStage.PAST_EXPERIENCE: """
-You are now discussing the candidate's past work experience in detail.
-
-Your task:
-1. Ask about their past work, projects, and accomplishments
-2. Listen carefully and ask natural follow-ups
-3. Call assess_response AFTER they respond
-4. Call ask_question BEFORE asking ANY question
-
-[DOCUMENT_CONTEXT]
-
-CONVERSATION STYLE:
-- Be conversational and genuinely curious
-- DO NOT say "Can you describe that using the STAR method?"
-- Naturally probe for details: "What was the situation?", "How did you approach that?"
-- Acknowledge interesting points
-
-FOCUS AREAS:
-- Specific projects relevant to [ROLE]
-- Technical challenges solved
-- Team collaboration
-- Impact of their work
-
-CRITICAL RULES:
-- Call assess_response AFTER EVERY response
-- Call ask_question BEFORE asking ANY question
-- Need at least 5 questions minimum
-
-TRANSITION: When minimum met and you have good understanding, call transition_stage.
-""",
-
-    InterviewStage.COMPANY_FIT: """
-You are now assessing company and role fit.
-
-[DOCUMENT_CONTEXT]
-
-Your task:
-1. Ask ~3 focused, open-ended questions about company/role fit
-2. Use any available resume and job description context to tailor questions
-3. Call assess_response AFTER each candidate response
-4. Call ask_question BEFORE asking ANY question
-5. Keep tone conversational - DO NOT give live feedback
-
-QUESTION THEMES:
-- Why this company/role interests them
-- How their skills align with role requirements
-- Culture fit and work style preferences
-- Long-term career alignment
-- What they'd bring to the team
-
-If job description available, reference specific requirements.
-If resume available, connect their experience to the role.
-
-CRITICAL RULES:
-- Call assess_response AFTER EVERY response
-- Call ask_question BEFORE asking ANY question
-- Need at least 3 questions
-- DO NOT provide feedback during interview
-
-TRANSITION: After 3+ quality exchanges about fit, call transition_stage to closing.
-""",
-
-    InterviewStage.CLOSING: """
-You are wrapping up the interview.
-
-Your task:
-- Thank the candidate sincerely for their time
-- Mention 1-2 positive observations (brief)
-- Let them know next steps via email
-- Say a warm goodbye: "Thank you again, and best of luck!"
-- Keep this VERY brief (under 30 seconds)
-
-After saying goodbye, the interview will automatically end.
-
-Style: Warm, professional, encouraging.
-"""
-}
-
 
 class InterviewAgent(Agent):
     """Mock interview agent with FSM-based stage management."""
@@ -201,7 +85,7 @@ class InterviewAgent(Agent):
         self.candidate_name = self.candidate_info.get('name', 'Candidate')
         self.candidate_role = self.candidate_info.get('role', 'this position')
 
-        personalized_greeting = INSTRUCTIONS[InterviewStage.WELCOME].replace(
+        personalized_greeting = WELCOME.greeting.replace(
             "[CANDIDATE_NAME]",
             self.candidate_name
         )
@@ -262,30 +146,12 @@ class InterviewAgent(Agent):
 
             await self._emit_stage_change(ctx, next_stage)
 
-            # Transition acknowledgements
-            transition_acks = {
-                InterviewStage.SELF_INTRO: (
-                    f"Great! I'm looking forward to learning more about you, {self.candidate_name}. "
-                    f"Please go ahead and tell me about yourself."
-                ),
-                InterviewStage.PAST_EXPERIENCE: (
-                    f"Excellent introduction, thank you {self.candidate_name}! "
-                    f"Now let's discuss your past work experience, "
-                    f"particularly as it relates to the {ctx.userdata.job_role or 'position'} role."
-                ),
-                InterviewStage.COMPANY_FIT: (
-                    f"Great insights into your experience, {self.candidate_name}! "
-                    f"Now let's talk about company and role fit. "
-                    f"I'd like to understand what draws you to this opportunity."
-                ),
-                InterviewStage.CLOSING: (
-                    f"Thank you so much for sharing all of that, {self.candidate_name}. "
-                    f"I really enjoyed learning about your background and experience. "
-                    f"We'll be in touch with next steps via email. Thank you again, and best of luck!"
-                ),
-            }
-
-            acknowledgement = transition_acks.get(next_stage)
+            # Get transition acknowledgement from prompts
+            acknowledgement = get_transition_ack(
+                next_stage,
+                self.candidate_name,
+                ctx.userdata.job_role or 'this position'
+            )
 
             if next_stage == InterviewStage.CLOSING:
                 ctx.userdata.closing_initiated = True
@@ -311,35 +177,38 @@ class InterviewAgent(Agent):
 
     def _get_stage_instructions(self, state: InterviewState, stage: InterviewStage) -> str:
         """Build personalized stage instructions with document context."""
-        base_instructions = INSTRUCTIONS[stage]
+        # Get base instructions from prompts module
+        base_instructions = build_stage_instructions(stage)
         
         # Replace placeholders
         instructions = base_instructions.replace("[ROLE]", state.job_role or "this position")
         
         # Add document context for relevant stages
         doc_context = ""
+        placeholder = "[DOCUMENT_CONTEXT]"
         if stage in [InterviewStage.PAST_EXPERIENCE, InterviewStage.COMPANY_FIT]:
             if state.include_profile:
                 doc_context = state.get_document_context()
                 
         if doc_context:
-            instructions = instructions.replace("[DOCUMENT_CONTEXT]", f"\nDOCUMENT CONTEXT:\n{doc_context}\n")
+            instructions = instructions.replace(
+                placeholder,
+                f"\nDOCUMENT CONTEXT:\n{doc_context}\n"
+            )
         else:
-            instructions = instructions.replace("[DOCUMENT_CONTEXT]", "")
+            instructions = instructions.replace(placeholder, "")
         
         # Add role context
-        role_context = self._get_role_context(state)
+        role_context = build_role_context(state.job_role or "this position", state.experience_level or "mid")
         
-        personality_note = f"""
-
-IMPORTANT: The candidate's name is {self.candidate_name}.
-They are applying for: {state.job_role or 'a technical position'}
-Experience level: {state.experience_level or 'mid-level'}
-
-{role_context}
-
-Use their name naturally. Maintain a warm, professional tone.
-"""
+        # Add personality note
+        personality_note = build_personality_note(
+            self.candidate_name,
+            state.job_role or "a technical position",
+            state.experience_level or "mid-level",
+            role_context
+        )
+        
         return instructions + personality_note
 
     async def _emit_stage_change(self, ctx: RunContext[InterviewState], new_stage: InterviewStage):
@@ -500,50 +369,12 @@ Use their name naturally. Maintain a warm, professional tone.
             logger.error(f"[AGENT] Record response error: {e}", exc_info=True)
             return "Error recording response"
 
-    def _get_role_context(self, state: InterviewState) -> str:
-        """Generate role-specific interview guidance."""
-        role = state.job_role.lower() if state.job_role else ""
-        level = state.experience_level.lower() if state.experience_level else "mid"
-
-        role_keywords = {
-            'engineer': 'technical skills, problem-solving, system design',
-            'developer': 'coding practices, frameworks, debugging',
-            'software': 'architecture, development process, code quality',
-            'manager': 'team leadership, project planning, stakeholder communication',
-            'product': 'product strategy, user research, roadmap',
-            'designer': 'design process, user research, collaboration',
-            'analyst': 'data analysis, business insights, technical tools',
-            'devops': 'infrastructure, CI/CD, monitoring',
-        }
-
-        level_expectations = {
-            'entry': 'Focus on learning approach, academic/personal projects.',
-            'junior': 'Focus on recent projects, technical growth.',
-            'mid': 'Focus on independent ownership, technical decisions.',
-            'senior': 'Focus on system design, mentoring, leadership.',
-            'lead': 'Focus on architecture strategy, team guidance.',
-            'staff': 'Focus on org-wide impact, technical strategy.',
-        }
-
-        role_focus = "technical experience and problem-solving"
-        for key, focus in role_keywords.items():
-            if key in role:
-                role_focus = focus
-                break
-
-        level_guidance = level_expectations.get(level, level_expectations['mid'])
-
-        return f"""
-For this {state.job_role or 'position'} role ({level} level):
-- Key focus: {role_focus}
-- {level_guidance}
-"""
 
     async def on_enter(self):
         """Called when agent becomes active."""
         logger.info(f"[AGENT] Agent activated - greeting {self.candidate_name}")
         self.session.generate_reply(
-            instructions=f"Greet the candidate and then immediately call transition_stage."
+            instructions=WELCOME.on_enter
         )
 
     async def on_exit(self):
@@ -736,7 +567,7 @@ async def entrypoint(ctx: JobContext):
                         
                         # Trigger agent to process skip
                         session.generate_reply(
-                            instructions=f"The candidate has requested to skip ahead. Call transition_stage immediately with reason 'candidate requested skip'."
+                            instructions=SKIP_STAGE.instruction
                         )
             except Exception as e:
                 logger.error(f"[DATA] Error processing: {e}")
@@ -853,8 +684,9 @@ async def stage_fallback_timer(
                 if elapsed > CLOSING_TIMEOUT and not state.closing_message_delivered:
                     logger.warning(f"[FALLBACK] Closing timeout - forcing finalization")
                     try:
+                        closing_msg = CLOSING_FALLBACK.message.replace("[CANDIDATE_NAME]", agent.candidate_name)
                         await session.say(
-                            f"Thank you for your time, {agent.candidate_name}. Best of luck!",
+                            closing_msg,
                             allow_interruptions=False
                         )
                         await asyncio.sleep(3.0)
@@ -914,15 +746,8 @@ async def stage_fallback_timer(
                     except Exception as e:
                         logger.error(f"[UI] Stage change emit error: {e}")
 
-                    # Queue acknowledgement
-                    ack_map = {
-                        InterviewStage.SELF_INTRO: f"Alright {agent.candidate_name}, please introduce yourself.",
-                        InterviewStage.PAST_EXPERIENCE: f"Thank you {agent.candidate_name}! Let's discuss your experience.",
-                        InterviewStage.COMPANY_FIT: f"Great insights! Let's talk about company and role fit.",
-                        InterviewStage.CLOSING: f"Thank you for sharing. Let me wrap up now.",
-                    }
-
-                    ack = ack_map.get(next_stage)
+                    # Get fallback acknowledgement from prompts
+                    ack = get_fallback_ack(next_stage, agent.candidate_name)
                     if ack:
                         state.pending_acknowledgement = ack
                         state.pending_ack_stage = next_stage.value
