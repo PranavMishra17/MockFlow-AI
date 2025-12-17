@@ -418,26 +418,23 @@ def get_interview_summary_api(filename):
         }), 500
 
 
-# ==================== FEEDBACK API (SKELETON) ====================
+# ==================== FEEDBACK API ====================
 
 @app.route('/api/feedback', methods=['POST'])
 def generate_feedback():
     """
-    Generate feedback for an interview (SKELETON - future implementation).
+    Generate AI-powered feedback for an interview using chain-of-thought analysis.
     
     Expected JSON body:
         - interview_id: Interview filename or identifier
         
     Returns:
-        Queued status with placeholder for future LLM-driven feedback.
-        
-    TODO: Implement LLM-driven feedback analysis with:
-        - strengths: List of candidate strengths
-        - improvements: List of areas for improvement
-        - question_feedback: Per-question analysis
-        - overall_score: Numerical rating
-        - recommendations: Next steps
+        Structured feedback with strengths, improvements, and practice plan.
     """
+    import json as json_module
+    from openai import OpenAI
+    from prompts import build_post_interview_feedback_prompt
+    
     try:
         data = request.json or {}
         interview_id = data.get('interview_id')
@@ -450,49 +447,111 @@ def generate_feedback():
             
         logger.info(f"[API] Feedback requested for: {interview_id}")
         
-        # Verify interview exists
-        summary = get_interview_summary(interview_id)
-        if 'error' in summary:
+        # Load and resequence the interview transcript
+        resequenced = resequence_interview(interview_id)
+        if 'error' in resequenced and resequenced.get('error'):
             return jsonify({
                 'error': 'Interview not found',
                 'message': f'Could not find interview: {interview_id}'
             }), 404
         
-        # TODO: Implement actual feedback generation
-        # Future implementation will:
-        # 1. Load the interview transcript
-        # 2. Send to LLM with structured prompt
-        # 3. Parse and return feedback in structured format
+        # Build the interview chat transcript
+        conversation = resequenced.get('ordered_conversation', [])
+        meta = resequenced.get('meta', {})
         
-        # Skeleton response
+        if not conversation:
+            return jsonify({
+                'error': 'Empty transcript',
+                'message': 'No conversation found in this interview'
+            }), 400
+        
+        # Format transcript for LLM
+        transcript_lines = []
+        for turn in conversation:
+            role = "INTERVIEWER" if turn['role'] == 'agent' else "CANDIDATE"
+            stage_info = f" [{turn['stage']}]" if turn.get('stage') else ""
+            transcript_lines.append(f"{role}{stage_info}: {turn['text']}")
+        
+        interview_chat = "\n\n".join(transcript_lines)
+        
+        # Load raw interview data for additional context
+        interview_path = Path("interviews") / interview_id
+        candidate_profile = f"Name: {meta.get('candidate', 'Unknown')}"
+        job_summary = "Role: Not specified"
+        
+        try:
+            with open(interview_path, 'r', encoding='utf-8') as f:
+                raw_data = json_module.load(f)
+                
+            # Extract additional context if available
+            if raw_data.get('job_role'):
+                job_summary = f"Role: {raw_data.get('job_role', 'Not specified')}"
+            if raw_data.get('experience_level'):
+                candidate_profile += f"\nExperience Level: {raw_data.get('experience_level', 'Not specified')}"
+        except Exception as e:
+            logger.warning(f"[API] Could not load raw interview data: {e}")
+        
+        # Build the feedback prompt using chain-of-thought approach
+        system_prompt = build_post_interview_feedback_prompt()
+        
+        user_prompt = f"""Please analyze this mock interview and provide detailed feedback.
+
+<CANDIDATE_PROFILE>
+{candidate_profile}
+</CANDIDATE_PROFILE>
+
+<JOB_SUMMARY>
+{job_summary}
+</JOB_SUMMARY>
+
+<INTERVIEW_CHAT>
+{interview_chat}
+</INTERVIEW_CHAT>
+
+Provide your analysis and feedback following the output format specified."""
+
+        # Call OpenAI API for feedback generation
+        openai_api_key = os.getenv('OPENAI_API_KEY')
+        if not openai_api_key:
+            return jsonify({
+                'error': 'Configuration error',
+                'message': 'OpenAI API key not configured'
+            }), 500
+        
+        logger.info(f"[API] Generating feedback via OpenAI for {interview_id}")
+        
+        client = OpenAI(api_key=openai_api_key)
+        
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.7,
+            max_tokens=2000
+        )
+        
+        feedback_text = response.choices[0].message.content
+        
+        logger.info(f"[API] Feedback generated successfully for {interview_id}")
+        
         return jsonify({
+            'success': True,
             'interview_id': interview_id,
-            'status': 'queued',
-            'message': 'Feedback generation will be implemented in a future release.',
-            
-            # Placeholder structure for future implementation
-            'feedback_schema': {
-                'strengths': ['(Coming soon) List of identified strengths'],
-                'improvements': ['(Coming soon) Areas for improvement with actionable tips'],
-                'question_feedback': [
-                    {
-                        'question': '(Coming soon) Specific question asked',
-                        'response_quality': '(Coming soon) Assessment of response',
-                        'suggestions': '(Coming soon) How to improve'
-                    }
-                ],
-                'overall_score': None,
-                'recommendations': ['(Coming soon) Next steps for interview prep']
-            },
-            
-            # Interview summary for reference
-            'interview_summary': summary
+            'feedback': feedback_text,
+            'meta': {
+                'candidate': meta.get('candidate'),
+                'interview_date': meta.get('interview_date'),
+                'total_turns': len(conversation),
+                'model': 'gpt-4o-mini'
+            }
         })
         
     except Exception as e:
         logger.error(f"[API] Feedback error: {e}", exc_info=True)
         return jsonify({
-            'error': 'Feedback request failed',
+            'error': 'Feedback generation failed',
             'message': str(e)
         }), 500
 

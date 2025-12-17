@@ -88,6 +88,9 @@ class InterviewAgent(Agent):
         personalized_greeting = WELCOME.greeting.replace(
             "[CANDIDATE_NAME]",
             self.candidate_name
+        ).replace(
+            "[ROLE]",
+            self.candidate_role
         )
 
         super().__init__(instructions=personalized_greeting)
@@ -371,11 +374,11 @@ class InterviewAgent(Agent):
 
 
     async def on_enter(self):
-        """Called when agent becomes active."""
-        logger.info(f"[AGENT] Agent activated - greeting {self.candidate_name}")
-        self.session.generate_reply(
-            instructions=WELCOME.on_enter
-        )
+        """Called when agent becomes active - delivers welcome greeting."""
+        logger.info(f"[AGENT] Agent activated - delivering welcome greeting to {self.candidate_name}")
+        # Trigger the agent to speak its initial greeting (set in __init__)
+        # The greeting prompt instructs the agent to call transition_stage after speaking
+        self.session.generate_reply()
 
     async def on_exit(self):
         """Called when agent is deactivated."""
@@ -590,12 +593,16 @@ async def entrypoint(ctx: JobContext):
                     "candidate": candidate_name,
                     "interview_date": datetime.now().isoformat(),
                     "room_name": ctx.room.name,
+                    "job_role": interview_state.job_role,
+                    "experience_level": interview_state.experience_level,
                     "conversation": conversation_history,
                     "total_messages": {
                         "agent": len(conversation_history['agent']),
                         "user": len(conversation_history['user'])
                     },
                     "skipped_stages": interview_state.skipped_stages,
+                    "final_stage": interview_state.stage.value,
+                    "ended_by": "natural_completion"
                 }
 
                 os.makedirs("interviews", exist_ok=True)
@@ -606,6 +613,7 @@ async def entrypoint(ctx: JobContext):
                     json_module.dump(history_data, f, indent=2, ensure_ascii=False)
 
                 logger.info(f"[HISTORY] Saved to {filename}")
+                closing_finalized["done"] = True
                 interview_complete.set()
                 await asyncio.sleep(2.0)
                 await ctx.room.disconnect()
@@ -617,7 +625,52 @@ async def entrypoint(ctx: JobContext):
         @ctx.room.on("disconnected")
         def on_room_disconnected():
             logger.info("[ROOM] Room disconnected")
+            # Save transcript on any disconnection (manual or automatic)
+            asyncio.create_task(save_transcript_on_disconnect())
             interview_complete.set()
+        
+        async def save_transcript_on_disconnect():
+            """Save interview transcript when room disconnects."""
+            try:
+                import json as json_module
+                from datetime import datetime
+                
+                # Don't save if already finalized
+                if closing_finalized.get("done"):
+                    logger.info("[HISTORY] Transcript already saved via finalize_and_disconnect")
+                    return
+                
+                # Check if we have any conversation to save
+                if not conversation_history["agent"] and not conversation_history["user"]:
+                    logger.info("[HISTORY] No conversation to save")
+                    return
+                
+                history_data = {
+                    "candidate": candidate_name,
+                    "interview_date": datetime.now().isoformat(),
+                    "room_name": ctx.room.name,
+                    "job_role": interview_state.job_role,
+                    "experience_level": interview_state.experience_level,
+                    "conversation": conversation_history,
+                    "total_messages": {
+                        "agent": len(conversation_history['agent']),
+                        "user": len(conversation_history['user'])
+                    },
+                    "skipped_stages": interview_state.skipped_stages,
+                    "final_stage": interview_state.stage.value,
+                    "ended_by": "user_disconnect"
+                }
+                
+                os.makedirs("interviews", exist_ok=True)
+                filename = f"interviews/{candidate_name.lower().replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                
+                with open(filename, 'w', encoding='utf-8') as f:
+                    json_module.dump(history_data, f, indent=2, ensure_ascii=False)
+                
+                logger.info(f"[HISTORY] Saved transcript on disconnect: {filename}")
+                
+            except Exception as e:
+                logger.error(f"[HISTORY] Error saving on disconnect: {e}", exc_info=True)
 
         # Start fallback timer
         fallback_task = asyncio.create_task(

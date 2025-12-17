@@ -1,0 +1,457 @@
+{
+  "candidate": "Pranav Mishra",
+  "interview_date": "2025-12-17T17:15:29.315447",
+  "room_name": "interview-pranav-mishra-1766009398",
+  "job_role": "AI Engineer",
+  "experience_level": "entry",
+  "conversation": {
+    "agent": [
+      {
+        "index": 0,
+        "text": "Now that we've completed the greeting, let's move on to the self-introduction stage. Please tell me a bit about yourself and your background related to the AI Engineer position.",
+        "timestamp": 1766009414.593624,
+        "stage": "self_intro"
+      },
+      {
+        "index": 1,
+        "text": "What inspired your interest in game design, and how does it relate to your aspiration to become an AI Engineer?",
+        "timestamp": 1766009471.400127,
+        "stage": "self_intro"
+      },
+      {
+        "index": 2,
+        "text": "What do you feel was the most significant AI project you worked on, and what were the key challenges you faced during that project?",
+        "timestamp": 1766009523.5088425,
+        "stage": "past_experience"
+      },
+      {
+        "index": 3,
+        "text": "What insights did you gain from comparing the performance of the different models in the live comparison?",
+        "timestamp": 1766009590.5960095,
+        "stage": "past_experience"
+      },
+      {
+        "index": 4,
+        "text": "What specifically interests you about the AI Engineer role here?",
+        "timestamp": 1766009646.456409,
+        "stage": "company_fit"
+      },
+      {
+        "index": 5,
+        "text": "How do you see this position aligning with your long-term career goals?",
+        "timestamp": 1766009684.4538934,
+        "stage": "company_fit"
+      },
+      {
+        "index": 6,
+        "text": "Thank you so much for sharing all of that, Pranav Mishra. I really enjoyed learning about your background and experience. We'll be in touch with next steps via email. Thank you again, and best of luck!",
+        "timestamp": 1766009724.318315,
+        "stage": "closing"
+      }
+    ],
+    "user": [
+      {
+        "index": 0,
+        "text": "Hi. I'm from USC with a master",
+        "timestamp": 1766009434.2437208
+      },
+      {
+        "index": 1,
+        "text": "I've also done research on multilayer systems, like RAGS,",
+        "timestamp": 1766009445.0766711
+      },
+      {
+        "index": 2,
+        "text": "and other AI engineering stuff.",
+        "timestamp": 1766009448.0747268
+      },
+      {
+        "index": 3,
+        "text": "I've done my masters in",
+        "timestamp": 1766009450.5637915
+      },
+      {
+        "index": 4,
+        "text": "proficiency in game design as well as machine learning.",
+        "timestamp": 1766009454.1377614
+      },
+      {
+        "index": 5,
+        "text": "So I'm pretty well prepped",
+        "timestamp": 1766009456.4565036
+      },
+      {
+        "index": 6,
+        "text": "for",
+        "timestamp": 1766009456.9715674
+      },
+      {
+        "index": 7,
+        "text": "anything basics to production level.",
+        "timestamp": 1766009459.7944267
+      },
+      {
+        "index": 8,
+        "text": "Stuff.",
+        "timestamp": 1766009460.2591527
+      },
+      {
+        "index": 9,
+        "text": "Well, I'm not into coding through games. I loved playing games as a child. So",
+        "timestamp": 1766009478.6092901
+      },
+      {
+        "index": 10,
+        "text": "when we were growing up, we used to play games.",
+        "timestamp": 1766009480.875389
+      },
+      {
+        "index": 11,
+        "text": "And",
+        "timestamp": 1766009481.8782022
+      },
+      {
+        "index": 12,
+        "text": "I just knew that I wanted to make games when I grew up.",
+        "timestamp": 1766009485.1301448
+      },
+      {
+        "index": 13,
+        "text": "So that was the whole inspiration of",
+        "timestamp": 1766009487.23387
+      },
+      {
+        "index": 14,
+        "text": "why I started coding in the first",
+        "timestamp": 1766009488.935598
+      },
+      {
+        "index": 15,
+        "text": "place. I made a couple of moving games on",
+        "timestamp": 1766009492.5255866
+      },
+      {
+        "index": 16,
+        "text": "I've been released it to my play store before",
+        "timestamp": 1766009496.5803347
+      },
+      {
+        "index": 17,
+        "text": "Even before I joined the OS.",
+        "timestamp": 1766009497.7333446
+      },
+      {
+        "index": 18,
+        "text": "So that was the",
+        "timestamp": 1766009499.267196
+      },
+      {
+        "index": 19,
+        "text": "how I got into coding, and then",
+        "timestamp": 1766009501.2254949
+      },
+      {
+        "index": 20,
+        "text": "during my studies, I got into study AI.",
+        "timestamp": 1766009505.5856357
+      },
+      {
+        "index": 21,
+        "text": "Thus, I wanted to learn more, so I came to US for my master's in business.",
+        "timestamp": 1766009510.0823643
+      },
+      {
+        "index": 22,
+        "text": "Well, I would say",
+        "timestamp": 1766009527.891153
+      },
+      {
+        "index": 23,
+        "text": "I would say that",
+        "timestamp": 1766009529.5134594
+      },
+      {
+        "index": 24,
+        "text": "there is one project called Snake AI MLOps.",
+        "timestamp": 1766009532.3874571
+      },
+      {
+        "index": 25,
+        "text": "Which is basically a reinforcement learning project where",
+        "timestamp": 1766009536.9386182
+      },
+      {
+        "index": 26,
+        "text": "I trained",
+        "timestamp": 1766009538.1635096
+      },
+      {
+        "index": 27,
+        "text": "a game agent's snake",
+        "timestamp": 1766009539.9158173
+      },
+      {
+        "index": 28,
+        "text": "to play the classic snake game.",
+        "timestamp": 1766009541.533721
+      },
+      {
+        "index": 29,
+        "text": "But through different reinforcement learning techniques.",
+        "timestamp": 1766009544.2836585
+      },
+      {
+        "index": 30,
+        "text": "So the whole point of the project was me learning the reinforcement learning",
+        "timestamp": 1766009548.7947805
+      },
+      {
+        "index": 31,
+        "text": "algorithms and how they work.",
+        "timestamp": 1766009551.0278113
+      },
+      {
+        "index": 32,
+        "text": "And if I could implement them in this environment,",
+        "timestamp": 1766009553.3684106
+      },
+      {
+        "index": 33,
+        "text": "So, yeah, I think that is the most",
+        "timestamp": 1766009556.038785
+      },
+      {
+        "index": 34,
+        "text": "fun project I've",
+        "timestamp": 1766009557.0711071
+      },
+      {
+        "index": 35,
+        "text": "I did. I did it in c plus plus.",
+        "timestamp": 1766009559.3024232
+      },
+      {
+        "index": 36,
+        "text": "A week.",
+        "timestamp": 1766009559.8774006
+      },
+      {
+        "index": 37,
+        "text": "Used",
+        "timestamp": 1766009560.3286977
+      },
+      {
+        "index": 38,
+        "text": "even Python for training, but then",
+        "timestamp": 1766009562.3924537
+      },
+      {
+        "index": 39,
+        "text": "ultimately, I had to use LipTox",
+        "timestamp": 1766009564.6254904
+      },
+      {
+        "index": 40,
+        "text": "for the real time URL.",
+        "timestamp": 1766009566.3254466
+      },
+      {
+        "index": 41,
+        "text": "Inference of the small models that I had for the reinforcement learning.",
+        "timestamp": 1766009570.341103
+      },
+      {
+        "index": 42,
+        "text": "Snake agent.",
+        "timestamp": 1766009571.3359234
+      },
+      {
+        "index": 43,
+        "text": "And I even had a, like, a live comparison",
+        "timestamp": 1766009574.384716
+      },
+      {
+        "index": 44,
+        "text": "of the models and the snakes running in the room.",
+        "timestamp": 1766009577.6416426
+      },
+      {
+        "index": 45,
+        "text": "To see how each one performs.",
+        "timestamp": 1766009579.7715142
+      },
+      {
+        "index": 46,
+        "text": "Uh, the whole I think my point was",
+        "timestamp": 1766009597.1382375
+      },
+      {
+        "index": 47,
+        "text": "like, checking the latency and the average scores of these, uh, agents.",
+        "timestamp": 1766009600.739236
+      },
+      {
+        "index": 48,
+        "text": "But, yeah, even in training, you can do that via simulated",
+        "timestamp": 1766009604.95274
+      },
+      {
+        "index": 49,
+        "text": "experience. Like, you can",
+        "timestamp": 1766009607.0262856
+      },
+      {
+        "index": 50,
+        "text": "leave the agents running code itself, not the UI.",
+        "timestamp": 1766009610.1345437
+      },
+      {
+        "index": 51,
+        "text": "But doing it in UI mean",
+        "timestamp": 1766009612.0400784
+      },
+      {
+        "index": 52,
+        "text": "meant",
+        "timestamp": 1766009612.7743073
+      },
+      {
+        "index": 53,
+        "text": "it was a challenge, which was",
+        "timestamp": 1766009614.8757558
+      },
+      {
+        "index": 54,
+        "text": "you had to run the models in the background in the inference.",
+        "timestamp": 1766009618.2515204
+      },
+      {
+        "index": 55,
+        "text": "And then in real time, you had to put in the input of the environment and then",
+        "timestamp": 1766009623.2302134
+      },
+      {
+        "index": 56,
+        "text": "get the output from the model.",
+        "timestamp": 1766009624.0679817
+      },
+      {
+        "index": 57,
+        "text": "And it translate into your BIM environment on the UI.",
+        "timestamp": 1766009627.3643842
+      },
+      {
+        "index": 58,
+        "text": "So the it's one thing to do in a binary matrix",
+        "timestamp": 1766009631.375168
+      },
+      {
+        "index": 59,
+        "text": "in code,",
+        "timestamp": 1766009632.5494676
+      },
+      {
+        "index": 60,
+        "text": "and it's another thing to show it in the UI, the actual graphics",
+        "timestamp": 1766009635.884673
+      },
+      {
+        "index": 61,
+        "text": "Uh, well, I have had plenty of experience building AI projects",
+        "timestamp": 1766009655.0912724
+      },
+      {
+        "index": 62,
+        "text": "AI engineering roles,",
+        "timestamp": 1766009655.5824318
+      },
+      {
+        "index": 63,
+        "text": "I have worked with REX, multi agent systems,",
+        "timestamp": 1766009658.6637542
+      },
+      {
+        "index": 64,
+        "text": "and other stuff. I even had done some research regarding",
+        "timestamp": 1766009662.2968595
+      },
+      {
+        "index": 65,
+        "text": "my director engagement in rags.",
+        "timestamp": 1766009664.170038
+      },
+      {
+        "index": 66,
+        "text": "I have worked with vision models, multi multi multi multi models.",
+        "timestamp": 1766009668.8283594
+      },
+      {
+        "index": 67,
+        "text": "And all that stuff. So I'm very pretty well versed with this.",
+        "timestamp": 1766009672.1366353
+      },
+      {
+        "index": 68,
+        "text": "Next, I want to have",
+        "timestamp": 1766009673.3821745
+      },
+      {
+        "index": 69,
+        "text": "a job in this role.",
+        "timestamp": 1766009674.5440416
+      },
+      {
+        "index": 70,
+        "text": "I guess I'm pretty solid at the moment.",
+        "timestamp": 1766009688.5708332
+      },
+      {
+        "index": 71,
+        "text": "And in",
+        "timestamp": 1766009689.735708
+      },
+      {
+        "index": 72,
+        "text": "in the short term, I see myself getting even more strong.",
+        "timestamp": 1766009693.1984117
+      },
+      {
+        "index": 73,
+        "text": "Getting well versed with industry standard on this, and then",
+        "timestamp": 1766009696.987507
+      },
+      {
+        "index": 74,
+        "text": "trying to",
+        "timestamp": 1766009698.2227514
+      },
+      {
+        "index": 75,
+        "text": "gain myself",
+        "timestamp": 1766009699.3673558
+      },
+      {
+        "index": 76,
+        "text": "push into even more research work with ML.",
+        "timestamp": 1766009703.126762
+      },
+      {
+        "index": 77,
+        "text": "Go",
+        "timestamp": 1766009704.9876678
+      },
+      {
+        "index": 78,
+        "text": "deep dive into user facing AI apps.",
+        "timestamp": 1766009707.498739
+      }
+    ]
+  },
+  "total_messages": {
+    "agent": 7,
+    "user": 79
+  },
+  "skipped_stages": [],
+  "final_stage": "closing",
+  "ended_by": "natural_completion"
+}

@@ -29,15 +29,36 @@
         <div id="mainContent" style="display: none;">
             <div class="interview-info" id="interviewInfo"></div>
 
-            <div class="feedback-banner">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="12" y1="16" x2="12" y2="12"/>
-                    <line x1="12" y1="8" x2="12.01" y2="8"/>
-                </svg>
-                <div class="feedback-banner-content">
-                    <h3>AI-Powered Feedback Coming Soon</h3>
-                    <p>Detailed analysis including strengths, areas for improvement, and question-specific feedback will be available in a future release. For now, review your transcript below.</p>
+            <!-- Feedback Section -->
+            <div class="feedback-section" id="feedbackSection">
+                <div class="feedback-header">
+                    <h2>AI-Powered Feedback</h2>
+                    <button class="btn-generate-feedback" id="generateFeedbackBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+                        </svg>
+                        Generate Feedback
+                    </button>
+                </div>
+                
+                <!-- Feedback loading state -->
+                <div class="feedback-loading" id="feedbackLoading" style="display: none;">
+                    <div class="feedback-spinner"></div>
+                    <p>Analyzing your interview with AI...</p>
+                    <p class="feedback-loading-sub">This may take a moment</p>
+                </div>
+                
+                <!-- Feedback content -->
+                <div class="feedback-content" id="feedbackContent" style="display: none;"></div>
+                
+                <!-- Feedback placeholder -->
+                <div class="feedback-placeholder" id="feedbackPlaceholder">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="12" y1="16" x2="12" y2="12"/>
+                        <line x1="12" y1="8" x2="12.01" y2="8"/>
+                    </svg>
+                    <p>Click "Generate Feedback" to get AI-powered analysis of your interview performance.</p>
                 </div>
             </div>
 
@@ -56,6 +77,7 @@
         'use strict';
         
         var filename = '{{ filename }}';
+        var feedbackGenerated = false;
         
         var elements = {
             loadingState: document.getElementById('loadingState'),
@@ -63,10 +85,19 @@
             mainContent: document.getElementById('mainContent'),
             interviewInfo: document.getElementById('interviewInfo'),
             transcriptContent: document.getElementById('transcriptContent'),
-            turnCount: document.getElementById('turnCount')
+            turnCount: document.getElementById('turnCount'),
+            generateFeedbackBtn: document.getElementById('generateFeedbackBtn'),
+            feedbackLoading: document.getElementById('feedbackLoading'),
+            feedbackContent: document.getElementById('feedbackContent'),
+            feedbackPlaceholder: document.getElementById('feedbackPlaceholder')
         };
         
-        document.addEventListener('DOMContentLoaded', loadInterview);
+        document.addEventListener('DOMContentLoaded', init);
+        
+        function init() {
+            loadInterview();
+            elements.generateFeedbackBtn.addEventListener('click', requestFeedback);
+        }
         
         function loadInterview() {
             fetch('/api/interview/' + encodeURIComponent(filename))
@@ -152,14 +183,25 @@
             
             elements.transcriptContent.innerHTML = transcriptHtml || '<p style="color: var(--text-light);">No transcript available.</p>';
             
-            // Check if feedback was requested
+            // Auto-generate feedback if requested via URL param
             var urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('request_feedback') === '1') {
+            if (urlParams.get('request_feedback') === '1' && !feedbackGenerated) {
                 requestFeedback();
             }
         }
         
         function requestFeedback() {
+            if (feedbackGenerated) {
+                return;
+            }
+            
+            // Show loading state
+            elements.generateFeedbackBtn.disabled = true;
+            elements.generateFeedbackBtn.textContent = 'Generating...';
+            elements.feedbackPlaceholder.style.display = 'none';
+            elements.feedbackLoading.style.display = 'flex';
+            elements.feedbackContent.style.display = 'none';
+            
             fetch('/api/feedback', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -167,11 +209,115 @@
             })
             .then(function(response) { return response.json(); })
             .then(function(data) {
-                console.log('[FEEDBACK] Response:', data);
+                elements.feedbackLoading.style.display = 'none';
+                
+                if (data.error) {
+                    showFeedbackError(data.error + ': ' + (data.message || ''));
+                    return;
+                }
+                
+                feedbackGenerated = true;
+                renderFeedback(data.feedback);
             })
             .catch(function(err) {
                 console.error('[FEEDBACK] Request error:', err);
+                elements.feedbackLoading.style.display = 'none';
+                showFeedbackError('Failed to generate feedback: ' + err.message);
             });
+        }
+        
+        function showFeedbackError(message) {
+            elements.feedbackContent.style.display = 'block';
+            elements.feedbackContent.innerHTML = 
+                '<div class="feedback-error">' +
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+                        '<circle cx="12" cy="12" r="10"/>' +
+                        '<line x1="15" y1="9" x2="9" y2="15"/>' +
+                        '<line x1="9" y1="9" x2="15" y2="15"/>' +
+                    '</svg>' +
+                    '<p>' + escapeHtml(message) + '</p>' +
+                    '<button class="btn-retry" onclick="location.reload()">Retry</button>' +
+                '</div>';
+            elements.generateFeedbackBtn.disabled = false;
+            elements.generateFeedbackBtn.innerHTML = 
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
+                    '<path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>' +
+                '</svg>' +
+                'Retry Feedback';
+        }
+        
+        function renderFeedback(feedbackText) {
+            elements.feedbackContent.style.display = 'block';
+            elements.generateFeedbackBtn.style.display = 'none';
+            
+            // Convert markdown-like text to HTML
+            var html = formatFeedbackText(feedbackText);
+            
+            elements.feedbackContent.innerHTML = 
+                '<div class="feedback-success">' +
+                    '<div class="feedback-text">' + html + '</div>' +
+                '</div>';
+        }
+        
+        function formatFeedbackText(text) {
+            if (!text) return '<p>No feedback available.</p>';
+            
+            // Split into sections by numbered headers
+            var lines = text.split('\n');
+            var html = '';
+            var inList = false;
+            
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i].trim();
+                
+                if (!line) {
+                    if (inList) {
+                        html += '</ul>';
+                        inList = false;
+                    }
+                    continue;
+                }
+                
+                // Check for section headers (1. 2. 3. etc)
+                var headerMatch = line.match(/^(\d+)\.\s*(.+)$/);
+                if (headerMatch) {
+                    if (inList) {
+                        html += '</ul>';
+                        inList = false;
+                    }
+                    html += '<h3 class="feedback-section-title">' + escapeHtml(headerMatch[2]) + '</h3>';
+                    continue;
+                }
+                
+                // Check for bullet points
+                if (line.startsWith('-') || line.startsWith('*') || line.startsWith('•')) {
+                    if (!inList) {
+                        html += '<ul class="feedback-list">';
+                        inList = true;
+                    }
+                    var bulletContent = line.substring(1).trim();
+                    // Bold text between ** **
+                    bulletContent = bulletContent.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+                    html += '<li>' + escapeHtml(bulletContent).replace(/&lt;strong&gt;/g, '<strong>').replace(/&lt;\/strong&gt;/g, '</strong>') + '</li>';
+                    continue;
+                }
+                
+                // Regular paragraph
+                if (inList) {
+                    html += '</ul>';
+                    inList = false;
+                }
+                
+                // Bold text between ** **
+                var formattedLine = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+                html += '<p>' + escapeHtml(formattedLine).replace(/&lt;strong&gt;/g, '<strong>').replace(/&lt;\/strong&gt;/g, '</strong>') + '</p>';
+            }
+            
+            if (inList) {
+                html += '</ul>';
+            }
+            
+            return html;
         }
         
         function formatDate(isoDate) {

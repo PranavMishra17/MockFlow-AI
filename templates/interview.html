@@ -186,9 +186,19 @@
                 </div>
                 <h3 class="modal-title" id="modalTitle">End Interview?</h3>
                 <p class="modal-message" id="modalMessage">Are you sure you want to end the interview?</p>
-                <div class="modal-actions">
+                <div class="modal-actions" id="modalActions">
                     <button class="btn-secondary" id="modalCancel">Cancel</button>
                     <button class="btn-danger" id="modalConfirm">End Interview</button>
+                </div>
+                <!-- Feedback button (shown after interview ends) -->
+                <div class="modal-feedback-actions" id="modalFeedbackActions" style="display: none;">
+                    <button class="btn-feedback-golden" id="getFeedbackBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+                        </svg>
+                        Get Feedback
+                    </button>
+                    <button class="btn-secondary" id="returnHomeBtn">Return Home</button>
                 </div>
             </div>
         </div>
@@ -360,7 +370,9 @@
                 blinkInterval: null,
                 timerInterval: null,
                 agentAudioAnalyser: null,
-                agentAudioContext: null
+                agentAudioContext: null,
+                roomName: null,
+                interviewFilename: null
             };
             
             var elements = {
@@ -798,6 +810,9 @@
                         throw new Error(data.error);
                     }
                     
+                    // Store room name for feedback URL generation
+                    state.roomName = data.room;
+                    
                     updateStatus('Connecting to room...', 'connecting');
                     
                     state.room = new LK.Room({
@@ -945,15 +960,57 @@
                 if (state.blinkInterval) clearTimeout(state.blinkInterval);
                 
                 setTimeout(function() {
-                    document.getElementById('modalTitle').textContent = 'Interview Complete';
-                    document.getElementById('modalMessage').textContent = 'Thank you for participating.';
-                    document.getElementById('modalIcon').className = 'modal-icon success';
-                    document.getElementById('modalIcon').innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
-                    document.getElementById('modalCancel').style.display = 'none';
-                    document.getElementById('modalConfirm').textContent = 'Return Home';
-                    document.getElementById('modalConfirm').onclick = function() { window.location.href = '/'; };
-                    showModal();
+                    showInterviewCompleteModal();
                 }, 1000);
+            }
+            
+            function showInterviewCompleteModal() {
+                document.getElementById('modalTitle').textContent = 'Interview Complete';
+                document.getElementById('modalMessage').textContent = 'Thank you for participating! Would you like to get feedback on your interview?';
+                document.getElementById('modalIcon').className = 'modal-icon success';
+                document.getElementById('modalIcon').innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+                
+                // Hide the confirm/cancel actions, show feedback actions
+                document.getElementById('modalActions').style.display = 'none';
+                document.getElementById('modalFeedbackActions').style.display = 'flex';
+                
+                // Set up feedback button
+                var feedbackBtn = document.getElementById('getFeedbackBtn');
+                feedbackBtn.onclick = function() {
+                    var filename = getInterviewFilename();
+                    if (filename) {
+                        window.location.href = '/feedback/' + encodeURIComponent(filename) + '?request_feedback=1';
+                    } else {
+                        // Fallback to past calls page
+                        window.location.href = '/past-calls';
+                    }
+                };
+                
+                // Set up return home button
+                document.getElementById('returnHomeBtn').onclick = function() {
+                    window.location.href = '/';
+                };
+                
+                showModal();
+            }
+            
+            function getInterviewFilename() {
+                // Generate expected filename based on candidate name and timestamp
+                if (state.interviewFilename) {
+                    return state.interviewFilename;
+                }
+                
+                // Build filename from candidate info and room connection time
+                var name = candidate.name.toLowerCase().replace(/\s+/g, '_');
+                var now = new Date();
+                var dateStr = now.getFullYear().toString() +
+                    (now.getMonth() + 1).toString().padStart(2, '0') +
+                    now.getDate().toString().padStart(2, '0') + '_' +
+                    now.getHours().toString().padStart(2, '0') +
+                    now.getMinutes().toString().padStart(2, '0') +
+                    now.getSeconds().toString().padStart(2, '0');
+                
+                return name + '_' + dateStr + '.json';
             }
             
             function onTrackSubscribed(track, publication, participant) {
@@ -1055,14 +1112,7 @@
                         updateStatus('Interview Complete', 'connected');
                         
                         setTimeout(function() {
-                            document.getElementById('modalTitle').textContent = 'Interview Complete';
-                            document.getElementById('modalMessage').textContent = 'Thank you for participating.';
-                            document.getElementById('modalIcon').className = 'modal-icon success';
-                            document.getElementById('modalIcon').innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
-                            document.getElementById('modalCancel').style.display = 'none';
-                            document.getElementById('modalConfirm').textContent = 'Return Home';
-                            document.getElementById('modalConfirm').onclick = function() { window.location.href = '/'; };
-                            showModal();
+                            showInterviewCompleteModal();
                         }, 2000);
                     }
                 } catch (err) {

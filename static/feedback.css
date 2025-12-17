@@ -174,3 +174,206 @@
     border-radius: 0.25rem;
     color: var(--text-light);
 }
+
+/* ==================== FEEDBACK SECTION ==================== */
+.feedback-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.feedback-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.feedback-header h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.btn-generate-feedback {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #1a1a1a;
+    background: linear-gradient(135deg, #ffd700 0%, #ffb700 50%, #ff9500 100%);
+    border: none;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(255, 183, 0, 0.3);
+}
+
+.btn-generate-feedback:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 183, 0, 0.4);
+}
+
+.btn-generate-feedback:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.btn-generate-feedback svg {
+    width: 1rem;
+    height: 1rem;
+}
+
+/* Feedback loading state */
+.feedback-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+    text-align: center;
+}
+
+.feedback-spinner {
+    width: 2.5rem;
+    height: 2.5rem;
+    border: 3px solid var(--border);
+    border-top-color: var(--primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.feedback-loading p {
+    color: var(--text);
+    font-weight: 500;
+    margin: 0;
+}
+
+.feedback-loading-sub {
+    color: var(--text-light) !important;
+    font-size: 0.875rem;
+    font-weight: 400 !important;
+    margin-top: 0.25rem !important;
+}
+
+/* Feedback placeholder */
+.feedback-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2.5rem;
+    text-align: center;
+    color: var(--text-light);
+}
+
+.feedback-placeholder svg {
+    width: 2.5rem;
+    height: 2.5rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.feedback-placeholder p {
+    max-width: 400px;
+    line-height: 1.5;
+}
+
+/* Feedback content */
+.feedback-content {
+    padding: 1.5rem;
+}
+
+.feedback-success {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.feedback-text {
+    line-height: 1.7;
+    color: var(--text);
+}
+
+.feedback-text h3.feedback-section-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 1.5rem 0 0.75rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.feedback-text h3.feedback-section-title:first-child {
+    margin-top: 0;
+}
+
+.feedback-text p {
+    margin: 0.75rem 0;
+    color: var(--text);
+}
+
+.feedback-text ul.feedback-list {
+    margin: 0.75rem 0;
+    padding-left: 1.5rem;
+}
+
+.feedback-text ul.feedback-list li {
+    margin: 0.5rem 0;
+    color: var(--text);
+    line-height: 1.6;
+}
+
+.feedback-text ul.feedback-list li strong {
+    color: var(--primary);
+}
+
+/* Feedback error */
+.feedback-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+    text-align: center;
+    color: var(--danger);
+}
+
+.feedback-error svg {
+    width: 2rem;
+    height: 2rem;
+    margin-bottom: 0.75rem;
+}
+
+.feedback-error p {
+    margin: 0 0 1rem 0;
+}
+
+.btn-retry {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-retry:hover {
+    background: var(--surface-3);
+    border-color: var(--primary);
+}
