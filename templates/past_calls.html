@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Past Interviews - MockFlow-AI</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/past_calls.css">
+</head>
+<body>
+    <div class="past-calls-page">
+        <div class="page-header">
+            <h1>Past Interviews</h1>
+            <a href="/start" class="back-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                New Interview
+            </a>
+        </div>
+
+        <div class="error-state" id="errorState" style="display: none;"></div>
+        
+        <div class="loading-state" id="loadingState">
+            Loading interviews...
+        </div>
+
+        <div class="interviews-list" id="interviewsList" style="display: none;"></div>
+
+        <div class="empty-state" id="emptyState" style="display: none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
+            </svg>
+            <h3>No interviews yet</h3>
+            <p>Complete your first mock interview to see it here.</p>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+        
+        var elements = {
+            loadingState: document.getElementById('loadingState'),
+            emptyState: document.getElementById('emptyState'),
+            errorState: document.getElementById('errorState'),
+            interviewsList: document.getElementById('interviewsList')
+        };
+        
+        document.addEventListener('DOMContentLoaded', loadInterviews);
+        
+        function loadInterviews() {
+            fetch('/api/interviews')
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('Failed to load interviews');
+                    }
+                    return response.json();
+                })
+                .then(function(data) {
+                    elements.loadingState.style.display = 'none';
+                    
+                    if (!data.interviews || data.interviews.length === 0) {
+                        elements.emptyState.style.display = 'block';
+                        return;
+                    }
+                    
+                    renderInterviews(data.interviews);
+                })
+                .catch(function(err) {
+                    console.error('[PAST_CALLS] Load error:', err);
+                    elements.loadingState.style.display = 'none';
+                    elements.errorState.textContent = 'Failed to load interviews: ' + err.message;
+                    elements.errorState.style.display = 'block';
+                });
+        }
+        
+        function renderInterviews(interviews) {
+            elements.interviewsList.style.display = 'flex';
+            
+            var html = interviews.map(function(interview) {
+                var date = interview.interview_date ? formatDate(interview.interview_date) : 'Unknown date';
+                var messageCount = interview.message_count || {};
+                var totalMessages = (messageCount.agent || 0) + (messageCount.user || 0);
+                
+                return '<div class="interview-card">' +
+                    '<div class="interview-header">' +
+                        '<span class="interview-name">' + escapeHtml(interview.candidate || 'Unknown') + '</span>' +
+                        '<span class="interview-date">' + date + '</span>' +
+                    '</div>' +
+                    '<div class="interview-meta">' +
+                        '<span class="interview-meta-item">' +
+                            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>' +
+                            totalMessages + ' messages' +
+                        '</span>' +
+                        '<span class="interview-meta-item">' +
+                            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>' +
+                            formatFileSize(interview.file_size || 0) +
+                        '</span>' +
+                    '</div>' +
+                    '<div class="interview-actions">' +
+                        '<button class="action-btn-sm btn-view" onclick="viewTranscript(\'' + escapeHtml(interview.filename) + '\')">' +
+                            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8m8 4H8m2-8H8"/></svg>' +
+                            'View Transcript' +
+                        '</button>' +
+                        '<button class="action-btn-sm btn-feedback" onclick="requestFeedback(\'' + escapeHtml(interview.filename) + '\')">' +
+                            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>' +
+                            'Get Feedback' +
+                        '</button>' +
+                    '</div>' +
+                '</div>';
+            }).join('');
+            
+            elements.interviewsList.innerHTML = html;
+        }
+        
+        function formatDate(isoDate) {
+            try {
+                var date = new Date(isoDate);
+                return date.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (e) {
+                return isoDate;
+            }
+        }
+        
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            var div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        window.viewTranscript = function(filename) {
+            window.location.href = '/feedback/' + encodeURIComponent(filename);
+        };
+        
+        window.requestFeedback = function(filename) {
+            window.location.href = '/feedback/' + encodeURIComponent(filename) + '?request_feedback=1';
+        };
+    })();
+    </script>
+</body>
+</html>

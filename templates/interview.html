@@ -9,13 +9,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/interview.css">
 </head>
 <body>
     <div class="interview-page">
-        <!-- State Transition Flash Effect -->
         <div class="state-flash" id="stateFlash"></div>
         
-        <!-- Progress Header with FSM States -->
+        <!-- Progress Header -->
         <header class="progress-header">
             <div class="progress-container">
                 <div class="progress-stages">
@@ -23,7 +23,7 @@
                         <div class="progress-fill" id="progressFill"></div>
                     </div>
                     
-                    <div class="stage-dot active" data-stage="greeting" id="stageGreeting">
+                    <div class="stage-dot active" data-stage="welcome" id="stageWelcome">
                         <div class="stage-circle">1</div>
                         <span class="stage-label">Welcome</span>
                     </div>
@@ -38,13 +38,20 @@
                         <span class="stage-label">Experience</span>
                     </div>
                     
-                    <div class="stage-dot" data-stage="closing" id="stageClosing">
+                    <div class="stage-dot" data-stage="company_fit" id="stageCompanyFit">
                         <div class="stage-circle">4</div>
+                        <span class="stage-label">Company Fit</span>
+                    </div>
+                    
+                    <div class="stage-dot" data-stage="closing" id="stageClosing">
+                        <div class="stage-circle">5</div>
                         <span class="stage-label">Closing</span>
                     </div>
                 </div>
             </div>
         </header>
+        
+        <!-- Skip area: compact toggle below timer (buttons revealed on toggle) -->
         
         <!-- Connection Status -->
         <div class="connection-status" id="connectionStatus">
@@ -52,50 +59,69 @@
             <span id="statusText">Connecting...</span>
         </div>
         
-        <!-- Stage Timer -->
         <div class="stage-timer-display" id="stageTimer">0:00</div>
+        <div class="skip-area">
+            <button id="skipToggle" class="skip-toggle" aria-expanded="false">Skip stages ▾</button>
+            <div class="skip-row hidden" id="skipRow">
+                <button class="skip-btn current" data-target="self_intro" disabled id="skipSelfIntro">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                    Intro
+                    <span class="skip-tooltip">Skip to Introduction</span>
+                </button>
+                <button class="skip-btn" data-target="past_experience" id="skipPastExp">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                    Experience
+                    <span class="skip-tooltip">Skip to Experience</span>
+                </button>
+                <button class="skip-btn" data-target="company_fit" id="skipCompanyFit">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                    Company Fit
+                    <span class="skip-tooltip">Skip to Company Fit</span>
+                </button>
+                <button class="skip-btn" data-target="closing" id="skipClosing">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"/>
+                    </svg>
+                    Closing
+                    <span class="skip-tooltip">Skip to Closing</span>
+                </button>
+            </div>
+        </div>
         
         <!-- Main Interview Area -->
         <main class="interview-main">
-            <!-- Agent Side (Left) -->
             <div class="agent-side">
                 <span class="agent-label">AI Interviewer</span>
-                
-                <!-- Circular Visualizer with Eyes -->
                 <div class="agent-visualizer" id="agentVisualizer">
                     <div class="voice-circle">
-                        <!-- Background circle -->
                         <div class="voice-circle-bg"></div>
-                        <!-- Audio bars container -->
                         <div class="bars-container" id="agentBarsContainer"></div>
-                        <!-- Eyes in center -->
                         <div class="agent-eyes" id="agentEyes">
                             <div class="agent-eye"></div>
                             <div class="agent-eye"></div>
                         </div>
                     </div>
                 </div>
-                
-                <!-- Agent Caption -->
                 <div class="agent-caption">
                     <p class="caption-text empty" id="agentCaption">Waiting for agent...</p>
                 </div>
             </div>
             
-            <!-- Candidate Side (Right) -->
             <div class="candidate-side">
                 <span class="candidate-label">Candidate</span>
-                
                 <div class="candidate-card">
-                    <!-- Video Feed -->
                     <div class="candidate-video-container" id="videoContainer">
                         <video class="candidate-video" id="candidateVideo" autoplay muted playsinline></video>
                         <div class="video-placeholder">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                                 <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                                 <circle cx="9" cy="7" r="4"/>
-                                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                             </svg>
                             <span>Camera Off</span>
                         </div>
@@ -111,7 +137,6 @@
                         </button>
                     </div>
                     
-                    <!-- Info Row -->
                     <div class="candidate-info-row">
                         <div class="candidate-info-top">
                             <h3 class="candidate-name" id="candidateName">Loading...</h3>
@@ -119,37 +144,24 @@
                         </div>
                         <div class="candidate-meta">
                             <span class="candidate-level" id="candidateLevel">-</span>
-                            <div class="candidate-company" id="candidateCompany" style="display: none;">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                                    <polyline points="9 22 9 12 15 12 15 22"/>
-                                </svg>
-                                <a href="#" id="companyLink" target="_blank" rel="noopener">Company</a>
-                            </div>
                         </div>
                     </div>
                     
-                    <!-- Spikey Audio Visualizer -->
                     <div class="audio-spikes-box" id="audioSpikesBox">
-                        <div class="spikes-container" id="spikesContainer">
-                            <!-- Bars will be generated dynamically -->
-                        </div>
-                        
-                        <!-- Noise Warning (positioned outside on right) -->
+                        <div class="spikes-container" id="spikesContainer"></div>
                         <div class="noise-warning" id="noiseWarning">
-                            <p class="noise-warning-text">High background noise detected. Consider using headphones or moving to a quieter location.</p>
+                            <p class="noise-warning-text">High background noise detected.</p>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Candidate Caption -->
                 <div class="candidate-caption">
                     <p class="caption-text empty" id="candidateCaption">Initiating...</p>
                 </div>
             </div>
         </main>
         
-        <!-- Interview Controls -->
+        <!-- Controls -->
         <div class="interview-controls">
             <button class="btn-icon" id="muteBtn" title="Mute/Unmute">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="muteIcon">
@@ -159,13 +171,10 @@
                     <line x1="8" y1="23" x2="16" y2="23"/>
                 </svg>
             </button>
-            
-            <button class="btn-danger" id="endBtn">
-                End Interview
-            </button>
+            <button class="btn-danger" id="endBtn">End Interview</button>
         </div>
         
-        <!-- Custom Modal -->
+        <!-- Modal -->
         <div class="modal-overlay" id="modalOverlay">
             <div class="modal-content">
                 <div class="modal-icon warning" id="modalIcon">
@@ -176,7 +185,7 @@
                     </svg>
                 </div>
                 <h3 class="modal-title" id="modalTitle">End Interview?</h3>
-                <p class="modal-message" id="modalMessage">Are you sure you want to end the interview? Your progress will not be saved.</p>
+                <p class="modal-message" id="modalMessage">Are you sure you want to end the interview?</p>
                 <div class="modal-actions">
                     <button class="btn-secondary" id="modalCancel">Cancel</button>
                     <button class="btn-danger" id="modalConfirm">End Interview</button>
@@ -185,67 +194,162 @@
         </div>
     </div>
 
-    <!-- LiveKit Client -->
-    <script src="https://unpkg.com/livekit-client@2.5.0/dist/livekit-client.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client@2.5.0/dist/livekit-client.umd.min.js"></script>
     <script>
         if (typeof LivekitClient === 'undefined' && typeof LiveKit === 'undefined') {
-            document.write('<script src="https://cdn.jsdelivr.net/npm/livekit-client@2.5.0/dist/livekit-client.umd.min.js"><\/script>');
+            document.write('<script src="https://unpkg.com/livekit-client@2.5.0/dist/livekit-client.umd.min.js"><\/script>');
         }
     </script>
-    
+
     <script>
     (function() {
         'use strict';
-        
-        console.log('[INTERVIEW] Script loaded, waiting for page load...');
-        
+
         window.addEventListener('load', initInterview);
-        
+
         function initInterview() {
-            console.log('[INTERVIEW] Page loaded, initializing...');
-            
-            var LK = window.LivekitClient || window.LiveKit;
-            console.log('[INTERVIEW] LiveKit client:', LK ? 'loaded' : 'NOT FOUND');
-            
-            if (!LK) {
-                console.error('[INIT] LiveKit client not loaded');
-                document.getElementById('statusText').textContent = 'Failed to load required libraries';
-                document.getElementById('statusIndicator').className = 'status-indicator error';
-                return;
+            var LK = null;
+            var LIVEKIT_CDN = 'https://cdn.jsdelivr.net/npm/livekit-client@2.5.0/dist/livekit-client.umd.min.js';
+            var statusEl = document.getElementById('statusText');
+
+            function getLKGlobal() {
+                return window.LivekitClient || window.LiveKit || window.LiveKitClient || window.livekit || null;
+            }
+
+            function loadScript(src) {
+                return new Promise(function(resolve, reject) {
+                    var s = document.createElement('script');
+                    s.src = src;
+                    s.async = true;
+                    s.onload = function() { resolve(); };
+                    s.onerror = function() { reject(new Error('Failed to load ' + src)); };
+                    document.head.appendChild(s);
+                });
+            }
+
+            async function ensureLivekitLoaded() {
+                LK = getLKGlobal();
+                if (LK) return LK;
+                if (statusEl) statusEl.textContent = 'Loading LiveKit client...';
+
+                // Try a local vendor copy first (faster and avoids CDN issues)
+                var localPath = '/static/vendors/livekit-client.umd.min.js';
+                try {
+                    await loadScript(localPath);
+                    LK = getLKGlobal();
+                    if (LK) {
+                        if (statusEl) statusEl.textContent = 'Loaded local LiveKit client';
+                        return LK;
+                    }
+                    // If local file present but global not exposed, fall through to CDN
+                } catch (localErr) {
+                    // local fallback not available — continue to CDN
+                    console.debug('[LIVEKIT] Local vendor not available:', localErr);
+                }
+
+                // Try CDN next
+                try {
+                    await loadScript(LIVEKIT_CDN);
+                    LK = getLKGlobal();
+                    if (LK) return LK;
+                    throw new Error('LiveKit client did not expose expected globals');
+                } catch (err) {
+                    if (statusEl) statusEl.textContent = 'Failed to load libraries';
+
+                    // Build a visible error box with actions and details
+                    var existingError = document.getElementById('livekitErrorBox');
+                    if (!existingError) {
+                        var errorBox = document.createElement('div');
+                        errorBox.id = 'livekitErrorBox';
+                        errorBox.className = 'livekit-error';
+                        errorBox.innerHTML = '<div><strong>LiveKit client failed to load.</strong></div>';
+
+                        var actions = document.createElement('div');
+                        actions.className = 'livekit-actions';
+
+                        var retry = document.createElement('button');
+                        retry.id = 'retryLivekitBtn';
+                        retry.className = 'btn';
+                        retry.textContent = 'Retry';
+
+                        var localBtn = document.createElement('button');
+                        localBtn.id = 'useLocalLivekitBtn';
+                        localBtn.className = 'btn';
+                        localBtn.textContent = 'Use local LiveKit client';
+
+                        actions.appendChild(retry);
+                        actions.appendChild(localBtn);
+                        errorBox.appendChild(actions);
+
+                        var details = document.createElement('pre');
+                        details.id = 'livekitErrorDetails';
+                        details.className = 'livekit-details';
+                        details.textContent = String(err && err.message ? err.message : err);
+                        errorBox.appendChild(details);
+
+                        if (statusEl && statusEl.parentNode) statusEl.parentNode.appendChild(errorBox);
+
+                        // Retry handler — attempts CDN again
+                        retry.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            retry.disabled = true;
+                            details.textContent = 'Retrying...';
+                            if (statusEl) statusEl.textContent = 'Retrying...';
+                            ensureLivekitLoaded().then(function() {
+                                try { errorBox.remove(); } catch (e) {}
+                                startAfterLivekit();
+                            }).catch(function(e2) {
+                                console.error('[LIVEKIT] Retry failed', e2);
+                                retry.disabled = false;
+                                details.textContent = String(e2 && e2.message ? e2.message : e2);
+                                if (statusEl) statusEl.textContent = 'Retry failed';
+                            });
+                        });
+
+                        // Local fallback handler: try loading from /static/vendors/
+                        localBtn.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            localBtn.disabled = true;
+                            details.textContent = 'Attempting local fallback...';
+                            if (statusEl) statusEl.textContent = 'Attempting local fallback...';
+                            loadScript(localPath).then(function() {
+                                LK = getLKGlobal();
+                                if (LK) {
+                                    try { errorBox.remove(); } catch (e) {}
+                                    if (statusEl) statusEl.textContent = 'Loaded local LiveKit client';
+                                    startAfterLivekit();
+                                    return;
+                                }
+                                throw new Error('Local file loaded but LiveKit global not found');
+                            }).catch(function(e2) {
+                                console.error('[LIVEKIT] Local fallback failed', e2);
+                                localBtn.disabled = false;
+                                details.textContent = String(e2 && e2.message ? e2.message : e2) + '\n\nTip: Place a copy of the LiveKit client at /static/vendors/livekit-client.umd.min.js to enable local fallback.';
+                                if (statusEl) statusEl.textContent = 'Local fallback failed';
+                            });
+                        });
+                    }
+                    console.error('[LIVEKIT] Could not load client:', err);
+                    throw err;
+                }
             }
             
-            console.log('[INTERVIEW] Parsing URL params...');
             var params = new URLSearchParams(window.location.search);
             var candidate = {
                 name: params.get('name') || 'Candidate',
                 email: params.get('email') || '',
                 role: params.get('role') || 'Position',
                 level: params.get('level') || 'entry',
-                companyUrl: params.get('companyUrl') || ''
+                resumeCacheKey: params.get('resumeCacheKey') || '',
+                includeProfile: params.get('includeProfile') !== 'false'
             };
-            console.log('[INTERVIEW] Candidate:', candidate);
             
             document.getElementById('candidateName').textContent = candidate.name;
             document.getElementById('candidateRole').textContent = candidate.role;
             document.getElementById('candidateLevel').textContent = formatLevel(candidate.level);
             
-            if (candidate.companyUrl) {
-                var companyEl = document.getElementById('candidateCompany');
-                var companyLink = document.getElementById('companyLink');
-                if (companyEl && companyLink) {
-                    try {
-                        var url = new URL(candidate.companyUrl);
-                        companyLink.href = candidate.companyUrl;
-                        companyLink.textContent = url.hostname.replace('www.', '');
-                        companyEl.style.display = 'flex';
-                    } catch (e) {
-                        console.log('[INFO] Invalid company URL provided');
-                    }
-                }
-            }
-            
             var state = {
-                currentStage: 'greeting',
+                currentStage: 'welcome',
                 isMuted: false,
                 isConnected: false,
                 isVideoOn: true,
@@ -253,13 +357,8 @@
                 audioContext: null,
                 analyser: null,
                 interviewStartTime: Date.now(),
-                stageStartTime: Date.now(),
-                timerInterval: null,
                 blinkInterval: null,
-                noiseCheckCount: 0,
-                noiseThreshold: 0.15,
-                noiseWarningShown: false,
-                noiseWarningTimeout: null,
+                timerInterval: null,
                 agentAudioAnalyser: null,
                 agentAudioContext: null
             };
@@ -267,7 +366,6 @@
             var elements = {
                 statusIndicator: document.getElementById('statusIndicator'),
                 statusText: document.getElementById('statusText'),
-                agentVisualizer: document.getElementById('agentVisualizer'),
                 agentBarsContainer: document.getElementById('agentBarsContainer'),
                 agentEyes: document.getElementById('agentEyes'),
                 agentCaption: document.getElementById('agentCaption'),
@@ -284,80 +382,46 @@
                 modalConfirm: document.getElementById('modalConfirm'),
                 videoContainer: document.getElementById('videoContainer'),
                 candidateVideo: document.getElementById('candidateVideo'),
-                videoToggle: document.getElementById('videoToggle'),
-                noiseWarning: document.getElementById('noiseWarning')
+                videoToggle: document.getElementById('videoToggle')
             };
             
-            var stages = ['greeting', 'self_intro', 'past_experience', 'closing'];
-            var stageProgress = { greeting: 0, self_intro: 33, past_experience: 66, closing: 100 };
+            var stages = ['welcome', 'self_intro', 'past_experience', 'company_fit', 'closing'];
+            var stageProgress = { welcome: 0, self_intro: 20, past_experience: 40, company_fit: 60, closing: 100 };
             
-            // Agent circular visualizer configuration
             var AGENT_BAR_COUNT = 64;
-            var AGENT_RADIUS = 75;
             var agentBars = [];
             var agentBarHeights = new Array(AGENT_BAR_COUNT).fill(4);
             
-            // Candidate spike visualizer configuration
             var SPIKE_COUNT = 50;
             var spikeHeights = new Array(SPIKE_COUNT).fill(3);
-            var noiseBaseline = [];
-            
+
             // Demo animation IDs
             var demoAgentAnimationId = null;
             var demoCandidateAnimationId = null;
-            
-            // Initialize components
-            console.log('[INIT] Starting initialization...');
-            
-            try {
-                initAgentCircularVisualizer();
-                console.log('[INIT] Agent visualizer initialized');
-            } catch (err) {
-                console.error('[INIT] Agent visualizer error:', err);
-            }
-            
-            try {
-                initCandidateSpikes();
-                console.log('[INIT] Candidate spikes initialized');
-            } catch (err) {
-                console.error('[INIT] Candidate spikes error:', err);
-            }
-            
-            try {
-                initVideoFeed();
-                console.log('[INIT] Video feed initialized');
-            } catch (err) {
-                console.error('[INIT] Video feed error:', err);
-            }
-            
+
+            initAgentVisualizer();
+            initCandidateSpikes();
+            initVideoFeed();
+            initSkipControls();
             startTimer();
             startBlinkAnimation();
             startDemoAnimations();
 
-            // Set initial stage color
-            var progressHeader = document.querySelector('.progress-header');
-            if (progressHeader) {
-                progressHeader.setAttribute('data-current-stage', 'greeting');
-            }
-
-            console.log('[INIT] Calling connectToRoom...');
-            connectToRoom();
+            // Ensure LiveKit client is loaded before attempting to connect
+            ensureLivekitLoaded().then(function() {
+                try { connectToRoom(); } catch (e) { console.error('[CONNECT] start error', e); }
+            }).catch(function(err) {
+                console.warn('[LIVEKIT] Could not load client:', err);
+            });
             
-            // Event listeners
             elements.muteBtn.addEventListener('click', toggleMute);
-            elements.endBtn.addEventListener('click', function() { showModal('end'); });
+            elements.endBtn.addEventListener('click', function() { showModal(); });
             elements.modalCancel.addEventListener('click', hideModal);
             elements.modalConfirm.addEventListener('click', confirmEndInterview);
             elements.videoToggle.addEventListener('click', toggleVideo);
             
-            // ==================== FUNCTIONS ====================
-            
             function formatLevel(level) {
-                var levels = {
-                    entry: 'Entry Level',
-                    mid: 'Mid Level',
-                    senior: 'Senior Level'
-                };
+                var levels = { entry: 'Entry Level', mid: 'Mid Level', senior: 'Senior Level' };
                 return levels[level] || level;
             }
             
@@ -369,10 +433,9 @@
             function updateStage(newStage) {
                 if (newStage === state.currentStage) return;
 
-                var oldStage = state.currentStage;
                 state.currentStage = newStage;
 
-                // Update data attribute for stage-specific styling
+                // Update progress header with data attribute for color theme
                 var progressHeader = document.querySelector('.progress-header');
                 if (progressHeader) {
                     progressHeader.setAttribute('data-current-stage', newStage);
@@ -395,10 +458,88 @@
                     }
                 });
 
-                state.stageStartTime = Date.now();
-                console.log('[STAGE] Transition:', oldStage, '->', newStage);
+                updateSkipButtons(newStage);
+                console.log('[STAGE] Transition to:', newStage);
             }
+            
+            function initSkipControls() {
+                var skipBtns = document.querySelectorAll('.skip-btn');
+                var skipToggle = document.getElementById('skipToggle');
+                var skipRow = document.getElementById('skipRow');
 
+                skipBtns.forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        var target = this.getAttribute('data-target');
+                        if (!this.disabled && state.room) {
+                            requestSkipStage(target);
+                        }
+                    });
+                });
+
+                if (skipToggle && skipRow) {
+                    skipToggle.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        var open = skipRow.classList.toggle('open');
+                        skipRow.classList.toggle('hidden', !open);
+                        skipToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+                    });
+
+                    // close when clicking outside the skip area
+                    document.addEventListener('click', function(e) {
+                        if (!skipRow.contains(e.target) && !skipToggle.contains(e.target)) {
+                            skipRow.classList.add('hidden');
+                            skipRow.classList.remove('open');
+                            skipToggle.setAttribute('aria-expanded', 'false');
+                        }
+                    });
+                }
+            }
+            
+            function updateSkipButtons(currentStage) {
+                var skipBtns = document.querySelectorAll('.skip-btn');
+                var currentIndex = stages.indexOf(currentStage);
+                
+                skipBtns.forEach(function(btn) {
+                    var target = btn.getAttribute('data-target');
+                    var targetIndex = stages.indexOf(target);
+                    
+                    btn.classList.remove('current', 'completed');
+                    
+                    if (targetIndex < currentIndex) {
+                        btn.classList.add('completed');
+                        btn.disabled = true;
+                    } else if (targetIndex === currentIndex) {
+                        btn.classList.add('current');
+                        btn.disabled = true;
+                    } else {
+                        btn.disabled = false;
+                    }
+                });
+            }
+            
+            function requestSkipStage(targetStage) {
+                if (!state.room || !state.room.localParticipant) {
+                    console.error('[SKIP] No room connection');
+                    return;
+                }
+                
+                console.log('[SKIP] Requesting skip to:', targetStage);
+                
+                var payload = JSON.stringify({
+                    type: 'skip_stage',
+                    target_stage: targetStage
+                });
+                
+                state.room.localParticipant.publishData(
+                    new TextEncoder().encode(payload),
+                    { reliable: true }
+                ).then(function() {
+                    console.log('[SKIP] Skip request sent');
+                }).catch(function(err) {
+                    console.error('[SKIP] Send error:', err);
+                });
+            }
+            
             function startTimer() {
                 state.timerInterval = setInterval(function() {
                     var elapsed = Math.floor((Date.now() - state.interviewStartTime) / 1000);
@@ -408,16 +549,11 @@
                 }, 1000);
             }
             
-            // ==================== AGENT CIRCULAR VISUALIZER ====================
-            // Bars arranged in a full circle around the center (like sun rays)
-            // Using transform-based positioning so bars always grow OUTWARD
-            
-            function initAgentCircularVisualizer() {
+            function initAgentVisualizer() {
                 var container = elements.agentBarsContainer;
                 container.innerHTML = '';
                 agentBars = [];
                 
-                // Create bars
                 for (var i = 0; i < AGENT_BAR_COUNT; i++) {
                     var bar = document.createElement('div');
                     bar.className = 'agent-bar';
@@ -425,46 +561,20 @@
                     agentBars.push(bar);
                 }
                 
-                // Position bars around the full circle using transform
-                // Each bar starts at center, rotates to point outward, then translates to circle edge
                 agentBars.forEach(function(bar, i) {
-                    // Calculate angle for this bar (full 360 degrees, starting from top)
-                    var angle = (i / AGENT_BAR_COUNT) * 360 - 90; // -90 to start at top
-                    
-                    // Transform: rotate to point outward, then translate to circle edge
-                    // translateY is negative because we want to move "up" in the rotated space (outward)
-                    bar.style.transform = 'rotate(' + angle + 'deg) translateY(-' + AGENT_RADIUS + 'px)';
+                    var angle = (i / AGENT_BAR_COUNT) * 360 - 90;
+                    bar.style.transform = 'rotate(' + angle + 'deg) translateY(-75px)';
                 });
-                
-                console.log('[VISUALIZER] Agent circular visualizer initialized with', AGENT_BAR_COUNT, 'bars in full circle (transform-based)');
             }
             
             function updateAgentVisualizer(audioData) {
                 agentBars.forEach(function(bar, i) {
-                    // Map audio data to bar index
-                    var dataIndex = Math.floor((i / AGENT_BAR_COUNT) * audioData.length);
-                    var value = (audioData[dataIndex] || 0) / 255; // Normalize 0-1
-                    
-                    // Calculate target height with spikey effect
+                    var value = (audioData[i] || 0) / 255;
                     var targetHeight = 4 + value * 35;
-                    
-                    // Smooth transition
                     agentBarHeights[i] = agentBarHeights[i] * 0.4 + targetHeight * 0.6;
-                    var finalHeight = Math.max(4, agentBarHeights[i]);
-                    
-                    bar.style.height = finalHeight + 'px';
+                    bar.style.height = Math.max(4, agentBarHeights[i]) + 'px';
                 });
             }
-            
-            function setAgentSpeaking(speaking) {
-                if (speaking) {
-                    elements.agentVisualizer.classList.add('speaking');
-                } else {
-                    elements.agentVisualizer.classList.remove('speaking');
-                }
-            }
-            
-            // ==================== AGENT BLINK ANIMATION ====================
             
             function startBlinkAnimation() {
                 function blink() {
@@ -475,18 +585,17 @@
                 }
                 
                 function scheduleNextBlink() {
-                    var delay = 2000 + Math.random() * 4000;
                     state.blinkInterval = setTimeout(function() {
                         blink();
                         scheduleNextBlink();
-                    }, delay);
+                    }, 2000 + Math.random() * 4000);
                 }
                 
                 scheduleNextBlink();
             }
-            
+
             // ==================== DEMO ANIMATIONS ====================
-            
+
             function startDemoAnimations() {
                 // Demo animation for agent circular visualizer
                 var agentPhase = 0;
@@ -494,44 +603,42 @@
                     if (state.agentAudioAnalyser) {
                         return; // Real audio connected, stop demo
                     }
-                    
+
                     var demoData = new Uint8Array(AGENT_BAR_COUNT);
                     for (var i = 0; i < AGENT_BAR_COUNT; i++) {
-                        // Create a gentle wave pattern around the full circle
                         var wave = Math.sin((i / AGENT_BAR_COUNT) * Math.PI * 4 + agentPhase) * 0.3 + 0.25;
                         var noise = Math.random() * 0.15;
                         demoData[i] = (wave + noise) * 80;
                     }
                     agentPhase += 0.06;
-                    
+
                     updateAgentVisualizer(demoData);
                     demoAgentAnimationId = requestAnimationFrame(animateAgentDemo);
                 }
-                
+
                 // Demo animation for candidate spikes
                 var candidatePhase = 0;
                 function animateCandidateDemo() {
                     if (state.analyser) {
                         return; // Real audio connected, stop demo
                     }
-                    
+
                     var demoData = new Uint8Array(SPIKE_COUNT);
                     for (var i = 0; i < SPIKE_COUNT; i++) {
-                        // Create subtle idle animation
                         var wave = Math.sin((i / SPIKE_COUNT) * Math.PI * 2 + candidatePhase) * 0.15 + 0.1;
                         var noise = Math.random() * 0.08;
                         demoData[i] = (wave + noise) * 35;
                     }
                     candidatePhase += 0.04;
-                    
+
                     updateCandidateSpikes(demoData);
                     demoCandidateAnimationId = requestAnimationFrame(animateCandidateDemo);
                 }
-                
+
                 animateAgentDemo();
                 animateCandidateDemo();
             }
-            
+
             function stopDemoAnimations() {
                 if (demoAgentAnimationId) {
                     cancelAnimationFrame(demoAgentAnimationId);
@@ -542,13 +649,13 @@
                     demoCandidateAnimationId = null;
                 }
             }
-            
+
             // ==================== CANDIDATE SPIKEY VISUALIZER ====================
-            
+
             function initCandidateSpikes() {
                 var container = elements.spikesContainer;
                 container.innerHTML = '';
-                
+
                 for (var i = 0; i < SPIKE_COUNT; i++) {
                     var spike = document.createElement('div');
                     spike.className = 'spike-bar';
@@ -556,73 +663,29 @@
                     container.appendChild(spike);
                 }
             }
-            
+
             function updateCandidateSpikes(audioData) {
                 var spikes = elements.spikesContainer.querySelectorAll('.spike-bar');
-                var sum = 0;
-                
+
                 spikes.forEach(function(spike, i) {
                     var value = audioData[i] || 0;
                     var normalized = value / 128;
-                    sum += normalized;
-                    
+
                     var height = 3 + normalized * 35;
-                    
+
                     spikeHeights[i] = spikeHeights[i] * 0.6 + height * 0.4;
                     spike.style.height = Math.max(3, spikeHeights[i]) + 'px';
                 });
-                
-                var avgLevel = sum / SPIKE_COUNT;
-                checkNoiseLevel(avgLevel);
             }
-            
-            function checkNoiseLevel(avgLevel) {
-                if (state.noiseWarningShown) return;
-                
-                noiseBaseline.push(avgLevel);
-                if (noiseBaseline.length > 30) {
-                    noiseBaseline.shift();
-                }
-                
-                if (noiseBaseline.length >= 20) {
-                    var baselineAvg = noiseBaseline.reduce(function(a, b) { return a + b; }, 0) / noiseBaseline.length;
-                    
-                    if (baselineAvg > state.noiseThreshold) {
-                        state.noiseCheckCount++;
-                        
-                        if (state.noiseCheckCount >= 5) {
-                            showNoiseWarning();
-                        }
-                    } else {
-                        state.noiseCheckCount = Math.max(0, state.noiseCheckCount - 1);
-                    }
-                }
-            }
-            
-            function showNoiseWarning() {
-                if (state.noiseWarningShown) return;
-                
-                state.noiseWarningShown = true;
-                elements.noiseWarning.classList.add('visible');
-                console.log('[NOISE] Warning displayed - high background noise detected');
-                
-                state.noiseWarningTimeout = setTimeout(function() {
-                    elements.noiseWarning.classList.remove('visible');
-                }, 10000);
-            }
-            
-            // ==================== VIDEO FEED ====================
             
             function initVideoFeed() {
                 navigator.mediaDevices.getUserMedia({ video: true, audio: false })
                     .then(function(stream) {
                         elements.candidateVideo.srcObject = stream;
-                        console.log('[VIDEO] Camera initialized');
                     })
                     .catch(function(err) {
-                        console.error('[VIDEO] Camera access error:', err);
+                        console.error('[VIDEO] Error:', err);
                         elements.videoContainer.classList.add('video-off');
-                        elements.videoToggle.classList.add('off');
                         state.isVideoOn = false;
                     });
             }
@@ -638,7 +701,7 @@
                             elements.videoToggle.classList.remove('off');
                         })
                         .catch(function(err) {
-                            console.error('[VIDEO] Camera re-enable error:', err);
+                            console.error('[VIDEO] Error:', err);
                             state.isVideoOn = false;
                         });
                 } else {
@@ -652,216 +715,25 @@
                 }
             }
             
-            // ==================== CAPTIONS ====================
-            
-            var agentCaptionTimeout = null;
-            var candidateCaptionTimeout = null;
-            var agentTypewriterInterval = null;
-            var candidateTypewriterInterval = null;
-
             function updateAgentCaption(text) {
-                if (agentTypewriterInterval) {
-                    clearInterval(agentTypewriterInterval);
-                    agentTypewriterInterval = null;
-                }
-                if (agentCaptionTimeout) {
-                    clearTimeout(agentCaptionTimeout);
-                    agentCaptionTimeout = null;
-                }
-
                 if (!text) {
                     elements.agentCaption.textContent = '';
                     elements.agentCaption.classList.add('empty');
                     return;
                 }
-
                 elements.agentCaption.classList.remove('empty');
-
-                var currentIndex = 0;
-                elements.agentCaption.textContent = '';
-
-                agentTypewriterInterval = setInterval(function() {
-                    if (currentIndex < text.length) {
-                        elements.agentCaption.textContent += text[currentIndex];
-                        currentIndex++;
-                    } else {
-                        clearInterval(agentTypewriterInterval);
-                        agentTypewriterInterval = null;
-
-                        var wordsCount = text.split(' ').length;
-                        var readingTimeMs = Math.max(10000, Math.min(30000, (wordsCount / 250) * 60 * 1000 + 5000));
-
-                        agentCaptionTimeout = setTimeout(function() {
-                            elements.agentCaption.textContent = '';
-                            elements.agentCaption.classList.add('empty');
-                        }, readingTimeMs);
-                    }
-                }, 15);
+                elements.agentCaption.textContent = text;
             }
-
+            
             function updateCandidateCaption(text) {
-                if (candidateTypewriterInterval) {
-                    clearInterval(candidateTypewriterInterval);
-                    candidateTypewriterInterval = null;
-                }
-                if (candidateCaptionTimeout) {
-                    clearTimeout(candidateCaptionTimeout);
-                    candidateCaptionTimeout = null;
-                }
-
                 if (!text) {
                     elements.candidateCaption.textContent = '';
                     elements.candidateCaption.classList.add('empty');
                     return;
                 }
-
                 elements.candidateCaption.classList.remove('empty');
-
-                var currentIndex = 0;
-                elements.candidateCaption.textContent = '';
-
-                candidateTypewriterInterval = setInterval(function() {
-                    if (currentIndex < text.length) {
-                        elements.candidateCaption.textContent += text[currentIndex];
-                        currentIndex++;
-                    } else {
-                        clearInterval(candidateTypewriterInterval);
-                        candidateTypewriterInterval = null;
-
-                        var wordsCount = text.split(' ').length;
-                        var readingTimeMs = Math.max(10000, Math.min(30000, (wordsCount / 250) * 60 * 1000 + 5000));
-
-                        candidateCaptionTimeout = setTimeout(function() {
-                            elements.candidateCaption.textContent = '';
-                            elements.candidateCaption.classList.add('empty');
-                        }, readingTimeMs);
-                    }
-                }, 15);
+                elements.candidateCaption.textContent = text;
             }
-            
-            // ==================== AUDIO VISUALIZATION ====================
-            
-            function initCandidateAudioVisualization(stream) {
-                try {
-                    stopDemoAnimations();
-                    
-                    if (state.audioContext) {
-                        state.audioContext.close();
-                    }
-                    
-                    state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    
-                    if (state.audioContext.state === 'suspended') {
-                        state.audioContext.resume();
-                    }
-                    
-                    state.analyser = state.audioContext.createAnalyser();
-                    state.analyser.fftSize = 256;
-                    state.analyser.smoothingTimeConstant = 0.3;
-                    state.analyser.minDecibels = -90;
-                    state.analyser.maxDecibels = -10;
-                    
-                    var source = state.audioContext.createMediaStreamSource(stream);
-                    source.connect(state.analyser);
-                    
-                    console.log('[AUDIO] Candidate visualization initialized, fftSize:', state.analyser.fftSize);
-                    drawCandidateWaveform();
-                } catch (err) {
-                    console.error('[AUDIO] Candidate visualization error:', err);
-                }
-            }
-            
-            function drawCandidateWaveform() {
-                if (!state.analyser) {
-                    console.log('[AUDIO] No analyser available');
-                    return;
-                }
-                
-                var bufferLength = state.analyser.frequencyBinCount;
-                var dataArray = new Uint8Array(bufferLength);
-                
-                function draw() {
-                    requestAnimationFrame(draw);
-                    
-                    state.analyser.getByteTimeDomainData(dataArray);
-                    
-                    var amplitudes = new Uint8Array(SPIKE_COUNT);
-                    var samplesPerSpike = Math.floor(bufferLength / SPIKE_COUNT);
-                    
-                    for (var i = 0; i < SPIKE_COUNT; i++) {
-                        var sum = 0;
-                        var startIdx = i * samplesPerSpike;
-                        for (var j = 0; j < samplesPerSpike; j++) {
-                            var sample = Math.abs(dataArray[startIdx + j] - 128);
-                            sum += sample;
-                        }
-                        amplitudes[i] = (sum / samplesPerSpike) * 2;
-                    }
-                    
-                    updateCandidateSpikes(amplitudes);
-                }
-                
-                draw();
-            }
-            
-            function initAgentAudioVisualization(track) {
-                try {
-                    if (state.agentAudioContext) {
-                        state.agentAudioContext.close();
-                    }
-                    
-                    state.agentAudioContext = new (window.AudioContext || window.webkitAudioContext)();
-                    
-                    if (state.agentAudioContext.state === 'suspended') {
-                        state.agentAudioContext.resume();
-                    }
-                    
-                    state.agentAudioAnalyser = state.agentAudioContext.createAnalyser();
-                    state.agentAudioAnalyser.fftSize = 256;
-                    state.agentAudioAnalyser.smoothingTimeConstant = 0.3;
-                    state.agentAudioAnalyser.minDecibels = -90;
-                    state.agentAudioAnalyser.maxDecibels = -10;
-                    
-                    var source = state.agentAudioContext.createMediaStreamSource(track.mediaStream);
-                    source.connect(state.agentAudioAnalyser);
-                    
-                    console.log('[AUDIO] Agent visualization initialized with frequency data');
-                    drawAgentWaveform();
-                } catch (err) {
-                    console.error('[AUDIO] Agent visualization error:', err);
-                }
-            }
-            
-            function drawAgentWaveform() {
-                if (!state.agentAudioAnalyser) {
-                    console.log('[AUDIO] No agent analyser available');
-                    return;
-                }
-                
-                var bufferLength = state.agentAudioAnalyser.frequencyBinCount;
-                var frequencyData = new Uint8Array(bufferLength);
-                
-                function draw() {
-                    requestAnimationFrame(draw);
-                    
-                    // Use frequency data for more dramatic, spikey visualization
-                    state.agentAudioAnalyser.getByteFrequencyData(frequencyData);
-                    
-                    var totalEnergy = 0;
-                    for (var i = 0; i < frequencyData.length; i++) {
-                        totalEnergy += frequencyData[i];
-                    }
-                    
-                    updateAgentVisualizer(frequencyData);
-                    
-                    var avgEnergy = totalEnergy / bufferLength;
-                    setAgentSpeaking(avgEnergy > 15);
-                }
-                
-                draw();
-            }
-            
-            // ==================== CONTROLS ====================
             
             function toggleMute() {
                 state.isMuted = !state.isMuted;
@@ -871,7 +743,7 @@
                 }
                 
                 if (state.isMuted) {
-                    elements.muteIcon.innerHTML = '<line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/><path d="M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>';
+                    elements.muteIcon.innerHTML = '<line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/>';
                     elements.muteBtn.classList.add('active');
                 } else {
                     elements.muteIcon.innerHTML = '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>';
@@ -879,7 +751,7 @@
                 }
             }
             
-            function showModal(type) {
+            function showModal() {
                 elements.modalOverlay.classList.add('visible');
             }
             
@@ -894,31 +766,38 @@
                 }
             }
             
-            // ==================== LIVEKIT CONNECTION ====================
-            
             async function connectToRoom() {
-                console.log('[CONNECT] Starting room connection...');
-                console.log('[CONNECT] Candidate data:', candidate);
                 updateStatus('Requesting access...', 'connecting');
                 
                 try {
-                    console.log('[CONNECT] Fetching token from /api/token');
+                    var tokenData = {
+                        name: candidate.name,
+                        email: candidate.email,
+                        role: candidate.role,
+                        level: candidate.level,
+                        resumeCacheKey: candidate.resumeCacheKey,
+                        includeProfile: candidate.includeProfile
+                    };
+                    
+                    // Add JD from session storage
+                    var jd = sessionStorage.getItem('mockflow_jd');
+                    if (jd) {
+                        tokenData.jobDescription = jd;
+                        sessionStorage.removeItem('mockflow_jd');
+                    }
+                    
                     var response = await fetch('/api/token', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(candidate)
+                        body: JSON.stringify(tokenData)
                     });
                     
-                    console.log('[CONNECT] Token response status:', response.status);
-                    
                     var data = await response.json();
-                    console.log('[CONNECT] Token response data:', data);
                     
                     if (data.error) {
                         throw new Error(data.error);
                     }
                     
-                    console.log('[CONNECT] Got token, connecting to room:', data.room);
                     updateStatus('Connecting to room...', 'connecting');
                     
                     state.room = new LK.Room({
@@ -934,15 +813,11 @@
                     state.room.on(LK.RoomEvent.Connected, onConnected);
                     state.room.on(LK.RoomEvent.Disconnected, onDisconnected);
                     state.room.on(LK.RoomEvent.TrackSubscribed, onTrackSubscribed);
-                    state.room.on(LK.RoomEvent.TrackUnsubscribed, onTrackUnsubscribed);
                     state.room.on(LK.RoomEvent.DataReceived, onDataReceived);
                     state.room.on(LK.RoomEvent.ParticipantConnected, onParticipantConnected);
-                    state.room.on(LK.RoomEvent.ActiveSpeakersChanged, onActiveSpeakersChanged);
                     state.room.on(LK.RoomEvent.LocalTrackPublished, onLocalTrackPublished);
                     
-                    console.log('[CONNECT] Connecting to LiveKit server:', data.url);
                     await state.room.connect(data.url, data.token);
-                    console.log('[CONNECT] Successfully connected to room');
                     
                 } catch (err) {
                     console.error('[CONNECT] Error:', err);
@@ -988,73 +863,180 @@
                 if (publication.kind === LK.Track.Kind.Audio && publication.track) {
                     console.log('[AUDIO] Initializing candidate visualization with local audio track');
 
-                    // Get the MediaStream from the track
                     if (publication.track.mediaStream) {
                         initCandidateAudioVisualization(publication.track.mediaStream);
                         console.log('[AUDIO] Candidate audio visualization started');
                     } else if (publication.track.mediaStreamTrack) {
-                        // Fallback: create MediaStream from MediaStreamTrack
                         var stream = new MediaStream([publication.track.mediaStreamTrack]);
                         initCandidateAudioVisualization(stream);
                         console.log('[AUDIO] Candidate audio visualization started (from MediaStreamTrack)');
-                    } else {
-                        console.warn('[AUDIO] No media stream available for candidate visualization');
                     }
                 }
             }
 
+            function initCandidateAudioVisualization(stream) {
+                try {
+                    stopDemoAnimations();
+
+                    if (state.audioContext) {
+                        state.audioContext.close();
+                    }
+
+                    state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+                    if (state.audioContext.state === 'suspended') {
+                        state.audioContext.resume();
+                    }
+
+                    state.analyser = state.audioContext.createAnalyser();
+                    state.analyser.fftSize = 256;
+                    state.analyser.smoothingTimeConstant = 0.3;
+                    state.analyser.minDecibels = -90;
+                    state.analyser.maxDecibels = -10;
+
+                    var source = state.audioContext.createMediaStreamSource(stream);
+                    source.connect(state.analyser);
+
+                    console.log('[AUDIO] Candidate visualization initialized, fftSize:', state.analyser.fftSize);
+                    drawCandidateWaveform();
+                } catch (err) {
+                    console.error('[AUDIO] Candidate visualization error:', err);
+                }
+            }
+
+            function drawCandidateWaveform() {
+                if (!state.analyser) {
+                    console.log('[AUDIO] No analyser available');
+                    return;
+                }
+
+                var bufferLength = state.analyser.frequencyBinCount;
+                var dataArray = new Uint8Array(bufferLength);
+
+                function draw() {
+                    requestAnimationFrame(draw);
+
+                    state.analyser.getByteTimeDomainData(dataArray);
+
+                    var amplitudes = new Uint8Array(SPIKE_COUNT);
+                    var samplesPerSpike = Math.floor(bufferLength / SPIKE_COUNT);
+
+                    for (var i = 0; i < SPIKE_COUNT; i++) {
+                        var sum = 0;
+                        var startIdx = i * samplesPerSpike;
+                        for (var j = 0; j < samplesPerSpike; j++) {
+                            var sample = Math.abs(dataArray[startIdx + j] - 128);
+                            sum += sample;
+                        }
+                        amplitudes[i] = (sum / samplesPerSpike) * 2;
+                    }
+
+                    updateCandidateSpikes(amplitudes);
+                }
+
+                draw();
+            }
+            
             function onDisconnected(reason) {
-                console.log('[ROOM] Disconnected:', reason);
                 state.isConnected = false;
                 updateStatus('Disconnected', 'disconnected');
                 
-                if (state.timerInterval) {
-                    clearInterval(state.timerInterval);
-                }
-                
-                if (state.blinkInterval) {
-                    clearTimeout(state.blinkInterval);
-                }
+                if (state.timerInterval) clearInterval(state.timerInterval);
+                if (state.blinkInterval) clearTimeout(state.blinkInterval);
                 
                 setTimeout(function() {
                     document.getElementById('modalTitle').textContent = 'Interview Complete';
-                    document.getElementById('modalMessage').textContent = 'Thank you for participating in this mock interview.';
+                    document.getElementById('modalMessage').textContent = 'Thank you for participating.';
                     document.getElementById('modalIcon').className = 'modal-icon success';
                     document.getElementById('modalIcon').innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
                     document.getElementById('modalCancel').style.display = 'none';
                     document.getElementById('modalConfirm').textContent = 'Return Home';
                     document.getElementById('modalConfirm').onclick = function() { window.location.href = '/'; };
-                    showModal('complete');
+                    showModal();
                 }, 1000);
             }
             
             function onTrackSubscribed(track, publication, participant) {
-                console.log('[TRACK] Subscribed:', track.kind, 'from', participant.identity);
-                
+                console.log('[TRACK] Subscribed to track:', track.kind);
+
                 if (track.kind === LK.Track.Kind.Audio) {
                     var audioElement = track.attach();
-                    audioElement.id = 'agent-audio-' + participant.sid;
                     audioElement.volume = 1.0;
                     document.body.appendChild(audioElement);
-                    
-                    if (track.mediaStream) {
-                        initAgentAudioVisualization(track);
-                    }
-                    
-                    console.log('[AUDIO] Agent audio attached');
-                    updateAgentCaption('Agent connected');
+
+                    console.log('[AUDIO] Agent audio attached, initializing visualization');
+                    initAgentAudioVisualization(track);
+                    updateAgentCaption('Agent connected. Interview starting...');
                 }
             }
-            
-            function onTrackUnsubscribed(track, publication, participant) {
-                console.log('[TRACK] Unsubscribed:', track.kind);
-                track.detach().forEach(function(el) { el.remove(); });
+
+            function initAgentAudioVisualization(track) {
+                try {
+                    if (state.agentAudioContext) {
+                        state.agentAudioContext.close();
+                    }
+
+                    state.agentAudioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+                    if (state.agentAudioContext.state === 'suspended') {
+                        state.agentAudioContext.resume();
+                    }
+
+                    state.agentAudioAnalyser = state.agentAudioContext.createAnalyser();
+                    state.agentAudioAnalyser.fftSize = 256;
+                    state.agentAudioAnalyser.smoothingTimeConstant = 0.3;
+                    state.agentAudioAnalyser.minDecibels = -90;
+                    state.agentAudioAnalyser.maxDecibels = -10;
+
+                    var source = state.agentAudioContext.createMediaStreamSource(track.mediaStream);
+                    source.connect(state.agentAudioAnalyser);
+
+                    console.log('[AUDIO] Agent visualization initialized with frequency data');
+                    drawAgentWaveform();
+                } catch (err) {
+                    console.error('[AUDIO] Agent visualization error:', err);
+                }
+            }
+
+            function drawAgentWaveform() {
+                if (!state.agentAudioAnalyser) {
+                    console.log('[AUDIO] No agent analyser available');
+                    return;
+                }
+
+                var bufferLength = state.agentAudioAnalyser.frequencyBinCount;
+                var frequencyData = new Uint8Array(bufferLength);
+
+                function draw() {
+                    requestAnimationFrame(draw);
+
+                    state.agentAudioAnalyser.getByteFrequencyData(frequencyData);
+
+                    var totalEnergy = 0;
+                    for (var i = 0; i < frequencyData.length; i++) {
+                        totalEnergy += frequencyData[i];
+                    }
+
+                    updateAgentVisualizer(frequencyData);
+
+                    var avgEnergy = totalEnergy / bufferLength;
+                    setAgentSpeaking(avgEnergy > 15);
+                }
+
+                draw();
+            }
+
+            function setAgentSpeaking(speaking) {
+                if (speaking) {
+                    elements.agentVisualizer.classList.add('speaking');
+                } else {
+                    elements.agentVisualizer.classList.remove('speaking');
+                }
             }
             
             function onDataReceived(payload, participant) {
                 try {
                     var data = JSON.parse(new TextDecoder().decode(payload));
-                    console.log('[DATA] Received:', data);
                     
                     if (data.type === 'stage_change' && data.stage) {
                         updateStage(data.stage);
@@ -1069,22 +1051,20 @@
                     }
                     
                     if (data.type === 'interview_ending') {
-                        console.log('[INTERVIEW] Ending notification received - showing completion modal');
-                        updateAgentCaption('Thank you! The interview is now complete.');
+                        updateAgentCaption('Interview complete.');
                         updateStatus('Interview Complete', 'connected');
                         
                         setTimeout(function() {
                             document.getElementById('modalTitle').textContent = 'Interview Complete';
-                            document.getElementById('modalMessage').textContent = 'Thank you for participating in this mock interview.';
+                            document.getElementById('modalMessage').textContent = 'Thank you for participating.';
                             document.getElementById('modalIcon').className = 'modal-icon success';
                             document.getElementById('modalIcon').innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
                             document.getElementById('modalCancel').style.display = 'none';
                             document.getElementById('modalConfirm').textContent = 'Return Home';
                             document.getElementById('modalConfirm').onclick = function() { window.location.href = '/'; };
-                            showModal('complete');
+                            showModal();
                         }, 2000);
                     }
-                    
                 } catch (err) {
                     console.error('[DATA] Parse error:', err);
                 }
@@ -1092,18 +1072,6 @@
             
             function onParticipantConnected(participant) {
                 console.log('[PARTICIPANT] Connected:', participant.identity);
-                
-                if (participant.identity.toLowerCase().includes('agent') || 
-                    participant.identity.toLowerCase().includes('interview')) {
-                    updateAgentCaption('Agent joined - preparing...');
-                }
-            }
-            
-            function onActiveSpeakersChanged(speakers) {
-                var agentSpeaking = speakers.some(function(s) {
-                    return !s.isLocal && s.audioTracks.size > 0;
-                });
-                setAgentSpeaking(agentSpeaking);
             }
         }
     })();

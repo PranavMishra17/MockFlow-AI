@@ -5,35 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Start Interview - MockFlow-AI</title>
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
-    <link rel="apple-touch-icon" href="/favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/styles.css">
-    <link rel="stylesheet" href="/static/modals.css">
+    <link rel="stylesheet" href="/static/form.css">
 </head>
 <body>
-    <!-- Action Buttons (About, GitHub, Settings) -->
     <div class="action-buttons">
-        <button onclick="window.DeveloperModal.open()" class="action-btn" title="About Developer">
+        <a href="/past-calls" class="action-btn" title="Past Interviews">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"/>
-                <line x1="12" y1="16" x2="12" y2="12"/>
-                <line x1="12" y1="8" x2="12.01" y2="8"/>
+                <path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
             </svg>
-        </button>
+        </a>
         <a href="https://github.com/PranavMishra17/MockFlow-AI" target="_blank" rel="noopener" class="action-btn action-btn-primary" title="View on GitHub">
             <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.840 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.430.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
             </svg>
         </a>
-        <button onclick="window.SettingsModal.open()" class="action-btn" title="Settings">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-                <circle cx="12" cy="12" r="3"/>
-            </svg>
-        </button>
     </div>
 
     <div class="form-page">
@@ -48,40 +37,17 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="name">Full Name</label>
-                            <input
-                                type="text"
-                                id="name"
-                                name="name"
-                                placeholder="Jane Smith"
-                                required
-                                class="form-input"
-                                autocomplete="name"
-                            >
+                            <input type="text" id="name" name="name" placeholder="Jane Smith" required class="form-input" autocomplete="name">
                         </div>
 
                         <div class="form-group">
                             <label for="email">Email Address</label>
-                            <input
-                                type="email"
-                                id="email"
-                                name="email"
-                                placeholder="jane@example.com"
-                                required
-                                class="form-input"
-                                autocomplete="email"
-                            >
+                            <input type="email" id="email" name="email" placeholder="jane@example.com" required class="form-input" autocomplete="email">
                         </div>
 
                         <div class="form-group">
                             <label for="role">Target Role</label>
-                            <input
-                                type="text"
-                                id="role"
-                                name="role"
-                                placeholder="Software Engineer, PM..."
-                                required
-                                class="form-input"
-                            >
+                            <input type="text" id="role" name="role" placeholder="Software Engineer, PM..." required class="form-input">
                         </div>
 
                         <div class="form-group">
@@ -94,29 +60,40 @@
                             </select>
                         </div>
 
+                        <div class="section-divider">Optional Enhancements</div>
+
                         <div class="form-group full-width">
-                            <label for="companyUrl">Company URL <span style="color: var(--text-light); font-weight: 400;">(optional)</span></label>
-                            <input
-                                type="url"
-                                id="companyUrl"
-                                name="companyUrl"
-                                placeholder="https://company.com"
-                                class="form-input"
-                            >
-                            <p class="form-helper">URL of the company you're interviewing for</p>
+                            <label>Resume Upload <span style="color: var(--text-light); font-weight: 400;">(PDF, DOCX, TXT)</span></label>
+                            <div class="file-upload-area" id="resumeUploadArea">
+                                <input type="file" id="resumeFile" accept=".pdf,.docx,.doc,.txt,.md">
+                                <svg class="file-upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                    <polyline points="17 8 12 3 7 8"/>
+                                    <line x1="12" y1="3" x2="12" y2="15"/>
+                                </svg>
+                                <p class="file-upload-text"><strong>Click to upload</strong> or drag and drop</p>
+                            </div>
+                            <div class="file-info" id="resumeFileInfo" style="display: none;">
+                                <span id="resumeFileName"></span>
+                                <span class="remove-file" id="removeResume">Remove</span>
+                            </div>
+                            <div class="upload-status" id="resumeStatus" style="display: none;"></div>
                         </div>
 
                         <div class="form-group full-width">
-                            <label for="jobDescription">Job Description <span style="color: var(--text-light); font-weight: 400;">(optional)</span></label>
-                            <textarea
-                                id="jobDescription"
-                                name="jobDescription"
-                                placeholder="Paste the job description here to tailor your interview..."
-                                class="form-input"
-                                rows="3"
-                            ></textarea>
+                            <label for="jobDescription">Job Description <span style="color: var(--text-light); font-weight: 400;">(paste here)</span></label>
+                            <textarea id="jobDescription" name="jobDescription" placeholder="Paste the job description to tailor your interview questions..." class="form-input" rows="4"></textarea>
+                        </div>
+
+                        <div class="form-group full-width">
+                            <div class="profile-toggle">
+                                <input type="checkbox" id="includeProfile" name="includeProfile" checked>
+                                <label for="includeProfile">Include my profile text in interview (resume & JD will be used to tailor questions)</label>
+                            </div>
                         </div>
                     </div>
+
+                    <input type="hidden" id="resumeCacheKey" name="resumeCacheKey" value="">
 
                     <div class="loading" id="loadingIndicator">
                         <span class="loading-spinner"></span>
@@ -127,9 +104,11 @@
                 <div class="interview-info">
                     <h3>What to expect</h3>
                     <ul>
-                        <li><strong>Stage 1:</strong> Self-introduction (3-4 min)</li>
-                        <li><strong>Stage 2:</strong> Experience discussion (5-7 min)</li>
+                        <li><strong>Stage 1:</strong> Self-introduction (2-3 min)</li>
+                        <li><strong>Stage 2:</strong> Experience discussion (4-5 min)</li>
+                        <li><strong>Stage 3:</strong> Company fit (3-4 min)</li>
                         <li>Speak naturally - real-time AI responses</li>
+                        <li>You can skip stages if needed</li>
                     </ul>
                 </div>
             </div>
@@ -137,33 +116,16 @@
             <div class="form-sidebar">
                 <button type="submit" form="candidateForm" class="btn-form-game" id="submitBtn">
                     <div class="btn-form-game-icon">
-                        <!-- Inactive: Writing on form icon -->
-                        <svg class="icon-inactive" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <!-- Clipboard -->
+                        <svg class="icon-inactive" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
                             <rect x="5" y="2" width="14" height="20" rx="2"/>
-                            <!-- Clip at top -->
                             <path d="M9 2v2h6V2"/>
-                            <!-- Writing lines -->
                             <line x1="8" y1="8" x2="16" y2="8"/>
                             <line x1="8" y1="12" x2="16" y2="12"/>
                             <line x1="8" y1="16" x2="12" y2="16"/>
-                            <!-- Pencil -->
-                            <path d="M18 14l-4 4"/>
-                            <path d="M14 18l1.5 1.5"/>
                         </svg>
-                        <!-- Active: Handshake icon -->
-                        <svg class="icon-active" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <!-- Left hand -->
-                            <path d="M2 14l4-4 4 4"/>
-                            <path d="M6 10v8"/>
-                            <!-- Right hand -->
-                            <path d="M22 14l-4-4-4 4"/>
-                            <path d="M18 10v8"/>
-                            <!-- Handshake center -->
-                            <path d="M9 12h6"/>
-                            <path d="M12 9v6"/>
-                            <!-- Connection -->
-                            <circle cx="12" cy="12" r="2"/>
+                        <svg class="icon-active" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <polyline points="22 4 12 14.01 9 11.01"/>
                         </svg>
                     </div>
                     <span class="btn-form-game-label">Begin Interview</span>
@@ -176,49 +138,158 @@
     (function() {
         'use strict';
         
+        var resumeCacheKey = '';
+        var uploadedFile = null;
+        
         document.addEventListener('DOMContentLoaded', init);
         
         function init() {
             initFormHandler();
             initInputValidation();
+            initFileUpload();
             updateButtonState();
+        }
+        
+        function initFileUpload() {
+            var uploadArea = document.getElementById('resumeUploadArea');
+            var fileInput = document.getElementById('resumeFile');
+            var fileInfo = document.getElementById('resumeFileInfo');
+            var fileName = document.getElementById('resumeFileName');
+            var removeBtn = document.getElementById('removeResume');
+            var status = document.getElementById('resumeStatus');
+            
+            uploadArea.addEventListener('click', function() {
+                fileInput.click();
+            });
+            
+            uploadArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                uploadArea.classList.add('dragover');
+            });
+            
+            uploadArea.addEventListener('dragleave', function() {
+                uploadArea.classList.remove('dragover');
+            });
+            
+            uploadArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                uploadArea.classList.remove('dragover');
+                if (e.dataTransfer.files.length > 0) {
+                    handleFile(e.dataTransfer.files[0]);
+                }
+            });
+            
+            fileInput.addEventListener('change', function() {
+                if (this.files.length > 0) {
+                    handleFile(this.files[0]);
+                }
+            });
+            
+            removeBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                clearFile();
+            });
+            
+            function handleFile(file) {
+                var validTypes = ['.pdf', '.docx', '.doc', '.txt', '.md'];
+                var ext = '.' + file.name.split('.').pop().toLowerCase();
+                
+                if (!validTypes.includes(ext)) {
+                    showStatus('error', 'Invalid file type. Use PDF, DOCX, or TXT.');
+                    return;
+                }
+                
+                if (file.size > 10 * 1024 * 1024) {
+                    showStatus('error', 'File too large. Max 10MB.');
+                    return;
+                }
+                
+                uploadedFile = file;
+                fileName.textContent = file.name + ' (' + formatBytes(file.size) + ')';
+                fileInfo.style.display = 'flex';
+                uploadArea.classList.add('has-file');
+                
+                uploadFile(file);
+            }
+            
+            function uploadFile(file) {
+                showStatus('loading', 'Uploading and extracting text...');
+                
+                var formData = new FormData();
+                formData.append('file', file);
+                formData.append('document_type', 'resume');
+                formData.append('include_profile', document.getElementById('includeProfile').checked);
+                
+                fetch('/api/upload-resume', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(function(response) {
+                    return response.json();
+                })
+                .then(function(data) {
+                    if (data.success) {
+                        resumeCacheKey = data.cache_key;
+                        document.getElementById('resumeCacheKey').value = data.cache_key;
+                        showStatus('success', 'Extracted ' + data.char_count + ' characters');
+                    } else {
+                        showStatus('error', data.message || 'Upload failed');
+                        clearFile();
+                    }
+                })
+                .catch(function(err) {
+                    console.error('[UPLOAD] Error:', err);
+                    showStatus('error', 'Upload failed: ' + err.message);
+                    clearFile();
+                });
+            }
+            
+            function clearFile() {
+                uploadedFile = null;
+                resumeCacheKey = '';
+                document.getElementById('resumeCacheKey').value = '';
+                fileInput.value = '';
+                fileInfo.style.display = 'none';
+                uploadArea.classList.remove('has-file');
+                status.style.display = 'none';
+            }
+            
+            function showStatus(type, message) {
+                status.className = 'upload-status ' + type;
+                status.textContent = message;
+                status.style.display = 'block';
+            }
+            
+            function formatBytes(bytes) {
+                if (bytes < 1024) return bytes + ' B';
+                if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+                return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+            }
         }
         
         function initFormHandler() {
             var form = document.getElementById('candidateForm');
             var submitBtn = document.getElementById('submitBtn');
-            if (!form) return;
             
-            // Handle form submission
             form.addEventListener('submit', function(e) {
                 e.preventDefault();
                 handleSubmit();
             });
             
-            // Also handle button click directly since button is outside form
-            if (submitBtn) {
-                submitBtn.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    if (!submitBtn.classList.contains('active')) {
-                        console.log('[FORM] Button not active - fill all required fields');
-                        return;
-                    }
+            submitBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (submitBtn.classList.contains('active')) {
                     handleSubmit();
-                });
-            }
+                }
+            });
         }
         
         function handleSubmit() {
             var form = document.getElementById('candidateForm');
             var submitBtn = document.getElementById('submitBtn');
+            var loadingEl = document.getElementById('loadingIndicator');
             
-            if (!form) return;
-            
-            // Check if button is active
-            if (submitBtn && !submitBtn.classList.contains('active')) {
-                console.log('[FORM] Cannot submit - not all required fields filled');
-                return;
-            }
+            if (!submitBtn.classList.contains('active')) return;
             
             var formData = new FormData(form);
             var data = {
@@ -226,60 +297,30 @@
                 email: formData.get('email'),
                 role: formData.get('role'),
                 level: formData.get('level'),
-                companyUrl: formData.get('companyUrl') || '',
-                jobDescription: formData.get('jobDescription') || ''
+                jobDescription: formData.get('jobDescription') || '',
+                resumeCacheKey: document.getElementById('resumeCacheKey').value,
+                includeProfile: document.getElementById('includeProfile').checked
             };
             
-            // Validate required fields
-            var isValid = true;
-            var inputs = form.querySelectorAll('.form-input[required]');
-            inputs.forEach(function(input) {
-                if (!validateInput(input)) {
-                    isValid = false;
-                }
+            loadingEl.classList.add('visible');
+            submitBtn.disabled = true;
+            
+            var params = new URLSearchParams({
+                name: data.name,
+                email: data.email,
+                role: data.role,
+                level: data.level,
+                resumeCacheKey: data.resumeCacheKey,
+                includeProfile: data.includeProfile,
+                hasJD: data.jobDescription.length > 0 ? '1' : '0'
             });
             
-            if (!isValid) {
-                console.log('[FORM] Validation failed');
-                return;
+            // Store JD in sessionStorage for token generation
+            if (data.jobDescription) {
+                sessionStorage.setItem('mockflow_jd', data.jobDescription);
             }
             
-            console.log('[FORM] Submitting with data:', data);
-            
-            var loadingEl = document.getElementById('loadingIndicator');
-            
-            if (loadingEl) {
-                loadingEl.classList.add('visible');
-            }
-            
-            if (submitBtn) {
-                submitBtn.disabled = true;
-            }
-            
-            try {
-                // Build URL params and redirect
-                var params = new URLSearchParams({
-                    name: data.name,
-                    email: data.email,
-                    role: data.role,
-                    level: data.level,
-                    companyUrl: data.companyUrl
-                });
-                
-                console.log('[FORM] Redirecting to interview page');
-                window.location.href = '/interview?' + params.toString();
-                
-            } catch (err) {
-                console.error('[FORM] Submission error:', err);
-                
-                if (loadingEl) {
-                    loadingEl.classList.remove('visible');
-                }
-                
-                if (submitBtn) {
-                    submitBtn.disabled = false;
-                }
-            }
+            window.location.href = '/interview?' + params.toString();
         }
         
         function initInputValidation() {
@@ -326,8 +367,6 @@
         function updateButtonState() {
             var form = document.getElementById('candidateForm');
             var submitBtn = document.getElementById('submitBtn');
-            if (!form || !submitBtn) return;
-            
             var requiredInputs = form.querySelectorAll('.form-input[required]');
             var allFilled = true;
             
@@ -345,185 +384,5 @@
         }
     })();
     </script>
-
-    <!-- Settings Modal -->
-    <div id="settingsModal" class="modal-overlay">
-        <div class="modal-container">
-            <div class="modal-header">
-                <h2 class="modal-title">API <span class="highlight">Settings</span></h2>
-                <button class="modal-close" aria-label="Close">×</button>
-            </div>
-            <div class="modal-content">
-                <div class="error-message" id="settingsError"></div>
-                <div class="success-message" id="settingsSuccess"></div>
-
-                <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
-                    Configure your API keys to use MockFlow-AI. Your keys are stored securely in your browser and never sent to our servers.
-                </p>
-
-                <div class="form-group">
-                    <label class="form-label">LiveKit URL <span class="required">*</span></label>
-                    <input type="text" id="livekitUrl" class="form-input" placeholder="wss://your-project.livekit.cloud">
-                    <p class="form-help">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                            <polyline points="15 3 21 3 21 9"/>
-                            <line x1="10" y1="14" x2="21" y2="3"/>
-                        </svg>
-                        <a href="https://cloud.livekit.io/" target="_blank">Get from LiveKit Cloud</a>
-                    </p>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">LiveKit API Key <span class="required">*</span></label>
-                    <input type="text" id="livekitApiKey" class="form-input" placeholder="APIxxxxxxxxxx">
-                    <p class="form-help">Find in LiveKit Dashboard → API Keys</p>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">LiveKit API Secret <span class="required">*</span></label>
-                    <input type="password" id="livekitApiSecret" class="form-input" placeholder="••••••••••••••••">
-                    <p class="form-help">Find in LiveKit Dashboard → API Keys</p>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">OpenAI API Key <span class="required">*</span></label>
-                    <input type="password" id="openaiApiKey" class="form-input" placeholder="sk-••••••••••••••••">
-                    <p class="form-help">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                            <polyline points="15 3 21 3 21 9"/>
-                            <line x1="10" y1="14" x2="21" y2="3"/>
-                        </svg>
-                        <a href="https://platform.openai.com/api-keys" target="_blank">Get from OpenAI</a>
-                    </p>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Deepgram API Key <span class="required">*</span></label>
-                    <input type="password" id="deepgramApiKey" class="form-input" placeholder="••••••••••••••••">
-                    <p class="form-help">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                            <polyline points="15 3 21 3 21 9"/>
-                            <line x1="10" y1="14" x2="21" y2="3"/>
-                        </svg>
-                        <a href="https://console.deepgram.com/" target="_blank">Get from Deepgram</a>
-                    </p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button id="settingsClear" class="modal-btn modal-btn-danger">Clear All</button>
-                <button id="settingsCancel" class="modal-btn modal-btn-secondary">Cancel</button>
-                <button id="settingsSave" class="modal-btn">Save Keys</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Developer Modal -->
-    <div id="developerModal" class="modal-overlay">
-        <div class="modal-container">
-            <div class="modal-header">
-                <h2 class="modal-title">About the <span class="highlight">Developer</span></h2>
-                <button class="modal-close" aria-label="Close">×</button>
-            </div>
-            <div class="modal-content">
-                <div class="dev-profile">
-                    <div class="dev-avatar">
-                        <img src="/static/me.jpg" alt="Pranav Mishra">
-                    </div>
-                    <div class="dev-info">
-                        <h3>Pranav Mishra</h3>
-                        <p>AI/ML Engineer & Full-Stack Dev</p>
-                    </div>
-                </div>
-
-                <div class="social-links">
-                    <a href="https://portfolio-pranav-mishra-paranoid.vercel.app" target="_blank" class="social-link social-portfolio">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                            <polyline points="15 3 21 3 21 9"/>
-                            <line x1="10" y1="14" x2="21" y2="3"/>
-                        </svg>
-                        Portfolio
-                    </a>
-                    <a href="https://www.linkedin.com/in/pranavgamedev/" target="_blank" class="social-link social-linkedin">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/>
-                        </svg>
-                        LinkedIn
-                    </a>
-                    <a href="https://portfolio-pranav-mishra-paranoid.vercel.app/resume" target="_blank" class="social-link social-resume">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                            <polyline points="14 2 14 8 20 8"/>
-                            <line x1="16" y1="13" x2="8" y2="13"/>
-                            <line x1="16" y1="17" x2="8" y2="17"/>
-                            <polyline points="10 9 9 9 8 9"/>
-                        </svg>
-                        Resume
-                    </a>
-                    <a href="https://www.youtube.com/@parano1dgames/featured" target="_blank" class="social-link social-youtube">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
-                        </svg>
-                        YouTube
-                    </a>
-                    <a href="https://huggingface.co/Paranoiid" target="_blank" class="social-link social-huggingface">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm6 13.5c-1.5 1.5-3.5 2.5-6 2.5s-4.5-1-6-2.5c0-2 4-3.5 6-3.5s6 1.5 6 3.5z"/>
-                        </svg>
-                        HuggingFace
-                    </a>
-                    <a href="https://scholar.google.com/citations?user=_Twn_owAAAAJ&hl=en&oi=sra" target="_blank" class="social-link social-scholar">
-                        <svg viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M5.242 13.769L0 9.5 12 0l12 9.5-5.242 4.269C17.548 11.249 14.978 9.5 12 9.5c-2.977 0-5.548 1.748-6.758 4.269zM12 10a7 7 0 1 0 0 14 7 7 0 0 0 0-14z"/>
-                        </svg>
-                        Scholar
-                    </a>
-                </div>
-
-                <div class="project-info">
-                    <div class="section-title">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polyline points="16 18 22 12 16 6"/>
-                            <polyline points="8 6 2 12 8 18"/>
-                        </svg>
-                        About this project
-                    </div>
-                    <p>
-                        MockFlow-AI helps you practice for interviews with AI-powered mock interviews.
-                        Future updates will include interview analysis, detailed feedback, and conversation history
-                        to help you track your progress across different roles.
-                    </p>
-                    <div class="project-actions">
-                        <a href="https://github.com/PranavMishra17/MockFlow-AI" target="_blank" class="github-link">
-                            <svg viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.840 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.430.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-                            </svg>
-                            Star on GitHub
-                        </a>
-                        <a href="https://github.com/PranavMishra17/MockFlow-AI/issues" target="_blank" class="bug-link">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <circle cx="12" cy="12" r="10"/>
-                                <line x1="12" y1="8" x2="12" y2="12"/>
-                                <line x1="12" y1="16" x2="12.01" y2="16"/>
-                            </svg>
-                            Report Bug
-                        </a>
-                    </div>
-                    <p class="license-text">
-                        Open Source • MIT License
-                    </p>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button id="devClose" class="modal-btn">Close</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="/static/apikey.js"></script>
-    <script src="/static/modal.js"></script>
 </body>
 </html>

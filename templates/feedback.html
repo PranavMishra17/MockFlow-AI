@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interview Feedback - MockFlow-AI</title>
+    <link rel="icon" href="/favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/feedback.css">
+</head>
+<body>
+    <div class="feedback-page">
+        <div class="page-header">
+            <h1>Interview Feedback</h1>
+            <a href="/past-calls" class="back-link">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                </svg>
+                Back to Interviews
+            </a>
+        </div>
+
+        <div class="loading-state" id="loadingState">Loading interview...</div>
+        <div class="error-state" id="errorState" style="display: none;"></div>
+
+        <div id="mainContent" style="display: none;">
+            <div class="interview-info" id="interviewInfo"></div>
+
+            <div class="feedback-banner">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <line x1="12" y1="16" x2="12" y2="12"/>
+                    <line x1="12" y1="8" x2="12.01" y2="8"/>
+                </svg>
+                <div class="feedback-banner-content">
+                    <h3>AI-Powered Feedback Coming Soon</h3>
+                    <p>Detailed analysis including strengths, areas for improvement, and question-specific feedback will be available in a future release. For now, review your transcript below.</p>
+                </div>
+            </div>
+
+            <div class="transcript-section">
+                <div class="transcript-header">
+                    <h2>Interview Transcript</h2>
+                    <span id="turnCount"></span>
+                </div>
+                <div class="transcript-content" id="transcriptContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        'use strict';
+        
+        var filename = '{{ filename }}';
+        
+        var elements = {
+            loadingState: document.getElementById('loadingState'),
+            errorState: document.getElementById('errorState'),
+            mainContent: document.getElementById('mainContent'),
+            interviewInfo: document.getElementById('interviewInfo'),
+            transcriptContent: document.getElementById('transcriptContent'),
+            turnCount: document.getElementById('turnCount')
+        };
+        
+        document.addEventListener('DOMContentLoaded', loadInterview);
+        
+        function loadInterview() {
+            fetch('/api/interview/' + encodeURIComponent(filename))
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('Interview not found');
+                    }
+                    return response.json();
+                })
+                .then(function(data) {
+                    elements.loadingState.style.display = 'none';
+                    
+                    if (data.error) {
+                        showError(data.error);
+                        return;
+                    }
+                    
+                    renderInterview(data);
+                })
+                .catch(function(err) {
+                    console.error('[FEEDBACK] Load error:', err);
+                    showError('Failed to load interview: ' + err.message);
+                });
+        }
+        
+        function showError(message) {
+            elements.loadingState.style.display = 'none';
+            elements.errorState.textContent = message;
+            elements.errorState.style.display = 'block';
+        }
+        
+        function renderInterview(data) {
+            elements.mainContent.style.display = 'block';
+            
+            var meta = data.meta || {};
+            var conversation = data.ordered_conversation || [];
+            
+            var stagesHtml = '';
+            if (meta.stages_covered && meta.stages_covered.length) {
+                stagesHtml = meta.stages_covered
+                    .filter(function(s) { return s; })
+                    .map(function(s) {
+                        return '<span class="stage-badge">' + formatStage(s) + '</span>';
+                    }).join('');
+            }
+            
+            elements.interviewInfo.innerHTML = 
+                '<div class="interview-info-grid">' +
+                    '<div class="info-item">' +
+                        '<span class="info-label">Candidate</span>' +
+                        '<span class="info-value">' + escapeHtml(meta.candidate || 'Unknown') + '</span>' +
+                    '</div>' +
+                    '<div class="info-item">' +
+                        '<span class="info-label">Date</span>' +
+                        '<span class="info-value">' + formatDate(meta.interview_date) + '</span>' +
+                    '</div>' +
+                    '<div class="info-item">' +
+                        '<span class="info-label">Total Turns</span>' +
+                        '<span class="info-value">' + conversation.length + '</span>' +
+                    '</div>' +
+                    (stagesHtml ? 
+                        '<div class="info-item">' +
+                            '<span class="info-label">Stages</span>' +
+                            '<div class="stages-list">' + stagesHtml + '</div>' +
+                        '</div>' : '') +
+                '</div>';
+            
+            elements.turnCount.textContent = conversation.length + ' turns';
+            
+            var transcriptHtml = conversation.map(function(turn) {
+                var roleClass = turn.role === 'agent' ? 'agent' : 'candidate';
+                var roleLabel = turn.role === 'agent' ? 'Interviewer' : 'Candidate';
+                var stageTag = turn.stage ? '<span class="turn-stage">' + formatStage(turn.stage) + '</span>' : '';
+                
+                return '<div class="transcript-turn">' +
+                    '<div class="turn-header">' +
+                        '<span class="turn-role ' + roleClass + '">' + roleLabel + '</span>' +
+                        stageTag +
+                    '</div>' +
+                    '<p class="turn-text">' + escapeHtml(turn.text) + '</p>' +
+                '</div>';
+            }).join('');
+            
+            elements.transcriptContent.innerHTML = transcriptHtml || '<p style="color: var(--text-light);">No transcript available.</p>';
+            
+            // Check if feedback was requested
+            var urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('request_feedback') === '1') {
+                requestFeedback();
+            }
+        }
+        
+        function requestFeedback() {
+            fetch('/api/feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ interview_id: filename })
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                console.log('[FEEDBACK] Response:', data);
+            })
+            .catch(function(err) {
+                console.error('[FEEDBACK] Request error:', err);
+            });
+        }
+        
+        function formatDate(isoDate) {
+            if (!isoDate) return 'Unknown';
+            try {
+                var date = new Date(isoDate);
+                return date.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (e) {
+                return isoDate;
+            }
+        }
+        
+        function formatStage(stage) {
+            if (!stage) return '';
+            var map = {
+                'welcome': 'Welcome',
+                'self_intro': 'Introduction',
+                'past_experience': 'Experience',
+                'company_fit': 'Company Fit',
+                'closing': 'Closing'
+            };
+            return map[stage] || stage;
+        }
+        
+        function escapeHtml(text) {
+            if (!text) return '';
+            var div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+.profile-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--surface-2);
+    border-radius: 0.5rem;
+    margin-top: 0.5rem;
+}
+.profile-toggle input[type="checkbox"] {
+    width: 1.25rem;
+    height: 1.25rem;
+    accent-color: var(--primary);
+    cursor: pointer;
+}
+.profile-toggle label {
+    font-size: 0.875rem;
+    color: var(--text);
+    cursor: pointer;
+    user-select: none;
+}
+.file-upload-area {
+    border: 2px dashed var(--border);
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    text-align: center;
+    transition: all 0.2s ease;
+    cursor: pointer;
+}
+.file-upload-area:hover,
+.file-upload-area.dragover {
+    border-color: var(--primary);
+    background: rgba(99, 102, 241, 0.05);
+}
+.file-upload-area.has-file {
+    border-color: var(--success);
+    background: rgba(34, 197, 94, 0.05);
+}
+.file-upload-area input[type="file"] {
+    display: none;
+}
+.file-upload-icon {
+    width: 2rem;
+    height: 2rem;
+    margin: 0 auto 0.5rem;
+    color: var(--text-light);
+}
+.file-upload-text {
+    font-size: 0.875rem;
+    color: var(--text-light);
+}
+.file-upload-text strong {
+    color: var(--primary);
+}
+.file-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    font-size: 0.75rem;
+    color: var(--text-light);
+}
+.file-info .remove-file {
+    color: var(--danger);
+    cursor: pointer;
+    margin-left: auto;
+}
+.upload-status {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    margin-top: 0.5rem;
+}
+.upload-status.success {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--success);
+}
+.upload-status.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger);
+}
+.upload-status.loading {
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--primary);
+}
+.section-divider {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 1.5rem 0;
+    color: var(--text-light);
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.section-divider::before,
+.section-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
