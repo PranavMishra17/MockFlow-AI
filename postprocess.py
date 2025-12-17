@@ -63,40 +63,28 @@ def resequence_interview(path_or_filename: Union[str, Path]) -> Dict:
         agent_messages = conversation.get('agent', [])
         user_messages = conversation.get('user', [])
         
-        # Merge user partials into complete turns
-        merged_user = _merge_user_partials(user_messages, gap_threshold=1.0)
+        # Use the improved merge function that groups user messages by agent turns
+        # This produces cleaner conversation flow
+        all_turns = merge_by_agent_turns(agent_messages, user_messages)
         
-        # Prepare all turns with role labels
-        all_turns = []
+        # Also calculate merged count using gap-based merging for metadata
+        merged_user = _merge_user_partials(user_messages, gap_threshold=5.0)
         
-        for msg in agent_messages:
-            all_turns.append({
-                'role': 'agent',
-                'text': msg.get('text', ''),
-                'timestamp': msg.get('timestamp', 0),
-                'stage': msg.get('stage'),
-            })
-            
-        for msg in merged_user:
-            all_turns.append({
-                'role': 'candidate',
-                'text': msg.get('text', ''),
-                'timestamp': msg.get('timestamp', 0),
-                'stage': None,
-            })
-        
-        # Sort by timestamp
-        all_turns.sort(key=lambda x: x['timestamp'])
+        # Get stages covered
+        stages_covered = list(set(m.get('stage') for m in agent_messages if m.get('stage')))
         
         # Build metadata
         meta = {
             'candidate': data.get('candidate', 'Unknown'),
             'interview_date': data.get('interview_date'),
             'room_name': data.get('room_name'),
+            'job_role': data.get('job_role', ''),
+            'experience_level': data.get('experience_level', ''),
             'total_agent_messages': len(agent_messages),
             'total_user_messages': len(user_messages),
             'merged_user_turns': len(merged_user),
             'total_turns': len(all_turns),
+            'stages_covered': stages_covered,
             'source_file': str(path),
         }
         
@@ -128,16 +116,17 @@ def resequence_interview(path_or_filename: Union[str, Path]) -> Dict:
 
 def _merge_user_partials(
     user_messages: List[Dict],
-    gap_threshold: float = 1.0
+    gap_threshold: float = 5.0
 ) -> List[Dict]:
     """
     Merge adjacent user partial transcripts into complete turns.
     
     Groups messages where timestamp gap is <= gap_threshold seconds.
+    Uses a 5-second gap threshold to capture natural speech pauses.
     
     Args:
         user_messages: List of user message dicts with 'text' and 'timestamp'
-        gap_threshold: Max seconds between messages to merge
+        gap_threshold: Max seconds between messages to merge (default 5s)
         
     Returns:
         List of merged message dicts
@@ -170,6 +159,80 @@ def _merge_user_partials(
     return merged
 
 
+def merge_by_agent_turns(
+    agent_messages: List[Dict],
+    user_messages: List[Dict]
+) -> List[Dict]:
+    """
+    Alternative merge: Group all user messages between agent messages.
+    
+    This produces cleaner conversation flow where each user "turn" 
+    is everything they said before the agent's next response.
+    
+    Args:
+        agent_messages: List of agent message dicts with timestamps
+        user_messages: List of user message dicts with timestamps
+        
+    Returns:
+        List of merged conversation turns in chronological order
+    """
+    if not agent_messages and not user_messages:
+        return []
+    
+    # Sort both by timestamp
+    sorted_agent = sorted(agent_messages, key=lambda x: x.get('timestamp', 0))
+    sorted_user = sorted(user_messages, key=lambda x: x.get('timestamp', 0))
+    
+    all_turns = []
+    user_buffer = []
+    user_idx = 0
+    
+    for agent_msg in sorted_agent:
+        agent_ts = agent_msg.get('timestamp', 0)
+        
+        # Collect all user messages before this agent message
+        while user_idx < len(sorted_user) and sorted_user[user_idx].get('timestamp', 0) < agent_ts:
+            user_buffer.append(sorted_user[user_idx])
+            user_idx += 1
+        
+        # If we have user messages, merge and add them
+        if user_buffer:
+            merged_text = ' '.join(m.get('text', '') for m in user_buffer if m.get('text'))
+            all_turns.append({
+                'role': 'candidate',
+                'text': merged_text,
+                'timestamp': user_buffer[0].get('timestamp', 0),
+                'stage': None,
+                'partial_count': len(user_buffer)
+            })
+            user_buffer = []
+        
+        # Add the agent message
+        all_turns.append({
+            'role': 'agent',
+            'text': agent_msg.get('text', ''),
+            'timestamp': agent_ts,
+            'stage': agent_msg.get('stage')
+        })
+    
+    # Don't forget any remaining user messages after the last agent turn
+    while user_idx < len(sorted_user):
+        user_buffer.append(sorted_user[user_idx])
+        user_idx += 1
+    
+    if user_buffer:
+        merged_text = ' '.join(m.get('text', '') for m in user_buffer if m.get('text'))
+        all_turns.append({
+            'role': 'candidate',
+            'text': merged_text,
+            'timestamp': user_buffer[0].get('timestamp', 0),
+            'stage': None,
+            'partial_count': len(user_buffer)
+        })
+    
+    return all_turns
+
+
 def _finalize_group(messages: List[Dict]) -> Dict:
     """Combine a group of messages into one turn."""
     texts = [m.get('text', '') for m in messages if m.get('text')]
@@ -184,13 +247,13 @@ def _finalize_group(messages: List[Dict]) -> Dict:
 
 def list_interviews(directory: Union[str, Path] = None) -> List[Dict]:
     """
-    List all saved interview files.
+    List all saved interview files with rich metadata.
     
     Args:
         directory: Directory to search (defaults to INTERVIEWS_DIR)
         
     Returns:
-        List of dicts with filename and basic metadata
+        List of dicts with filename and metadata
     """
     dir_path = Path(directory) if directory else INTERVIEWS_DIR
     
@@ -204,14 +267,29 @@ def list_interviews(directory: Union[str, Path] = None) -> List[Dict]:
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-                
+            
+            # Get conversation stats
+            conversation = data.get('conversation', {})
+            agent_msgs = conversation.get('agent', [])
+            user_msgs = conversation.get('user', [])
+            
+            # Get stages covered
+            stages = list(set(m.get('stage') for m in agent_msgs if m.get('stage')))
+            
             interviews.append({
                 'filename': file_path.name,
                 'candidate': data.get('candidate', 'Unknown'),
                 'interview_date': data.get('interview_date'),
                 'room_name': data.get('room_name'),
+                'job_role': data.get('job_role', ''),
+                'experience_level': data.get('experience_level', ''),
+                'final_stage': data.get('final_stage', ''),
+                'ended_by': data.get('ended_by', 'unknown'),
+                'stages_covered': stages,
                 'message_count': data.get('total_messages', {}),
                 'file_size': file_path.stat().st_size,
+                'has_resume': bool(data.get('resume_text')),
+                'has_jd': bool(data.get('job_description')),
             })
         except Exception as e:
             logger.warning(f"[POSTPROCESS] Error reading {file_path}: {e}")

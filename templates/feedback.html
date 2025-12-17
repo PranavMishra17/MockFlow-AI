@@ -44,8 +44,14 @@
                 <!-- Feedback loading state -->
                 <div class="feedback-loading" id="feedbackLoading" style="display: none;">
                     <div class="feedback-spinner"></div>
-                    <p>Analyzing your interview with AI...</p>
-                    <p class="feedback-loading-sub">This may take a moment</p>
+                    <p class="loading-phase" id="loadingPhase">Preparing analysis...</p>
+                    <div class="loading-phases-track">
+                        <span class="phase-dot active" data-phase="0"></span>
+                        <span class="phase-dot" data-phase="1"></span>
+                        <span class="phase-dot" data-phase="2"></span>
+                        <span class="phase-dot" data-phase="3"></span>
+                        <span class="phase-dot" data-phase="4"></span>
+                    </div>
                 </div>
                 
                 <!-- Feedback content -->
@@ -78,6 +84,16 @@
         
         var filename = '{{ filename }}';
         var feedbackGenerated = false;
+        var loadingPhaseInterval = null;
+        
+        var loadingPhases = [
+            "Gathering candidate profile...",
+            "Reviewing job requirements...",
+            "Processing conversation flow...",
+            "Evaluating response quality...",
+            "Synthesizing insights..."
+        ];
+        var currentPhaseIndex = 0;
         
         var elements = {
             loadingState: document.getElementById('loadingState'),
@@ -89,7 +105,8 @@
             generateFeedbackBtn: document.getElementById('generateFeedbackBtn'),
             feedbackLoading: document.getElementById('feedbackLoading'),
             feedbackContent: document.getElementById('feedbackContent'),
-            feedbackPlaceholder: document.getElementById('feedbackPlaceholder')
+            feedbackPlaceholder: document.getElementById('feedbackPlaceholder'),
+            loadingPhase: document.getElementById('loadingPhase')
         };
         
         document.addEventListener('DOMContentLoaded', init);
@@ -97,6 +114,38 @@
         function init() {
             loadInterview();
             elements.generateFeedbackBtn.addEventListener('click', requestFeedback);
+        }
+        
+        function startLoadingPhases() {
+            currentPhaseIndex = 0;
+            updateLoadingPhase();
+            loadingPhaseInterval = setInterval(function() {
+                currentPhaseIndex = (currentPhaseIndex + 1) % loadingPhases.length;
+                updateLoadingPhase();
+            }, 4000);
+        }
+        
+        function updateLoadingPhase() {
+            if (elements.loadingPhase) {
+                elements.loadingPhase.textContent = loadingPhases[currentPhaseIndex];
+                elements.loadingPhase.classList.add('phase-fade');
+                setTimeout(function() {
+                    elements.loadingPhase.classList.remove('phase-fade');
+                }, 300);
+            }
+            // Update dots
+            var dots = document.querySelectorAll('.phase-dot');
+            dots.forEach(function(dot, i) {
+                dot.classList.toggle('active', i === currentPhaseIndex);
+                dot.classList.toggle('completed', i < currentPhaseIndex);
+            });
+        }
+        
+        function stopLoadingPhases() {
+            if (loadingPhaseInterval) {
+                clearInterval(loadingPhaseInterval);
+                loadingPhaseInterval = null;
+            }
         }
         
         function loadInterview() {
@@ -111,7 +160,8 @@
                     elements.loadingState.style.display = 'none';
                     
                     if (data.error) {
-                        showError(data.error);
+                        // Interview not found - show option to go to past-calls
+                        showInterviewNotFound();
                         return;
                     }
                     
@@ -119,8 +169,22 @@
                 })
                 .catch(function(err) {
                     console.error('[FEEDBACK] Load error:', err);
-                    showError('Failed to load interview: ' + err.message);
+                    showInterviewNotFound();
                 });
+        }
+        
+        function showInterviewNotFound() {
+            elements.loadingState.style.display = 'none';
+            elements.errorState.innerHTML = 
+                '<div style="text-align: center;">' +
+                    '<p style="margin-bottom: 1rem;">Interview transcript not found or still being saved.</p>' +
+                    '<p style="margin-bottom: 1rem; font-size: 0.875rem; opacity: 0.8;">The transcript may take a moment to save after the interview ends.</p>' +
+                    '<div style="display: flex; gap: 0.75rem; justify-content: center;">' +
+                        '<button onclick="location.reload()" class="btn-retry" style="padding: 0.5rem 1rem;">Retry</button>' +
+                        '<a href="/past-calls" class="btn-retry" style="padding: 0.5rem 1rem; text-decoration: none;">View All Interviews</a>' +
+                    '</div>' +
+                '</div>';
+            elements.errorState.style.display = 'block';
         }
         
         function showError(message) {
@@ -195,12 +259,13 @@
                 return;
             }
             
-            // Show loading state
+            // Show loading state with animated phases
             elements.generateFeedbackBtn.disabled = true;
             elements.generateFeedbackBtn.textContent = 'Generating...';
             elements.feedbackPlaceholder.style.display = 'none';
             elements.feedbackLoading.style.display = 'flex';
             elements.feedbackContent.style.display = 'none';
+            startLoadingPhases();
             
             fetch('/api/feedback', {
                 method: 'POST',
@@ -209,6 +274,7 @@
             })
             .then(function(response) { return response.json(); })
             .then(function(data) {
+                stopLoadingPhases();
                 elements.feedbackLoading.style.display = 'none';
                 
                 if (data.error) {
@@ -220,6 +286,7 @@
                 renderFeedback(data.feedback);
             })
             .catch(function(err) {
+                stopLoadingPhases();
                 console.error('[FEEDBACK] Request error:', err);
                 elements.feedbackLoading.style.display = 'none';
                 showFeedbackError('Failed to generate feedback: ' + err.message);

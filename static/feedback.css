@@ -267,6 +267,40 @@
     margin-top: 0.25rem !important;
 }
 
+.loading-phase {
+    transition: opacity 0.3s ease;
+    min-height: 1.5em;
+}
+
+.loading-phase.phase-fade {
+    opacity: 0.5;
+}
+
+.loading-phases-track {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    justify-content: center;
+}
+
+.phase-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: all 0.3s ease;
+}
+
+.phase-dot.active {
+    background: var(--primary);
+    transform: scale(1.2);
+    box-shadow: 0 0 8px rgba(99, 102, 241, 0.5);
+}
+
+.phase-dot.completed {
+    background: var(--success);
+}
+
 /* Feedback placeholder */
 .feedback-placeholder {
     display: flex;
@@ -293,6 +327,8 @@
 /* Feedback content */
 .feedback-content {
     padding: 1.5rem;
+    max-height: 70vh;
+    overflow-y: auto;
 }
 
 .feedback-success {

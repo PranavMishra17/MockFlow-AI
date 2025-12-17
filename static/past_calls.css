@@ -51,7 +51,12 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+.interview-header-left {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
 }
 .interview-name {
     font-size: 1.125rem;
@@ -61,6 +66,51 @@
 .interview-date {
     font-size: 0.75rem;
     color: var(--text-light);
+    white-space: nowrap;
+}
+.interview-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+}
+.interview-tag {
+    font-size: 0.6875rem;
+    padding: 0.1875rem 0.5rem;
+    border-radius: 0.25rem;
+    font-weight: 500;
+}
+.interview-tag.role {
+    background: rgba(99, 102, 241, 0.1);
+    color: var(--primary);
+}
+.interview-tag.level {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--success);
+}
+.interview-tag.ended-early {
+    background: rgba(245, 158, 11, 0.1);
+    color: #d97706;
+}
+.interview-stages {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+}
+.stage-pill {
+    font-size: 0.625rem;
+    padding: 0.125rem 0.375rem;
+    background: var(--surface-2);
+    border-radius: 0.25rem;
+    color: var(--text-light);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+.interview-meta-item.has-file {
+    color: var(--success);
+}
+.interview-meta-item.has-file svg {
+    opacity: 1;
 }
 .interview-meta {
     display: flex;

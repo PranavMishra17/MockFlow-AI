@@ -581,9 +581,16 @@ async def entrypoint(ctx: JobContext):
                 import json
                 from datetime import datetime
 
-                # Emit ending notification
+                now = datetime.now()
+                just_filename = f"{candidate_name.lower().replace(' ', '_')}_{now.strftime('%Y%m%d_%H%M%S')}.json"
+                
+                # Emit ending notification with filename
                 try:
-                    data_payload = json.dumps({"type": "interview_ending", "message": "Interview Complete"})
+                    data_payload = json.dumps({
+                        "type": "interview_ending", 
+                        "message": "Interview Complete",
+                        "filename": just_filename
+                    })
                     await ctx.room.local_participant.publish_data(data_payload.encode('utf-8'))
                 except Exception as e:
                     logger.warning(f"[UI] Failed to emit ending: {e}")
@@ -591,7 +598,7 @@ async def entrypoint(ctx: JobContext):
                 # Save conversation
                 history_data = {
                     "candidate": candidate_name,
-                    "interview_date": datetime.now().isoformat(),
+                    "interview_date": now.isoformat(),
                     "room_name": ctx.room.name,
                     "job_role": interview_state.job_role,
                     "experience_level": interview_state.experience_level,
@@ -606,13 +613,13 @@ async def entrypoint(ctx: JobContext):
                 }
 
                 os.makedirs("interviews", exist_ok=True)
-                filename = f"interviews/{candidate_name.lower().replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                filepath = f"interviews/{just_filename}"
 
-                with open(filename, 'w', encoding='utf-8') as f:
+                with open(filepath, 'w', encoding='utf-8') as f:
                     import json as json_module
                     json_module.dump(history_data, f, indent=2, ensure_ascii=False)
 
-                logger.info(f"[HISTORY] Saved to {filename}")
+                logger.info(f"[HISTORY] Saved to {filepath}")
                 closing_finalized["done"] = True
                 interview_complete.set()
                 await asyncio.sleep(2.0)
@@ -645,9 +652,10 @@ async def entrypoint(ctx: JobContext):
                     logger.info("[HISTORY] No conversation to save")
                     return
                 
+                now = datetime.now()
                 history_data = {
                     "candidate": candidate_name,
-                    "interview_date": datetime.now().isoformat(),
+                    "interview_date": now.isoformat(),
                     "room_name": ctx.room.name,
                     "job_role": interview_state.job_role,
                     "experience_level": interview_state.experience_level,
@@ -662,12 +670,23 @@ async def entrypoint(ctx: JobContext):
                 }
                 
                 os.makedirs("interviews", exist_ok=True)
-                filename = f"interviews/{candidate_name.lower().replace(' ', '_')}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+                just_filename = f"{candidate_name.lower().replace(' ', '_')}_{now.strftime('%Y%m%d_%H%M%S')}.json"
+                filepath = f"interviews/{just_filename}"
                 
-                with open(filename, 'w', encoding='utf-8') as f:
+                with open(filepath, 'w', encoding='utf-8') as f:
                     json_module.dump(history_data, f, indent=2, ensure_ascii=False)
                 
-                logger.info(f"[HISTORY] Saved transcript on disconnect: {filename}")
+                logger.info(f"[HISTORY] Saved transcript on disconnect: {filepath}")
+                
+                # Emit the filename so frontend can navigate to it
+                try:
+                    data_payload = json_module.dumps({
+                        "type": "transcript_saved",
+                        "filename": just_filename
+                    })
+                    await ctx.room.local_participant.publish_data(data_payload.encode('utf-8'))
+                except Exception as e:
+                    logger.warning(f"[UI] Failed to emit transcript filename: {e}")
                 
             except Exception as e:
                 logger.error(f"[HISTORY] Error saving on disconnect: {e}", exc_info=True)

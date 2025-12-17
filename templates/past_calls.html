@@ -87,11 +87,37 @@
                 var messageCount = interview.message_count || {};
                 var totalMessages = (messageCount.agent || 0) + (messageCount.user || 0);
                 
+                // Build tags for role, level, stages
+                var tagsHtml = '';
+                if (interview.job_role) {
+                    tagsHtml += '<span class="interview-tag role">' + escapeHtml(interview.job_role) + '</span>';
+                }
+                if (interview.experience_level) {
+                    tagsHtml += '<span class="interview-tag level">' + formatLevel(interview.experience_level) + '</span>';
+                }
+                if (interview.ended_by === 'user_disconnect') {
+                    tagsHtml += '<span class="interview-tag ended-early">Ended Early</span>';
+                }
+                
+                // Build stages pills
+                var stagesHtml = '';
+                if (interview.stages_covered && interview.stages_covered.length) {
+                    stagesHtml = interview.stages_covered
+                        .filter(function(s) { return s; })
+                        .map(function(s) {
+                            return '<span class="stage-pill">' + formatStage(s) + '</span>';
+                        }).join('');
+                }
+                
                 return '<div class="interview-card">' +
                     '<div class="interview-header">' +
-                        '<span class="interview-name">' + escapeHtml(interview.candidate || 'Unknown') + '</span>' +
+                        '<div class="interview-header-left">' +
+                            '<span class="interview-name">' + escapeHtml(interview.candidate || 'Unknown') + '</span>' +
+                            (tagsHtml ? '<div class="interview-tags">' + tagsHtml + '</div>' : '') +
+                        '</div>' +
                         '<span class="interview-date">' + date + '</span>' +
                     '</div>' +
+                    (stagesHtml ? '<div class="interview-stages">' + stagesHtml + '</div>' : '') +
                     '<div class="interview-meta">' +
                         '<span class="interview-meta-item">' +
                             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>' +
@@ -101,6 +127,7 @@
                             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>' +
                             formatFileSize(interview.file_size || 0) +
                         '</span>' +
+                        (interview.has_resume ? '<span class="interview-meta-item has-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>Resume</span>' : '') +
                     '</div>' +
                     '<div class="interview-actions">' +
                         '<button class="action-btn-sm btn-view" onclick="viewTranscript(\'' + escapeHtml(interview.filename) + '\')">' +
@@ -116,6 +143,29 @@
             }).join('');
             
             elements.interviewsList.innerHTML = html;
+        }
+        
+        function formatLevel(level) {
+            var levels = { 
+                'entry': 'Entry Level', 
+                'junior': 'Junior',
+                'mid': 'Mid Level', 
+                'senior': 'Senior',
+                'lead': 'Lead',
+                'staff': 'Staff'
+            };
+            return levels[level] || level;
+        }
+        
+        function formatStage(stage) {
+            var stages = {
+                'welcome': 'Welcome',
+                'self_intro': 'Intro',
+                'past_experience': 'Experience',
+                'company_fit': 'Fit',
+                'closing': 'Closing'
+            };
+            return stages[stage] || stage;
         }
         
         function formatDate(isoDate) {

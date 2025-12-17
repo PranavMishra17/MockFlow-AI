@@ -995,22 +995,13 @@
             }
             
             function getInterviewFilename() {
-                // Generate expected filename based on candidate name and timestamp
+                // Use the actual filename received from the agent if available
                 if (state.interviewFilename) {
                     return state.interviewFilename;
                 }
                 
-                // Build filename from candidate info and room connection time
-                var name = candidate.name.toLowerCase().replace(/\s+/g, '_');
-                var now = new Date();
-                var dateStr = now.getFullYear().toString() +
-                    (now.getMonth() + 1).toString().padStart(2, '0') +
-                    now.getDate().toString().padStart(2, '0') + '_' +
-                    now.getHours().toString().padStart(2, '0') +
-                    now.getMinutes().toString().padStart(2, '0') +
-                    now.getSeconds().toString().padStart(2, '0');
-                
-                return name + '_' + dateStr + '.json';
+                // Fallback: return null to trigger past-calls redirect
+                return null;
             }
             
             function onTrackSubscribed(track, publication, participant) {
@@ -1111,9 +1102,23 @@
                         updateAgentCaption('Interview complete.');
                         updateStatus('Interview Complete', 'connected');
                         
+                        // Store the actual filename from the agent
+                        if (data.filename) {
+                            state.interviewFilename = data.filename;
+                            console.log('[INTERVIEW] Transcript filename:', data.filename);
+                        }
+                        
                         setTimeout(function() {
                             showInterviewCompleteModal();
                         }, 2000);
+                    }
+                    
+                    if (data.type === 'transcript_saved') {
+                        // Transcript saved after disconnect - store filename
+                        if (data.filename) {
+                            state.interviewFilename = data.filename;
+                            console.log('[INTERVIEW] Transcript saved:', data.filename);
+                        }
                     }
                 } catch (err) {
                     console.error('[DATA] Parse error:', err);
