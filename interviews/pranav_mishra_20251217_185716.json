@@ -1,0 +1,285 @@
+{
+  "candidate": "Pranav Mishra",
+  "interview_date": "2025-12-17T18:57:16.099777",
+  "room_name": "interview-pranav-mishra-1766015620",
+  "job_role": "AI Engineer",
+  "experience_level": "entry",
+  "conversation": {
+    "agent": [
+      {
+        "index": 0,
+        "text": "Now that we've completed the greeting, let's move on to the self-introduction stage. Please go ahead and introduce yourself, Pranav!",
+        "timestamp": 1766015637.6105478,
+        "stage": "self_intro"
+      },
+      {
+        "index": 1,
+        "text": "Thank you for sharing, Pranav! Now that we've covered your self-introduction and background, let's move on to the next stage where we can discuss your past experiences in more detail.",
+        "timestamp": 1766015679.0527859,
+        "stage": "past_experience"
+      },
+      {
+        "index": 2,
+        "text": "Excellent introduction, thank you Pranav Mishra! Now let's discuss your past work experience, particularly as it relates to the AI Engineer role. Can you tell me about a specific project you've worked on during your time at Will Price as an AI ML intern?",
+        "timestamp": 1766015701.195843,
+        "stage": "past_experience"
+      },
+      {
+        "index": 3,
+        "text": "I'm glad to hear you enjoyed it! Can you elaborate on how you measured the model's performance and ensured the accuracy of the visualizations?",
+        "timestamp": 1766015759.7646182,
+        "stage": "past_experience"
+      },
+      {
+        "index": 4,
+        "text": "Thank you so much for sharing all of that, Pranav Mishra. I really enjoyed learning about your background and experience. We'll be in touch with next steps via email. Thank you again, and best of luck!",
+        "timestamp": 1766015831.0984156,
+        "stage": "closing"
+      }
+    ],
+    "user": [
+      {
+        "index": 0,
+        "text": "Hi. I'm Pranav. I'm a recent grad from UI with a master's in computer science.",
+        "timestamp": 1766015641.9902942
+      },
+      {
+        "index": 1,
+        "text": "Been building projects",
+        "timestamp": 1766015643.8205385
+      },
+      {
+        "index": 2,
+        "text": "and around AI and machine learning.",
+        "timestamp": 1766015646.0181434
+      },
+      {
+        "index": 3,
+        "text": "I started coding while gaming. I made a",
+        "timestamp": 1766015648.519541
+      },
+      {
+        "index": 4,
+        "text": "a a number of games. Started with mobile games. I also have apps",
+        "timestamp": 1766015653.4922078
+      },
+      {
+        "index": 5,
+        "text": "in virtual reality.",
+        "timestamp": 1766015653.8584874
+      },
+      {
+        "index": 6,
+        "text": "As well as health care applications.",
+        "timestamp": 1766015655.9085479
+      },
+      {
+        "index": 7,
+        "text": "At UIC, I also worked as a research software engineer in multi agent research.",
+        "timestamp": 1766015660.5440052
+      },
+      {
+        "index": 8,
+        "text": "Upon graduation, I've been working at Will Price as an AI ML intern.",
+        "timestamp": 1766015665.27825
+      },
+      {
+        "index": 9,
+        "text": "Sure.",
+        "timestamp": 1766015683.1171565
+      },
+      {
+        "index": 10,
+        "text": "Yeah. Uh, I was architecture of",
+        "timestamp": 1766015705.2312806
+      },
+      {
+        "index": 11,
+        "text": "a particular project",
+        "timestamp": 1766015707.4183288
+      },
+      {
+        "index": 12,
+        "text": "around computer vision where",
+        "timestamp": 1766015709.2601454
+      },
+      {
+        "index": 13,
+        "text": "we gave the users a feature to visualize the ways that they",
+        "timestamp": 1766015713.2754045
+      },
+      {
+        "index": 14,
+        "text": "want to buy and how that would look on their car.",
+        "timestamp": 1766015716.028581
+      },
+      {
+        "index": 15,
+        "text": "For this, we serve this via fine tune YOLO model,",
+        "timestamp": 1766015720.620883
+      },
+      {
+        "index": 16,
+        "text": "We took a object detection model like YOLO because",
+        "timestamp": 1766015724.525717
+      },
+      {
+        "index": 17,
+        "text": "we did a very simple image swapping where",
+        "timestamp": 1766015727.4702082
+      },
+      {
+        "index": 18,
+        "text": "we took the seller's image, and we used techniques to first detect the",
+        "timestamp": 1766015731.8231971
+      },
+      {
+        "index": 19,
+        "text": "object that is the wheel and then wrap it out of the image.",
+        "timestamp": 1766015734.9204726
+      },
+      {
+        "index": 20,
+        "text": "And then similarly, place that same wheel in the",
+        "timestamp": 1766015739.930226
+      },
+      {
+        "index": 21,
+        "text": "on top of the wheels of the",
+        "timestamp": 1766015740.162707
+      },
+      {
+        "index": 22,
+        "text": "user's car.",
+        "timestamp": 1766015741.3665287
+      },
+      {
+        "index": 23,
+        "text": "So it it it's like an image to image operation.",
+        "timestamp": 1766015744.9781284
+      },
+      {
+        "index": 24,
+        "text": "And, yeah, it it was pretty fun.",
+        "timestamp": 1766015747.8687406
+      },
+      {
+        "index": 25,
+        "text": "Yeah. Sure. So for the",
+        "timestamp": 1766015764.136758
+      },
+      {
+        "index": 26,
+        "text": "for the very",
+        "timestamp": 1766015764.576534
+      },
+      {
+        "index": 27,
+        "text": "rough",
+        "timestamp": 1766015765.1194093
+      },
+      {
+        "index": 28,
+        "text": "metric, we had a feedback score.",
+        "timestamp": 1766015767.663795
+      },
+      {
+        "index": 29,
+        "text": "And we evaluated it ourselves. But",
+        "timestamp": 1766015770.0179687
+      },
+      {
+        "index": 30,
+        "text": "the",
+        "timestamp": 1766015771.2345266
+      },
+      {
+        "index": 31,
+        "text": "contemporary metrics, I would say, was IU score.",
+        "timestamp": 1766015775.033165
+      },
+      {
+        "index": 32,
+        "text": "So based on the fine tuned model, we did find",
+        "timestamp": 1766015780.0338566
+      },
+      {
+        "index": 33,
+        "text": "one open source dataset",
+        "timestamp": 1766015780.4613645
+      },
+      {
+        "index": 34,
+        "text": "which had this",
+        "timestamp": 1766015782.0555925
+      },
+      {
+        "index": 35,
+        "text": "uh, dataset above off wheels. So",
+        "timestamp": 1766015787.070322
+      },
+      {
+        "index": 36,
+        "text": "from there, we had a base metric",
+        "timestamp": 1766015787.3992996
+      },
+      {
+        "index": 37,
+        "text": "IU score of the YOLO model.",
+        "timestamp": 1766015789.4238014
+      },
+      {
+        "index": 38,
+        "text": "We keep keep that, and",
+        "timestamp": 1766015791.8416476
+      },
+      {
+        "index": 39,
+        "text": "later on, when we served it live to 100, 200 users,",
+        "timestamp": 1766015795.6278565
+      },
+      {
+        "index": 40,
+        "text": "we also made sure to keep checking the models",
+        "timestamp": 1766015799.726413
+      },
+      {
+        "index": 41,
+        "text": "monitoring the models metrics on the user's images.",
+        "timestamp": 1766015803.1196232
+      },
+      {
+        "index": 42,
+        "text": "So this was done in batch. Like, it was not done in real time. It was done in batch",
+        "timestamp": 1766015808.1433363
+      },
+      {
+        "index": 43,
+        "text": "processing so that",
+        "timestamp": 1766015808.8252792
+      },
+      {
+        "index": 44,
+        "text": "in a in a day or two, we would get that metric.",
+        "timestamp": 1766015811.3057444
+      },
+      {
+        "index": 45,
+        "text": "But, yeah, these are all the things that we took into con consideration.",
+        "timestamp": 1766015815.7782884
+      },
+      {
+        "index": 46,
+        "text": "Thank you.",
+        "timestamp": 1766015834.752712
+      }
+    ]
+  },
+  "total_messages": {
+    "agent": 5,
+    "user": 47
+  },
+  "skipped_stages": [],
+  "final_stage": "closing",
+  "ended_by": "natural_completion"
+}

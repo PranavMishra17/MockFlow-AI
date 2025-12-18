@@ -1,0 +1,565 @@
+{
+  "candidate": "Pranav Mishra",
+  "interview_date": "2025-12-17T17:46:26.297943",
+  "room_name": "interview-pranav-mishra-1766011063",
+  "job_role": "AI Engineer",
+  "experience_level": "entry",
+  "conversation": {
+    "agent": [
+      {
+        "index": 0,
+        "text": "Hi Pranav Mishra! I'm Alex, and I'll be your interviewer today. Welcome to your mock interview for the AI Engineer position. We'll go through a few stages: first you'll introduce yourself, then we'll discuss your past experience, explore how you might fit with the role, and wrap up. Let's get started! Please go ahead and introduce yourself.",
+        "timestamp": 1766011087.143865,
+        "stage": "welcome"
+      },
+      {
+        "index": 1,
+        "text": "Thank you for your introduction, Pranav! It's great to hear about your recent graduation. Let's move on to discuss your past experience. Can you tell me about any relevant projects or internships you've worked on that relate to AI engineering?",
+        "timestamp": 1766011111.5017312,
+        "stage": "self_intro"
+      },
+      {
+        "index": 2,
+        "text": "That's really interesting, Pranav! Utilizing a fine-tuning model and working on AWS is quite relevant for an AI Engineer role. Now that we've covered your background a bit, can you share what inspired you to pursue a career in AI and machine learning?",
+        "timestamp": 1766011159.35414,
+        "stage": "self_intro"
+      },
+      {
+        "index": 3,
+        "text": "It's fascinating to hear how your passion for gaming and virtual realities evolved into a focus on AI and machine learning, Pranav. I appreciate you sharing your journey with me. \n\nNow that we have a good understanding of your background and interests, let's transition to discussing your experiences in more detail. This will help us explore how your skills and knowledge can contribute to the role of an AI Engineer. Shall we dive into your past projects and experiences?",
+        "timestamp": 1766011226.8205538,
+        "stage": "past_experience"
+      },
+      {
+        "index": 4,
+        "text": "Great! Let's explore your past projects in more detail. You mentioned working on a chatbot and a computer vision feature during your internship. Could you elaborate on one of those projects? What were the main challenges you faced, and how did you approach solving them?",
+        "timestamp": 1766011246.3526523,
+        "stage": "past_experience"
+      },
+      {
+        "index": 5,
+        "text": "It sounds like you had a rewarding experience working on the chatbot project, Pranav! Integrating different tools and accommodating client-specific needs must have been quite the challenge, but also a great learning opportunity.\n\nNow that we've covered the chatbot project in detail, let's briefly touch on your experience with the computer vision feature. What were some of the key components or techniques you used in that project?",
+        "timestamp": 1766011335.4242563,
+        "stage": "past_experience"
+      },
+      {
+        "index": 6,
+        "text": "It's great to hear that you found the computer vision project to be straightforward after getting the techniques right, Pranav. Your ability to improve latency shows a strong problem-solving mindset, which is essential for an AI Engineer.\n\nAs we wrap up our discussion, is there anything else you would like to share about your experiences or any specific skills you feel particularly proud of that you haven't mentioned yet?",
+        "timestamp": 1766011425.4724677,
+        "stage": "past_experience"
+      },
+      {
+        "index": 7,
+        "text": "Thank you for sharing those insights, Pranav! It sounds like you have a well-rounded portfolio with a variety of experiences in AI, machine learning, and full stack applications. Your work with virtual avatars in healthcare also highlights your versatility and innovative thinking.\n\nNow, let's transition to discussing how you see yourself fitting into the AI Engineer role and what you hope to achieve in this position. What excites you most about the opportunity to work as an AI Engineer?",
+        "timestamp": 1766011485.3284535,
+        "stage": "company_fit"
+      },
+      {
+        "index": 8,
+        "text": "That's a solid goal, Pranav! Getting hands-on experience is crucial for growth, especially in a rapidly evolving field like AI. \n\nTo wrap up our discussion, what specific skills or perspectives do you feel you can contribute to our team that would be particularly valuable?",
+        "timestamp": 1766011536.6426485,
+        "stage": "company_fit"
+      },
+      {
+        "index": 9,
+        "text": "Thank you so much for sharing all of that, Pranav Mishra. I really enjoyed learning about your background and experience. We'll be in touch with next steps via email. Thank you again, and best of luck!",
+        "timestamp": 1766011581.3005695,
+        "stage": "closing"
+      }
+    ],
+    "user": [
+      {
+        "index": 0,
+        "text": "Hi, Alex.",
+        "timestamp": 1766011089.550585
+      },
+      {
+        "index": 1,
+        "text": "I'm Pranov. I'm a recent grad from UIC with a master's in computer science.",
+        "timestamp": 1766011093.0663471
+      },
+      {
+        "index": 2,
+        "text": "Yeah. Upon graduation, I started working as an AIML intern at We Place.",
+        "timestamp": 1766011118.2667127
+      },
+      {
+        "index": 3,
+        "text": "Uh, I had full stack responsible responsibilities as well as",
+        "timestamp": 1766011123.2678099
+      },
+      {
+        "index": 4,
+        "text": "I was, like, a coordinator for couple of projects.",
+        "timestamp": 1766011127.9176111
+      },
+      {
+        "index": 5,
+        "text": "With one was a chatbot, another was a",
+        "timestamp": 1766011128.7542307
+      },
+      {
+        "index": 6,
+        "text": "computer vision feature that we implemented for the users",
+        "timestamp": 1766011133.7149374
+      },
+      {
+        "index": 7,
+        "text": "to see how the wheels that they want to buy would look on their car.",
+        "timestamp": 1766011134.9131217
+      },
+      {
+        "index": 8,
+        "text": "We use, like, a fine tuning model for this,",
+        "timestamp": 1766011139.929665
+      },
+      {
+        "index": 9,
+        "text": "We solved it on AWS EC two instance.",
+        "timestamp": 1766011141.005762
+      },
+      {
+        "index": 10,
+        "text": "Yeah. Well, I started coding because I loved",
+        "timestamp": 1766011167.9026282
+      },
+      {
+        "index": 11,
+        "text": "playing games, and I played a lot of games. So I started coding while I'm making kids.",
+        "timestamp": 1766011170.8640296
+      },
+      {
+        "index": 12,
+        "text": "This was before",
+        "timestamp": 1766011172.1566489
+      },
+      {
+        "index": 13,
+        "text": "even before my bachelor's. So I made a couple of mobile games using Unity.",
+        "timestamp": 1766011176.1168144
+      },
+      {
+        "index": 14,
+        "text": "Released it on PlayStation. And that's how",
+        "timestamp": 1766011178.6039257
+      },
+      {
+        "index": 15,
+        "text": "I got interested in coding and graphics",
+        "timestamp": 1766011181.7673411
+      },
+      {
+        "index": 16,
+        "text": "and virtual realities and all that stuff. And in my",
+        "timestamp": 1766011186.7740834
+      },
+      {
+        "index": 17,
+        "text": "studies, I've had the pleasure of making mini",
+        "timestamp": 1766011186.9411073
+      },
+      {
+        "index": 18,
+        "text": "projects as such.",
+        "timestamp": 1766011188.5106335
+      },
+      {
+        "index": 19,
+        "text": "And, also, I went deep into AI and ML projects, and that's why I decided to",
+        "timestamp": 1766011192.764118
+      },
+      {
+        "index": 20,
+        "text": "pursue a masters from United States.",
+        "timestamp": 1766011195.494184
+      },
+      {
+        "index": 21,
+        "text": "Yeah. Sure. Go ahead.",
+        "timestamp": 1766011228.8400714
+      },
+      {
+        "index": 22,
+        "text": "Yeah. I would say for the chatbot,",
+        "timestamp": 1766011249.978694
+      },
+      {
+        "index": 23,
+        "text": "it was about different data sources.",
+        "timestamp": 1766011253.1000967
+      },
+      {
+        "index": 24,
+        "text": "So we were basically making a white label chat assistant",
+        "timestamp": 1766011257.011606
+      },
+      {
+        "index": 25,
+        "text": "to help the users just understand if the wheels that they want to buy would fit their car or not.",
+        "timestamp": 1766011261.6619017
+      },
+      {
+        "index": 26,
+        "text": "So there are a lot of specs and other stuff that",
+        "timestamp": 1766011264.7063432
+      },
+      {
+        "index": 27,
+        "text": "even when you have the same brands wheel, then you cannot just fit it",
+        "timestamp": 1766011268.6550906
+      },
+      {
+        "index": 28,
+        "text": "directly.",
+        "timestamp": 1766011269.406422
+      },
+      {
+        "index": 29,
+        "text": "There are many things. So you had we had a",
+        "timestamp": 1766011271.957203
+      },
+      {
+        "index": 30,
+        "text": "basically, a really compact MCP tool for the chatbot where",
+        "timestamp": 1766011276.2114024
+      },
+      {
+        "index": 31,
+        "text": "we made a lookup to make it understand the slang of car enthusiasts.",
+        "timestamp": 1766011281.2139392
+      },
+      {
+        "index": 32,
+        "text": "And also some",
+        "timestamp": 1766011282.8474932
+      },
+      {
+        "index": 33,
+        "text": "lookup tools to look up",
+        "timestamp": 1766011284.2960682
+      },
+      {
+        "index": 34,
+        "text": "tables.",
+        "timestamp": 1766011285.4329247
+      },
+      {
+        "index": 35,
+        "text": "For spec dimensions and other stuff if to figure out if they are matching or not.",
+        "timestamp": 1766011290.1682017
+      },
+      {
+        "index": 36,
+        "text": "And, also, some other data basis",
+        "timestamp": 1766011293.2542956
+      },
+      {
+        "index": 37,
+        "text": "as well.",
+        "timestamp": 1766011294.0831318
+      },
+      {
+        "index": 38,
+        "text": "So three to four tool calls was all that it was needed.",
+        "timestamp": 1766011297.7760015
+      },
+      {
+        "index": 39,
+        "text": "And just for different number of clients. So each one had their own",
+        "timestamp": 1766011300.9204316
+      },
+      {
+        "index": 40,
+        "text": "specific background knowledge they wanted to integrate.",
+        "timestamp": 1766011303.6556227
+      },
+      {
+        "index": 41,
+        "text": "So that was fun.",
+        "timestamp": 1766011305.5049024
+      },
+      {
+        "index": 42,
+        "text": "Yeah. So I proposed this idea because",
+        "timestamp": 1766011341.3088427
+      },
+      {
+        "index": 43,
+        "text": "we were lacking this feature, which I thought would be helpful.",
+        "timestamp": 1766011343.3070827
+      },
+      {
+        "index": 44,
+        "text": "So what we do is we take the two images, one from the user's car,",
+        "timestamp": 1766011347.5777223
+      },
+      {
+        "index": 45,
+        "text": "that they just upload when they want this feature,",
+        "timestamp": 1766011350.211312
+      },
+      {
+        "index": 46,
+        "text": "and another from the seller's field.",
+        "timestamp": 1766011352.1601682
+      },
+      {
+        "index": 47,
+        "text": "And we apply very simple computer vision technique",
+        "timestamp": 1766011357.1259634
+      },
+      {
+        "index": 48,
+        "text": "to wrap the wheel out of the image",
+        "timestamp": 1766011357.4998999
+      },
+      {
+        "index": 49,
+        "text": "So we have, like,",
+        "timestamp": 1766011359.3598769
+      },
+      {
+        "index": 50,
+        "text": "two wheels wrapped out of both the images.",
+        "timestamp": 1766011361.6978297
+      },
+      {
+        "index": 51,
+        "text": "And we basically",
+        "timestamp": 1766011363.211936
+      },
+      {
+        "index": 52,
+        "text": "take the seller's wheel and put it on the user's car. That's what we do.",
+        "timestamp": 1766011367.0328777
+      },
+      {
+        "index": 53,
+        "text": "And in that",
+        "timestamp": 1766011368.0570195
+      },
+      {
+        "index": 54,
+        "text": "after this wrapping, we have to make sure of many things like perspective,",
+        "timestamp": 1766011371.6233568
+      },
+      {
+        "index": 55,
+        "text": "height,",
+        "timestamp": 1766011372.533358
+      },
+      {
+        "index": 56,
+        "text": "dimension, and other stuff to make sure",
+        "timestamp": 1766011375.112834
+      },
+      {
+        "index": 57,
+        "text": "that it's",
+        "timestamp": 1766011376.1042926
+      },
+      {
+        "index": 58,
+        "text": "as realistic as it can be.",
+        "timestamp": 1766011378.2642014
+      },
+      {
+        "index": 59,
+        "text": "Because it's not an AR thing. It's not like a snap filter.",
+        "timestamp": 1766011381.1126206
+      },
+      {
+        "index": 60,
+        "text": "It's just an image to image operation.",
+        "timestamp": 1766011383.2643518
+      },
+      {
+        "index": 61,
+        "text": "So that was fun. So",
+        "timestamp": 1766011385.512395
+      },
+      {
+        "index": 62,
+        "text": "yeah, there were couple of improvements which we did",
+        "timestamp": 1766011390.5295506
+      },
+      {
+        "index": 63,
+        "text": "to improve latency, but, overall, it was a",
+        "timestamp": 1766011391.0097241
+      },
+      {
+        "index": 64,
+        "text": "pretty straightforward project when once you get the computer vision right.",
+        "timestamp": 1766011394.9627829
+      },
+      {
+        "index": 65,
+        "text": "So",
+        "timestamp": 1766011397.1466055
+      },
+      {
+        "index": 66,
+        "text": "Well, yes. I'm a very curious builder. So if you can look up my portfolio,",
+        "timestamp": 1766011431.8086333
+      },
+      {
+        "index": 67,
+        "text": "portfolio, I have many, many projects.",
+        "timestamp": 1766011432.8598115
+      },
+      {
+        "index": 68,
+        "text": "Across AI, game,",
+        "timestamp": 1766011434.9616425
+      },
+      {
+        "index": 69,
+        "text": "as well as ML applications. I have full stack applications, research application, and other",
+        "timestamp": 1766011439.962634
+      },
+      {
+        "index": 70,
+        "text": "stuff.",
+        "timestamp": 1766011440.2492783
+      },
+      {
+        "index": 71,
+        "text": "I've also have couple of papers lined up",
+        "timestamp": 1766011442.909284
+      },
+      {
+        "index": 72,
+        "text": "which I worked on during my",
+        "timestamp": 1766011444.706618
+      },
+      {
+        "index": 73,
+        "text": "work as a research software engineer at UIC.",
+        "timestamp": 1766011447.255942
+      },
+      {
+        "index": 74,
+        "text": "I've done work at home and systems drag as well as",
+        "timestamp": 1766011450.9642022
+      },
+      {
+        "index": 75,
+        "text": "virtual avatars with health care professionals.",
+        "timestamp": 1766011453.9090369
+      },
+      {
+        "index": 76,
+        "text": "Yeah. I will say getting to know the industry standards about",
+        "timestamp": 1766011490.1899195
+      },
+      {
+        "index": 77,
+        "text": "how users interact",
+        "timestamp": 1766011492.061666
+      },
+      {
+        "index": 78,
+        "text": "with AI, what is done in practice in the back end,",
+        "timestamp": 1766011495.0111785
+      },
+      {
+        "index": 79,
+        "text": "and get just getting to know what works and what does not work.",
+        "timestamp": 1766011498.316752
+      },
+      {
+        "index": 80,
+        "text": "I mean, I know how to code. So and",
+        "timestamp": 1766011503.3340213
+      },
+      {
+        "index": 81,
+        "text": "the thing that's left is to test it out in a market",
+        "timestamp": 1766011505.1873536
+      },
+      {
+        "index": 82,
+        "text": "That's why I want to be at a company which have",
+        "timestamp": 1766011508.0158782
+      },
+      {
+        "index": 83,
+        "text": "users and",
+        "timestamp": 1766011509.6020153
+      },
+      {
+        "index": 84,
+        "text": "apps and all different pipelines.",
+        "timestamp": 1766011512.452222
+      },
+      {
+        "index": 85,
+        "text": "So that I can get my hands full on and learn as much as possible.",
+        "timestamp": 1766011516.3813474
+      },
+      {
+        "index": 86,
+        "text": "Well, I was",
+        "timestamp": 1766011541.2179034
+      },
+      {
+        "index": 87,
+        "text": "again, I would emphasize among curious build up.",
+        "timestamp": 1766011542.492384
+      },
+      {
+        "index": 88,
+        "text": "I put my mouth where my work is.",
+        "timestamp": 1766011547.5162585
+      },
+      {
+        "index": 89,
+        "text": "I have had many projects. I have live projects.",
+        "timestamp": 1766011549.0252118
+      },
+      {
+        "index": 90,
+        "text": "That shows that I have the capability to build",
+        "timestamp": 1766011551.9542897
+      },
+      {
+        "index": 91,
+        "text": "even on my own.",
+        "timestamp": 1766011553.2542448
+      },
+      {
+        "index": 92,
+        "text": "So bringing what I bring on the table is a very decisive",
+        "timestamp": 1766011558.0641057
+      },
+      {
+        "index": 93,
+        "text": "player who can work hard",
+        "timestamp": 1766011559.851714
+      },
+      {
+        "index": 94,
+        "text": "implement, and learn on its own.",
+        "timestamp": 1766011561.9527926
+      },
+      {
+        "index": 95,
+        "text": "As well as be",
+        "timestamp": 1766011563.4657345
+      },
+      {
+        "index": 96,
+        "text": "astronomically curious.",
+        "timestamp": 1766011566.2581944
+      }
+    ]
+  },
+  "total_messages": {
+    "agent": 10,
+    "user": 97
+  },
+  "skipped_stages": [],
+  "final_stage": "closing",
+  "ended_by": "natural_completion"
+}
