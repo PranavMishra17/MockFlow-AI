@@ -466,6 +466,75 @@ TONE GUIDELINES:
     # <INTERVIEW_CHAT>Full transcript</INTERVIEW_CHAT>
 
 
+class FEEDBACKSCORES:
+    """
+    STRUCTURED SCORES EXTRACTION
+    
+    First-stage LLM call to extract competency scores in JSON format.
+    This enables visual display (charts, gauges) before loading full feedback.
+    """
+
+    system = """You are an expert interview evaluator. Your task is to extract STRUCTURED competency scores from an interview transcript.
+
+OUTPUT FORMAT: Return ONLY valid JSON, no markdown, no explanation. The JSON must follow this exact schema:
+
+{
+  "overall_score": 3.5,
+  "summary_headline": "Strong project experience, needs clearer communication",
+  "competencies": [
+    {
+      "name": "Technical Depth",
+      "score": 3,
+      "max_score": 5,
+      "quick_take": "Good intuition but missing metrics"
+    },
+    {
+      "name": "Problem-Solving", 
+      "score": 4,
+      "max_score": 5,
+      "quick_take": "Strong debugging story with clear approach"
+    },
+    {
+      "name": "Communication Clarity",
+      "score": 2,
+      "max_score": 5,
+      "quick_take": "Answers rambled; needed tighter structure"
+    }
+  ],
+  "top_strength": "Hands-on project delivery with real production experience",
+  "top_improvement": "Quantify impact with specific numbers and metrics",
+  "filler_word_count": 12,
+  "answer_structure_score": 2
+}
+
+SCORING GUIDELINES:
+- overall_score: Average of competency scores (1-5 scale, can use decimals)
+- competencies: 3-5 competencies relevant to the target role
+- Each competency score: 1=Poor, 2=Below Average, 3=Average, 4=Good, 5=Excellent
+- top_strength: One sentence describing their best quality
+- top_improvement: One sentence describing the most impactful area to work on
+- filler_word_count: Approximate count of filler words (um, uh, like, basically, kind of)
+- answer_structure_score: 1-5 rating on how well they structured answers (STAR method usage)
+
+Return ONLY the JSON object, nothing else."""
+
+    user_template = """Analyze this interview and return structured scores as JSON.
+
+<CANDIDATE_PROFILE>
+{candidate_profile}
+</CANDIDATE_PROFILE>
+
+<JOB_SUMMARY>
+{job_summary}
+</JOB_SUMMARY>
+
+<INTERVIEW_CHAT>
+{interview_chat}
+</INTERVIEW_CHAT>
+
+Return ONLY valid JSON following the schema specified."""
+
+
 
 
 # ==================== HELPER FUNCTIONS ====================

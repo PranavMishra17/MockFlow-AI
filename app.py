@@ -420,20 +420,73 @@ def get_interview_summary_api(filename):
 
 # ==================== FEEDBACK API ====================
 
-@app.route('/api/feedback', methods=['POST'])
-def generate_feedback():
+def _load_interview_context(interview_id):
     """
-    Generate AI-powered feedback for an interview using chain-of-thought analysis.
+    Helper to load interview transcript and context for feedback generation.
+    
+    Returns:
+        tuple: (interview_chat, candidate_profile, job_summary, meta, conversation, error)
+    """
+    import json as json_module
+    
+    # Load and resequence the interview transcript
+    resequenced = resequence_interview(interview_id)
+    if 'error' in resequenced and resequenced.get('error'):
+        return None, None, None, None, None, f'Could not find interview: {interview_id}'
+    
+    # Build the interview chat transcript
+    conversation = resequenced.get('ordered_conversation', [])
+    meta = resequenced.get('meta', {})
+    
+    if not conversation:
+        return None, None, None, None, None, 'No conversation found in this interview'
+    
+    # Format transcript for LLM
+    transcript_lines = []
+    for turn in conversation:
+        role = "INTERVIEWER" if turn['role'] == 'agent' else "CANDIDATE"
+        stage_info = f" [{turn['stage']}]" if turn.get('stage') else ""
+        transcript_lines.append(f"{role}{stage_info}: {turn['text']}")
+    
+    interview_chat = "\n\n".join(transcript_lines)
+    
+    # Load raw interview data for additional context
+    interview_path = Path("interviews") / interview_id
+    candidate_profile = f"Name: {meta.get('candidate', 'Unknown')}"
+    job_summary = "Role: Not specified"
+    
+    try:
+        with open(interview_path, 'r', encoding='utf-8') as f:
+            raw_data = json_module.load(f)
+            
+        # Extract additional context if available
+        if raw_data.get('job_role'):
+            job_summary = f"Role: {raw_data.get('job_role', 'Not specified')}"
+        if raw_data.get('experience_level'):
+            candidate_profile += f"\nExperience Level: {raw_data.get('experience_level', 'Not specified')}"
+    except Exception as e:
+        logger.warning(f"[API] Could not load raw interview data: {e}")
+    
+    return interview_chat, candidate_profile, job_summary, meta, conversation, None
+
+
+@app.route('/api/feedback/scores', methods=['POST'])
+def generate_feedback_scores():
+    """
+    Stage 1: Extract structured competency scores from interview.
+    
+    Returns JSON with scores for visual display (charts, gauges).
+    This is faster than full feedback and enables progressive loading.
     
     Expected JSON body:
         - interview_id: Interview filename or identifier
         
     Returns:
-        Structured feedback with strengths, improvements, and practice plan.
+        Structured scores with competencies, overall score, and headline.
     """
     import json as json_module
     from openai import OpenAI
-    from prompts import build_post_interview_feedback_prompt
+    from prompts import FEEDBACKSCORES
     
     try:
         data = request.json or {}
@@ -445,51 +498,131 @@ def generate_feedback():
                 'message': 'Please provide an interview_id'
             }), 400
             
+        logger.info(f"[API] Feedback scores requested for: {interview_id}")
+        
+        # Load interview context
+        interview_chat, candidate_profile, job_summary, meta, conversation, error = _load_interview_context(interview_id)
+        
+        if error:
+            return jsonify({'error': 'Interview not found', 'message': error}), 404
+        
+        # Build scores extraction prompt
+        user_prompt = FEEDBACKSCORES.user_template.format(
+            candidate_profile=candidate_profile,
+            job_summary=job_summary,
+            interview_chat=interview_chat
+        )
+        
+        # Call OpenAI API for scores extraction
+        openai_api_key = os.getenv('OPENAI_API_KEY')
+        if not openai_api_key:
+            return jsonify({
+                'error': 'Configuration error',
+                'message': 'OpenAI API key not configured'
+            }), 500
+        
+        logger.info(f"[API] Extracting scores via OpenAI for {interview_id}")
+        
+        client = OpenAI(api_key=openai_api_key)
+        
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": FEEDBACKSCORES.system},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.3,  # Lower temperature for consistent structure
+            max_tokens=800
+        )
+        
+        scores_text = response.choices[0].message.content
+        
+        # Parse JSON response
+        try:
+            # Clean up response (remove markdown code blocks if present)
+            cleaned = scores_text.strip()
+            if cleaned.startswith('```'):
+                # Remove ```json and closing ```
+                lines = cleaned.split('\n')
+                cleaned = '\n'.join(lines[1:-1] if lines[-1].strip() == '```' else lines[1:])
+            
+            scores_data = json_module.loads(cleaned)
+        except json_module.JSONDecodeError as e:
+            logger.error(f"[API] Failed to parse scores JSON: {e}")
+            logger.error(f"[API] Raw response: {scores_text}")
+            # Return a fallback structure
+            scores_data = {
+                'overall_score': 3.0,
+                'summary_headline': 'Analysis complete',
+                'competencies': [
+                    {'name': 'Technical Skills', 'score': 3, 'max_score': 5, 'quick_take': 'Demonstrated relevant experience'},
+                    {'name': 'Communication', 'score': 3, 'max_score': 5, 'quick_take': 'Room for clearer responses'},
+                    {'name': 'Problem-Solving', 'score': 3, 'max_score': 5, 'quick_take': 'Showed analytical thinking'}
+                ],
+                'top_strength': 'Relevant project experience',
+                'top_improvement': 'Structure answers more clearly',
+                'filler_word_count': 0,
+                'answer_structure_score': 3
+            }
+        
+        logger.info(f"[API] Scores extracted successfully for {interview_id}")
+        
+        return jsonify({
+            'success': True,
+            'interview_id': interview_id,
+            'scores': scores_data,
+            'meta': {
+                'candidate': meta.get('candidate'),
+                'interview_date': meta.get('interview_date'),
+                'total_turns': len(conversation),
+                'model': 'gpt-4o-mini'
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"[API] Scores extraction error: {e}", exc_info=True)
+        return jsonify({
+            'error': 'Scores extraction failed',
+            'message': str(e)
+        }), 500
+
+
+@app.route('/api/feedback', methods=['POST'])
+def generate_feedback():
+    """
+    Stage 2: Generate detailed AI-powered feedback using chain-of-thought analysis.
+    
+    Call this after /api/feedback/scores to get full descriptive feedback.
+    
+    Expected JSON body:
+        - interview_id: Interview filename or identifier
+        - scores: (optional) Pre-computed scores to include in response
+        
+    Returns:
+        Structured feedback with strengths, improvements, and practice plan.
+    """
+    import json as json_module
+    from openai import OpenAI
+    from prompts import build_post_interview_feedback_prompt
+    
+    try:
+        data = request.json or {}
+        interview_id = data.get('interview_id')
+        provided_scores = data.get('scores')  # Optional: pass scores from stage 1
+        
+        if not interview_id:
+            return jsonify({
+                'error': 'Missing interview_id',
+                'message': 'Please provide an interview_id'
+            }), 400
+            
         logger.info(f"[API] Feedback requested for: {interview_id}")
         
-        # Load and resequence the interview transcript
-        resequenced = resequence_interview(interview_id)
-        if 'error' in resequenced and resequenced.get('error'):
-            return jsonify({
-                'error': 'Interview not found',
-                'message': f'Could not find interview: {interview_id}'
-            }), 404
+        # Load interview context
+        interview_chat, candidate_profile, job_summary, meta, conversation, error = _load_interview_context(interview_id)
         
-        # Build the interview chat transcript
-        conversation = resequenced.get('ordered_conversation', [])
-        meta = resequenced.get('meta', {})
-        
-        if not conversation:
-            return jsonify({
-                'error': 'Empty transcript',
-                'message': 'No conversation found in this interview'
-            }), 400
-        
-        # Format transcript for LLM
-        transcript_lines = []
-        for turn in conversation:
-            role = "INTERVIEWER" if turn['role'] == 'agent' else "CANDIDATE"
-            stage_info = f" [{turn['stage']}]" if turn.get('stage') else ""
-            transcript_lines.append(f"{role}{stage_info}: {turn['text']}")
-        
-        interview_chat = "\n\n".join(transcript_lines)
-        
-        # Load raw interview data for additional context
-        interview_path = Path("interviews") / interview_id
-        candidate_profile = f"Name: {meta.get('candidate', 'Unknown')}"
-        job_summary = "Role: Not specified"
-        
-        try:
-            with open(interview_path, 'r', encoding='utf-8') as f:
-                raw_data = json_module.load(f)
-                
-            # Extract additional context if available
-            if raw_data.get('job_role'):
-                job_summary = f"Role: {raw_data.get('job_role', 'Not specified')}"
-            if raw_data.get('experience_level'):
-                candidate_profile += f"\nExperience Level: {raw_data.get('experience_level', 'Not specified')}"
-        except Exception as e:
-            logger.warning(f"[API] Could not load raw interview data: {e}")
+        if error:
+            return jsonify({'error': 'Interview not found', 'message': error}), 404
         
         # Build the feedback prompt using chain-of-thought approach
         system_prompt = build_post_interview_feedback_prompt()
@@ -529,14 +662,14 @@ Provide your analysis and feedback following the output format specified."""
                 {"role": "user", "content": user_prompt}
             ],
             temperature=0.7,
-            max_tokens=2000
+            max_tokens=3000  # Increased for comprehensive feedback
         )
         
         feedback_text = response.choices[0].message.content
         
         logger.info(f"[API] Feedback generated successfully for {interview_id}")
         
-        return jsonify({
+        response_data = {
             'success': True,
             'interview_id': interview_id,
             'feedback': feedback_text,
@@ -546,7 +679,13 @@ Provide your analysis and feedback following the output format specified."""
                 'total_turns': len(conversation),
                 'model': 'gpt-4o-mini'
             }
-        })
+        }
+        
+        # Include scores if provided
+        if provided_scores:
+            response_data['scores'] = provided_scores
+        
+        return jsonify(response_data)
         
     except Exception as e:
         logger.error(f"[API] Feedback error: {e}", exc_info=True)

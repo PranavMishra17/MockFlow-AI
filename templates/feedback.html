@@ -41,6 +41,78 @@
                     </button>
                 </div>
                 
+                <!-- Scores Dashboard (Stage 1) -->
+                <div class="scores-dashboard" id="scoresDashboard" style="display: none;">
+                    <div class="scores-grid">
+                        <!-- Overall Score Radial -->
+                        <div class="score-card overall-score-card">
+                            <div class="radial-score" id="overallScoreRadial">
+                                <svg viewBox="0 0 100 100">
+                                    <circle class="radial-bg" cx="50" cy="50" r="45"/>
+                                    <circle class="radial-progress" cx="50" cy="50" r="45" id="radialProgress"/>
+                                </svg>
+                                <div class="radial-value">
+                                    <span class="score-number" id="overallScoreValue">--</span>
+                                    <span class="score-max">/5</span>
+                                </div>
+                            </div>
+                            <h3 class="score-card-title">Overall Score</h3>
+                            <p class="score-headline" id="scoreHeadline">Analyzing performance...</p>
+                        </div>
+                        
+                        <!-- Competencies List -->
+                        <div class="score-card competencies-card">
+                            <h3 class="score-card-title">Competency Breakdown</h3>
+                            <div class="competencies-list" id="competenciesList">
+                                <div class="competency-skeleton"></div>
+                                <div class="competency-skeleton"></div>
+                                <div class="competency-skeleton"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Quick Stats -->
+                        <div class="score-card stats-card">
+                            <h3 class="score-card-title">Quick Insights</h3>
+                            <div class="quick-stats">
+                                <div class="stat-item">
+                                    <div class="stat-icon strength">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+                                        </svg>
+                                    </div>
+                                    <div class="stat-content">
+                                        <span class="stat-label">Top Strength</span>
+                                        <span class="stat-value" id="topStrength">Loading...</span>
+                                    </div>
+                                </div>
+                                <div class="stat-item">
+                                    <div class="stat-icon improvement">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <circle cx="12" cy="12" r="10"/>
+                                            <line x1="12" y1="8" x2="12" y2="16"/>
+                                            <line x1="8" y1="12" x2="16" y2="12"/>
+                                        </svg>
+                                    </div>
+                                    <div class="stat-content">
+                                        <span class="stat-label">Focus Area</span>
+                                        <span class="stat-value" id="topImprovement">Loading...</span>
+                                    </div>
+                                </div>
+                                <div class="stat-row">
+                                    <div class="mini-stat">
+                                        <span class="mini-stat-value" id="fillerCount">--</span>
+                                        <span class="mini-stat-label">Filler Words</span>
+                                    </div>
+                                    <div class="mini-stat">
+                                        <span class="mini-stat-value" id="structureScore">--</span>
+                                        <span class="mini-stat-label">Structure</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Feedback loading state -->
                 <div class="feedback-loading" id="feedbackLoading" style="display: none;">
                     <div class="feedback-spinner"></div>
@@ -84,14 +156,16 @@
         
         var filename = '{{ filename }}';
         var feedbackGenerated = false;
+        var scoresLoaded = false;
         var loadingPhaseInterval = null;
+        var cachedScores = null;
         
         var loadingPhases = [
-            "Gathering candidate profile...",
-            "Reviewing job requirements...",
-            "Processing conversation flow...",
-            "Evaluating response quality...",
-            "Synthesizing insights..."
+            "Extracting competency scores...",
+            "Analyzing answer structure...",
+            "Identifying strengths...",
+            "Finding improvement areas...",
+            "Generating practice plan..."
         ];
         var currentPhaseIndex = 0;
         
@@ -106,7 +180,16 @@
             feedbackLoading: document.getElementById('feedbackLoading'),
             feedbackContent: document.getElementById('feedbackContent'),
             feedbackPlaceholder: document.getElementById('feedbackPlaceholder'),
-            loadingPhase: document.getElementById('loadingPhase')
+            loadingPhase: document.getElementById('loadingPhase'),
+            scoresDashboard: document.getElementById('scoresDashboard'),
+            overallScoreValue: document.getElementById('overallScoreValue'),
+            radialProgress: document.getElementById('radialProgress'),
+            scoreHeadline: document.getElementById('scoreHeadline'),
+            competenciesList: document.getElementById('competenciesList'),
+            topStrength: document.getElementById('topStrength'),
+            topImprovement: document.getElementById('topImprovement'),
+            fillerCount: document.getElementById('fillerCount'),
+            structureScore: document.getElementById('structureScore')
         };
         
         document.addEventListener('DOMContentLoaded', init);
@@ -122,7 +205,7 @@
             loadingPhaseInterval = setInterval(function() {
                 currentPhaseIndex = (currentPhaseIndex + 1) % loadingPhases.length;
                 updateLoadingPhase();
-            }, 4000);
+            }, 3000);
         }
         
         function updateLoadingPhase() {
@@ -133,7 +216,6 @@
                     elements.loadingPhase.classList.remove('phase-fade');
                 }, 300);
             }
-            // Update dots
             var dots = document.querySelectorAll('.phase-dot');
             dots.forEach(function(dot, i) {
                 dot.classList.toggle('active', i === currentPhaseIndex);
@@ -151,20 +233,15 @@
         function loadInterview() {
             fetch('/api/interview/' + encodeURIComponent(filename))
                 .then(function(response) {
-                    if (!response.ok) {
-                        throw new Error('Interview not found');
-                    }
+                    if (!response.ok) throw new Error('Interview not found');
                     return response.json();
                 })
                 .then(function(data) {
                     elements.loadingState.style.display = 'none';
-                    
                     if (data.error) {
-                        // Interview not found - show option to go to past-calls
                         showInterviewNotFound();
                         return;
                     }
-                    
                     renderInterview(data);
                 })
                 .catch(function(err) {
@@ -180,22 +257,15 @@
                     '<p style="margin-bottom: 1rem;">Interview transcript not found or still being saved.</p>' +
                     '<p style="margin-bottom: 1rem; font-size: 0.875rem; opacity: 0.8;">The transcript may take a moment to save after the interview ends.</p>' +
                     '<div style="display: flex; gap: 0.75rem; justify-content: center;">' +
-                        '<button onclick="location.reload()" class="btn-retry" style="padding: 0.5rem 1rem;">Retry</button>' +
-                        '<a href="/past-calls" class="btn-retry" style="padding: 0.5rem 1rem; text-decoration: none;">View All Interviews</a>' +
+                        '<button onclick="location.reload()" class="btn-retry">Retry</button>' +
+                        '<a href="/past-calls" class="btn-retry" style="text-decoration: none;">View All Interviews</a>' +
                     '</div>' +
                 '</div>';
             elements.errorState.style.display = 'block';
         }
         
-        function showError(message) {
-            elements.loadingState.style.display = 'none';
-            elements.errorState.textContent = message;
-            elements.errorState.style.display = 'block';
-        }
-        
         function renderInterview(data) {
             elements.mainContent.style.display = 'block';
-            
             var meta = data.meta || {};
             var conversation = data.ordered_conversation || [];
             
@@ -210,23 +280,10 @@
             
             elements.interviewInfo.innerHTML = 
                 '<div class="interview-info-grid">' +
-                    '<div class="info-item">' +
-                        '<span class="info-label">Candidate</span>' +
-                        '<span class="info-value">' + escapeHtml(meta.candidate || 'Unknown') + '</span>' +
-                    '</div>' +
-                    '<div class="info-item">' +
-                        '<span class="info-label">Date</span>' +
-                        '<span class="info-value">' + formatDate(meta.interview_date) + '</span>' +
-                    '</div>' +
-                    '<div class="info-item">' +
-                        '<span class="info-label">Total Turns</span>' +
-                        '<span class="info-value">' + conversation.length + '</span>' +
-                    '</div>' +
-                    (stagesHtml ? 
-                        '<div class="info-item">' +
-                            '<span class="info-label">Stages</span>' +
-                            '<div class="stages-list">' + stagesHtml + '</div>' +
-                        '</div>' : '') +
+                    '<div class="info-item"><span class="info-label">Candidate</span><span class="info-value">' + escapeHtml(meta.candidate || 'Unknown') + '</span></div>' +
+                    '<div class="info-item"><span class="info-label">Date</span><span class="info-value">' + formatDate(meta.interview_date) + '</span></div>' +
+                    '<div class="info-item"><span class="info-label">Total Turns</span><span class="info-value">' + conversation.length + '</span></div>' +
+                    (stagesHtml ? '<div class="info-item"><span class="info-label">Stages</span><div class="stages-list">' + stagesHtml + '</div></div>' : '') +
                 '</div>';
             
             elements.turnCount.textContent = conversation.length + ' turns';
@@ -235,19 +292,11 @@
                 var roleClass = turn.role === 'agent' ? 'agent' : 'candidate';
                 var roleLabel = turn.role === 'agent' ? 'Interviewer' : 'Candidate';
                 var stageTag = turn.stage ? '<span class="turn-stage">' + formatStage(turn.stage) + '</span>' : '';
-                
-                return '<div class="transcript-turn">' +
-                    '<div class="turn-header">' +
-                        '<span class="turn-role ' + roleClass + '">' + roleLabel + '</span>' +
-                        stageTag +
-                    '</div>' +
-                    '<p class="turn-text">' + escapeHtml(turn.text) + '</p>' +
-                '</div>';
+                return '<div class="transcript-turn"><div class="turn-header"><span class="turn-role ' + roleClass + '">' + roleLabel + '</span>' + stageTag + '</div><p class="turn-text">' + escapeHtml(turn.text) + '</p></div>';
             }).join('');
             
             elements.transcriptContent.innerHTML = transcriptHtml || '<p style="color: var(--text-light);">No transcript available.</p>';
             
-            // Auto-generate feedback if requested via URL param
             var urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('request_feedback') === '1' && !feedbackGenerated) {
                 requestFeedback();
@@ -255,11 +304,8 @@
         }
         
         function requestFeedback() {
-            if (feedbackGenerated) {
-                return;
-            }
+            if (feedbackGenerated) return;
             
-            // Show loading state with animated phases
             elements.generateFeedbackBtn.disabled = true;
             elements.generateFeedbackBtn.textContent = 'Generating...';
             elements.feedbackPlaceholder.style.display = 'none';
@@ -267,10 +313,24 @@
             elements.feedbackContent.style.display = 'none';
             startLoadingPhases();
             
-            fetch('/api/feedback', {
+            // Stage 1: Get scores first (fast)
+            fetch('/api/feedback/scores', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ interview_id: filename })
+            })
+            .then(function(response) { return response.json(); })
+            .then(function(data) {
+                if (data.success && data.scores) {
+                    cachedScores = data.scores;
+                    renderScores(data.scores);
+                }
+                // Stage 2: Get full feedback (slower)
+                return fetch('/api/feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ interview_id: filename, scores: cachedScores })
+                });
             })
             .then(function(response) { return response.json(); })
             .then(function(data) {
@@ -293,126 +353,186 @@
             });
         }
         
+        function renderScores(scores) {
+            elements.scoresDashboard.style.display = 'block';
+            scoresLoaded = true;
+            
+            // Animate overall score
+            var overall = scores.overall_score || 3;
+            elements.overallScoreValue.textContent = overall.toFixed(1);
+            
+            // Set radial progress (circumference = 2 * PI * 45 = 283)
+            var circumference = 283;
+            var progress = (overall / 5) * circumference;
+            elements.radialProgress.style.strokeDasharray = circumference;
+            elements.radialProgress.style.strokeDashoffset = circumference - progress;
+            
+            // Set color based on score
+            var color = overall >= 4 ? '#22c55e' : overall >= 3 ? '#f59e0b' : '#ef4444';
+            elements.radialProgress.style.stroke = color;
+            
+            elements.scoreHeadline.textContent = scores.summary_headline || 'Analysis complete';
+            
+            // Render competencies
+            var competenciesHtml = (scores.competencies || []).map(function(comp) {
+                var pct = (comp.score / comp.max_score) * 100;
+                var barColor = comp.score >= 4 ? '#22c55e' : comp.score >= 3 ? '#f59e0b' : '#ef4444';
+                return '<div class="competency-item">' +
+                    '<div class="competency-header">' +
+                        '<span class="competency-name">' + escapeHtml(comp.name) + '</span>' +
+                        '<span class="competency-score">' + comp.score + '/' + comp.max_score + '</span>' +
+                    '</div>' +
+                    '<div class="competency-bar"><div class="competency-fill" style="width: ' + pct + '%; background: ' + barColor + ';"></div></div>' +
+                    '<p class="competency-take">' + escapeHtml(comp.quick_take) + '</p>' +
+                '</div>';
+            }).join('');
+            elements.competenciesList.innerHTML = competenciesHtml || '<p>No competencies available</p>';
+            
+            // Quick stats
+            elements.topStrength.textContent = scores.top_strength || 'N/A';
+            elements.topImprovement.textContent = scores.top_improvement || 'N/A';
+            elements.fillerCount.textContent = scores.filler_word_count || '0';
+            elements.structureScore.textContent = (scores.answer_structure_score || 0) + '/5';
+        }
+        
         function showFeedbackError(message) {
             elements.feedbackContent.style.display = 'block';
             elements.feedbackContent.innerHTML = 
                 '<div class="feedback-error">' +
-                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
-                        '<circle cx="12" cy="12" r="10"/>' +
-                        '<line x1="15" y1="9" x2="9" y2="15"/>' +
-                        '<line x1="9" y1="9" x2="15" y2="15"/>' +
-                    '</svg>' +
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>' +
                     '<p>' + escapeHtml(message) + '</p>' +
                     '<button class="btn-retry" onclick="location.reload()">Retry</button>' +
                 '</div>';
             elements.generateFeedbackBtn.disabled = false;
-            elements.generateFeedbackBtn.innerHTML = 
-                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">' +
-                    '<path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>' +
-                '</svg>' +
-                'Retry Feedback';
+            elements.generateFeedbackBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>Retry Feedback';
         }
         
         function renderFeedback(feedbackText) {
             elements.feedbackContent.style.display = 'block';
             elements.generateFeedbackBtn.style.display = 'none';
             
-            // Convert markdown-like text to HTML
-            var html = formatFeedbackText(feedbackText);
-            
-            elements.feedbackContent.innerHTML = 
-                '<div class="feedback-success">' +
-                    '<div class="feedback-text">' + html + '</div>' +
-                '</div>';
+            var html = parseMarkdown(feedbackText);
+            elements.feedbackContent.innerHTML = '<div class="feedback-success"><div class="feedback-text">' + html + '</div></div>';
         }
         
-        function formatFeedbackText(text) {
+        function parseMarkdown(text) {
             if (!text) return '<p>No feedback available.</p>';
             
-            // Split into sections by numbered headers
-            var lines = text.split('\n');
-            var html = '';
-            var inList = false;
+            var html = text;
+            
+            // Escape HTML first
+            html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            
+            // Headers (## and ###)
+            html = html.replace(/^## (\d+)\. (.+)$/gm, '<h2 class="feedback-h2"><span class="section-num">$1</span>$2</h2>');
+            html = html.replace(/^## (.+)$/gm, '<h2 class="feedback-h2">$1</h2>');
+            html = html.replace(/^### (.+)$/gm, '<h3 class="feedback-h3">$1</h3>');
+            
+            // Bold and italic
+            html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+            
+            // Inline code
+            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+            
+            // Code blocks (```...```)
+            html = html.replace(/```(\w*)\n([\s\S]*?)```/g, function(match, lang, code) {
+                return '<pre class="code-block"><code>' + code.trim() + '</code></pre>';
+            });
+            
+            // Tables (| ... | format)
+            html = html.replace(/(\|.+\|[\r\n]+\|[-:\s|]+\|[\r\n]+((\|.+\|[\r\n]*)+))/g, function(match) {
+                var rows = match.trim().split('\n').filter(function(r) { return r.trim(); });
+                if (rows.length < 2) return match;
+                
+                var tableHtml = '<div class="table-wrapper"><table class="feedback-table">';
+                
+                // Header row
+                var headerCells = rows[0].split('|').filter(function(c) { return c.trim(); });
+                tableHtml += '<thead><tr>';
+                headerCells.forEach(function(cell) {
+                    tableHtml += '<th>' + cell.trim() + '</th>';
+                });
+                tableHtml += '</tr></thead><tbody>';
+                
+                // Skip separator row (index 1), process data rows
+                for (var i = 2; i < rows.length; i++) {
+                    var cells = rows[i].split('|').filter(function(c) { return c.trim(); });
+                    tableHtml += '<tr>';
+                    cells.forEach(function(cell) {
+                        tableHtml += '<td>' + cell.trim() + '</td>';
+                    });
+                    tableHtml += '</tr>';
+                }
+                
+                tableHtml += '</tbody></table></div>';
+                return tableHtml;
+            });
+            
+            // Horizontal rules
+            html = html.replace(/^---+$/gm, '<hr class="feedback-hr">');
+            
+            // Blockquotes (for quoted text)
+            html = html.replace(/^&gt; (.+)$/gm, '<blockquote class="feedback-quote">$1</blockquote>');
+            
+            // Lists (unordered)
+            html = html.replace(/^- (.+)$/gm, '<li class="feedback-li">$1</li>');
+            html = html.replace(/(<li class="feedback-li">.+<\/li>\n?)+/g, '<ul class="feedback-ul">$&</ul>');
+            
+            // Numbered lists
+            html = html.replace(/^\d+\. \[([^\]]+)\] (.+)$/gm, '<li class="feedback-li"><span class="list-tag">$1</span>$2</li>');
+            html = html.replace(/^\d+\. (.+)$/gm, '<li class="feedback-li-num">$1</li>');
+            html = html.replace(/(<li class="feedback-li-num">.+<\/li>\n?)+/g, '<ol class="feedback-ol">$&</ol>');
+            
+            // Paragraphs (wrap remaining text)
+            var lines = html.split('\n');
+            var result = [];
+            var inPara = false;
             
             for (var i = 0; i < lines.length; i++) {
                 var line = lines[i].trim();
-                
                 if (!line) {
-                    if (inList) {
-                        html += '</ul>';
-                        inList = false;
+                    if (inPara) {
+                        result.push('</p>');
+                        inPara = false;
                     }
                     continue;
                 }
                 
-                // Check for section headers (1. 2. 3. etc)
-                var headerMatch = line.match(/^(\d+)\.\s*(.+)$/);
-                if (headerMatch) {
-                    if (inList) {
-                        html += '</ul>';
-                        inList = false;
+                // Skip if already wrapped
+                if (line.match(/^<(h[23]|ul|ol|li|table|div|pre|blockquote|hr)/)) {
+                    if (inPara) {
+                        result.push('</p>');
+                        inPara = false;
                     }
-                    html += '<h3 class="feedback-section-title">' + escapeHtml(headerMatch[2]) + '</h3>';
+                    result.push(line);
                     continue;
                 }
                 
-                // Check for bullet points
-                if (line.startsWith('-') || line.startsWith('*') || line.startsWith('•')) {
-                    if (!inList) {
-                        html += '<ul class="feedback-list">';
-                        inList = true;
-                    }
-                    var bulletContent = line.substring(1).trim();
-                    // Bold text between ** **
-                    bulletContent = bulletContent.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-                    html += '<li>' + escapeHtml(bulletContent).replace(/&lt;strong&gt;/g, '<strong>').replace(/&lt;\/strong&gt;/g, '</strong>') + '</li>';
-                    continue;
+                if (!inPara) {
+                    result.push('<p class="feedback-p">');
+                    inPara = true;
                 }
-                
-                // Regular paragraph
-                if (inList) {
-                    html += '</ul>';
-                    inList = false;
-                }
-                
-                // Bold text between ** **
-                var formattedLine = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-                html += '<p>' + escapeHtml(formattedLine).replace(/&lt;strong&gt;/g, '<strong>').replace(/&lt;\/strong&gt;/g, '</strong>') + '</p>';
+                result.push(line);
             }
             
-            if (inList) {
-                html += '</ul>';
-            }
+            if (inPara) result.push('</p>');
             
-            return html;
+            return result.join('\n');
         }
         
         function formatDate(isoDate) {
             if (!isoDate) return 'Unknown';
             try {
                 var date = new Date(isoDate);
-                return date.toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-            } catch (e) {
-                return isoDate;
-            }
+                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            } catch (e) { return isoDate; }
         }
         
         function formatStage(stage) {
-            if (!stage) return '';
-            var map = {
-                'welcome': 'Welcome',
-                'self_intro': 'Introduction',
-                'past_experience': 'Experience',
-                'company_fit': 'Company Fit',
-                'closing': 'Closing'
-            };
-            return map[stage] || stage;
+            var map = { 'welcome': 'Welcome', 'self_intro': 'Introduction', 'past_experience': 'Experience', 'company_fit': 'Company Fit', 'closing': 'Closing' };
+            return map[stage] || stage || '';
         }
         
         function escapeHtml(text) {
