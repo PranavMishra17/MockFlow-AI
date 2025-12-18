@@ -9,6 +9,7 @@ interview history, and feedback endpoints.
 import os
 import time
 import logging
+import json as json_module
 from pathlib import Path
 from flask import Flask, render_template, request, jsonify, send_from_directory, redirect, url_for
 from flask_cors import CORS
@@ -38,6 +39,9 @@ CORS(app)  # Enable CORS for API endpoints
 LIVEKIT_URL = os.getenv('LIVEKIT_URL')
 LIVEKIT_API_KEY = os.getenv('LIVEKIT_API_KEY')
 LIVEKIT_API_SECRET = os.getenv('LIVEKIT_API_SECRET')
+
+# Feedback storage directory
+FEEDBACK_DIR = Path("feedback")
 
 # Validate configuration
 if not all([LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET]):
@@ -427,8 +431,6 @@ def _load_interview_context(interview_id):
     Returns:
         tuple: (interview_chat, candidate_profile, job_summary, meta, conversation, error)
     """
-    import json as json_module
-    
     # Load and resequence the interview transcript
     resequenced = resequence_interview(interview_id)
     if 'error' in resequenced and resequenced.get('error'):
@@ -470,6 +472,129 @@ def _load_interview_context(interview_id):
     return interview_chat, candidate_profile, job_summary, meta, conversation, None
 
 
+def _get_feedback_filepath(interview_id):
+    """Get the filepath for saved feedback."""
+    # Remove .json extension if present and add _feedback.json
+    base_name = interview_id.replace('.json', '')
+    return FEEDBACK_DIR / f"{base_name}_feedback.json"
+
+
+@app.route('/api/feedback/saved/<interview_id>')
+def get_saved_feedback(interview_id):
+    """
+    Check if feedback already exists for this interview and return it.
+    
+    Args:
+        interview_id: Interview filename
+        
+    Returns:
+        Saved feedback if exists, or 404
+    """
+    try:
+        if '..' in interview_id or '/' in interview_id or '\\' in interview_id:
+            return jsonify({'error': 'Invalid interview_id'}), 400
+            
+        feedback_path = _get_feedback_filepath(interview_id)
+        
+        if not feedback_path.exists():
+            return jsonify({'success': False, 'message': 'No saved feedback'}), 404
+            
+        with open(feedback_path, 'r', encoding='utf-8') as f:
+            saved_data = json_module.load(f)
+            
+        logger.info(f"[API] Loaded saved feedback for: {interview_id}")
+        
+        return jsonify({
+            'success': True,
+            'interview_id': interview_id,
+            'feedback': saved_data.get('feedback'),
+            'scores': saved_data.get('scores'),
+            'generated_at': saved_data.get('generated_at'),
+            'meta': saved_data.get('meta')
+        })
+        
+    except Exception as e:
+        logger.error(f"[API] Get saved feedback error: {e}", exc_info=True)
+        return jsonify({
+            'error': 'Failed to load saved feedback',
+            'message': str(e)
+        }), 500
+
+
+@app.route('/api/feedback/save', methods=['POST'])
+def save_feedback():
+    """
+    Save generated feedback for an interview.
+    
+    Expected JSON body:
+        - interview_id: Interview filename
+        - feedback: The generated feedback text
+        - scores: The structured scores data
+        
+    Returns:
+        Success status
+    """
+    try:
+        data = request.json or {}
+        interview_id = data.get('interview_id')
+        feedback = data.get('feedback')
+        scores = data.get('scores')
+        
+        if not interview_id:
+            return jsonify({
+                'error': 'Missing interview_id'
+            }), 400
+            
+        if not feedback:
+            return jsonify({
+                'error': 'Missing feedback'
+            }), 400
+            
+        if '..' in interview_id or '/' in interview_id or '\\' in interview_id:
+            return jsonify({'error': 'Invalid interview_id'}), 400
+        
+        # Ensure feedback directory exists
+        FEEDBACK_DIR.mkdir(exist_ok=True)
+        
+        # Get interview metadata for context
+        resequenced = resequence_interview(interview_id)
+        meta = resequenced.get('meta', {})
+        
+        # Build save data
+        save_data = {
+            'interview_id': interview_id,
+            'feedback': feedback,
+            'scores': scores,
+            'generated_at': time.time(),
+            'meta': {
+                'candidate': meta.get('candidate'),
+                'interview_date': meta.get('interview_date'),
+                'job_role': meta.get('job_role'),
+                'experience_level': meta.get('experience_level')
+            }
+        }
+        
+        feedback_path = _get_feedback_filepath(interview_id)
+        
+        with open(feedback_path, 'w', encoding='utf-8') as f:
+            json_module.dump(save_data, f, indent=2, ensure_ascii=False)
+            
+        logger.info(f"[API] Saved feedback for: {interview_id} -> {feedback_path}")
+        
+        return jsonify({
+            'success': True,
+            'message': 'Feedback saved successfully',
+            'filepath': str(feedback_path)
+        })
+        
+    except Exception as e:
+        logger.error(f"[API] Save feedback error: {e}", exc_info=True)
+        return jsonify({
+            'error': 'Failed to save feedback',
+            'message': str(e)
+        }), 500
+
+
 @app.route('/api/feedback/scores', methods=['POST'])
 def generate_feedback_scores():
     """
@@ -484,7 +609,6 @@ def generate_feedback_scores():
     Returns:
         Structured scores with competencies, overall score, and headline.
     """
-    import json as json_module
     from openai import OpenAI
     from prompts import FEEDBACKSCORES
     
@@ -601,7 +725,6 @@ def generate_feedback():
     Returns:
         Structured feedback with strengths, improvements, and practice plan.
     """
-    import json as json_module
     from openai import OpenAI
     from prompts import build_post_interview_feedback_prompt
     
@@ -792,8 +915,9 @@ if __name__ == '__main__':
     logger.info("[MAIN] Starting Flask web server")
     logger.info("[MAIN] Access the application at http://localhost:5000")
 
-    # Ensure interviews directory exists
+    # Ensure directories exist
     os.makedirs("interviews", exist_ok=True)
+    os.makedirs("feedback", exist_ok=True)
 
     # Run Flask app
     app.run(

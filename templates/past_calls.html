@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Past Interviews - MockFlow-AI</title>
+    <title>Interview History - MockFlow-AI</title>
     <link rel="icon" href="/favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,31 +12,65 @@
     <link rel="stylesheet" href="/static/past_calls.css">
 </head>
 <body>
-    <div class="past-calls-page">
-        <div class="page-header">
-            <h1>Past Interviews</h1>
-            <a href="/start" class="back-link">
+    <header class="app-header">
+        <a href="/" class="header-brand">
+            <img src="/static/icon.png" alt="MockFlow-AI" class="header-logo">
+            <span class="header-title">MockFlow<span class="header-title-accent">.ai</span></span>
+        </a>
+        <nav class="header-nav">
+            <a href="/start" class="header-link header-link-primary">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M19 12H5M12 19l-7-7 7-7"/>
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
                 </svg>
                 New Interview
             </a>
+        </nav>
+    </header>
+
+    <div class="history-page">
+        <div class="page-hero">
+            <h1>Your Sessions</h1>
+            <p>Review past interviews, analyze performance, and track your progress over time.</p>
         </div>
 
-        <div class="error-state" id="errorState" style="display: none;"></div>
+        <div class="error-banner" id="errorState" style="display: none;"></div>
         
         <div class="loading-state" id="loadingState">
-            Loading interviews...
+            <div class="loading-spinner"></div>
+            <p>Loading your interviews...</p>
         </div>
 
-        <div class="interviews-list" id="interviewsList" style="display: none;"></div>
+        <div class="interviews-grid" id="interviewsList" style="display: none;"></div>
 
         <div class="empty-state" id="emptyState" style="display: none;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>
-            </svg>
-            <h3>No interviews yet</h3>
-            <p>Complete your first mock interview to see it here.</p>
+            <div class="empty-illustration">
+                <svg viewBox="0 0 120 120" fill="none">
+                    <circle cx="60" cy="60" r="50" stroke="var(--border)" stroke-width="2" stroke-dasharray="8 4"/>
+                    <circle cx="60" cy="60" r="30" fill="var(--surface-2)"/>
+                    <path d="M50 55h20M50 65h12" stroke="var(--text-light)" stroke-width="2" stroke-linecap="round"/>
+                    <circle cx="60" cy="45" r="8" fill="var(--primary)" opacity="0.2"/>
+                    <circle cx="60" cy="45" r="4" fill="var(--primary)"/>
+                </svg>
+            </div>
+            <h2>No interviews yet</h2>
+            <p>Complete your first mock interview to see your history here. Each session helps you improve.</p>
+            <a href="/start" class="btn-start-first">Start Your First Interview</a>
+        </div>
+
+        <div class="stats-summary" id="statsSummary" style="display: none;">
+            <div class="stat-card">
+                <span class="stat-value" id="totalInterviews">0</span>
+                <span class="stat-label">Total Sessions</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="thisMonth">0</span>
+                <span class="stat-label">This Month</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="avgMessages">0</span>
+                <span class="stat-label">Avg. Messages</span>
+            </div>
         </div>
     </div>
 
@@ -48,7 +82,11 @@
             loadingState: document.getElementById('loadingState'),
             emptyState: document.getElementById('emptyState'),
             errorState: document.getElementById('errorState'),
-            interviewsList: document.getElementById('interviewsList')
+            interviewsList: document.getElementById('interviewsList'),
+            statsSummary: document.getElementById('statsSummary'),
+            totalInterviews: document.getElementById('totalInterviews'),
+            thisMonth: document.getElementById('thisMonth'),
+            avgMessages: document.getElementById('avgMessages')
         };
         
         document.addEventListener('DOMContentLoaded', loadInterviews);
@@ -56,116 +94,114 @@
         function loadInterviews() {
             fetch('/api/interviews')
                 .then(function(response) {
-                    if (!response.ok) {
-                        throw new Error('Failed to load interviews');
-                    }
+                    if (!response.ok) throw new Error('Failed to load interviews');
                     return response.json();
                 })
                 .then(function(data) {
                     elements.loadingState.style.display = 'none';
                     
                     if (!data.interviews || data.interviews.length === 0) {
-                        elements.emptyState.style.display = 'block';
+                        elements.emptyState.style.display = 'flex';
                         return;
                     }
                     
                     renderInterviews(data.interviews);
+                    renderStats(data.interviews);
                 })
                 .catch(function(err) {
-                    console.error('[PAST_CALLS] Load error:', err);
+                    console.error('[HISTORY] Load error:', err);
                     elements.loadingState.style.display = 'none';
-                    elements.errorState.textContent = 'Failed to load interviews: ' + err.message;
+                    elements.errorState.textContent = 'Unable to load interviews. Please try again.';
                     elements.errorState.style.display = 'block';
                 });
         }
         
-        function renderInterviews(interviews) {
-            elements.interviewsList.style.display = 'flex';
+        function renderStats(interviews) {
+            elements.statsSummary.style.display = 'flex';
             
-            var html = interviews.map(function(interview) {
+            var total = interviews.length;
+            var now = new Date();
+            var thisMonth = interviews.filter(function(i) {
+                if (!i.interview_date) return false;
+                var d = new Date(i.interview_date);
+                return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+            }).length;
+            
+            var totalMsgs = interviews.reduce(function(sum, i) {
+                var mc = i.message_count || {};
+                return sum + (mc.agent || 0) + (mc.user || 0);
+            }, 0);
+            var avgMsgs = total > 0 ? Math.round(totalMsgs / total) : 0;
+            
+            elements.totalInterviews.textContent = total;
+            elements.thisMonth.textContent = thisMonth;
+            elements.avgMessages.textContent = avgMsgs;
+        }
+        
+        function renderInterviews(interviews) {
+            elements.interviewsList.style.display = 'grid';
+            
+            var html = interviews.map(function(interview, idx) {
                 var date = interview.interview_date ? formatDate(interview.interview_date) : 'Unknown date';
+                var relativeDate = interview.interview_date ? getRelativeTime(interview.interview_date) : '';
                 var messageCount = interview.message_count || {};
                 var totalMessages = (messageCount.agent || 0) + (messageCount.user || 0);
                 
-                // Build tags for role, level, stages
-                var tagsHtml = '';
-                if (interview.job_role) {
-                    tagsHtml += '<span class="interview-tag role">' + escapeHtml(interview.job_role) + '</span>';
-                }
-                if (interview.experience_level) {
-                    tagsHtml += '<span class="interview-tag level">' + formatLevel(interview.experience_level) + '</span>';
-                }
-                if (interview.ended_by === 'user_disconnect') {
-                    tagsHtml += '<span class="interview-tag ended-early">Ended Early</span>';
-                }
+                var stageProgress = getStageProgress(interview.stages_covered || []);
+                var completionStatus = interview.ended_by === 'natural_completion' ? 'completed' : 'partial';
                 
-                // Build stages pills
-                var stagesHtml = '';
-                if (interview.stages_covered && interview.stages_covered.length) {
-                    stagesHtml = interview.stages_covered
-                        .filter(function(s) { return s; })
-                        .map(function(s) {
-                            return '<span class="stage-pill">' + formatStage(s) + '</span>';
-                        }).join('');
-                }
-                
-                return '<div class="interview-card">' +
-                    '<div class="interview-header">' +
-                        '<div class="interview-header-left">' +
-                            '<span class="interview-name">' + escapeHtml(interview.candidate || 'Unknown') + '</span>' +
-                            (tagsHtml ? '<div class="interview-tags">' + tagsHtml + '</div>' : '') +
+                return '<article class="interview-card" style="animation-delay: ' + (idx * 0.05) + 's">' +
+                    '<div class="card-top">' +
+                        '<div class="card-info">' +
+                            '<h3 class="card-name">' + escapeHtml(interview.candidate || 'Unknown') + '</h3>' +
+                            '<time class="card-date" datetime="' + (interview.interview_date || '') + '">' + relativeDate + '</time>' +
                         '</div>' +
-                        '<span class="interview-date">' + date + '</span>' +
+                        '<div class="card-badge ' + completionStatus + '">' + 
+                            (completionStatus === 'completed' ? 'Completed' : 'Partial') +
+                        '</div>' +
                     '</div>' +
-                    (stagesHtml ? '<div class="interview-stages">' + stagesHtml + '</div>' : '') +
-                    '<div class="interview-meta">' +
-                        '<span class="interview-meta-item">' +
+                    (interview.job_role ? '<p class="card-role">' + escapeHtml(interview.job_role) + '</p>' : '') +
+                    '<div class="card-progress">' +
+                        '<div class="progress-bar"><div class="progress-fill" style="width: ' + stageProgress + '%"></div></div>' +
+                        '<span class="progress-label">' + stageProgress + '% complete</span>' +
+                    '</div>' +
+                    '<div class="card-stats">' +
+                        '<span class="stat-item">' +
                             '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>' +
-                            totalMessages + ' messages' +
+                            totalMessages +
                         '</span>' +
-                        '<span class="interview-meta-item">' +
-                            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>' +
-                            formatFileSize(interview.file_size || 0) +
-                        '</span>' +
-                        (interview.has_resume ? '<span class="interview-meta-item has-file"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/></svg>Resume</span>' : '') +
+                        (interview.experience_level ? '<span class="stat-item level-' + interview.experience_level + '">' + formatLevel(interview.experience_level) + '</span>' : '') +
                     '</div>' +
-                    '<div class="interview-actions">' +
-                        '<button class="action-btn-sm btn-view" onclick="viewTranscript(\'' + escapeHtml(interview.filename) + '\')">' +
-                            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8m8 4H8m2-8H8"/></svg>' +
-                            'View Transcript' +
+                    '<div class="card-actions">' +
+                        '<button class="action-btn view" onclick="viewInterview(\'' + escapeHtml(interview.filename) + '\')" title="View details">' +
+                            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' +
                         '</button>' +
-                        '<button class="action-btn-sm btn-feedback" onclick="requestFeedback(\'' + escapeHtml(interview.filename) + '\')">' +
-                            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>' +
-                            'Get Feedback' +
+                        '<button class="action-btn feedback" onclick="getFeedback(\'' + escapeHtml(interview.filename) + '\')" title="Get AI feedback">' +
+                            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>' +
                         '</button>' +
                     '</div>' +
-                '</div>';
+                '</article>';
             }).join('');
             
             elements.interviewsList.innerHTML = html;
         }
         
+        function getStageProgress(stages) {
+            var allStages = ['welcome', 'self_intro', 'past_experience', 'company_fit', 'closing'];
+            var completed = stages.filter(function(s) { return s && allStages.indexOf(s) !== -1; }).length;
+            return Math.round((completed / allStages.length) * 100);
+        }
+        
         function formatLevel(level) {
             var levels = { 
-                'entry': 'Entry Level', 
-                'junior': 'Junior',
-                'mid': 'Mid Level', 
-                'senior': 'Senior',
+                'entry': 'Entry', 
+                'junior': 'Jr',
+                'mid': 'Mid', 
+                'senior': 'Sr',
                 'lead': 'Lead',
                 'staff': 'Staff'
             };
             return levels[level] || level;
-        }
-        
-        function formatStage(stage) {
-            var stages = {
-                'welcome': 'Welcome',
-                'self_intro': 'Intro',
-                'past_experience': 'Experience',
-                'company_fit': 'Fit',
-                'closing': 'Closing'
-            };
-            return stages[stage] || stage;
         }
         
         function formatDate(isoDate) {
@@ -174,19 +210,28 @@
                 return date.toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
+                    year: 'numeric'
                 });
             } catch (e) {
                 return isoDate;
             }
         }
         
-        function formatFileSize(bytes) {
-            if (bytes < 1024) return bytes + ' B';
-            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        function getRelativeTime(isoDate) {
+            try {
+                var date = new Date(isoDate);
+                var now = new Date();
+                var diff = now - date;
+                var days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                
+                if (days === 0) return 'Today';
+                if (days === 1) return 'Yesterday';
+                if (days < 7) return days + ' days ago';
+                if (days < 30) return Math.floor(days / 7) + 'w ago';
+                return formatDate(isoDate);
+            } catch (e) {
+                return '';
+            }
         }
         
         function escapeHtml(text) {
@@ -196,11 +241,11 @@
             return div.innerHTML;
         }
         
-        window.viewTranscript = function(filename) {
+        window.viewInterview = function(filename) {
             window.location.href = '/feedback/' + encodeURIComponent(filename);
         };
         
-        window.requestFeedback = function(filename) {
+        window.getFeedback = function(filename) {
             window.location.href = '/feedback/' + encodeURIComponent(filename) + '?request_feedback=1';
         };
     })();
