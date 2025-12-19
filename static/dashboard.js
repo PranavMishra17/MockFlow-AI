@@ -30,7 +30,7 @@ async function loadApiKeysStatus() {
     const statusDiv = document.getElementById('apiKeysStatus');
 
     try {
-        const response = await fetch('/api/user/api-keys/status');
+        const response = await fetch('/api/user/keys/status');
         const data = await response.json();
 
         if (data.has_keys) {
@@ -42,7 +42,7 @@ async function loadApiKeysStatus() {
                     </svg>
                     <div>
                         <p style="font-weight: 500; margin-bottom: 0.25rem;">API Keys Configured</p>
-                        <p style="color: var(--text-muted); font-size: 0.8125rem;">OpenAI and Deepgram keys are set</p>
+                        <p style="color: var(--text-muted); font-size: 0.8125rem;">All required keys are set</p>
                     </div>
                 </div>
             `;
@@ -56,77 +56,18 @@ async function loadApiKeysStatus() {
                     </svg>
                     <div>
                         <p style="font-weight: 500; margin-bottom: 0.25rem;">API Keys Not Set</p>
-                        <p style="color: var(--text-muted); font-size: 0.8125rem;">Add your keys to start interviewing</p>
+                        <p style="color: var(--text-muted); font-size: 0.8125rem;">Configure your keys to start interviewing</p>
                     </div>
                 </div>
             `;
         }
     } catch (error) {
-        console.error('Failed to load API keys status:', error);
+        console.error('[DASHBOARD] Failed to load API keys status:', error);
         statusDiv.innerHTML = `
             <p style="color: var(--error); font-size: 0.875rem;">Failed to load API keys status</p>
         `;
     }
 }
-
-function openApiKeysModal() {
-    document.getElementById('apiKeysModal').style.display = 'flex';
-}
-
-function closeApiKeysModal() {
-    document.getElementById('apiKeysModal').style.display = 'none';
-}
-
-// Handle API Keys form submission
-document.getElementById('apiKeysForm')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const openaiKey = document.getElementById('openaiKey').value;
-    const deepgramKey = document.getElementById('deepgramKey').value;
-
-    if (!openaiKey || !deepgramKey) {
-        alert('Please provide both API keys');
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/user/api-keys', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                openai_key: openaiKey,
-                deepgram_key: deepgramKey
-            })
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            alert('API keys saved successfully!');
-            closeApiKeysModal();
-            await loadApiKeysStatus();
-
-            // Clear form
-            document.getElementById('openaiKey').value = '';
-            document.getElementById('deepgramKey').value = '';
-        } else {
-            alert('Failed to save API keys: ' + (data.message || 'Unknown error'));
-        }
-    } catch (error) {
-        console.error('Failed to save API keys:', error);
-        alert('Failed to save API keys. Please try again.');
-    }
-});
-
-// Close modal when clicking outside
-window.addEventListener('click', (e) => {
-    const modal = document.getElementById('apiKeysModal');
-    if (e.target === modal) {
-        closeApiKeysModal();
-    }
-});
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', initDashboard);

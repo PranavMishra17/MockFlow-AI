@@ -65,18 +65,35 @@ class SupabaseClient:
             logger.error(f"Error creating user: {e}")
             return None
 
-    def save_api_keys(self, user_id: str, openai_key: str, deepgram_key: str) -> bool:
-        """Save encrypted API keys for user"""
+    def save_api_keys(self, user_id: str, livekit_url: str, livekit_api_key: str,
+                      livekit_api_secret: str, openai_key: str, deepgram_key: str) -> bool:
+        """Save or update encrypted API keys for user"""
         try:
+            encrypted_livekit_url = self._encrypt(livekit_url)
+            encrypted_livekit_key = self._encrypt(livekit_api_key)
+            encrypted_livekit_secret = self._encrypt(livekit_api_secret)
             encrypted_openai = self._encrypt(openai_key)
             encrypted_deepgram = self._encrypt(deepgram_key)
 
-            response = self.client.table('user_api_keys').upsert({
+            # Check if keys exist
+            existing = self.client.table('user_api_keys').select('id').eq('user_id', user_id).execute()
+
+            data = {
                 'user_id': user_id,
+                'livekit_url_encrypted': encrypted_livekit_url,
+                'livekit_key_encrypted': encrypted_livekit_key,
+                'livekit_secret_encrypted': encrypted_livekit_secret,
                 'openai_key_encrypted': encrypted_openai,
                 'deepgram_key_encrypted': encrypted_deepgram,
                 'encryption_salt': 'salt_v1'
-            }).execute()
+            }
+
+            if existing.data:
+                # Update existing
+                self.client.table('user_api_keys').update(data).eq('user_id', user_id).execute()
+            else:
+                # Insert new
+                self.client.table('user_api_keys').insert(data).execute()
 
             return True
         except Exception as e:
@@ -93,6 +110,9 @@ class SupabaseClient:
 
             keys = response.data[0]
             return {
+                'livekit_url': self._decrypt(keys['livekit_url_encrypted']),
+                'livekit_api_key': self._decrypt(keys['livekit_key_encrypted']),
+                'livekit_api_secret': self._decrypt(keys['livekit_secret_encrypted']),
                 'openai_key': self._decrypt(keys['openai_key_encrypted']),
                 'deepgram_key': self._decrypt(keys['deepgram_key_encrypted'])
             }

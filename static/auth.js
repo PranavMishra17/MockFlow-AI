@@ -11,6 +11,15 @@ async function checkAuthStatus() {
     }
 }
 
+async function requireAuth() {
+    const authData = await checkAuthStatus();
+    if (!authData.authenticated) {
+        window.location.href = '/auth/login';
+        throw new Error('Not authenticated');
+    }
+    return authData;
+}
+
 async function logout() {
     try {
         window.location.href = '/auth/logout';

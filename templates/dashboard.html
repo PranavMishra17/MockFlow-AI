@@ -60,16 +60,14 @@
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
                     <div>
                         <h3 style="margin-bottom: 0.5rem;">API Keys</h3>
-                        <p style="color: var(--text-muted); font-size: 0.875rem;">Manage your OpenAI and Deepgram API keys for interviews</p>
+                        <p style="color: var(--text-muted); font-size: 0.875rem;">Manage your API keys for interviews (BYOK)</p>
                     </div>
-                    <button onclick="openApiKeysModal()" class="btn-primary">
+                    <a href="/api-keys" class="btn-primary" style="text-decoration: none;">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem;">
-                            <circle cx="12" cy="12" r="10"></circle>
-                            <line x1="12" y1="8" x2="12" y2="16"></line>
-                            <line x1="8" y1="12" x2="16" y2="12"></line>
+                            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
                         </svg>
                         Manage Keys
-                    </button>
+                    </a>
                 </div>
 
                 <div id="apiKeysStatus" style="padding: 1rem; background: var(--bg-warm); border-radius: 8px;">
@@ -88,38 +86,6 @@
                     <h4 style="margin-bottom: 0.5rem;">Interview History</h4>
                     <p style="color: var(--text-muted); font-size: 0.875rem;">Review past interviews and feedback</p>
                 </a>
-            </div>
-        </div>
-    </div>
-
-    <!-- API Keys Modal (Refactored from Settings) -->
-    <div id="apiKeysModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>API Key Configuration</h2>
-                <button class="modal-close" onclick="closeApiKeysModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.9375rem;">
-                    Enter your API keys to enable AI-powered interviews. Your keys are encrypted and stored securely.
-                </p>
-
-                <form id="apiKeysForm">
-                    <div class="form-group">
-                        <label for="openaiKey">OpenAI API Key</label>
-                        <input type="password" id="openaiKey" placeholder="sk-...">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="deepgramKey">Deepgram API Key</label>
-                        <input type="password" id="deepgramKey" placeholder="...">
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="button" onclick="closeApiKeysModal()" class="btn-secondary">Cancel</button>
-                        <button type="submit" class="btn-primary">Save Keys</button>
-                    </div>
-                </form>
             </div>
         </div>
     </div>

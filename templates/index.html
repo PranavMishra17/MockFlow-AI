@@ -148,73 +148,101 @@
         <p>MockFlow-AI - Practice makes confidence</p>
     </footer>
 
-    <!-- Settings Modal -->
+    <!-- Settings Modal (shows account info for authenticated, API keys for guest) -->
     <div id="settingsModal" class="modal-overlay">
         <div class="modal-container">
             <div class="modal-header">
-                <h2 class="modal-title">API <span class="highlight">Settings</span></h2>
+                <h2 class="modal-title" id="settingsModalTitle">Settings</h2>
                 <button class="modal-close" aria-label="Close">×</button>
             </div>
             <div class="modal-content">
-                <div class="error-message" id="settingsError"></div>
-                <div class="success-message" id="settingsSuccess"></div>
-
-                <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
-                    Configure your API keys to use MockFlow-AI. Your keys are stored securely in your browser and never sent to our servers.
-                </p>
-
-                <div class="form-group">
-                    <label class="form-label">LiveKit URL <span class="required">*</span></label>
-                    <input type="text" id="livekitUrl" class="form-input" placeholder="wss://your-project.livekit.cloud">
-                    <p class="form-help">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                            <polyline points="15 3 21 3 21 9"/>
-                            <line x1="10" y1="14" x2="21" y2="3"/>
-                        </svg>
-                        <a href="https://cloud.livekit.io/" target="_blank">Get from LiveKit Cloud</a>
+                <!-- Authenticated User View -->
+                <div id="authenticatedSettingsView" style="display: none;">
+                    <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
+                        You are logged in. Manage your account and API keys from your dashboard.
                     </p>
+
+                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                        <a href="/dashboard" class="modal-btn" style="text-decoration: none; text-align: center; display: block;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
+                                <rect x="3" y="3" width="7" height="7"></rect>
+                                <rect x="14" y="3" width="7" height="7"></rect>
+                                <rect x="14" y="14" width="7" height="7"></rect>
+                                <rect x="3" y="14" width="7" height="7"></rect>
+                            </svg>
+                            Go to Dashboard
+                        </a>
+                        <a href="/api-keys" class="modal-btn modal-btn-secondary" style="text-decoration: none; text-align: center; display: block;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: inline-block; vertical-align: middle; margin-right: 0.5rem;">
+                                <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+                            </svg>
+                            Manage API Keys
+                        </a>
+                    </div>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">LiveKit API Key <span class="required">*</span></label>
-                    <input type="text" id="livekitApiKey" class="form-input" placeholder="APIxxxxxxxxxx">
-                    <p class="form-help">Find in LiveKit Dashboard → API Keys</p>
-                </div>
+                <!-- Guest User View (API Keys Form) -->
+                <div id="guestSettingsView">
+                    <div class="error-message" id="settingsError"></div>
+                    <div class="success-message" id="settingsSuccess"></div>
 
-                <div class="form-group">
-                    <label class="form-label">LiveKit API Secret <span class="required">*</span></label>
-                    <input type="password" id="livekitApiSecret" class="form-input" placeholder="••••••••••••••••">
-                    <p class="form-help">Find in LiveKit Dashboard → API Keys</p>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">OpenAI API Key <span class="required">*</span></label>
-                    <input type="password" id="openaiApiKey" class="form-input" placeholder="sk-••••••••••••••••">
-                    <p class="form-help">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                            <polyline points="15 3 21 3 21 9"/>
-                            <line x1="10" y1="14" x2="21" y2="3"/>
-                        </svg>
-                        <a href="https://platform.openai.com/api-keys" target="_blank">Get from OpenAI</a>
+                    <p style="font-size: 0.875rem; color: var(--text-secondary); margin-bottom: 1.5rem;">
+                        Configure your API keys to use MockFlow-AI. Your keys are stored securely in your browser and never sent to our servers.
                     </p>
-                </div>
 
-                <div class="form-group">
-                    <label class="form-label">Deepgram API Key <span class="required">*</span></label>
-                    <input type="password" id="deepgramApiKey" class="form-input" placeholder="••••••••••••••••">
-                    <p class="form-help">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                            <polyline points="15 3 21 3 21 9"/>
-                            <line x1="10" y1="14" x2="21" y2="3"/>
-                        </svg>
-                        <a href="https://console.deepgram.com/" target="_blank">Get from Deepgram</a>
-                    </p>
+                    <div class="form-group">
+                        <label class="form-label">LiveKit URL <span class="required">*</span></label>
+                        <input type="text" id="livekitUrl" class="form-input" placeholder="wss://your-project.livekit.cloud">
+                        <p class="form-help">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                                <polyline points="15 3 21 3 21 9"/>
+                                <line x1="10" y1="14" x2="21" y2="3"/>
+                            </svg>
+                            <a href="https://cloud.livekit.io/" target="_blank">Get from LiveKit Cloud</a>
+                        </p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">LiveKit API Key <span class="required">*</span></label>
+                        <input type="text" id="livekitApiKey" class="form-input" placeholder="APIxxxxxxxxxx">
+                        <p class="form-help">Find in LiveKit Dashboard → API Keys</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">LiveKit API Secret <span class="required">*</span></label>
+                        <input type="password" id="livekitApiSecret" class="form-input" placeholder="••••••••••••••••">
+                        <p class="form-help">Find in LiveKit Dashboard → API Keys</p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">OpenAI API Key <span class="required">*</span></label>
+                        <input type="password" id="openaiApiKey" class="form-input" placeholder="sk-••••••••••••••••">
+                        <p class="form-help">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                                <polyline points="15 3 21 3 21 9"/>
+                                <line x1="10" y1="14" x2="21" y2="3"/>
+                            </svg>
+                            <a href="https://platform.openai.com/api-keys" target="_blank">Get from OpenAI</a>
+                        </p>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Deepgram API Key <span class="required">*</span></label>
+                        <input type="password" id="deepgramApiKey" class="form-input" placeholder="••••••••••••••••">
+                        <p class="form-help">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                                <polyline points="15 3 21 3 21 9"/>
+                                <line x1="10" y1="14" x2="21" y2="3"/>
+                            </svg>
+                            <a href="https://console.deepgram.com/" target="_blank">Get from Deepgram</a>
+                        </p>
+                    </div>
                 </div>
             </div>
-            <div class="modal-footer">
+            <div class="modal-footer" id="guestSettingsFooter">
                 <button id="settingsClear" class="modal-btn modal-btn-danger">Clear All</button>
                 <button id="settingsCancel" class="modal-btn modal-btn-secondary">Cancel</button>
                 <button id="settingsSave" class="modal-btn">Save Keys</button>

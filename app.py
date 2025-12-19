@@ -152,63 +152,93 @@ def auth_status():
 
 # ==================== USER API KEYS ENDPOINTS ====================
 
-@app.route('/api/user/api-keys/status')
+@app.route('/api/user/keys/status')
 @require_auth
-def get_api_keys_status():
+def get_keys_status():
     """Check if user has API keys configured"""
     try:
         user_id = get_user_id()
         keys = supabase_client.get_api_keys(user_id)
 
-        return jsonify({
-            'success': True,
-            'has_keys': keys is not None
-        })
+        if keys:
+            return jsonify({
+                'has_keys': True,
+                'livekit_url_masked': f"wss://{keys['livekit_url'].split('//')[1][:15]}...",
+                'livekit_key_masked': f"{keys['livekit_api_key'][:8]}...",
+                'openai_masked': f"sk-...{keys['openai_key'][-4:]}",
+                'deepgram_masked': f"...{keys['deepgram_key'][-4:]}"
+            })
+
+        return jsonify({'has_keys': False})
     except Exception as e:
-        logger.error(f"[API] Get API keys status error: {e}", exc_info=True)
-        return jsonify({
-            'error': 'Failed to check API keys status',
-            'message': str(e)
-        }), 500
+        logger.error(f"[API] Failed to get keys status: {e}", exc_info=True)
+        return jsonify({'has_keys': False})
 
 
-@app.route('/api/user/api-keys', methods=['POST'])
+@app.route('/api/user/keys', methods=['POST'])
 @require_auth
-def save_api_keys():
+def save_user_keys():
     """Save user's API keys (encrypted)"""
     try:
         user_id = get_user_id()
         data = request.json or {}
 
+        livekit_url = data.get('livekit_url')
+        livekit_api_key = data.get('livekit_api_key')
+        livekit_api_secret = data.get('livekit_api_secret')
         openai_key = data.get('openai_key')
         deepgram_key = data.get('deepgram_key')
 
-        if not openai_key or not deepgram_key:
-            return jsonify({
-                'error': 'Missing API keys',
-                'message': 'Please provide both OpenAI and Deepgram API keys'
-            }), 400
+        if not all([livekit_url, livekit_api_key, livekit_api_secret, openai_key, deepgram_key]):
+            return jsonify({'error': 'All API keys required'}), 400
 
-        success = supabase_client.save_api_keys(user_id, openai_key, deepgram_key)
+        success = supabase_client.save_api_keys(
+            user_id, livekit_url, livekit_api_key, livekit_api_secret,
+            openai_key, deepgram_key
+        )
 
         if success:
             logger.info(f"[API] API keys saved for user: {user_id}")
-            return jsonify({
-                'success': True,
-                'message': 'API keys saved successfully'
-            })
-        else:
-            return jsonify({
-                'error': 'Failed to save API keys',
-                'message': 'Could not save keys to database'
-            }), 500
+            return jsonify({'success': True, 'message': 'Keys saved successfully'})
+
+        return jsonify({'error': 'Failed to save keys'}), 500
 
     except Exception as e:
-        logger.error(f"[API] Save API keys error: {e}", exc_info=True)
-        return jsonify({
-            'error': 'Failed to save API keys',
-            'message': str(e)
-        }), 500
+        logger.error(f"[API] Failed to save keys: {e}", exc_info=True)
+        return jsonify({'error': 'Internal error'}), 500
+
+
+@app.route('/api/user/keys/validate', methods=['POST'])
+@require_auth
+def validate_keys():
+    """Test API keys validity"""
+    try:
+        data = request.json or {}
+        livekit_url = data.get('livekit_url')
+        livekit_api_key = data.get('livekit_api_key')
+        livekit_api_secret = data.get('livekit_api_secret')
+        openai_key = data.get('openai_key')
+        deepgram_key = data.get('deepgram_key')
+
+        if not livekit_url or not (livekit_url.startswith('wss://') or livekit_url.startswith('ws://')):
+            return jsonify({'valid': False, 'message': 'Invalid LiveKit URL format'})
+
+        if not livekit_api_key or len(livekit_api_key) < 5:
+            return jsonify({'valid': False, 'message': 'Invalid LiveKit API Key'})
+
+        if not livekit_api_secret or len(livekit_api_secret) < 10:
+            return jsonify({'valid': False, 'message': 'Invalid LiveKit API Secret'})
+
+        if not openai_key or not openai_key.startswith('sk-'):
+            return jsonify({'valid': False, 'message': 'Invalid OpenAI key format'})
+
+        if not deepgram_key or len(deepgram_key) < 10:
+            return jsonify({'valid': False, 'message': 'Invalid Deepgram key format'})
+
+        return jsonify({'valid': True})
+    except Exception as e:
+        logger.error(f"[API] Key validation failed: {e}", exc_info=True)
+        return jsonify({'valid': False, 'message': 'Validation error'}), 500
 
 
 # ==================== STATIC FILES ====================
@@ -240,6 +270,14 @@ def dashboard():
     """User dashboard (protected)."""
     logger.info("[ROUTE] /dashboard - Dashboard accessed")
     return render_template('dashboard.html')
+
+
+@app.route('/api-keys')
+@require_auth
+def api_keys_page():
+    """API keys management page (protected)."""
+    logger.info("[ROUTE] /api-keys - API keys page accessed")
+    return render_template('api_keys.html')
 
 
 @app.route('/start')

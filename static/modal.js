@@ -7,11 +7,43 @@
 
     // Settings Modal
     window.SettingsModal = {
-        open: function() {
+        open: async function() {
             var modal = document.getElementById('settingsModal');
             if (modal) {
+                // Check if user is authenticated
+                var isAuth = await this.checkAuthentication();
+                this.toggleView(isAuth);
                 modal.classList.add('visible');
-                this.loadSavedKeys();
+
+                if (!isAuth) {
+                    this.loadSavedKeys();
+                }
+            }
+        },
+
+        checkAuthentication: async function() {
+            try {
+                var response = await fetch('/api/auth/status');
+                var data = await response.json();
+                return data.authenticated || false;
+            } catch (e) {
+                return false;
+            }
+        },
+
+        toggleView: function(isAuthenticated) {
+            var authView = document.getElementById('authenticatedSettingsView');
+            var guestView = document.getElementById('guestSettingsView');
+            var footer = document.getElementById('guestSettingsFooter');
+
+            if (isAuthenticated) {
+                if (authView) authView.style.display = 'block';
+                if (guestView) guestView.style.display = 'none';
+                if (footer) footer.style.display = 'none';
+            } else {
+                if (authView) authView.style.display = 'none';
+                if (guestView) guestView.style.display = 'block';
+                if (footer) footer.style.display = 'flex';
             }
         },
 
