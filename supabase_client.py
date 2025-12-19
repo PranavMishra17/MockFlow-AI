@@ -42,6 +42,29 @@ class SupabaseClient:
             logger.error(f"Error fetching user: {e}")
             return None
 
+    def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        """Get user by email"""
+        try:
+            response = self.client.table('users').select('*').eq('email', email).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            logger.error(f"Error fetching user by email: {e}")
+            return None
+
+    def create_user(self, email: str, name: str, google_id: str, picture_url: str = '') -> Optional[str]:
+        """Create new user and return user ID"""
+        try:
+            response = self.client.table('users').insert({
+                'email': email,
+                'name': name,
+                'google_id': google_id,
+                'picture_url': picture_url
+            }).execute()
+            return response.data[0]['id'] if response.data else None
+        except Exception as e:
+            logger.error(f"Error creating user: {e}")
+            return None
+
     def save_api_keys(self, user_id: str, openai_key: str, deepgram_key: str) -> bool:
         """Save encrypted API keys for user"""
         try:

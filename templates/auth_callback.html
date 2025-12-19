@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authenticating - MockFlow.ai</title>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: #FAF8F5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .auth-loading {
+            text-align: center;
+        }
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid rgba(129, 199, 132, 0.2);
+            border-top-color: #81C784;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1.5rem;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        h2 {
+            color: #1A1A1A;
+            margin-bottom: 0.5rem;
+        }
+        p {
+            color: #7A7A7A;
+            font-size: 0.9375rem;
+        }
+        .error {
+            color: #E53935;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-loading">
+        <div class="spinner"></div>
+        <h2>Completing Sign In...</h2>
+        <p id="status">Processing authentication</p>
+        <p id="error" class="error" style="display: none;"></p>
+    </div>
+
+    <script>
+        (async function() {
+            try {
+                // Extract tokens from URL fragment (#access_token=...)
+                const fragment = window.location.hash.substring(1); // Remove #
+                const params = new URLSearchParams(fragment);
+
+                const accessToken = params.get('access_token');
+                const refreshToken = params.get('refresh_token');
+                const expiresIn = params.get('expires_in');
+
+                console.log('Auth callback - Has access_token:', !!accessToken);
+                console.log('Auth callback - Has refresh_token:', !!refreshToken);
+                console.log('Auth callback - Expires in:', expiresIn);
+
+                if (!accessToken) {
+                    throw new Error('No access token received from authentication provider');
+                }
+
+                // Send tokens to backend to set session
+                document.getElementById('status').textContent = 'Saving session...';
+
+                const response = await fetch('/auth/session', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        access_token: accessToken,
+                        refresh_token: refreshToken
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('status').textContent = 'Success! Redirecting...';
+                    // Redirect to dashboard
+                    window.location.href = data.redirect || '/dashboard';
+                } else {
+                    throw new Error(data.error || 'Failed to set session');
+                }
+            } catch (error) {
+                console.error('Auth callback error:', error);
+                document.getElementById('status').style.display = 'none';
+                document.querySelector('.spinner').style.display = 'none';
+                const errorEl = document.getElementById('error');
+                errorEl.textContent = `Authentication failed: ${error.message}`;
+                errorEl.style.display = 'block';
+
+                // Redirect to home after 3 seconds
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 3000);
+            }
+        })();
+    </script>
+</body>
+</html>

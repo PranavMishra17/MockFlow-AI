@@ -1819,3 +1819,95 @@ footer a:hover {
         height: 1.125rem;
     }
 }
+/* ==================== AUTH HEADER ==================== */
+
+.auth-header {
+    position: fixed;
+    top: var(--spacing-lg);
+    left: var(--spacing-lg);
+    display: flex;
+    gap: var(--spacing-sm);
+    z-index: 999;
+}
+
+.auth-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    background: var(--bg-card);
+    border: 1px solid rgba(26, 26, 26, 0.1);
+    border-radius: 8px;
+    color: var(--text-primary);
+    text-decoration: none;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.auth-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    border-color: rgba(26, 26, 26, 0.2);
+}
+
+.auth-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+.signup-btn {
+    background: var(--text-primary);
+    color: var(--bg-cream);
+    border-color: var(--text-primary);
+}
+
+.signup-btn:hover {
+    background: #2A2A2A;
+}
+
+.account-btn {
+    font-weight: 600;
+}
+
+@media (max-width: 768px) {
+    .auth-header {
+        top: var(--spacing-sm);
+        left: var(--spacing-sm);
+        gap: 0.5rem;
+    }
+
+    .auth-btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+    }
+}
+
+/* Auth Avatar in Header */
+.auth-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(26, 26, 26, 0.1);
+}
+
+.auth-avatar-placeholder {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #81C784, #4CAF50);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.account-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+}
