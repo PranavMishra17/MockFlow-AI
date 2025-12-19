@@ -1,21 +1,50 @@
-MIT License
+Source-Available Open Use License (SAOUL)
+Version 1.0
 
 Copyright (c) 2025 Pranav Mishra
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+All rights reserved.
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+This software is source-available but not open source as defined by the Open Source Initiative.
+Permission is granted to view, run, and modify this software for personal, educational,
+and non-commercial purposes only, subject to the conditions below.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+1. Permitted Use
+You may:
+- View and study the source code.
+- Run the software for personal or internal use.
+- Modify the source code for your own use.
+
+2. Redistribution
+You may redistribute this software or modified versions of it ONLY if:
+- The complete source code is made available.
+- The redistributed work is licensed under this same license.
+- Proper credit is given to the original author.
+
+3. Attribution
+Any use, redistribution, or derivative work must include clear attribution to:
+  "Pranav Mishra"  
+and a link to the original repository.
+
+4. No Closed-Source or Proprietary Use
+You may NOT:
+- Distribute this software or derivatives in closed-source form.
+- Use this software as part of any proprietary or commercial product.
+- Sell, sublicense, or monetize this software or derivatives without
+  explicit written permission from the author.
+
+5. No Trademark Rights
+This license does not grant permission to use the author's name, branding,
+or project name for promotion without prior written consent.
+
+6. Disclaimer
+THIS SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY ARISING FROM THE USE OF THIS SOFTWARE.
+
+7. Termination
+Any violation of this license automatically terminates your rights under it.
+
+For commercial licensing or other permissions, contact:
+pranavgamedev.17@gmail.com
