@@ -10,6 +10,7 @@
 7. CLEAN CODE STRUCTURE - Follow project organization
 8. TEXT READABILITY - All UI text must be readable with high contrast
 9. LOAD ENV VARIABLES LOCALLY - always use local .env file at root to laod any variable
+10. NO TESTTING or COMMITS required from your end - USER will do so, NOT YOU
 
 ## WARNING
 

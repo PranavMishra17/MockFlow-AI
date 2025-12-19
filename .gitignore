@@ -183,3 +183,9 @@ cython_debug/
 .cursorignore
 .cursorindexingignore
 PITCH_SCRIPTS.md
+
+.env.development
+.env.production
+.env
+*.env.local
+supabase/.env

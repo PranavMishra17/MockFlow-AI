@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 from document_processor import doc_processor, DocumentMetadata
 from postprocess import resequence_interview, list_interviews, get_interview_summary
 from conversation_cache import conversation_cache, ConversationMetadata
+from supabase_client import supabase_client
 
 # In-memory feedback cache
 feedback_cache = {}
@@ -32,7 +33,7 @@ logging.basicConfig(
     format='[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S'
 )
-logger = logging.getLogger("flask-app")
+logger = logging.getLogger(__name__)
 
 # Create Flask app
 app = Flask(__name__)
