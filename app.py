@@ -9,7 +9,6 @@ interview history, and feedback endpoints.
 import os
 import time
 import logging
-import json as json_module
 from pathlib import Path
 from flask import Flask, render_template, request, jsonify, send_from_directory, redirect, url_for
 from flask_cors import CORS
@@ -18,6 +17,10 @@ from dotenv import load_dotenv
 
 from document_processor import doc_processor, DocumentMetadata
 from postprocess import resequence_interview, list_interviews, get_interview_summary
+from conversation_cache import conversation_cache, ConversationMetadata
+
+# In-memory feedback cache
+feedback_cache = {}
 
 # Load environment variables from .env file in project root
 env_path = Path(__file__).parent / '.env'
@@ -39,9 +42,6 @@ CORS(app)  # Enable CORS for API endpoints
 LIVEKIT_URL = os.getenv('LIVEKIT_URL')
 LIVEKIT_API_KEY = os.getenv('LIVEKIT_API_KEY')
 LIVEKIT_API_SECRET = os.getenv('LIVEKIT_API_SECRET')
-
-# Feedback storage directory
-FEEDBACK_DIR = Path("feedback")
 
 # Validate configuration
 if not all([LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET]):
@@ -335,6 +335,103 @@ def upload_resume():
         }), 500
 
 
+# ==================== CONVERSATION CACHE API ====================
+
+@app.route('/api/conversation/cache', methods=['POST'])
+def cache_conversation():
+    """
+    Cache a conversation from the agent.
+    
+    Expected JSON body:
+    {
+        "conversation": {"agent": [...], "user": [...]},
+        "candidate_name": "John Doe",
+        "room_name": "interview-john-1234",
+        "job_role": "Software Engineer",
+        "experience_level": "mid",
+        "final_stage": "closing",
+        "ended_by": "natural_completion",
+        "skipped_stages": []
+    }
+    
+    Returns:
+        - cache_key: Key to retrieve conversation
+    """
+    try:
+        data = request.json or {}
+        
+        conversation = data.get('conversation', {})
+        if not conversation:
+            return jsonify({
+                'error': 'No conversation provided',
+                'message': 'Please provide conversation data'
+            }), 400
+        
+        # Create metadata
+        from datetime import datetime
+        metadata = ConversationMetadata(
+            candidate_name=data.get('candidate_name', 'Unknown'),
+            interview_date=datetime.now().isoformat(),
+            room_name=data.get('room_name', ''),
+            job_role=data.get('job_role', ''),
+            experience_level=data.get('experience_level', ''),
+            final_stage=data.get('final_stage', ''),
+            ended_by=data.get('ended_by', 'unknown'),
+            skipped_stages=data.get('skipped_stages', []),
+            has_resume=data.get('has_resume', False),
+            has_jd=data.get('has_jd', False)
+        )
+        
+        # Cache the conversation
+        cache_key = conversation_cache.cache_conversation(conversation, metadata)
+        
+        if not cache_key:
+            return jsonify({
+                'error': 'Cache failed',
+                'message': 'Failed to cache conversation'
+            }), 500
+        
+        logger.info(f"[API] Conversation cached: {cache_key}")
+        
+        return jsonify({
+            'success': True,
+            'cache_key': cache_key,
+            'message': 'Conversation cached successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"[API] Cache conversation error: {e}", exc_info=True)
+        return jsonify({
+            'error': 'Cache failed',
+            'message': str(e)
+        }), 500
+
+
+@app.route('/api/conversation/<cache_key>')
+def get_cached_conversation(cache_key):
+    """Get a cached conversation by key."""
+    try:
+        conversation = conversation_cache.get_conversation(cache_key)
+        
+        if not conversation:
+            return jsonify({
+                'error': 'Conversation not found',
+                'message': f'No conversation found with key: {cache_key}'
+            }), 404
+        
+        return jsonify({
+            'success': True,
+            'conversation': conversation
+        })
+        
+    except Exception as e:
+        logger.error(f"[API] Get conversation error: {e}", exc_info=True)
+        return jsonify({
+            'error': 'Failed to get conversation',
+            'message': str(e)
+        }), 500
+
+
 # ==================== INTERVIEW HISTORY API ====================
 
 @app.route('/api/interviews')
@@ -342,7 +439,7 @@ def get_interviews():
     """
     List all saved interview files.
     
-    Returns list of interview metadata.
+    Returns list of interview metadata from both cache and files.
     """
     try:
         interviews = list_interviews()
@@ -366,7 +463,7 @@ def get_interview(filename):
     Get re-sequenced interview transcript.
     
     Args:
-        filename: Interview JSON filename
+        filename: Interview JSON filename or cache key
         
     Returns:
         Re-sequenced conversation with metadata.
@@ -424,6 +521,45 @@ def get_interview_summary_api(filename):
 
 # ==================== FEEDBACK API ====================
 
+# Feedback cache for storing generated feedback
+_feedback_cache = {}
+
+
+@app.route('/api/feedback/cached/<interview_id>')
+def get_cached_feedback(interview_id):
+    """
+    Get cached feedback for an interview if available.
+    
+    Args:
+        interview_id: Interview filename or cache key
+        
+    Returns:
+        Cached feedback or 404 if not found.
+    """
+    try:
+        if interview_id in _feedback_cache:
+            cached = _feedback_cache[interview_id]
+            logger.info(f"[API] Returning cached feedback for: {interview_id}")
+            return jsonify({
+                'success': True,
+                'interview_id': interview_id,
+                'feedback': cached.get('feedback'),
+                'cached_at': cached.get('cached_at'),
+                'from_cache': True
+            })
+        
+        return jsonify({
+            'error': 'No cached feedback',
+            'message': f'No cached feedback found for: {interview_id}'
+        }), 404
+        
+    except Exception as e:
+        logger.error(f"[API] Get cached feedback error: {e}", exc_info=True)
+        return jsonify({
+            'error': 'Failed to get cached feedback',
+            'message': str(e)
+        }), 500
+
 def _load_interview_context(interview_id):
     """
     Helper to load interview transcript and context for feedback generation.
@@ -431,6 +567,8 @@ def _load_interview_context(interview_id):
     Returns:
         tuple: (interview_chat, candidate_profile, job_summary, meta, conversation, error)
     """
+    import json as json_module
+    
     # Load and resequence the interview transcript
     resequenced = resequence_interview(interview_id)
     if 'error' in resequenced and resequenced.get('error'):
@@ -452,147 +590,31 @@ def _load_interview_context(interview_id):
     
     interview_chat = "\n\n".join(transcript_lines)
     
-    # Load raw interview data for additional context
-    interview_path = Path("interviews") / interview_id
+    # Build candidate profile and job summary from metadata
     candidate_profile = f"Name: {meta.get('candidate', 'Unknown')}"
     job_summary = "Role: Not specified"
     
-    try:
-        with open(interview_path, 'r', encoding='utf-8') as f:
-            raw_data = json_module.load(f)
-            
-        # Extract additional context if available
-        if raw_data.get('job_role'):
-            job_summary = f"Role: {raw_data.get('job_role', 'Not specified')}"
-        if raw_data.get('experience_level'):
-            candidate_profile += f"\nExperience Level: {raw_data.get('experience_level', 'Not specified')}"
-    except Exception as e:
-        logger.warning(f"[API] Could not load raw interview data: {e}")
+    # Try to get additional context
+    if meta.get('job_role'):
+        job_summary = f"Role: {meta.get('job_role', 'Not specified')}"
+    if meta.get('experience_level'):
+        candidate_profile += f"\nExperience Level: {meta.get('experience_level', 'Not specified')}"
+    
+    # If source is file, try to load raw data for more context
+    if meta.get('source') == 'file':
+        try:
+            interview_path = Path("interviews") / interview_id
+            with open(interview_path, 'r', encoding='utf-8') as f:
+                raw_data = json_module.load(f)
+                
+            if raw_data.get('job_role'):
+                job_summary = f"Role: {raw_data.get('job_role', 'Not specified')}"
+            if raw_data.get('experience_level'):
+                candidate_profile = f"Name: {meta.get('candidate', 'Unknown')}\nExperience Level: {raw_data.get('experience_level', 'Not specified')}"
+        except Exception as e:
+            logger.warning(f"[API] Could not load raw interview data: {e}")
     
     return interview_chat, candidate_profile, job_summary, meta, conversation, None
-
-
-def _get_feedback_filepath(interview_id):
-    """Get the filepath for saved feedback."""
-    # Remove .json extension if present and add _feedback.json
-    base_name = interview_id.replace('.json', '')
-    return FEEDBACK_DIR / f"{base_name}_feedback.json"
-
-
-@app.route('/api/feedback/saved/<interview_id>')
-def get_saved_feedback(interview_id):
-    """
-    Check if feedback already exists for this interview and return it.
-    
-    Args:
-        interview_id: Interview filename
-        
-    Returns:
-        Saved feedback if exists, or 404
-    """
-    try:
-        if '..' in interview_id or '/' in interview_id or '\\' in interview_id:
-            return jsonify({'error': 'Invalid interview_id'}), 400
-            
-        feedback_path = _get_feedback_filepath(interview_id)
-        
-        if not feedback_path.exists():
-            return jsonify({'success': False, 'message': 'No saved feedback'}), 404
-            
-        with open(feedback_path, 'r', encoding='utf-8') as f:
-            saved_data = json_module.load(f)
-            
-        logger.info(f"[API] Loaded saved feedback for: {interview_id}")
-        
-        return jsonify({
-            'success': True,
-            'interview_id': interview_id,
-            'feedback': saved_data.get('feedback'),
-            'scores': saved_data.get('scores'),
-            'generated_at': saved_data.get('generated_at'),
-            'meta': saved_data.get('meta')
-        })
-        
-    except Exception as e:
-        logger.error(f"[API] Get saved feedback error: {e}", exc_info=True)
-        return jsonify({
-            'error': 'Failed to load saved feedback',
-            'message': str(e)
-        }), 500
-
-
-@app.route('/api/feedback/save', methods=['POST'])
-def save_feedback():
-    """
-    Save generated feedback for an interview.
-    
-    Expected JSON body:
-        - interview_id: Interview filename
-        - feedback: The generated feedback text
-        - scores: The structured scores data
-        
-    Returns:
-        Success status
-    """
-    try:
-        data = request.json or {}
-        interview_id = data.get('interview_id')
-        feedback = data.get('feedback')
-        scores = data.get('scores')
-        
-        if not interview_id:
-            return jsonify({
-                'error': 'Missing interview_id'
-            }), 400
-            
-        if not feedback:
-            return jsonify({
-                'error': 'Missing feedback'
-            }), 400
-            
-        if '..' in interview_id or '/' in interview_id or '\\' in interview_id:
-            return jsonify({'error': 'Invalid interview_id'}), 400
-        
-        # Ensure feedback directory exists
-        FEEDBACK_DIR.mkdir(exist_ok=True)
-        
-        # Get interview metadata for context
-        resequenced = resequence_interview(interview_id)
-        meta = resequenced.get('meta', {})
-        
-        # Build save data
-        save_data = {
-            'interview_id': interview_id,
-            'feedback': feedback,
-            'scores': scores,
-            'generated_at': time.time(),
-            'meta': {
-                'candidate': meta.get('candidate'),
-                'interview_date': meta.get('interview_date'),
-                'job_role': meta.get('job_role'),
-                'experience_level': meta.get('experience_level')
-            }
-        }
-        
-        feedback_path = _get_feedback_filepath(interview_id)
-        
-        with open(feedback_path, 'w', encoding='utf-8') as f:
-            json_module.dump(save_data, f, indent=2, ensure_ascii=False)
-            
-        logger.info(f"[API] Saved feedback for: {interview_id} -> {feedback_path}")
-        
-        return jsonify({
-            'success': True,
-            'message': 'Feedback saved successfully',
-            'filepath': str(feedback_path)
-        })
-        
-    except Exception as e:
-        logger.error(f"[API] Save feedback error: {e}", exc_info=True)
-        return jsonify({
-            'error': 'Failed to save feedback',
-            'message': str(e)
-        }), 500
 
 
 @app.route('/api/feedback/scores', methods=['POST'])
@@ -609,6 +631,7 @@ def generate_feedback_scores():
     Returns:
         Structured scores with competencies, overall score, and headline.
     """
+    import json as json_module
     from openai import OpenAI
     from prompts import FEEDBACKSCORES
     
@@ -725,6 +748,7 @@ def generate_feedback():
     Returns:
         Structured feedback with strengths, improvements, and practice plan.
     """
+    import json as json_module
     from openai import OpenAI
     from prompts import build_post_interview_feedback_prompt
     
@@ -790,7 +814,15 @@ Provide your analysis and feedback following the output format specified."""
         
         feedback_text = response.choices[0].message.content
         
-        logger.info(f"[API] Feedback generated successfully for {interview_id}")
+        # Cache the feedback for future retrieval
+        import time as time_module
+        _feedback_cache[interview_id] = {
+            'feedback': feedback_text,
+            'cached_at': time_module.time(),
+            'model': 'gpt-4o-mini'
+        }
+        
+        logger.info(f"[API] Feedback generated and cached for {interview_id}")
         
         response_data = {
             'success': True,
@@ -891,7 +923,8 @@ def health_check():
         'status': 'healthy',
         'service': 'MockFlow-AI',
         'livekit_configured': bool(LIVEKIT_URL and LIVEKIT_API_KEY),
-        'cache_stats': doc_processor.get_cache_stats()
+        'document_cache_stats': doc_processor.get_cache_stats(),
+        'conversation_cache_stats': conversation_cache.get_cache_stats()
     })
 
 
@@ -915,9 +948,8 @@ if __name__ == '__main__':
     logger.info("[MAIN] Starting Flask web server")
     logger.info("[MAIN] Access the application at http://localhost:5000")
 
-    # Ensure directories exist
+    # Ensure interviews directory exists
     os.makedirs("interviews", exist_ok=True)
-    os.makedirs("feedback", exist_ok=True)
 
     # Run Flask app
     app.run(

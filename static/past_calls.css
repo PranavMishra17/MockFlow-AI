@@ -1,477 +1,258 @@
-/* ==================== HEADER ==================== */
-.app-header {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 60px;
-    background: var(--surface);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 1.5rem;
-    z-index: 100;
-}
+/* ==================== PAST CALLS PAGE ==================== */
+/* Inherits variables from styles.css */
 
-.header-brand {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    text-decoration: none;
-}
-
-.header-logo {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-}
-
-.header-title {
-    font-size: 1.125rem;
-    font-weight: 700;
-    color: var(--text);
-}
-
-.header-title-accent {
-    color: var(--primary);
-}
-
-.header-nav {
-    display: flex;
-    align-items: center;
-}
-
-.header-link {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--text-light);
-    text-decoration: none;
-    transition: color 0.2s;
-}
-
-.header-link-primary {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    background: var(--primary);
-    color: white;
-    border-radius: 0.5rem;
-    transition: all 0.2s;
-}
-
-.header-link-primary:hover {
-    background: var(--primary-hover);
-    transform: translateY(-1px);
-}
-
-.header-link-primary svg {
-    width: 14px;
-    height: 14px;
-}
-
-/* ==================== PAGE LAYOUT ==================== */
-.history-page {
+.past-calls-page {
     min-height: 100vh;
-    padding: 60px 1.5rem 2rem;
-    max-width: 1200px;
+    padding: 2rem;
+    padding-top: 4rem; /* Space for header buttons */
+    max-width: 1100px;
     margin: 0 auto;
+    background: var(--bg-cream);
+    overflow-y: auto;
 }
 
-/* ==================== PAGE HERO ==================== */
-.page-hero {
-    text-align: center;
-    padding: 3rem 1rem 2rem;
-}
-
-.page-hero h1 {
-    font-size: 2rem;
-    font-weight: 800;
-    color: var(--text);
-    margin: 0 0 0.5rem 0;
-}
-
-.page-hero p {
-    font-size: 1rem;
-    color: var(--text-light);
-    margin: 0;
-    max-width: 500px;
-    margin: 0 auto;
-}
-
-/* ==================== STATS SUMMARY ==================== */
-.stats-summary {
+.page-header {
     display: flex;
-    gap: 1rem;
+    align-items: center;
     justify-content: center;
     margin-bottom: 2rem;
-    padding: 0 1rem;
 }
 
-.stat-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 0.75rem;
-    padding: 1rem 1.5rem;
-    text-align: center;
-    min-width: 120px;
-}
-
-.stat-value {
+.page-header h1 {
     font-size: 1.75rem;
-    font-weight: 700;
-    color: var(--text);
-    display: block;
-    line-height: 1.2;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
 }
 
-.stat-label {
-    font-size: 0.6875rem;
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--text-light);
-}
-
-/* ==================== INTERVIEWS GRID ==================== */
+/* ==================== 2-COLUMN GRID ==================== */
 .interviews-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-    gap: 1rem;
-    padding: 0 0.5rem;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.25rem;
 }
 
-/* ==================== INTERVIEW CARD ==================== */
-.interview-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 0.75rem;
-    padding: 1.25rem;
-    transition: all 0.2s ease;
-    animation: cardFadeIn 0.4s ease forwards;
-    opacity: 0;
-}
-
-@keyframes cardFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.interview-card:hover {
-    border-color: rgba(99, 102, 241, 0.3);
-    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.1);
-}
-
-.card-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 0.5rem;
-}
-
-.card-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.card-name {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--text);
-    margin: 0 0 0.25rem 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.card-date {
-    font-size: 0.75rem;
-    color: var(--text-light);
-}
-
-.card-badge {
-    font-size: 0.625rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.25rem;
-    flex-shrink: 0;
-}
-
-.card-badge.completed {
-    background: rgba(34, 197, 94, 0.1);
-    color: #22c55e;
-}
-
-.card-badge.partial {
-    background: rgba(245, 158, 11, 0.1);
-    color: #f59e0b;
-}
-
-.card-role {
-    font-size: 0.8125rem;
-    color: var(--text-light);
-    margin: 0 0 0.75rem 0;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* ==================== PROGRESS BAR ==================== */
-.card-progress {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
-}
-
-.progress-bar {
-    flex: 1;
-    height: 4px;
-    background: var(--border);
-    border-radius: 2px;
-    overflow: hidden;
-}
-
-.progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, var(--primary), #8b5cf6);
-    border-radius: 2px;
-    transition: width 0.5s ease;
-}
-
-.progress-label {
-    font-size: 0.6875rem;
-    font-weight: 500;
-    color: var(--text-light);
-    flex-shrink: 0;
-}
-
-/* ==================== CARD STATS ==================== */
-.card-stats {
-    display: flex;
-    gap: 0.75rem;
-    margin-bottom: 1rem;
-}
-
-.stat-item {
-    display: flex;
-    align-items: center;
-    gap: 0.375rem;
-    font-size: 0.75rem;
-    color: var(--text-light);
-}
-
-.stat-item svg {
-    width: 14px;
-    height: 14px;
-    opacity: 0.7;
-}
-
-.stat-item.level-entry { color: #64748b; }
-.stat-item.level-junior { color: #22c55e; }
-.stat-item.level-mid { color: #3b82f6; }
-.stat-item.level-senior { color: #8b5cf6; }
-.stat-item.level-lead { color: #f59e0b; }
-.stat-item.level-staff { color: #ef4444; }
-
-/* ==================== CARD ACTIONS ==================== */
-.card-actions {
-    display: flex;
-    gap: 0.5rem;
-}
-
-.action-btn {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.375rem;
-    padding: 0.625rem;
-    font-size: 0.8125rem;
-    font-weight: 500;
-    border-radius: 0.5rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border: 1px solid var(--border);
-    background: var(--surface);
-    color: var(--text);
-}
-
-.action-btn svg {
-    width: 16px;
-    height: 16px;
-}
-
-.action-btn.view:hover {
-    background: var(--surface-2);
-    border-color: var(--primary);
-    color: var(--primary);
-}
-
-.action-btn.feedback {
-    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 183, 0, 0.1));
-    border-color: rgba(255, 183, 0, 0.3);
-    color: #b8860b;
-}
-
-.action-btn.feedback:hover {
-    background: linear-gradient(135deg, rgba(255, 215, 0, 0.2), rgba(255, 183, 0, 0.2));
-    border-color: rgba(255, 183, 0, 0.5);
-    transform: translateY(-1px);
-}
-
-/* ==================== EMPTY STATE ==================== */
-.empty-state {
-    display: none;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    padding: 4rem 2rem;
-    min-height: 50vh;
-}
-
-.empty-illustration {
-    margin-bottom: 1.5rem;
-}
-
-.empty-illustration svg {
-    width: 120px;
-    height: 120px;
-}
-
-.empty-state h2 {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text);
-    margin: 0 0 0.5rem 0;
-}
-
-.empty-state p {
-    font-size: 0.9375rem;
-    color: var(--text-light);
-    max-width: 350px;
-    line-height: 1.6;
-    margin: 0 0 1.5rem 0;
-}
-
-.btn-start-first {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: white;
-    background: var(--primary);
-    border-radius: 0.5rem;
-    text-decoration: none;
-    transition: all 0.2s ease;
-}
-
-.btn-start-first:hover {
-    background: var(--primary-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-}
-
-/* ==================== LOADING STATE ==================== */
-.loading-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 4rem 2rem;
-    min-height: 40vh;
-}
-
-.loading-spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid var(--border);
-    border-top-color: var(--primary);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-    margin-bottom: 1rem;
-}
-
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-.loading-state p {
-    color: var(--text-light);
-    font-size: 0.9375rem;
-    margin: 0;
-}
-
-/* ==================== ERROR STATE ==================== */
-.error-banner {
-    background: rgba(239, 68, 68, 0.1);
-    border: 1px solid rgba(239, 68, 68, 0.2);
-    border-radius: 0.5rem;
-    padding: 1rem 1.5rem;
-    color: #dc2626;
-    margin-bottom: 1.5rem;
-    text-align: center;
-    font-size: 0.9375rem;
-}
-
-/* ==================== RESPONSIVE ==================== */
 @media (max-width: 768px) {
-    .history-page {
-        padding: 60px 1rem 2rem;
-    }
-    
-    .page-hero {
-        padding: 2rem 0.5rem 1.5rem;
-    }
-    
-    .page-hero h1 {
-        font-size: 1.5rem;
-    }
-    
-    .stats-summary {
-        flex-wrap: wrap;
-    }
-    
-    .stat-card {
-        flex: 1;
-        min-width: 100px;
-    }
-    
     .interviews-grid {
         grid-template-columns: 1fr;
     }
 }
 
-@media (max-width: 480px) {
-    .app-header {
-        padding: 0 1rem;
+/* ==================== CLICKABLE INTERVIEW CARD ==================== */
+.interview-card {
+    position: relative;
+    display: block;
+    text-decoration: none;
+    color: white;
+    background: var(--text-primary);
+    border: 3px solid var(--text-primary);
+    border-radius: var(--radius-md);
+    padding: 1.25rem;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: var(--shadow-medium);
+    overflow: hidden;
+}
+
+.interview-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--accent-green-deep) 0%, var(--accent-cyan) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.interview-card:hover {
+    transform: scale(1.02);
+    box-shadow: var(--shadow-lifted);
+    border-color: var(--accent-green-deep);
+}
+
+.interview-card:hover::before {
+    opacity: 0.2;
+}
+
+.interview-card:active {
+    transform: scale(1.0);
+}
+
+.card-content {
+    position: relative;
+    z-index: 1;
+}
+
+.interview-name {
+    font-size: 1.125rem;
+    font-weight: 800;
+    color: rgba(255, 255, 255, 0.95);
+    margin-bottom: 0.5rem;
+    display: -webkit-box;
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.interview-date {
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.6);
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+}
+
+/* ==================== INTERVIEW TAGS ==================== */
+.interview-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin-bottom: 0.75rem;
+}
+
+.interview-tag {
+    font-size: 0.625rem;
+    padding: 0.1875rem 0.5rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.interview-tag.role {
+    background: rgba(225, 190, 231, 0.3);
+    border-color: rgba(225, 190, 231, 0.5);
+}
+
+.interview-tag.level {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* ==================== STAGES PILLS ==================== */
+.interview-stages {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.stage-pill {
+    font-size: 0.5625rem;
+    padding: 0.125rem 0.375rem;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: rgba(255, 255, 255, 0.8);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    font-weight: 600;
+}
+
+/* ==================== INTERVIEW META ==================== */
+.interview-meta {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.75rem;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.interview-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-weight: 600;
+}
+
+.interview-meta-item svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    opacity: 0.7;
+    stroke: rgba(255, 255, 255, 0.7);
+}
+
+/* Click indicator */
+.card-arrow {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    color: rgba(255, 255, 255, 0.5);
+    stroke: rgba(255, 255, 255, 0.5);
+    opacity: 0.5;
+    transition: all 0.2s;
+}
+
+.interview-card:hover .card-arrow {
+    opacity: 1;
+    color: var(--bg-cream);
+    stroke: var(--bg-cream);
+    transform: translateX(4px);
+}
+
+/* ==================== EMPTY STATE ==================== */
+.empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--text-muted);
+    background: var(--bg-card);
+    border: 3px solid var(--text-primary);
+    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.1);
+}
+
+.empty-state svg {
+    width: 4rem;
+    height: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+/* ==================== LOADING & ERROR STATES ==================== */
+.loading-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-secondary);
+    background: var(--bg-card);
+    border: 3px solid var(--text-primary);
+    font-weight: 600;
+}
+
+.error-state {
+    grid-column: 1 / -1;
+    background: var(--bg-card);
+    border: 3px solid var(--error);
+    padding: 1rem;
+    color: var(--error);
+    margin-bottom: 1rem;
+    font-weight: 600;
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 600px) {
+    .past-calls-page {
+        padding: 1rem;
+        padding-top: 4rem;
     }
     
-    .header-link-primary span {
-        display: none;
+    .page-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
     }
     
-    .header-link-primary {
-        padding: 0.5rem;
-    }
-    
-    .stat-card {
-        padding: 0.75rem 1rem;
-    }
-    
-    .stat-value {
-        font-size: 1.5rem;
+    .header-actions {
+        width: 100%;
+        justify-content: space-between;
     }
 }
