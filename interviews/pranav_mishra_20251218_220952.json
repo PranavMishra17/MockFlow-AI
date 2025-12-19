@@ -1,0 +1,51 @@
+{
+  "candidate": "Pranav Mishra",
+  "interview_date": "2025-12-18T22:09:52.299030",
+  "room_name": "interview-pranav-mishra-1766113673",
+  "job_role": "AI Engineer",
+  "experience_level": "entry",
+  "conversation": {
+    "agent": [
+      {
+        "index": 0,
+        "text": "Hi Pranav Mishra! I'm Alex, and I'll be your interviewer today. Welcome to your mock interview for the AI Engineer position. We'll go through a few stages: first you'll introduce yourself, then we'll discuss your past experience, explore how you might fit with the role, and wrap up. Let's get started! Please go ahead and introduce yourself.",
+        "timestamp": 1766113699.0848424,
+        "stage": "welcome"
+      },
+      {
+        "index": 1,
+        "text": "Hi Pranav Mishra! I'm Alex, and I'll be your interviewer today. Welcome to your mock interview for the AI Engineer position. We'll go through a few stages: first you'll introduce",
+        "timestamp": 1766113709.7468853,
+        "stage": "welcome"
+      },
+      {
+        "index": 2,
+        "text": "Now that we've completed the introduction stage, let's move on to discussing your past experience. Can you share some details about your previous roles and how they relate to the AI Engineer position?",
+        "timestamp": 1766113723.4087825,
+        "stage": "company_fit"
+      },
+      {
+        "index": 3,
+        "text": "Great insights into your experience, Pranav Mishra! Now let's talk about company and role fit. I'd like to understand what draws you to this opportunity. What specifically interests you about the AI Engineer role at qBraid and how do you see yourself contributing to the team?",
+        "timestamp": 1766113745.9013143,
+        "stage": "company_fit"
+      },
+      {
+        "index": 4,
+        "text": "Thanks for sharing that, Pranav! Now, can you describe a project or experience where you faced a significant challenge in AI or a related field? How did you approach solving it?",
+        "timestamp": 1766113765.9477866,
+        "stage": "company_fit"
+      }
+    ],
+    "user": []
+  },
+  "total_messages": {
+    "agent": 5,
+    "user": 0
+  },
+  "skipped_stages": [
+    "welcome"
+  ],
+  "final_stage": "company_fit",
+  "ended_by": "user_disconnect"
+}

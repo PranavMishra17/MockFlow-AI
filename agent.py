@@ -76,6 +76,62 @@ logger.info(f"[CONFIG] Deepgram API Key present: {bool(DEEPGRAM_API_KEY)}")
 server = AgentServer()
 
 
+async def execute_skip_transition(
+    session: AgentSession,
+    interview_state: InterviewState,
+    target_stage: InterviewStage,
+    agent: 'InterviewAgent',
+    ctx: JobContext
+):
+    """Execute a skip transition directly without relying on LLM tool calls."""
+    try:
+        current_stage = interview_state.stage
+        logger.info(
+            f"[SKIP] Executing forced skip: {current_stage.value} -> {target_stage.value}"
+        )
+
+        # Execute the transition
+        interview_state.transition_to(target_stage, forced=False, skipped=True)
+
+        # Update agent instructions
+        stage_instructions = agent._get_stage_instructions(interview_state, target_stage)
+        await agent.update_instructions(stage_instructions)
+
+        # Emit stage change to UI
+        try:
+            import json
+            data_payload = json.dumps({
+                "type": "stage_change",
+                "stage": target_stage.value
+            })
+            await ctx.room.local_participant.publish_data(
+                data_payload.encode('utf-8')
+            )
+            logger.info(f"[SKIP] UI notified of stage change to {target_stage.value}")
+        except Exception as e:
+            logger.error(f"[SKIP] Failed to emit stage change: {e}")
+
+        # Get and deliver transition acknowledgement
+        from prompts import get_transition_ack
+        ack = get_transition_ack(
+            target_stage,
+            agent.candidate_name,
+            interview_state.job_role or 'this position'
+        )
+
+        if ack:
+            logger.info(f"[SKIP] Delivering acknowledgement: {ack[:50]}...")
+            try:
+                await session.say(ack, allow_interruptions=False)
+            except Exception as e:
+                logger.warning(f"[SKIP] Failed to deliver acknowledgement: {e}")
+
+        logger.info(f"[SKIP] Skip transition complete to {target_stage.value}")
+
+    except Exception as e:
+        logger.error(f"[SKIP] Error executing skip transition: {e}", exc_info=True)
+
+
 class InterviewAgent(Agent):
     """Mock interview agent with FSM-based stage management."""
 
@@ -105,14 +161,7 @@ class InterviewAgent(Agent):
         """Explicit stage transition called by LLM when ready to move forward."""
         try:
             current_stage = ctx.userdata.stage
-            
-            # Check for skip queue first
-            skip_target = ctx.userdata.process_skip_queue()
-            if skip_target:
-                next_stage = skip_target
-                logger.info(f"[AGENT] Processing skip request to {next_stage.value}")
-            else:
-                next_stage = ctx.userdata.get_next_stage()
+            next_stage = ctx.userdata.get_next_stage()
 
             if not next_stage:
                 return f"Cannot transition from {current_stage.value} - interview complete"
@@ -128,14 +177,14 @@ class InterviewAgent(Agent):
             }
 
             min_time = MIN_TIMES.get(current_stage, 0)
-            if time_in_stage < min_time and not skip_target:
+            if time_in_stage < min_time:
                 return (
                     f"Please spend more time in this stage. "
                     f"Current: {time_in_stage:.0f}s, Minimum: {min_time}s"
                 )
 
             # Execute transition
-            ctx.userdata.transition_to(next_stage, forced=False, skipped=bool(skip_target))
+            ctx.userdata.transition_to(next_stage, forced=False, skipped=False)
 
             # Get stage instructions
             stage_instructions = self._get_stage_instructions(ctx.userdata, next_stage)
@@ -179,31 +228,35 @@ class InterviewAgent(Agent):
             return f"Error during transition: {str(e)}"
 
     def _get_stage_instructions(self, state: InterviewState, stage: InterviewStage) -> str:
-        """Build personalized stage instructions with document context."""
+        """Build personalized stage instructions with stage-specific document context."""
         # Get base instructions from prompts module
         base_instructions = build_stage_instructions(stage)
-        
+
         # Replace placeholders
         instructions = base_instructions.replace("[ROLE]", state.job_role or "this position")
-        
-        # Add document context for relevant stages
+
+        # Add stage-specific document context
         doc_context = ""
         placeholder = "[DOCUMENT_CONTEXT]"
+
+        # Only inject document context for specific stages
         if stage in [InterviewStage.PAST_EXPERIENCE, InterviewStage.COMPANY_FIT]:
-            if state.include_profile:
-                doc_context = state.get_document_context()
-                
+            doc_context = state.get_document_context(stage=stage)  # <-- PASS STAGE
+
         if doc_context:
             instructions = instructions.replace(
                 placeholder,
-                f"\nDOCUMENT CONTEXT:\n{doc_context}\n"
+                f"\n{doc_context}\n"
             )
         else:
             instructions = instructions.replace(placeholder, "")
-        
+
         # Add role context
-        role_context = build_role_context(state.job_role or "this position", state.experience_level or "mid")
-        
+        role_context = build_role_context(
+            state.job_role or "this position",
+            state.experience_level or "mid"
+        )
+
         # Add personality note
         personality_note = build_personality_note(
             self.candidate_name,
@@ -211,7 +264,7 @@ class InterviewAgent(Agent):
             state.experience_level or "mid-level",
             role_context
         )
-        
+
         return instructions + personality_note
 
     async def _emit_stage_change(self, ctx: RunContext[InterviewState], new_stage: InterviewStage):
@@ -441,6 +494,21 @@ async def entrypoint(ctx: JobContext):
         candidate_info = {'name': candidate_name, 'role': role}
         logger.info(f"[SESSION] Candidate: {candidate_name} (Role: {role}, Level: {level})")
 
+        if resume_text:
+            logger.info(
+                f"[SESSION] Resume context available: {len(resume_text)} chars - "
+                f"will be injected in PAST_EXPERIENCE stage only"
+            )
+
+        if job_description:
+            logger.info(
+                f"[SESSION] Job description available: {len(job_description)} chars - "
+                f"will be injected in COMPANY_FIT stage only"
+            )
+
+        if not resume_text and not job_description:
+            logger.info("[SESSION] No document context available")
+
         # Initialize interview state
         interview_state = InterviewState()
         interview_state.candidate_name = candidate_name
@@ -558,22 +626,37 @@ async def entrypoint(ctx: JobContext):
             try:
                 import json
                 payload = json.loads(data_packet.data.decode('utf-8'))
-                
+
                 if payload.get('type') == 'skip_stage':
                     target_stage_name = payload.get('target_stage')
                     logger.info(f"[SKIP] Received skip request to: {target_stage_name}")
-                    
+
                     target_stage = interview_state.get_stage_by_name(target_stage_name)
-                    if target_stage and interview_state.can_skip_to(target_stage):
-                        interview_state.queue_skip_to(target_stage)
-                        logger.info(f"[SKIP] Queued skip to {target_stage.value}")
-                        
-                        # Trigger agent to process skip
-                        session.generate_reply(
-                            instructions=SKIP_STAGE.instruction
+
+                    if not target_stage:
+                        logger.warning(f"[SKIP] Invalid stage name: {target_stage_name}")
+                        return
+
+                    if not interview_state.can_skip_to(target_stage):
+                        logger.warning(
+                            f"[SKIP] Cannot skip to {target_stage_name} from {interview_state.stage.value}"
                         )
+                        return
+
+                    # Execute skip transition directly
+                    logger.info(f"[SKIP] Initiating forced skip to {target_stage.value}")
+                    asyncio.create_task(
+                        execute_skip_transition(
+                            session=session,
+                            interview_state=interview_state,
+                            target_stage=target_stage,
+                            agent=agent,
+                            ctx=ctx
+                        )
+                    )
+
             except Exception as e:
-                logger.error(f"[DATA] Error processing: {e}")
+                logger.error(f"[DATA] Error processing data: {e}", exc_info=True)
 
         async def finalize_and_disconnect():
             """Finalize interview and disconnect."""

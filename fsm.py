@@ -393,30 +393,49 @@ class InterviewState:
 
         return q_status['met_minimum'] and time_status['elapsed_pct'] >= 50
 
-    def get_document_context(self) -> str:
+    def get_document_context(self, stage: Optional[InterviewStage] = None) -> str:
         """
         Get formatted document context for agent prompt injection.
 
+        Stage-specific rules:
+        - PAST_EXPERIENCE: Resume only
+        - COMPANY_FIT: Job description only
+        - Other stages: No document context
+
+        Args:
+            stage: The interview stage to get context for
+
         Returns:
-            Formatted string with resume/JD highlights if available
+            Formatted string with stage-appropriate document highlights
         """
         if not self.include_profile:
             return ""
 
         context_parts = []
 
-        if self.uploaded_resume_text:
-            # Truncate to reasonable size
+        # Resume context: PAST_EXPERIENCE stage only
+        if stage == InterviewStage.PAST_EXPERIENCE and self.uploaded_resume_text:
             resume_snippet = self.uploaded_resume_text[:1500]
             if len(self.uploaded_resume_text) > 1500:
                 resume_snippet += "..."
-            context_parts.append(f"CANDIDATE RESUME HIGHLIGHTS:\n{resume_snippet}")
+            context_parts.append(
+                f"CANDIDATE RESUME HIGHLIGHTS:\n{resume_snippet}\n\n"
+                f"INSTRUCTION: Reference specific projects, skills, and experiences "
+                f"from the resume when asking follow-up questions. Ask about gaps, "
+                f"challenges faced, and technical details mentioned."
+            )
 
-        if self.job_description:
+        # Job description context: COMPANY_FIT stage only
+        if stage == InterviewStage.COMPANY_FIT and self.job_description:
             jd_snippet = self.job_description[:1000]
             if len(self.job_description) > 1000:
                 jd_snippet += "..."
-            context_parts.append(f"JOB DESCRIPTION:\n{jd_snippet}")
+            context_parts.append(
+                f"JOB DESCRIPTION:\n{jd_snippet}\n\n"
+                f"INSTRUCTION: Assess how the candidate's background and interests "
+                f"align with this role's requirements. Ask about their understanding "
+                f"of the position and why they're interested in this specific role."
+            )
 
         if context_parts:
             return "\n\n".join(context_parts)

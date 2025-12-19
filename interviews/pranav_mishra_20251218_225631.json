@@ -1,0 +1,52 @@
+{
+  "candidate": "Pranav Mishra",
+  "interview_date": "2025-12-18T22:56:31.605870",
+  "room_name": "interview-pranav-mishra-1766116519",
+  "job_role": "AI Engineer",
+  "experience_level": "entry",
+  "conversation": {
+    "agent": [
+      {
+        "index": 0,
+        "text": "Hi Pranav Mishra! I'm Alex, and I'll be your interviewer today. Welcome to your mock interview for the AI Engineer position. We'll go through a few stages: first you'll introduce yourself, then we'll discuss your past experience, explore how you might fit with the role, and wrap up. Let's get started! Please go ahead and introduce yourself.",
+        "timestamp": 1766116543.095429,
+        "stage": "welcome"
+      },
+      {
+        "index": 1,
+        "text": "Great! Now that we're in the self-introduction stage, please continue with your introduction. Tell me a bit about yourself, your background, and what led you to pursue a career in AI engineering.",
+        "timestamp": 1766116564.0663068,
+        "stage": "company_fit"
+      },
+      {
+        "index": 2,
+        "text": "Great insights into your experience, Pranav Mishra! Now let's talk about company and role fit. I'd like to understand what draws you to this opportunity.",
+        "timestamp": 1766116574.0661998,
+        "stage": "closing"
+      },
+      {
+        "index": 3,
+        "text": "Thank you so much for sharing all of that, Pranav Mishra. I really enjoyed learning about your background and experience. We'll be in touch with next steps via email. Thank you again, and best of luck!",
+        "timestamp": 1766116586.6033654,
+        "stage": "closing"
+      }
+    ],
+    "user": [
+      {
+        "index": 0,
+        "text": "Hello. I'm.",
+        "timestamp": 1766116548.8945343
+      }
+    ]
+  },
+  "total_messages": {
+    "agent": 4,
+    "user": 1
+  },
+  "skipped_stages": [
+    "self_intro",
+    "company_fit"
+  ],
+  "final_stage": "closing",
+  "ended_by": "natural_completion"
+}
