@@ -1460,15 +1460,15 @@ document.addEventListener('DOMContentLoaded', loadInterviews);
 
 ### Tasks Checklist
 
-- [ ] Update `app.py` with interview/feedback endpoints
-- [ ] Modify `templates/interview.html` to save to database
-- [ ] Update `templates/feedback.html` with fallback logic
-- [ ] Update `templates/past_calls.html` with merge logic
+- [x] Update `app.py` with interview/feedback endpoints
+- [x] Modify `templates/interview.html` to save to database
+- [x] Update `templates/feedback.html` with fallback logic
+- [x] Update `templates/past_calls.html` with merge logic
 - [ ] Test database save success case
 - [ ] Test localStorage fallback when database fails
 - [ ] Test loading from both sources
 - [ ] Test merge logic for mixed data
-- [ ] Add CSS for "Local Only" badge
+- [x] Add CSS for "Local Only" badge
 - [ ] Commit changes: "Phase 5: Add database storage with fallback"
 
 **Phase 5 Complete**: Interviews save to database with localStorage fallback
@@ -1478,8 +1478,6 @@ document.addEventListener('DOMContentLoaded', loadInterviews);
 ## Phase 6: Agent BYOK Integration
 
 **Goal**: Modify agent to use user-provided API keys from participant attributes.
-
-**Duration**: 2-3 days
 
 **Dependencies**: Phase 5 complete
 

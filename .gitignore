@@ -189,3 +189,4 @@ PITCH_SCRIPTS.md
 .env
 *.env.local
 supabase/.env
+/interviews

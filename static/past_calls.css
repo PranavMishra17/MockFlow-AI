@@ -95,6 +95,22 @@
     overflow: hidden;
 }
 
+/* ==================== LOCAL ONLY BADGE ==================== */
+.local-only-badge {
+    display: inline-block;
+    font-size: 0.625rem;
+    padding: 0.125rem 0.5rem;
+    margin-left: 0.5rem;
+    background: rgba(255, 152, 0, 0.2);
+    border: 1.5px solid rgba(255, 152, 0, 0.5);
+    color: rgba(255, 200, 100, 1);
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    font-weight: 700;
+    vertical-align: middle;
+}
+
 .interview-date {
     font-size: 0.75rem;
     color: rgba(255, 255, 255, 0.6);

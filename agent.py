@@ -758,9 +758,9 @@ async def entrypoint(ctx: JobContext):
                 
                 with open(filepath, 'w', encoding='utf-8') as f:
                     json_module.dump(history_data, f, indent=2, ensure_ascii=False)
-                
+
                 logger.info(f"[HISTORY] Saved transcript on disconnect: {filepath}")
-                
+
                 # Emit the filename so frontend can navigate to it
                 try:
                     data_payload = json_module.dumps({

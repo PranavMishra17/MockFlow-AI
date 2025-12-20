@@ -238,7 +238,6 @@
         </div>
     </div>
 
-    <script src="/static/apikey.js"></script>
     <script src="/static/modal.js"></script>
     <script>
     window.DeveloperModal = {
@@ -261,8 +260,54 @@
         };
         
         document.addEventListener('DOMContentLoaded', loadInterviews);
-        
+
         function loadInterviews() {
+            checkAuth().then(function(isAuthenticated) {
+                if (isAuthenticated) {
+                    loadFromDatabaseWithLocalStorageMerge();
+                } else {
+                    loadFromLocalStorageOnly();
+                }
+            }).catch(function() {
+                loadFromLocalStorageOnly();
+            });
+        }
+
+        function checkAuth() {
+            return fetch('/api/auth/status')
+                .then(function(response) { return response.json(); })
+                .then(function(data) { return data.authenticated; })
+                .catch(function() { return false; });
+        }
+
+        function loadFromDatabaseWithLocalStorageMerge() {
+            fetch('/api/user/interviews?limit=50')
+                .then(function(response) {
+                    if (!response.ok) throw new Error('Failed to load from database');
+                    return response.json();
+                })
+                .then(function(dbInterviews) {
+                    console.log('[PAST_CALLS] Loaded ' + dbInterviews.length + ' interviews from database');
+                    var localInterviews = getLocalStorageInterviews();
+                    var merged = mergeInterviews(dbInterviews, localInterviews);
+
+                    elements.loadingState.style.display = 'none';
+
+                    if (merged.length === 0) {
+                        showEmptyState();
+                        return;
+                    }
+
+                    renderInterviews(merged);
+                })
+                .catch(function(err) {
+                    console.error('[PAST_CALLS] Database load error:', err);
+                    loadFromLocalStorageOnly();
+                });
+        }
+
+        function loadFromLocalStorageOnly() {
+            console.log('[PAST_CALLS] Loading from localStorage only');
             fetch('/api/interviews')
                 .then(function(response) {
                     if (!response.ok) throw new Error('Failed to load interviews');
@@ -270,27 +315,104 @@
                 })
                 .then(function(data) {
                     elements.loadingState.style.display = 'none';
-                    
+
                     if (!data.interviews || data.interviews.length === 0) {
-                        elements.interviewsGrid.innerHTML = 
-                            '<div class="empty-state">' +
-                                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">' +
-                                    '<path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>' +
-                                '</svg>' +
-                                '<h3>No interviews yet</h3>' +
-                                '<p>Complete your first mock interview to see it here.</p>' +
-                            '</div>';
+                        var localInterviews = getLocalStorageInterviews();
+                        if (localInterviews.length > 0) {
+                            renderInterviews(localInterviews);
+                        } else {
+                            showEmptyState();
+                        }
                         return;
                     }
-                    
+
                     renderInterviews(data.interviews);
                 })
                 .catch(function(err) {
                     console.error('[PAST_CALLS] Load error:', err);
+                    var localInterviews = getLocalStorageInterviews();
                     elements.loadingState.style.display = 'none';
-                    elements.errorState.textContent = 'Failed to load interviews: ' + err.message;
-                    elements.errorState.style.display = 'block';
+
+                    if (localInterviews.length > 0) {
+                        renderInterviews(localInterviews);
+                    } else {
+                        elements.errorState.textContent = 'Failed to load interviews: ' + err.message;
+                        elements.errorState.style.display = 'block';
+                    }
                 });
+        }
+
+        function getLocalStorageInterviews() {
+            var interviews = [];
+            for (var i = 0; i < localStorage.length; i++) {
+                var key = localStorage.key(i);
+                if (key && key.startsWith('interview_') && !key.startsWith('interview_id_map_')) {
+                    try {
+                        var data = JSON.parse(localStorage.getItem(key));
+                        interviews.push({
+                            filename: data.roomName || key.replace('interview_', ''),
+                            candidate: data.candidateName || 'Unknown',
+                            interview_date: data.endedAt || new Date().toISOString(),
+                            job_role: data.jobRole,
+                            experience_level: data.experienceLevel,
+                            source: 'localStorage',
+                            message_count: {}
+                        });
+                    } catch (e) {
+                        console.error('[PAST_CALLS] Failed to parse localStorage item:', key, e);
+                    }
+                }
+            }
+            return interviews;
+        }
+
+        function mergeInterviews(dbInterviews, localInterviews) {
+            var dbRoomNames = new Set();
+            dbInterviews.forEach(function(interview) {
+                if (interview.room_name) {
+                    dbRoomNames.add(interview.room_name);
+                }
+            });
+
+            var uniqueLocal = localInterviews.filter(function(interview) {
+                return !dbRoomNames.has(interview.filename);
+            });
+
+            var merged = dbInterviews.map(function(interview) {
+                var interviewId = interview.id;
+                var roomName = interview.room_name || interviewId;
+
+                localStorage.setItem('interview_id_map_' + roomName, interviewId);
+
+                return {
+                    filename: roomName,
+                    databaseId: interviewId,
+                    candidate: interview.candidate_name || 'Unknown',
+                    interview_date: interview.interview_date || interview.created_at,
+                    job_role: interview.job_role,
+                    experience_level: interview.experience_level,
+                    stages_covered: interview.final_stage ? [interview.final_stage] : [],
+                    message_count: {},
+                    source: 'database'
+                };
+            }).concat(uniqueLocal);
+
+            merged.sort(function(a, b) {
+                return new Date(b.interview_date) - new Date(a.interview_date);
+            });
+
+            return merged;
+        }
+
+        function showEmptyState() {
+            elements.interviewsGrid.innerHTML =
+                '<div class="empty-state">' +
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">' +
+                        '<path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>' +
+                    '</svg>' +
+                    '<h3>No interviews yet</h3>' +
+                    '<p>Complete your first mock interview to see it here.</p>' +
+                '</div>';
         }
         
         function renderInterviews(interviews) {
@@ -299,7 +421,7 @@
                 var messageCount = interview.message_count || {};
                 var totalMessages = (messageCount.agent || 0) + (messageCount.user || 0);
                 var filename = interview.filename || interview.cache_key;
-                
+
                 var tagsHtml = '';
                 if (interview.job_role) {
                     tagsHtml += '<span class="interview-tag role">' + escapeHtml(interview.job_role) + '</span>';
@@ -307,7 +429,12 @@
                 if (interview.experience_level) {
                     tagsHtml += '<span class="interview-tag level">' + formatLevel(interview.experience_level) + '</span>';
                 }
-                
+
+                var localBadge = '';
+                if (interview.source === 'localStorage') {
+                    localBadge = '<span class="local-only-badge" title="Stored locally only">Local Only</span>';
+                }
+
                 var stagesHtml = '';
                 if (interview.stages_covered && interview.stages_covered.length) {
                     stagesHtml = '<div class="interview-stages">' +
@@ -317,10 +444,10 @@
                             .join('') +
                         '</div>';
                 }
-                
+
                 return '<a href="/feedback/' + encodeURIComponent(filename) + '" class="interview-card">' +
                     '<div class="card-content">' +
-                        '<div class="interview-name">' + escapeHtml(interview.candidate || 'Unknown') + '</div>' +
+                        '<div class="interview-name">' + escapeHtml(interview.candidate || 'Unknown') + localBadge + '</div>' +
                         '<div class="interview-date">' + date + '</div>' +
                         (tagsHtml ? '<div class="interview-tags">' + tagsHtml + '</div>' : '') +
                         stagesHtml +
@@ -336,7 +463,7 @@
                     '</svg>' +
                 '</a>';
             }).join('');
-            
+
             elements.interviewsGrid.innerHTML = html;
         }
         

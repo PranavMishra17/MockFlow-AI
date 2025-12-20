@@ -372,7 +372,8 @@
                 agentAudioAnalyser: null,
                 agentAudioContext: null,
                 roomName: null,
-                interviewFilename: null
+                interviewFilename: null,
+                interviewDatabaseId: null
             };
             
             var elements = {
@@ -955,10 +956,10 @@
             function onDisconnected(reason) {
                 state.isConnected = false;
                 updateStatus('Disconnected', 'disconnected');
-                
+
                 if (state.timerInterval) clearInterval(state.timerInterval);
                 if (state.blinkInterval) clearTimeout(state.blinkInterval);
-                
+
                 setTimeout(function() {
                     showInterviewCompleteModal();
                 }, 1000);

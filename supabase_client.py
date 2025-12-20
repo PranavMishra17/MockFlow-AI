@@ -123,20 +123,22 @@ class SupabaseClient:
     def save_interview(self, user_id: str, interview_data: Dict[str, Any]) -> Optional[str]:
         """Save interview to database, returns interview_id"""
         try:
+            # Handle both formats: JSON file format and frontend format
             data = {
                 'user_id': user_id,
-                'candidate_name': interview_data.get('candidateName'),
-                'room_name': interview_data.get('roomName'),
-                'job_role': interview_data.get('jobRole'),
-                'experience_level': interview_data.get('experienceLevel'),
-                'final_stage': interview_data.get('finalStage'),
-                'ended_by': interview_data.get('endedBy'),
-                'skipped_stages': interview_data.get('skippedStages', []),
-                'has_resume': interview_data.get('hasResume', False),
-                'has_jd': interview_data.get('hasJobDescription', False),
-                'conversation': interview_data.get('conversation', []),
-                'total_messages': interview_data.get('totalMessages', {}),
-                'metadata': interview_data.get('metadata', {})
+                'candidate_name': interview_data.get('candidate') or interview_data.get('candidateName'),
+                'room_name': interview_data.get('room_name') or interview_data.get('roomName'),
+                'job_role': interview_data.get('job_role') or interview_data.get('jobRole'),
+                'experience_level': interview_data.get('experience_level') or interview_data.get('experienceLevel'),
+                'final_stage': interview_data.get('final_stage') or interview_data.get('finalStage'),
+                'ended_by': interview_data.get('ended_by') or interview_data.get('endedBy'),
+                'skipped_stages': interview_data.get('skipped_stages') or interview_data.get('skippedStages', []),
+                'has_resume': interview_data.get('has_resume', False) or interview_data.get('hasResume', False),
+                'has_jd': interview_data.get('has_jd', False) or interview_data.get('hasJobDescription', False),
+                'conversation': interview_data.get('conversation', {}),
+                'total_messages': interview_data.get('total_messages') or interview_data.get('totalMessages', {}),
+                'metadata': interview_data.get('metadata', {}),
+                'interview_date': interview_data.get('interview_date')
             }
 
             response = self.client.table('interviews').insert(data).execute()
@@ -161,6 +163,15 @@ class SupabaseClient:
             return response.data[0] if response.data else None
         except Exception as e:
             logger.error(f"Error fetching interview: {e}")
+            return None
+
+    def get_interview_by_room_name(self, user_id: str, room_name: str) -> Optional[Dict[str, Any]]:
+        """Get interview by room name for specific user"""
+        try:
+            response = self.client.table('interviews').select('*').eq('user_id', user_id).eq('room_name', room_name).execute()
+            return response.data[0] if response.data else None
+        except Exception as e:
+            logger.error(f"Error fetching interview by room name: {e}")
             return None
 
     def save_feedback(self, user_id: str, interview_id: str, feedback_data: Dict[str, Any]) -> bool:

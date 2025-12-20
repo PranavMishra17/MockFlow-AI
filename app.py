@@ -641,7 +641,7 @@ def get_cached_conversation(cache_key):
 def get_interviews():
     """
     List all saved interview files.
-    
+
     Returns list of interview metadata from both cache and files.
     """
     try:
@@ -660,14 +660,159 @@ def get_interviews():
         }), 500
 
 
+@app.route('/api/user/interviews')
+@require_auth
+def get_user_interviews():
+    """Get authenticated user's interview history from database"""
+    try:
+        user_id = get_user_id()
+        limit = request.args.get('limit', 50, type=int)
+
+        # First, claim any unclaimed interviews in localStorage
+        claim_local_interviews(user_id)
+
+        interviews = supabase_client.get_user_interviews(user_id, limit)
+        logger.info(f"[API] Retrieved {len(interviews)} interviews for user {user_id}")
+        return jsonify(interviews)
+    except Exception as e:
+        logger.error(f"[API] Failed to fetch user interviews: {e}", exc_info=True)
+        return jsonify([])
+
+
+def claim_local_interviews(user_id: str):
+    """Claim interviews that were saved without user_id by matching room_name"""
+    try:
+        # This would be called with room_names from localStorage
+        # For now, just a placeholder
+        pass
+    except Exception as e:
+        logger.error(f"[API] Error claiming interviews: {e}")
+
+
+@app.route('/api/interview/save', methods=['POST'])
+def save_interview_endpoint():
+    """
+    Save interview to database if authenticated.
+    Called by frontend after loading interview JSON from file.
+    """
+    try:
+        data = request.json or {}
+        user = get_current_user()
+
+        if not user:
+            logger.info("[API] Interview save - no auth, using localStorage fallback")
+            return jsonify({
+                'success': False,
+                'message': 'Not authenticated',
+                'saved_to': 'localStorage'
+            }), 401
+
+        user_id = user.user.id
+        logger.info(f"[API] Saving interview for user {user_id}, keys: {list(data.keys())}")
+
+        interview_id = supabase_client.save_interview(user_id, data)
+
+        if interview_id:
+            logger.info(f"[API] Interview saved to database: {interview_id}")
+            return jsonify({
+                'success': True,
+                'interview_id': interview_id,
+                'saved_to': 'database'
+            })
+        else:
+            logger.warning("[API] Database save failed, using localStorage fallback")
+            return jsonify({
+                'success': False,
+                'message': 'Database save failed',
+                'saved_to': 'localStorage'
+            }), 500
+    except Exception as e:
+        logger.error(f"[API] Interview save error: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'message': str(e),
+            'saved_to': 'localStorage'
+        }), 500
+
+
+@app.route('/api/feedback/save', methods=['POST'])
+def save_feedback_endpoint():
+    """Save feedback to database if authenticated, fallback to localStorage"""
+    try:
+        data = request.json or {}
+        user = get_current_user()
+
+        if not user:
+            logger.info("[API] Feedback save - no auth, using localStorage fallback")
+            return jsonify({
+                'success': False,
+                'message': 'Not authenticated',
+                'saved_to': 'localStorage'
+            }), 401
+
+        user_id = user.user.id
+        interview_id = data.get('interview_id')
+        feedback_data = data.get('feedback')
+
+        if not interview_id:
+            return jsonify({'error': 'interview_id required'}), 400
+
+        success = supabase_client.save_feedback(user_id, interview_id, feedback_data)
+
+        if success:
+            logger.info(f"[API] Feedback saved to database for interview: {interview_id}")
+            return jsonify({
+                'success': True,
+                'saved_to': 'database'
+            })
+        else:
+            logger.warning("[API] Feedback database save failed, using localStorage")
+            return jsonify({
+                'success': False,
+                'message': 'Database save failed',
+                'saved_to': 'localStorage'
+            }), 500
+    except Exception as e:
+        logger.error(f"[API] Feedback save error: {e}", exc_info=True)
+        return jsonify({
+            'success': False,
+            'message': str(e),
+            'saved_to': 'localStorage'
+        }), 500
+
+
+@app.route('/api/feedback/get/<interview_id>')
+def get_feedback_by_id(interview_id):
+    """Get feedback for interview (database first, localStorage fallback)"""
+    try:
+        user = get_current_user()
+
+        if not user:
+            logger.info("[API] Feedback fetch - no auth, client should use localStorage")
+            return jsonify({}), 404
+
+        user_id = user.user.id
+        feedback = supabase_client.get_feedback(interview_id)
+
+        if feedback and feedback.get('user_id') == user_id:
+            logger.info(f"[API] Feedback retrieved from database: {interview_id}")
+            return jsonify(feedback.get('feedback_data', {}))
+
+        logger.info(f"[API] No feedback found in database for: {interview_id}")
+        return jsonify({}), 404
+    except Exception as e:
+        logger.error(f"[API] Feedback fetch error: {e}", exc_info=True)
+        return jsonify({}), 500
+
+
 @app.route('/api/interview/<filename>')
 def get_interview(filename):
     """
     Get re-sequenced interview transcript.
-    
+
     Args:
-        filename: Interview JSON filename or cache key
-        
+        filename: Interview JSON filename, room name, or cache key
+
     Returns:
         Re-sequenced conversation with metadata.
     """
@@ -677,18 +822,42 @@ def get_interview(filename):
             return jsonify({
                 'error': 'Invalid filename'
             }), 400
-            
+
+        # Try loading from files/cache first
         result = resequence_interview(filename)
-        
-        if 'error' in result and result.get('error'):
-            return jsonify(result), 404
-            
-        logger.info(f"[API] Resequenced interview: {filename}")
-        return jsonify({
-            'success': True,
-            **result
-        })
-        
+
+        if 'error' not in result or not result.get('error'):
+            logger.info(f"[API] Resequenced interview: {filename}")
+            return jsonify({
+                'success': True,
+                **result
+            })
+
+        # If not found in files, try database lookup by room_name for authenticated users
+        user = get_current_user()
+        if user:
+            user_id = user.user.id
+            try:
+                interview = supabase_client.get_interview_by_room_name(user_id, filename)
+                if interview:
+                    logger.info(f"[API] Found interview in database: {filename}")
+                    # Convert database interview to postprocess format
+                    return jsonify({
+                        'success': True,
+                        'meta': {
+                            'candidate': interview.get('candidate_name', 'Unknown'),
+                            'interview_date': interview.get('interview_date'),
+                            'job_role': interview.get('job_role'),
+                            'experience_level': interview.get('experience_level'),
+                            'source': 'database'
+                        },
+                        'ordered_conversation': []
+                    })
+            except Exception as db_err:
+                logger.error(f"[API] Database lookup error: {db_err}")
+
+        return jsonify(result), 404
+
     except Exception as e:
         logger.error(f"[API] Get interview error: {e}", exc_info=True)
         return jsonify({
