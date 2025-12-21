@@ -114,11 +114,6 @@
                     </div>
 
                     <input type="hidden" id="resumeCacheKey" name="resumeCacheKey" value="">
-
-                    <div class="loading" id="loadingIndicator">
-                        <span class="loading-spinner"></span>
-                        Connecting to interview room...
-                    </div>
                 </form>
 
                 <div class="interview-info">
@@ -134,6 +129,11 @@
             </div>
 
             <div class="form-sidebar">
+                <div class="loading loading-sidebar" id="loadingIndicator">
+                    <span class="loading-spinner"></span>
+                    <span class="loading-text">Starting agent worker...</span>
+                </div>
+
                 <button type="submit" form="candidateForm" class="btn-form-game" id="submitBtn">
                     <div class="btn-form-game-icon">
                         <svg class="icon-inactive" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -493,13 +493,13 @@
             });
         }
         
-        function handleSubmit() {
+        async function handleSubmit() {
             var form = document.getElementById('candidateForm');
             var submitBtn = document.getElementById('submitBtn');
             var loadingEl = document.getElementById('loadingIndicator');
-            
+
             if (!submitBtn.classList.contains('active')) return;
-            
+
             var formData = new FormData(form);
             var data = {
                 name: formData.get('name'),
@@ -510,26 +510,57 @@
                 resumeCacheKey: document.getElementById('resumeCacheKey').value,
                 includeProfile: document.getElementById('includeProfile').checked
             };
-            
+
+            var loadingText = loadingEl.querySelector('.loading-text');
+            loadingText.textContent = 'Starting agent worker...';
             loadingEl.classList.add('visible');
             submitBtn.disabled = true;
-            
-            var params = new URLSearchParams({
-                name: data.name,
-                email: data.email,
-                role: data.role,
-                level: data.level,
-                resumeCacheKey: data.resumeCacheKey,
-                includeProfile: data.includeProfile,
-                hasJD: data.jobDescription.length > 0 ? '1' : '0'
-            });
-            
-            // Store JD in sessionStorage for token generation
-            if (data.jobDescription) {
-                sessionStorage.setItem('mockflow_jd', data.jobDescription);
+
+            try {
+                // Call /api/token to spawn worker and get token
+                var response = await fetch('/api/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                var result = await response.json();
+
+                if (result.error) {
+                    throw new Error(result.message || result.error);
+                }
+
+                // Worker is ready, now redirect to interview page
+                loadingText.textContent = 'Agent ready. Redirecting...';
+
+                // Store token data in sessionStorage (worker already spawned, no need to call /api/token again)
+                sessionStorage.setItem('mockflow_token', result.token);
+                sessionStorage.setItem('mockflow_url', result.url);
+                sessionStorage.setItem('mockflow_room', result.room);
+
+                var params = new URLSearchParams({
+                    name: data.name,
+                    email: data.email,
+                    role: data.role,
+                    level: data.level,
+                    resumeCacheKey: data.resumeCacheKey,
+                    includeProfile: data.includeProfile,
+                    hasJD: data.jobDescription.length > 0 ? '1' : '0'
+                });
+
+                // Store JD in sessionStorage for interview page
+                if (data.jobDescription) {
+                    sessionStorage.setItem('mockflow_jd', data.jobDescription);
+                }
+
+                window.location.href = '/interview?' + params.toString();
+
+            } catch (err) {
+                console.error('[FORM] Submit error:', err);
+                loadingEl.classList.remove('visible');
+                submitBtn.disabled = false;
+                alert('Failed to start interview: ' + err.message);
             }
-            
-            window.location.href = '/interview?' + params.toString();
         }
         
         function initInputValidation() {

@@ -9,6 +9,7 @@ interview history, and feedback endpoints.
 import os
 import time
 import logging
+import atexit
 from pathlib import Path
 from flask import Flask, render_template, request, jsonify, send_from_directory, redirect, url_for, session
 from flask_cors import CORS
@@ -20,6 +21,7 @@ from postprocess import list_interviews, get_interview_summary
 from conversation_cache import conversation_cache, ConversationMetadata
 from supabase_client import supabase_client
 from auth_helpers import require_auth, get_current_user, get_user_id, is_authenticated
+from worker_manager import worker_manager
 
 # In-memory feedback cache
 feedback_cache = {}
@@ -40,6 +42,9 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-prod')
 CORS(app)  # Enable CORS for API endpoints
+
+# Register cleanup on server shutdown
+atexit.register(worker_manager.cleanup_all_workers)
 
 # Configuration from environment
 LIVEKIT_URL = os.getenv('LIVEKIT_URL')
@@ -343,39 +348,19 @@ def feedback_page(filename):
 @require_auth
 def generate_token():
     """
-    Generate LiveKit access token for candidate.
+    Spawn agent worker and generate LiveKit token.
 
-    Requires authentication - user must be logged in to start an interview.
-
-    Expected JSON body:
-    {
-        "name": "Candidate Name",
-        "email": "email@example.com",
-        "role": "Software Engineer",
-        "level": "mid",
-        "resumeCacheKey": "optional_cache_key",
-        "jobDescription": "optional_jd_text",
-        "includeProfile": true
-    }
-
-    Returns:
-    {
-        "token": "jwt_token",
-        "url": "wss://livekit.server.com",
-        "room": "interview-name-timestamp"
-    }
+    This endpoint:
+    1. Validates user has API keys
+    2. Spawns dedicated agent worker subprocess with user's keys
+    3. Waits for worker ready signal
+    4. Generates LiveKit token
+    5. Returns token + room info
     """
     try:
-        # Get authenticated user_id
         user_id = get_user_id()
-        if not user_id:
-            logger.error("[API] Token generation failed - no user_id")
-            return jsonify({
-                'error': 'Authentication required',
-                'message': 'Please log in to start an interview'
-            }), 401
+        data = request.json or {}
 
-        data = request.json
         name = data.get('name', 'Anonymous')
         email = data.get('email', '')
         role = data.get('role', '')
@@ -384,16 +369,55 @@ def generate_token():
         job_description = data.get('jobDescription', '')
         include_profile = data.get('includeProfile', True)
 
+        logger.info(f"[TOKEN] Token request from user {user_id} ({name})")
+
+        # Get user's API keys from database
+        keys = supabase_client.get_api_keys(user_id)
+
+        if not keys:
+            logger.error(f"[TOKEN] No API keys found for user: {user_id}")
+            return jsonify({
+                'error': 'API keys not configured',
+                'message': 'Please configure your API keys in Settings before starting an interview.'
+            }), 400
+
+        # Validate keys are present
+        required_keys = ['livekit_url', 'livekit_api_key', 'livekit_api_secret', 'openai_key', 'deepgram_key']
+        missing_keys = [k for k in required_keys if not keys.get(k)]
+
+        if missing_keys:
+            logger.error(f"[TOKEN] Missing keys for user {user_id}: {missing_keys}")
+            return jsonify({
+                'error': 'Incomplete API keys',
+                'message': f'Missing keys: {", ".join(missing_keys)}'
+            }), 400
+
         # Create unique room name
         timestamp = int(time.time())
         room_name = f"interview-{name.lower().replace(' ', '-')}-{timestamp}"
 
-        logger.info(
-            f"[API] Token generation requested for {name} (user_id: {user_id}) "
-            f"(email: {email}, role: {role}, level: {level})"
+        logger.info(f"[TOKEN] Spawning worker for room: {room_name}")
+
+        # Spawn agent worker subprocess with user's API keys
+        worker_started = worker_manager.spawn_worker(
+            room_name=room_name,
+            livekit_url=keys['livekit_url'],
+            livekit_api_key=keys['livekit_api_key'],
+            livekit_api_secret=keys['livekit_api_secret'],
+            openai_api_key=keys['openai_key'],
+            deepgram_api_key=keys['deepgram_key']
         )
 
-        # Build participant attributes - CRITICAL: include user_id for database save
+        if not worker_started:
+            logger.error(f"[TOKEN] Worker failed to start for room: {room_name}")
+            return jsonify({
+                'error': 'Worker startup failed',
+                'message': 'Failed to start interview agent. Please try again.'
+            }), 500
+
+        logger.info(f"[TOKEN] Worker ready for room: {room_name}")
+
+        # Build participant attributes (without API keys - already in worker)
         attributes = {
             'user_id': user_id,
             'role': role,
@@ -406,22 +430,20 @@ def generate_token():
         if resume_cache_key:
             resume_text = doc_processor.get_cached_text(resume_cache_key)
             if resume_text:
-                # Truncate to fit in attributes (LiveKit has limits)
                 attributes['resume_text'] = resume_text[:3000]
-                logger.info(f"[API] Attached resume text ({len(resume_text)} chars)")
+                logger.info(f"[TOKEN] Attached resume text ({len(resume_text)} chars)")
 
         # Add job description if provided
         if job_description:
             attributes['job_description'] = job_description[:2000]
-            logger.info(f"[API] Attached job description ({len(job_description)} chars)")
+            logger.info(f"[TOKEN] Attached job description ({len(job_description)} chars)")
 
-        # Create LiveKit access token
+        # Create LiveKit access token using USER'S keys
         token = api.AccessToken(
-            LIVEKIT_API_KEY,
-            LIVEKIT_API_SECRET
+            keys['livekit_api_key'],
+            keys['livekit_api_secret']
         )
 
-        # Set identity and grants with metadata
         token.with_identity(name).with_name(name).with_grants(
             api.VideoGrants(
                 room_join=True,
@@ -434,11 +456,11 @@ def generate_token():
         # Generate JWT
         jwt_token = token.to_jwt()
 
-        logger.info(f"[API] Token generated successfully for room: {room_name} (user_id: {user_id})")
+        logger.info(f"[TOKEN] Token generated successfully for room: {room_name}")
 
         return jsonify({
             'token': jwt_token,
-            'url': LIVEKIT_URL,
+            'url': keys['livekit_url'],
             'room': room_name,
             'candidate': {
                 'name': name,
@@ -449,11 +471,28 @@ def generate_token():
         })
 
     except Exception as e:
-        logger.error(f"[API] Token generation error: {e}", exc_info=True)
+        logger.error(f"[TOKEN] Token generation error: {e}", exc_info=True)
         return jsonify({
-            'error': 'Failed to generate token',
+            'error': 'Token generation failed',
             'message': str(e)
         }), 500
+
+
+@app.route('/api/worker/status/<room_name>')
+@require_auth
+def worker_status(room_name):
+    """Check worker status for room"""
+    try:
+        status = worker_manager.get_worker_status(room_name)
+
+        return jsonify({
+            'room_name': room_name,
+            'status': status or 'not_found'
+        })
+
+    except Exception as e:
+        logger.error(f"[WORKER] Status check error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 
 # ==================== DOCUMENT UPLOAD API ====================
@@ -1371,5 +1410,6 @@ if __name__ == '__main__':
     app.run(
         debug=True,
         port=5000,
-        host='0.0.0.0'
+        host='0.0.0.0',
+        use_reloader=False  # Disable auto-reload to prevent killing spawned workers
     )

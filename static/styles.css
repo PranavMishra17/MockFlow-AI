@@ -617,6 +617,14 @@ select.form-input {
     display: flex;
 }
 
+.loading-sidebar {
+    padding: 1rem;
+    background: rgba(34, 197, 94, 0.1);
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    font-size: 1rem;
+}
+
 .loading-spinner {
     display: inline-block;
     width: 16px;

@@ -780,40 +780,27 @@
             }
             
             async function connectToRoom() {
-                updateStatus('Requesting access...', 'connecting');
-                
+                updateStatus('Connecting to room...', 'connecting');
+
                 try {
-                    var tokenData = {
-                        name: candidate.name,
-                        email: candidate.email,
-                        role: candidate.role,
-                        level: candidate.level,
-                        resumeCacheKey: candidate.resumeCacheKey,
-                        includeProfile: candidate.includeProfile
-                    };
-                    
-                    // Add JD from session storage
-                    var jd = sessionStorage.getItem('mockflow_jd');
-                    if (jd) {
-                        tokenData.jobDescription = jd;
-                        sessionStorage.removeItem('mockflow_jd');
+                    // Get token data from sessionStorage (worker already spawned on form page)
+                    var token = sessionStorage.getItem('mockflow_token');
+                    var url = sessionStorage.getItem('mockflow_url');
+                    var room = sessionStorage.getItem('mockflow_room');
+
+                    // Clear from sessionStorage after retrieval
+                    sessionStorage.removeItem('mockflow_token');
+                    sessionStorage.removeItem('mockflow_url');
+                    sessionStorage.removeItem('mockflow_room');
+
+                    if (!token || !url || !room) {
+                        throw new Error('Missing connection credentials. Please return to the form and try again.');
                     }
-                    
-                    var response = await fetch('/api/token', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(tokenData)
-                    });
-                    
-                    var data = await response.json();
-                    
-                    if (data.error) {
-                        throw new Error(data.error);
-                    }
-                    
+
                     // Store room name for feedback URL generation
-                    state.roomName = data.room;
-                    
+                    state.roomName = room;
+
+                    console.log('[CONNECT] Using pre-spawned worker for room:', room);
                     updateStatus('Connecting to room...', 'connecting');
                     
                     state.room = new LK.Room({
@@ -832,8 +819,8 @@
                     state.room.on(LK.RoomEvent.DataReceived, onDataReceived);
                     state.room.on(LK.RoomEvent.ParticipantConnected, onParticipantConnected);
                     state.room.on(LK.RoomEvent.LocalTrackPublished, onLocalTrackPublished);
-                    
-                    await state.room.connect(data.url, data.token);
+
+                    await state.room.connect(url, token);
                     
                 } catch (err) {
                     console.error('[CONNECT] Error:', err);
