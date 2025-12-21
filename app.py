@@ -269,6 +269,40 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/health')
+def health_check():
+    """Health check endpoint for monitoring and deployment verification."""
+    try:
+        # Check database connection by attempting to query
+        # This will fail if database is unreachable
+        from supabase_client import supabase_client
+
+        # Test database connectivity (query will return None for non-existent user, but connection works)
+        supabase_client.get_user('health-check-test-user-id')
+
+        # Count active workers
+        active_worker_count = len(worker_manager.active_workers)
+        max_workers = worker_manager.max_workers
+
+        logger.info(f"[HEALTH] Health check passed - {active_worker_count}/{max_workers} workers active")
+
+        return jsonify({
+            'status': 'healthy',
+            'database': 'connected',
+            'workers': {
+                'active': active_worker_count,
+                'max': max_workers
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"[HEALTH] Health check failed: {e}", exc_info=True)
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e)
+        }), 500
+
+
 @app.route('/dashboard')
 @require_auth
 def dashboard():

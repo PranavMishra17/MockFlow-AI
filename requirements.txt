@@ -11,12 +11,14 @@ livekit-plugins-silero>=1.3.6
 # Flask Web Framework
 Flask==3.0.0
 Flask-Cors==4.0.0
+gunicorn==21.2.0
 
 # Environment & Configuration
 python-dotenv==1.0.0
 
 # Utilities
 aiohttp>=3.9.0
+supervisor==4.2.5
 
 # Document Processing
 PyPDF2>=3.0.0
