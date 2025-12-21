@@ -1115,10 +1115,11 @@
                     }
                     
                     if (data.type === 'transcript_saved') {
-                        // Transcript saved after disconnect - store filename
+                        // Transcript saved after disconnect - store filename and upload to DB
                         if (data.filename) {
                             state.interviewFilename = data.filename;
                             console.log('[INTERVIEW] Transcript saved:', data.filename);
+                            uploadInterviewToDatabase(data.filename);
                         }
                     }
                 } catch (err) {
@@ -1128,6 +1129,46 @@
             
             function onParticipantConnected(participant) {
                 console.log('[PARTICIPANT] Connected:', participant.identity);
+            }
+
+            async function uploadInterviewToDatabase(filename) {
+                console.log('[UPLOAD] Uploading interview to database:', filename);
+                try {
+                    // Load the raw interview JSON
+                    var response = await fetch('/interviews/' + encodeURIComponent(filename));
+                    if (!response.ok) {
+                        console.warn('[UPLOAD] Could not load interview file');
+                        return;
+                    }
+
+                    var interviewData = await response.json();
+
+                    // Upload to database
+                    var uploadResponse = await fetch('/api/interview/save', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify(interviewData)
+                    });
+
+                    var result = await uploadResponse.json();
+
+                    if (result.success && result.interview_id) {
+                        console.log('[UPLOAD] Interview uploaded to database:', result.interview_id);
+                        state.interviewDatabaseId = result.interview_id;
+
+                        // Store ID mapping for later use
+                        var roomName = interviewData.room_name;
+                        if (roomName) {
+                            localStorage.setItem('interview_id_map_' + roomName, result.interview_id);
+                            localStorage.setItem('interview_id_map_' + filename, result.interview_id);
+                        }
+                    } else {
+                        console.log('[UPLOAD] Upload skipped or failed:', result.message);
+                    }
+                } catch (error) {
+                    console.error('[UPLOAD] Failed to upload interview:', error);
+                }
             }
         }
     })();

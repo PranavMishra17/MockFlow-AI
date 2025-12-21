@@ -406,6 +406,25 @@
         }
         
         function loadInterview() {
+            // First, try to load RAW interview JSON for database upload
+            fetch('/interviews/' + encodeURIComponent(filename))
+                .then(function(response) {
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    return null;
+                })
+                .then(function(rawData) {
+                    if (rawData && rawData.conversation && rawData.total_messages) {
+                        console.log('[FEEDBACK] Loaded raw interview JSON');
+                        uploadInterviewToDatabase(rawData);
+                    }
+                })
+                .catch(function(err) {
+                    console.log('[FEEDBACK] Could not load raw JSON:', err);
+                });
+
+            // Then load the resequenced version for display
             fetch('/api/interview/' + encodeURIComponent(filename))
                 .then(function(response) {
                     if (!response.ok) throw new Error('Interview not found');
@@ -416,11 +435,6 @@
                     if (data.error) {
                         tryLoadFromLocalStorage();
                         return;
-                    }
-
-                    // Upload to database if authenticated and has full data
-                    if (data.conversation && data.total_messages) {
-                        uploadInterviewToDatabase(data);
                     }
 
                     renderInterview(data);
