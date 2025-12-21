@@ -16,7 +16,7 @@ from livekit import api
 from dotenv import load_dotenv
 
 from document_processor import doc_processor, DocumentMetadata
-from postprocess import resequence_interview, list_interviews, get_interview_summary
+from postprocess import list_interviews, get_interview_summary
 from conversation_cache import conversation_cache, ConversationMetadata
 from supabase_client import supabase_client
 from auth_helpers import require_auth, get_current_user, get_user_id, is_authenticated
@@ -340,9 +340,12 @@ def feedback_page(filename):
 # ==================== TOKEN API ====================
 
 @app.route('/api/token', methods=['POST'])
+@require_auth
 def generate_token():
     """
     Generate LiveKit access token for candidate.
+
+    Requires authentication - user must be logged in to start an interview.
 
     Expected JSON body:
     {
@@ -363,6 +366,15 @@ def generate_token():
     }
     """
     try:
+        # Get authenticated user_id
+        user_id = get_user_id()
+        if not user_id:
+            logger.error("[API] Token generation failed - no user_id")
+            return jsonify({
+                'error': 'Authentication required',
+                'message': 'Please log in to start an interview'
+            }), 401
+
         data = request.json
         name = data.get('name', 'Anonymous')
         email = data.get('email', '')
@@ -377,12 +389,13 @@ def generate_token():
         room_name = f"interview-{name.lower().replace(' ', '-')}-{timestamp}"
 
         logger.info(
-            f"[API] Token generation requested for {name} "
+            f"[API] Token generation requested for {name} (user_id: {user_id}) "
             f"(email: {email}, role: {role}, level: {level})"
         )
 
-        # Build participant attributes
+        # Build participant attributes - CRITICAL: include user_id for database save
         attributes = {
+            'user_id': user_id,
             'role': role,
             'level': level,
             'email': email,
@@ -421,7 +434,7 @@ def generate_token():
         # Generate JWT
         jwt_token = token.to_jwt()
 
-        logger.info(f"[API] Token generated successfully for room: {room_name}")
+        logger.info(f"[API] Token generated successfully for room: {room_name} (user_id: {user_id})")
 
         return jsonify({
             'token': jwt_token,
@@ -782,88 +795,112 @@ def save_feedback_endpoint():
 
 
 @app.route('/api/feedback/get/<interview_id>')
+@require_auth
 def get_feedback_by_id(interview_id):
-    """Get feedback for interview (database first, localStorage fallback)"""
+    """Get feedback for interview from database"""
     try:
-        user = get_current_user()
+        user_id = get_user_id()
 
-        if not user:
-            logger.info("[API] Feedback fetch - no auth, client should use localStorage")
-            return jsonify({}), 404
+        # Validate UUID format
+        import uuid
+        try:
+            uuid.UUID(interview_id)
+        except ValueError:
+            return jsonify({'error': 'Invalid interview ID'}), 400
 
-        user_id = user.user.id
+        # Get feedback from database
         feedback = supabase_client.get_feedback(interview_id)
 
-        if feedback and feedback.get('user_id') == user_id:
-            logger.info(f"[API] Feedback retrieved from database: {interview_id}")
-            return jsonify(feedback.get('feedback_data', {}))
+        if not feedback:
+            return jsonify({}), 404
 
-        logger.info(f"[API] No feedback found in database for: {interview_id}")
-        return jsonify({}), 404
+        # Verify user owns this interview
+        if feedback.get('user_id') != user_id:
+            return jsonify({'error': 'Unauthorized'}), 403
+
+        logger.info(f"[API] Feedback retrieved for interview: {interview_id}")
+        return jsonify(feedback)
+
     except Exception as e:
         logger.error(f"[API] Feedback fetch error: {e}", exc_info=True)
         return jsonify({}), 500
 
 
-@app.route('/api/interview/<filename>')
-def get_interview(filename):
-    """
-    Get re-sequenced interview transcript.
-
-    Args:
-        filename: Interview JSON filename, room name, or cache key
-
-    Returns:
-        Re-sequenced conversation with metadata.
-    """
+def format_conversation(conversation_dict):
+    """Convert DB conversation format to ordered list for frontend"""
     try:
-        # Security: Ensure filename is safe
-        if '..' in filename or '/' in filename or '\\' in filename:
-            return jsonify({
-                'error': 'Invalid filename'
-            }), 400
+        agent_msgs = conversation_dict.get('agent', [])
+        user_msgs = conversation_dict.get('user', [])
 
-        # Try loading from files/cache first
-        result = resequence_interview(filename)
+        # Merge by timestamp
+        all_msgs = []
 
-        if 'error' not in result or not result.get('error'):
-            logger.info(f"[API] Resequenced interview: {filename}")
-            return jsonify({
-                'success': True,
-                **result
+        for msg in agent_msgs:
+            all_msgs.append({
+                'role': 'agent',
+                'text': msg.get('text', ''),
+                'timestamp': msg.get('timestamp', 0),
+                'stage': msg.get('stage', '')
             })
 
-        # If not found in files, try database lookup by room_name for authenticated users
-        user = get_current_user()
-        if user:
-            user_id = user.user.id
-            try:
-                interview = supabase_client.get_interview_by_room_name(user_id, filename)
-                if interview:
-                    logger.info(f"[API] Found interview in database: {filename}")
-                    # Convert database interview to postprocess format
-                    return jsonify({
-                        'success': True,
-                        'meta': {
-                            'candidate': interview.get('candidate_name', 'Unknown'),
-                            'interview_date': interview.get('interview_date'),
-                            'job_role': interview.get('job_role'),
-                            'experience_level': interview.get('experience_level'),
-                            'source': 'database'
-                        },
-                        'ordered_conversation': []
-                    })
-            except Exception as db_err:
-                logger.error(f"[API] Database lookup error: {db_err}")
+        for msg in user_msgs:
+            all_msgs.append({
+                'role': 'user',
+                'text': msg.get('text', ''),
+                'timestamp': msg.get('timestamp', 0)
+            })
 
-        return jsonify(result), 404
+        # Sort by timestamp
+        all_msgs.sort(key=lambda x: x.get('timestamp', 0))
+
+        return all_msgs
+
+    except Exception as e:
+        logger.error(f"[FORMAT] Conversation format error: {e}", exc_info=True)
+        return []
+
+
+@app.route('/api/interview/<interview_id>')
+@require_auth
+def get_interview(interview_id):
+    """Get interview by ID from database"""
+    try:
+        user_id = get_user_id()
+
+        # Validate UUID format
+        import uuid
+        try:
+            uuid.UUID(interview_id)
+        except ValueError:
+            return jsonify({'error': 'Invalid interview ID format'}), 400
+
+        # Load from database
+        interview = supabase_client.get_interview_by_id(user_id, interview_id)
+
+        if not interview:
+            return jsonify({'error': 'Interview not found'}), 404
+
+        logger.info(f"[API] Loaded interview {interview_id} for user {user_id}")
+
+        # Format conversation for frontend
+        ordered_conversation = format_conversation(interview.get('conversation', {}))
+
+        # Format for frontend
+        return jsonify({
+            'success': True,
+            'meta': {
+                'candidate': interview.get('candidate_name', 'Unknown'),
+                'interview_date': interview.get('interview_date'),
+                'job_role': interview.get('job_role'),
+                'experience_level': interview.get('experience_level'),
+                'source': 'database'
+            },
+            'ordered_conversation': ordered_conversation
+        })
 
     except Exception as e:
         logger.error(f"[API] Get interview error: {e}", exc_info=True)
-        return jsonify({
-            'error': 'Failed to get interview',
-            'message': str(e)
-        }), 500
+        return jsonify({'error': str(e)}), 500
 
 
 @app.route('/api/interview/<filename>/summary')
@@ -934,59 +971,66 @@ def get_cached_feedback(interview_id):
 
 def _load_interview_context(interview_id):
     """
-    Helper to load interview transcript and context for feedback generation.
-    
+    Helper to load interview transcript and context for feedback generation from database.
+
     Returns:
         tuple: (interview_chat, candidate_profile, job_summary, meta, conversation, error)
     """
-    import json as json_module
-    
-    # Load and resequence the interview transcript
-    resequenced = resequence_interview(interview_id)
-    if 'error' in resequenced and resequenced.get('error'):
-        return None, None, None, None, None, f'Could not find interview: {interview_id}'
-    
-    # Build the interview chat transcript
-    conversation = resequenced.get('ordered_conversation', [])
-    meta = resequenced.get('meta', {})
-    
-    if not conversation:
-        return None, None, None, None, None, 'No conversation found in this interview'
-    
-    # Format transcript for LLM
-    transcript_lines = []
-    for turn in conversation:
-        role = "INTERVIEWER" if turn['role'] == 'agent' else "CANDIDATE"
-        stage_info = f" [{turn['stage']}]" if turn.get('stage') else ""
-        transcript_lines.append(f"{role}{stage_info}: {turn['text']}")
-    
-    interview_chat = "\n\n".join(transcript_lines)
-    
-    # Build candidate profile and job summary from metadata
-    candidate_profile = f"Name: {meta.get('candidate', 'Unknown')}"
-    job_summary = "Role: Not specified"
-    
-    # Try to get additional context
-    if meta.get('job_role'):
-        job_summary = f"Role: {meta.get('job_role', 'Not specified')}"
-    if meta.get('experience_level'):
-        candidate_profile += f"\nExperience Level: {meta.get('experience_level', 'Not specified')}"
-    
-    # If source is file, try to load raw data for more context
-    if meta.get('source') == 'file':
+    try:
+        # Get authenticated user
+        user_id = get_user_id()
+        if not user_id:
+            return None, None, None, None, None, 'Authentication required'
+
+        # Validate UUID format
+        import uuid
         try:
-            interview_path = Path("interviews") / interview_id
-            with open(interview_path, 'r', encoding='utf-8') as f:
-                raw_data = json_module.load(f)
-                
-            if raw_data.get('job_role'):
-                job_summary = f"Role: {raw_data.get('job_role', 'Not specified')}"
-            if raw_data.get('experience_level'):
-                candidate_profile = f"Name: {meta.get('candidate', 'Unknown')}\nExperience Level: {raw_data.get('experience_level', 'Not specified')}"
-        except Exception as e:
-            logger.warning(f"[API] Could not load raw interview data: {e}")
-    
-    return interview_chat, candidate_profile, job_summary, meta, conversation, None
+            uuid.UUID(interview_id)
+        except ValueError:
+            return None, None, None, None, None, f'Invalid interview ID format: {interview_id}'
+
+        # Load interview from database
+        interview = supabase_client.get_interview_by_id(user_id, interview_id)
+        if not interview:
+            return None, None, None, None, None, f'Could not find interview: {interview_id}'
+
+        # Format conversation from database format
+        conversation = format_conversation(interview.get('conversation', {}))
+
+        if not conversation:
+            return None, None, None, None, None, 'No conversation found in this interview'
+
+        # Format transcript for LLM
+        transcript_lines = []
+        for turn in conversation:
+            role = "INTERVIEWER" if turn['role'] == 'agent' else "CANDIDATE"
+            stage_info = f" [{turn['stage']}]" if turn.get('stage') else ""
+            transcript_lines.append(f"{role}{stage_info}: {turn['text']}")
+
+        interview_chat = "\n\n".join(transcript_lines)
+
+        # Build metadata
+        meta = {
+            'candidate': interview.get('candidate_name', 'Unknown'),
+            'interview_date': interview.get('interview_date'),
+            'job_role': interview.get('job_role'),
+            'experience_level': interview.get('experience_level'),
+            'source': 'database'
+        }
+
+        # Build candidate profile and job summary
+        candidate_profile = f"Name: {meta.get('candidate', 'Unknown')}"
+        if meta.get('experience_level'):
+            candidate_profile += f"\nExperience Level: {meta.get('experience_level', 'Not specified')}"
+
+        job_summary = f"Role: {meta.get('job_role', 'Not specified')}"
+
+        logger.info(f"[FEEDBACK] Loaded interview context for {interview_id} from database")
+        return interview_chat, candidate_profile, job_summary, meta, conversation, None
+
+    except Exception as e:
+        logger.error(f"[FEEDBACK] Error loading interview context: {e}", exc_info=True)
+        return None, None, None, None, None, f'Error loading interview: {str(e)}'
 
 
 @app.route('/api/feedback/scores', methods=['POST'])

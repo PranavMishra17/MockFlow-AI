@@ -1,1807 +1,1628 @@
-# MIGRATION.md - Production Migration Plan
+# MockFlow-AI Production Migration Plan
 
-Phased migration to production with Supabase backend and BYOK architecture. Each phase is self-contained and can be completed independently.
+Complete phased migration to production with Supabase backend and BYOK architecture. Each phase is self-contained and can be completed independently.
 
-**Core Principles:**
+## Core Principles
+
 - Maintain existing UI theme, colors, fonts, and styling
 - Reuse existing CSS classes, modals, and button effects
-- Keep localStorage fallback for transcripts and feedback
+- **NO localStorage - Database is single source of truth**
+- **NO local file storage - Render's filesystem is ephemeral**
+- **On-demand agent workers - Spawn per interview, terminate on completion**
 - No new features (subscriptions, payments, etc.)
 - Iterative approach - each phase is complete before next begins
 
+## Production Environment
+
+- **Hosting**: Render.com (Free Tier - 512MB RAM, 0.1 CPU)
+- **Database**: Supabase (Free Tier)
+- **LiveKit**: Cloud (Free Tier - agent dispatch enabled)
+- **Expected Users**: <5 concurrent
+
 ---
 
-## Phase 1: Backend Foundation - Supabase Integration
+## Phase 1: Backend Foundation - Supabase Integration ✅ DONE
 
 **Goal**: Set up backend infrastructure with Supabase client and database operations.
 
-**Prerequisites**: Complete PREREQUISITES.md setup  - DONE
-
-### Files to Create
-
-#### 1.1 Create `supabase_client.py`
-**Location**: Root directory
-
-**Purpose**: Single source of truth for all Supabase operations
-
-**Implementation**:
-```python
-import os
-from supabase import create_client, Client
-from cryptography.fernet import Fernet
-from typing import Optional, Dict, Any, List
-import logging
-from dotenv import load_dotenv
-
-load_dotenv()
-
-logger = logging.getLogger(__name__)
-
-class SupabaseClient:
-    def __init__(self):
-        url = os.getenv('SUPABASE_URL')
-        key = os.getenv('SUPABASE_SERVICE_KEY')
-        
-        if not url or not key:
-            raise ValueError("Missing Supabase credentials in environment")
-        
-        self.client: Client = create_client(url, key)
-        self.encryption_key = os.getenv('ENCRYPTION_KEY', '').encode()
-        self.cipher = Fernet(self.encryption_key) if self.encryption_key else None
-        
-    def _encrypt(self, text: str) -> str:
-        """Encrypt sensitive data"""
-        if not self.cipher:
-            raise ValueError("Encryption key not configured")
-        return self.cipher.encrypt(text.encode()).decode()
-    
-    def _decrypt(self, encrypted_text: str) -> str:
-        """Decrypt sensitive data"""
-        if not self.cipher:
-            raise ValueError("Encryption key not configured")
-        return self.cipher.decrypt(encrypted_text.encode()).decode()
-    
-    def get_user(self, user_id: str) -> Optional[Dict[str, Any]]:
-        """Get user by ID"""
-        try:
-            response = self.client.table('users').select('*').eq('id', user_id).execute()
-            return response.data[0] if response.data else None
-        except Exception as e:
-            logger.error(f"Error fetching user: {e}")
-            return None
-    
-    def save_api_keys(self, user_id: str, openai_key: str, deepgram_key: str) -> bool:
-        """Save encrypted API keys for user"""
-        try:
-            encrypted_openai = self._encrypt(openai_key)
-            encrypted_deepgram = self._encrypt(deepgram_key)
-            
-            response = self.client.table('user_api_keys').upsert({
-                'user_id': user_id,
-                'openai_key_encrypted': encrypted_openai,
-                'deepgram_key_encrypted': encrypted_deepgram,
-                'encryption_salt': 'salt_v1'
-            }).execute()
-            
-            return True
-        except Exception as e:
-            logger.error(f"Error saving API keys: {e}")
-            return False
-    
-    def get_api_keys(self, user_id: str) -> Optional[Dict[str, str]]:
-        """Get decrypted API keys for user"""
-        try:
-            response = self.client.table('user_api_keys').select('*').eq('user_id', user_id).execute()
-            
-            if not response.data:
-                return None
-            
-            keys = response.data[0]
-            return {
-                'openai_key': self._decrypt(keys['openai_key_encrypted']),
-                'deepgram_key': self._decrypt(keys['deepgram_key_encrypted'])
-            }
-        except Exception as e:
-            logger.error(f"Error fetching API keys: {e}")
-            return None
-    
-    def save_interview(self, user_id: str, interview_data: Dict[str, Any]) -> Optional[str]:
-        """Save interview to database, returns interview_id"""
-        try:
-            data = {
-                'user_id': user_id,
-                'candidate_name': interview_data.get('candidateName'),
-                'room_name': interview_data.get('roomName'),
-                'job_role': interview_data.get('jobRole'),
-                'experience_level': interview_data.get('experienceLevel'),
-                'final_stage': interview_data.get('finalStage'),
-                'ended_by': interview_data.get('endedBy'),
-                'skipped_stages': interview_data.get('skippedStages', []),
-                'has_resume': interview_data.get('hasResume', False),
-                'has_jd': interview_data.get('hasJobDescription', False),
-                'conversation': interview_data.get('conversation', []),
-                'total_messages': interview_data.get('totalMessages', {}),
-                'metadata': interview_data.get('metadata', {})
-            }
-            
-            response = self.client.table('interviews').insert(data).execute()
-            return response.data[0]['id'] if response.data else None
-        except Exception as e:
-            logger.error(f"Error saving interview: {e}")
-            return None
-    
-    def get_user_interviews(self, user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
-        """Get all interviews for user"""
-        try:
-            response = self.client.table('interviews').select('*').eq('user_id', user_id).order('interview_date', desc=True).limit(limit).execute()
-            return response.data
-        except Exception as e:
-            logger.error(f"Error fetching interviews: {e}")
-            return []
-    
-    def get_interview_by_room(self, room_name: str) -> Optional[Dict[str, Any]]:
-        """Get interview by room name"""
-        try:
-            response = self.client.table('interviews').select('*').eq('room_name', room_name).execute()
-            return response.data[0] if response.data else None
-        except Exception as e:
-            logger.error(f"Error fetching interview: {e}")
-            return None
-    
-    def save_feedback(self, user_id: str, interview_id: str, feedback_data: Dict[str, Any]) -> bool:
-        """Save feedback for interview"""
-        try:
-            response = self.client.table('feedback').insert({
-                'user_id': user_id,
-                'interview_id': interview_id,
-                'feedback_data': feedback_data
-            }).execute()
-            return True
-        except Exception as e:
-            logger.error(f"Error saving feedback: {e}")
-            return False
-    
-    def get_feedback(self, interview_id: str) -> Optional[Dict[str, Any]]:
-        """Get feedback for interview"""
-        try:
-            response = self.client.table('feedback').select('*').eq('interview_id', interview_id).execute()
-            return response.data[0] if response.data else None
-        except Exception as e:
-            logger.error(f"Error fetching feedback: {e}")
-            return None
-
-supabase_client = SupabaseClient()
-```
-
-### Files to Modify
-
-#### 1.2 Update `app.py` - Import Supabase Client
-**Changes**:
-- Add import at top:
-```python
-from supabase_client import supabase_client
-```
-- Add logging configuration:
-```python
-import logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-```
-
-### Tasks Checklist
-
-- [x] Create `supabase_client.py` with all CRUD operations
-- [x] Add error handling with try-catch blocks
-- [x] Implement encryption/decryption for API keys
-- [x] Add comprehensive logging
-- [x] Test connection with `test_supabase.py` (from PREREQUISITES)
-- [x] Verify all methods work with Supabase dashboard
-- [x] Commit changes: "Phase 1: Add Supabase client foundation"
-
-**Phase 1 Complete**: Backend can now communicate with Supabase - DONE
+**Status**: Complete
 
 ---
 
-## Phase 2: Authentication Foundation - Supabase Auth
+## Phase 2: Authentication Foundation - Supabase Auth ✅ DONE
 
-**Goal**: Implement Google OAuth authentication using Supabase's built-in auth. - We have already enabled Gauth via SUPABASE free tier and Google cloud, with all api n other stuuf added in .env.development file. WE just need to integrate the asme 
+**Goal**: Implement Google OAuth authentication using Supabase's built-in auth.
 
-**Duration**: 2-3 days
-
-**Dependencies**: Phase 1 complete
-
-### Files to Create
-
-#### 2.1 Create `auth_helpers.py`
-**Location**: Root directory
-
-**Purpose**: Authentication utilities and session management
-
-**Implementation**:
-```python
-import os
-from functools import wraps
-from flask import session, redirect, url_for, request, jsonify
-from supabase import create_client
-import logging
-
-logger = logging.getLogger(__name__)
-
-url = os.getenv('SUPABASE_URL')
-anon_key = os.getenv('SUPABASE_ANON_KEY')
-supabase = create_client(url, anon_key)
-
-def get_current_user():
-    """Get current authenticated user from session"""
-    try:
-        access_token = session.get('access_token')
-        if not access_token:
-            return None
-        
-        user = supabase.auth.get_user(access_token)
-        return user
-    except Exception as e:
-        logger.error(f"Error getting current user: {e}")
-        return None
-
-def require_auth(f):
-    """Decorator to protect routes requiring authentication"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        user = get_current_user()
-        if not user:
-            if request.is_json:
-                return jsonify({'error': 'Authentication required'}), 401
-            return redirect(url_for('login'))
-        return f(*args, **kwargs)
-    return decorated_function
-
-def get_user_id():
-    """Extract user_id from session"""
-    user = get_current_user()
-    return user.user.id if user else None
-
-def is_authenticated():
-    """Check if user is authenticated"""
-    return get_current_user() is not None
-```
-
-### Files to Modify
-
-#### 2.2 Update `app.py` - Add Auth Routes
-**Location**: `app.py`
-
-**Changes**:
-```python
-from auth_helpers import require_auth, get_current_user, get_user_id, is_authenticated
-
-# Add session secret key
-app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-prod')
-
-@app.route('/auth/login')
-def login():
-    """Redirect to Supabase Google OAuth"""
-    try:
-        redirect_url = f"{request.host_url}auth/callback"
-        auth_url = f"{os.getenv('SUPABASE_URL')}/auth/v1/authorize?provider=google&redirect_to={redirect_url}"
-        return redirect(auth_url)
-    except Exception as e:
-        logger.error(f"Login error: {e}")
-        return "Login failed", 500
-
-@app.route('/auth/callback')
-def auth_callback():
-    """Handle OAuth callback from Supabase"""
-    try:
-        access_token = request.args.get('access_token')
-        refresh_token = request.args.get('refresh_token')
-        
-        if not access_token:
-            return "Authentication failed", 400
-        
-        session['access_token'] = access_token
-        session['refresh_token'] = refresh_token
-        
-        return redirect(url_for('dashboard'))
-    except Exception as e:
-        logger.error(f"Auth callback error: {e}")
-        return "Authentication failed", 500
-
-@app.route('/auth/logout')
-def logout():
-    """Clear session and logout"""
-    session.clear()
-    return redirect(url_for('index'))
-
-@app.route('/api/auth/status')
-def auth_status():
-    """Check authentication status"""
-    try:
-        user = get_current_user()
-        if user:
-            return jsonify({
-                'authenticated': True,
-                'user': {
-                    'id': user.user.id,
-                    'email': user.user.email,
-                    'name': user.user.user_metadata.get('full_name'),
-                    'avatar': user.user.user_metadata.get('avatar_url')
-                }
-            })
-        return jsonify({'authenticated': False})
-    except Exception as e:
-        logger.error(f"Auth status error: {e}")
-        return jsonify({'authenticated': False})
-```
-
-### Tasks Checklist
-
-- [x] Create `auth_helpers.py` with authentication utilities
-- [x] Update `app.py` with auth routes
-- [x] Add session management
-- [ ] Test login flow locally
-- [ ] Test logout functionality
-- [ ] Test auth status endpoint
-- [x] Add error handling for all auth operations
-- [ ] Commit changes: "Phase 2: Add Supabase authentication"
-
-**Phase 2 Complete**: Users can now authenticate with Google - DONE
+**Status**: Complete
 
 ---
 
-## Phase 3: Authentication UI - Login & Dashboard
+## Phase 3: Authentication UI - Login & Dashboard ✅ DONE
 
 **Goal**: Create login page and user dashboard with existing UI theme.
 
-**Duration**: 1-2 days
-
-**Dependencies**: Phase 2 complete
-
-**UI Theme Reference**: Use existing CSS from `static/style.css`:
-- Background: `#0a0a0a`
-- Primary color: `#00ff00` (lime green)
-- Secondary: `#00e5ff` (cyan)
-- Card background: `rgba(255, 255, 255, 0.05)`
-- Fonts: 'Space Mono', monospace
-- Buttons: `.primary-btn`, `.secondary-btn` classes
-- Modals: Reuse existing modal styles
-
-### Files to Create
-
-#### 3.1 Create `templates/login.html`
-**Purpose**: Landing page for unauthenticated users
-
-**Implementation**: Use existing theme from `index.html`
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MockFlow AI - Login</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>MockFlow AI</h1>
-            <p class="subtitle">AI-Powered Technical Interview Practice</p>
-        </div>
-
-        <div class="content-card" style="max-width: 500px; margin: 0 auto;">
-            <h2>Sign In to Continue</h2>
-            <p style="color: #888; margin-bottom: 2rem;">
-                Practice technical interviews with an AI interviewer
-            </p>
-
-            <button class="primary-btn" onclick="loginWithGoogle()" style="width: 100%;">
-                <svg style="width: 20px; height: 20px; margin-right: 10px;" viewBox="0 0 24 24">
-                    <path fill="currentColor" d="M12.545,10.239v3.821h5.445c-0.712,2.315-2.647,3.972-5.445,3.972c-3.332,0-6.033-2.701-6.033-6.032s2.701-6.032,6.033-6.032c1.498,0,2.866,0.549,3.921,1.453l2.814-2.814C17.503,2.988,15.139,2,12.545,2C7.021,2,2.543,6.477,2.543,12s4.478,10,10.002,10c8.396,0,10.249-7.85,9.426-11.748L12.545,10.239z"/>
-                </svg>
-                Continue with Google
-            </button>
-
-            <p style="color: #666; font-size: 0.875rem; margin-top: 2rem; text-align: center;">
-                By signing in, you agree to our Terms of Service
-            </p>
-        </div>
-    </div>
-
-    <script>
-        function loginWithGoogle() {
-            window.location.href = '/auth/login';
-        }
-    </script>
-</body>
-</html>
-```
-
-#### 3.2 Create `templates/dashboard.html`
-**Purpose**: User dashboard after login
-
-**Implementation**: Reuse card styles from existing templates
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - MockFlow AI</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <div class="container">
-        <!-- Reuse existing navigation structure -->
-        <div class="header">
-            <h1>MockFlow AI</h1>
-            <div class="user-info">
-                <img id="userAvatar" class="avatar" src="" alt="">
-                <span id="userName"></span>
-                <button class="secondary-btn" onclick="logout()">Logout</button>
-            </div>
-        </div>
-
-        <div class="content-card">
-            <h2>Welcome back, <span id="userNameDisplay"></span></h2>
-            
-            <!-- API Keys Status -->
-            <div class="status-card" id="apiKeysStatus">
-                <h3>API Keys</h3>
-                <p id="keysStatusText">Loading...</p>
-                <button class="primary-btn" onclick="manageKeys()">Manage API Keys</button>
-            </div>
-
-            <!-- Quick Actions -->
-            <div class="actions-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; margin: 2rem 0;">
-                <button class="action-card" onclick="startInterview()" id="startInterviewBtn" disabled>
-                    <h3>Start New Interview</h3>
-                    <p>Practice technical interviews with AI</p>
-                </button>
-                
-                <button class="action-card" onclick="viewHistory()">
-                    <h3>Interview History</h3>
-                    <p>Review past interviews and feedback</p>
-                </button>
-            </div>
-
-            <!-- Recent Interviews -->
-            <div id="recentInterviews">
-                <h3>Recent Interviews</h3>
-                <div id="interviewsList"></div>
-            </div>
-        </div>
-    </div>
-
-    <script src="{{ url_for('static', filename='auth.js') }}"></script>
-    <script src="{{ url_for('static', filename='dashboard.js') }}"></script>
-</body>
-</html>
-```
-
-### Files to Modify
-
-#### 3.3 Update `app.py` - Add Dashboard Route
-```python
-@app.route('/')
-def index():
-    """Landing page - redirect to dashboard if authenticated"""
-    if is_authenticated():
-        return redirect(url_for('dashboard'))
-    return redirect(url_for('login'))
-
-@app.route('/dashboard')
-@require_auth
-def dashboard():
-    """User dashboard"""
-    return render_template('dashboard.html')
-```
-
-#### 3.4 Update `static/style.css` - Add Auth Components
-**Add these classes** (following existing theme):
-```css
-/* User Info */
-.user-info {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.avatar {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    border: 2px solid var(--primary-color);
-}
-
-/* Status Card */
-.status-card {
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: 1.5rem;
-    margin: 2rem 0;
-}
-
-/* Action Cards */
-.action-card {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: 2rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    text-align: left;
-}
-
-.action-card:hover:not(:disabled) {
-    border-color: var(--primary-color);
-    background: rgba(0, 255, 0, 0.05);
-    transform: translateY(-2px);
-}
-
-.action-card:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-```
-
-#### 3.5 Create `static/auth.js`
-**Purpose**: Frontend auth utilities
-
-```javascript
-async function checkAuthStatus() {
-    try {
-        const response = await fetch('/api/auth/status');
-        const data = await response.json();
-        return data;
-    } catch (error) {
-        console.error('Auth check failed:', error);
-        return { authenticated: false };
-    }
-}
-
-async function logout() {
-    try {
-        window.location.href = '/auth/logout';
-    } catch (error) {
-        console.error('Logout failed:', error);
-    }
-}
-
-async function requireAuth() {
-    const auth = await checkAuthStatus();
-    if (!auth.authenticated) {
-        window.location.href = '/login';
-        return null;
-    }
-    return auth.user;
-}
-```
-
-#### 3.6 Create `static/dashboard.js`
-**Purpose**: Dashboard functionality
-
-```javascript
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        const user = await requireAuth();
-        if (!user) return;
-
-        document.getElementById('userName').textContent = user.name || user.email;
-        document.getElementById('userNameDisplay').textContent = user.name || user.email;
-        document.getElementById('userAvatar').src = user.avatar || '/static/default-avatar.png';
-
-        await checkApiKeys();
-        await loadRecentInterviews();
-    } catch (error) {
-        console.error('Dashboard initialization failed:', error);
-    }
-});
-
-async function checkApiKeys() {
-    try {
-        const response = await fetch('/api/user/keys/status');
-        const data = await response.json();
-        
-        const statusText = document.getElementById('keysStatusText');
-        const startBtn = document.getElementById('startInterviewBtn');
-        
-        if (data.has_keys) {
-            statusText.textContent = 'API keys configured';
-            statusText.style.color = '#00ff00';
-            startBtn.disabled = false;
-        } else {
-            statusText.textContent = 'Please configure your API keys to start interviews';
-            statusText.style.color = '#ff9800';
-            startBtn.disabled = true;
-        }
-    } catch (error) {
-        console.error('Failed to check API keys:', error);
-    }
-}
-
-function manageKeys() {
-    window.location.href = '/api-keys';
-}
-
-function startInterview() {
-    window.location.href = '/form';
-}
-
-function viewHistory() {
-    window.location.href = '/past-calls';
-}
-
-async function loadRecentInterviews() {
-    try {
-        const response = await fetch('/api/user/interviews?limit=5');
-        const interviews = await response.json();
-        
-        const list = document.getElementById('interviewsList');
-        if (interviews.length === 0) {
-            list.innerHTML = '<p style="color: #666;">No interviews yet. Start your first one!</p>';
-            return;
-        }
-        
-        list.innerHTML = interviews.map(interview => `
-            <div class="interview-card" onclick="viewInterview('${interview.id}')">
-                <h4>${interview.job_role} - ${interview.experience_level}</h4>
-                <p>${new Date(interview.interview_date).toLocaleDateString()}</p>
-            </div>
-        `).join('');
-    } catch (error) {
-        console.error('Failed to load interviews:', error);
-    }
-}
-
-function viewInterview(id) {
-    window.location.href = `/feedback?id=${id}`;
-}
-```
-
-### Tasks Checklist
-
-- [x] Create `templates/login.html` with existing theme (Simplified - Login redirects to Supabase OAuth)
-- [x] Create `templates/dashboard.html` with card layouts
-- [x] Update `static/style.css` with auth components
-- [x] Create `static/auth.js` utilities
-- [x] Create `static/dashboard.js` functionality
-- [x] Update `app.py` routes
-- [x] Test login flow end-to-end
-- [x] Test dashboard displays user info
-- [x] Verify existing CSS classes work properly
-- [x] Add Google avatar to Account button
-- [x] Fix OAuth fragment token handling
-- [x] Commit changes: "Phase 2 & 3: Add Supabase authentication with UI"
-
-**Phase 3 Complete**: Users can log in and access dashboard - FULLY TESTED & WORKING ✓
-
-**Implementation Notes**:
-- Login/Signup buttons in header on index.html (unauthenticated state)
-- Account button with Google avatar when logged in (authenticated state)
-- API keys management integrated into dashboard (no separate page needed)
-- OAuth callback handles fragment-based tokens correctly with client-side extraction
-- Comprehensive logging for debugging auth flow
+**Status**: Complete
 
 ---
 
-## Phase 4: API Key Management - BYOK Implementation ✅ COMPLETED
+## Phase 4: API Key Management - BYOK Implementation ✅ DONE
 
 **Goal**: Allow users to save and manage their API keys (LiveKit, OpenAI, Deepgram) with full BYOK model.
 
-**Dependencies**: Phase 3 complete
-
-**Status**: ✅ Fully implemented with enhanced UX and security features
-
-### Files to Create
-
-#### 4.1 Create `templates/api_keys.html`
-**Purpose**: API key management page
-
-**Implementation**: Use existing form and modal styles
-```html
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Keys - MockFlow AI</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>API Keys Management</h1>
-            <button class="secondary-btn" onclick="goBack()">Back to Dashboard</button>
-        </div>
-
-        <div class="content-card">
-            <div class="info-box">
-                <h3>About API Keys (BYOK)</h3>
-                <p>MockFlow AI uses your own API keys to conduct interviews. Your keys are encrypted and stored securely.</p>
-                <ul>
-                    <li>OpenAI API key: Used for LLM and text-to-speech</li>
-                    <li>Deepgram API key: Used for speech-to-text</li>
-                </ul>
-            </div>
-
-            <form id="apiKeysForm">
-                <div class="form-group">
-                    <label for="openaiKey">OpenAI API Key</label>
-                    <input type="password" id="openaiKey" class="form-input" placeholder="sk-proj-..." required>
-                    <small>Get your key from <a href="https://platform.openai.com/api-keys" target="_blank">OpenAI Platform</a></small>
-                </div>
-
-                <div class="form-group">
-                    <label for="deepgramKey">Deepgram API Key</label>
-                    <input type="password" id="deepgramKey" class="form-input" placeholder="..." required>
-                    <small>Get your key from <a href="https://console.deepgram.com/" target="_blank">Deepgram Console</a></small>
-                </div>
-
-                <div class="button-group">
-                    <button type="button" class="secondary-btn" onclick="testKeys()">Test Keys</button>
-                    <button type="submit" class="primary-btn">Save Keys</button>
-                </div>
-            </form>
-
-            <div id="currentKeys" style="margin-top: 2rem;">
-                <h3>Current Keys</h3>
-                <p id="keysStatus">Loading...</p>
-            </div>
-        </div>
-    </div>
-
-    <!-- Reuse existing modal styles -->
-    <div id="messageModal" class="modal">
-        <div class="modal-content">
-            <h3 id="modalTitle"></h3>
-            <p id="modalMessage"></p>
-            <button class="primary-btn" onclick="closeModal()">OK</button>
-        </div>
-    </div>
-
-    <script src="{{ url_for('static', filename='auth.js') }}"></script>
-    <script src="{{ url_for('static', filename='apikeys.js') }}"></script>
-</body>
-</html>
-```
-
-#### 4.2 Create `static/apikeys.js` - file is already there - but the code there is non-implmeneted / leftover 
-
-**Purpose**: API key management logic
-
-```javascript
-document.addEventListener('DOMContentLoaded', async () => {
-    await requireAuth();
-    await loadCurrentKeys();
-});
-
-async function loadCurrentKeys() {
-    try {
-        const response = await fetch('/api/user/keys/status');
-        const data = await response.json();
-        
-        const status = document.getElementById('keysStatus');
-        if (data.has_keys) {
-            status.innerHTML = `
-                <p style="color: #00ff00;">✓ Keys configured</p>
-                <p style="font-size: 0.875rem; color: #666;">
-                    OpenAI: ${data.openai_masked}<br>
-                    Deepgram: ${data.deepgram_masked}
-                </p>
-            `;
-        } else {
-            status.innerHTML = '<p style="color: #ff9800;">No keys configured</p>';
-        }
-    } catch (error) {
-        console.error('Failed to load keys status:', error);
-    }
-}
-
-function validateKeys() {
-    const openaiKey = document.getElementById('openaiKey').value.trim();
-    const deepgramKey = document.getElementById('deepgramKey').value.trim();
-    
-    if (!openaiKey.startsWith('sk-')) {
-        showModal('Invalid Key', 'OpenAI key should start with "sk-"');
-        return false;
-    }
-    
-    if (deepgramKey.length < 10) {
-        showModal('Invalid Key', 'Deepgram key appears too short');
-        return false;
-    }
-    
-    return true;
-}
-
-async function testKeys() {
-    if (!validateKeys()) return;
-    
-    const openaiKey = document.getElementById('openaiKey').value.trim();
-    const deepgramKey = document.getElementById('deepgramKey').value.trim();
-    
-    try {
-        const response = await fetch('/api/user/keys/validate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ openai_key: openaiKey, deepgram_key: deepgramKey })
-        });
-        
-        const result = await response.json();
-        
-        if (result.valid) {
-            showModal('Success', 'API keys are valid!');
-        } else {
-            showModal('Invalid Keys', result.message || 'One or more keys are invalid');
-        }
-    } catch (error) {
-        console.error('Key validation failed:', error);
-        showModal('Error', 'Failed to validate keys. Please try again.');
-    }
-}
-
-document.getElementById('apiKeysForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    
-    if (!validateKeys()) return;
-    
-    const openaiKey = document.getElementById('openaiKey').value.trim();
-    const deepgramKey = document.getElementById('deepgramKey').value.trim();
-    
-    try {
-        const response = await fetch('/api/user/keys', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ openai_key: openaiKey, deepgram_key: deepgramKey })
-        });
-        
-        const result = await response.json();
-        
-        if (response.ok) {
-            showModal('Success', 'API keys saved successfully!', () => {
-                window.location.href = '/dashboard';
-            });
-        } else {
-            showModal('Error', result.message || 'Failed to save keys');
-        }
-    } catch (error) {
-        console.error('Failed to save keys:', error);
-        showModal('Error', 'Failed to save keys. Please try again.');
-    }
-});
-
-function showModal(title, message, callback = null) {
-    document.getElementById('modalTitle').textContent = title;
-    document.getElementById('modalMessage').textContent = message;
-    document.getElementById('messageModal').style.display = 'flex';
-    
-    if (callback) {
-        window.modalCallback = callback;
-    }
-}
-
-function closeModal() {
-    document.getElementById('messageModal').style.display = 'none';
-    if (window.modalCallback) {
-        window.modalCallback();
-        window.modalCallback = null;
-    }
-}
-
-function goBack() {
-    window.location.href = '/dashboard';
-}
-```
-
-### Files to Modify
-
-#### 4.3 Update `app.py` - Add API Key Endpoints
-```python
-@app.route('/api-keys')
-@require_auth
-def api_keys_page():
-    """API keys management page"""
-    return render_template('api_keys.html')
-
-@app.route('/api/user/keys/status')
-@require_auth
-def get_keys_status():
-    """Check if user has API keys configured"""
-    try:
-        user_id = get_user_id()
-        keys = supabase_client.get_api_keys(user_id)
-        
-        if keys:
-            return jsonify({
-                'has_keys': True,
-                'openai_masked': f"sk-...{keys['openai_key'][-4:]}",
-                'deepgram_masked': f"...{keys['deepgram_key'][-4:]}"
-            })
-        
-        return jsonify({'has_keys': False})
-    except Exception as e:
-        logger.error(f"Failed to get keys status: {e}")
-        return jsonify({'has_keys': False})
-
-@app.route('/api/user/keys', methods=['POST'])
-@require_auth
-def save_user_keys():
-    """Save user's API keys (encrypted)"""
-    try:
-        user_id = get_user_id()
-        data = request.json
-        
-        openai_key = data.get('openai_key')
-        deepgram_key = data.get('deepgram_key')
-        
-        if not openai_key or not deepgram_key:
-            return jsonify({'error': 'Both keys required'}), 400
-        
-        success = supabase_client.save_api_keys(user_id, openai_key, deepgram_key)
-        
-        if success:
-            return jsonify({'message': 'Keys saved successfully'})
-        
-        return jsonify({'error': 'Failed to save keys'}), 500
-    except Exception as e:
-        logger.error(f"Failed to save keys: {e}")
-        return jsonify({'error': 'Internal error'}), 500
-
-@app.route('/api/user/keys/validate', methods=['POST'])
-@require_auth
-def validate_keys():
-    """Test API keys validity"""
-    try:
-        data = request.json
-        openai_key = data.get('openai_key')
-        deepgram_key = data.get('deepgram_key')
-        
-        # Quick validation - just check format and basic connectivity
-        # Full validation happens during actual interview
-        
-        if not openai_key.startswith('sk-'):
-            return jsonify({'valid': False, 'message': 'Invalid OpenAI key format'})
-        
-        if len(deepgram_key) < 10:
-            return jsonify({'valid': False, 'message': 'Invalid Deepgram key format'})
-        
-        return jsonify({'valid': True})
-    except Exception as e:
-        logger.error(f"Key validation failed: {e}")
-        return jsonify({'valid': False, 'message': 'Validation error'}), 500
-```
-
-### Implementation Summary
-
-**What Was Actually Built** (beyond the original plan):
-
-#### Core Features
-- ✅ **Full BYOK Implementation**: All 5 API keys (LiveKit URL, LiveKit API Key, LiveKit API Secret, OpenAI, Deepgram)
-- ✅ **Dedicated API Keys Page**: Professional UI with custom styling matching app theme
-- ✅ **Encrypted Storage**: Fernet encryption (AES-128-CBC + HMAC) at application layer
-- ✅ **Smart Database Operations**: INSERT for new keys, UPDATE for existing (no upsert conflicts)
-
-#### Enhanced UX Features
-- ✅ **Masked Keys Display**: Shows `••••••` for existing keys with disabled form
-- ✅ **Smart Button States**: "Save Keys" vs "Update Keys", enabled only when modified
-- ✅ **Interactive Edit Mode**: Click any field to clear mask and enable editing
-- ✅ **Proper Feedback Modals**: Success (green), Error (red), with auto-redirect
-- ✅ **Status Indicators**: Visual badges showing key configuration status
-- ✅ **Loading States**: "Saving..." button text during operations
-
-#### Security & Validation
-- ✅ **Client-Side Validation**: Format checks before API calls
-- ✅ **Server-Side Validation**: Additional checks in backend
-- ✅ **Test Keys Feature**: Validate key formats without saving
-- ✅ **Secure Display**: Masked values in status, never show full keys
-- ✅ **Detailed Security Info**: User-friendly explanation of encryption method
-
-#### Settings Modal Enhancement
-- ✅ **Smart Modal**: Shows different content based on auth status
-  - **Authenticated Users**: Buttons to Dashboard and API Keys page
-  - **Guest Users**: Full localStorage-based API keys form
-- ✅ **Seamless Integration**: No breaking changes to existing guest flow
-
-#### Technical Improvements
-- ✅ **Added `requireAuth()`**: Missing function in auth.js
-- ✅ **Modal System Fix**: Changed from inline styles to CSS classes
-- ✅ **Initialization Safety**: Waits for dependencies, handles race conditions
-- ✅ **Comprehensive Logging**: Debug logs at every step
-- ✅ **Error Handling**: Graceful degradation with user-friendly messages
-
-#### Database Schema
-- ✅ **Migration SQL**: Added 3 new encrypted columns to `user_api_keys` table
-- ✅ **Documentation**: Comments on table structure and encryption
-
-### Files Created/Modified
-
-#### Created
-1. **`templates/api_keys.html`** - Dedicated API keys management page
-2. **`static/apikeys.js`** - Full UX logic with validation and feedback
-3. **`add_livekit_keys_migration.sql`** - Database migration script
-
-#### Modified
-1. **`templates/dashboard.html`** - Removed inline modal, added link to API keys page
-2. **`templates/index.html`** - Enhanced settings modal with auth-aware content
-3. **`static/dashboard.js`** - Updated API endpoints and simplified status display
-4. **`static/auth.js`** - Added missing `requireAuth()` function
-5. **`static/modal.js`** - Added auth check and view toggling for settings modal
-6. **`app.py`** - Added 4 new endpoints (page route, status, save, validate)
-7. **`supabase_client.py`** - Extended to handle all 5 API keys with INSERT/UPDATE logic
-
-### API Endpoints Implemented
-
-```
-GET  /api-keys                    - API keys management page (protected)
-GET  /api/user/keys/status        - Get keys status with masked values
-POST /api/user/keys               - Save/update encrypted keys
-POST /api/user/keys/validate      - Validate key formats
-```
-
-### Testing Checklist
-
-- ✅ Create `templates/api_keys.html` with professional UI
-- ✅ Create `static/apikeys.js` with full UX logic
-- ✅ Update `app.py` with all key management endpoints
-- ✅ Update `supabase_client.py` for 5 keys + INSERT/UPDATE
-- ✅ Add `requireAuth()` to `auth.js`
-- ✅ Fix modal display system (CSS classes)
-- ✅ Test key saving (first time - INSERT)
-- ✅ Test key updating (existing - UPDATE, no 409 error)
-- ✅ Test key encryption (Fernet encryption working)
-- ✅ Test key retrieval (decryption working)
-- ✅ Test key masking (shows `•••` on reload)
-- ✅ Test edit mode (click field clears mask, enables form)
-- ✅ Test save button states (disabled until modified)
-- ✅ Test validation (format checks working)
-- ✅ Test success modal (green title, auto-redirect)
-- ✅ Test error modal (red title, clear messages)
-- ✅ Test dashboard status display (shows "configured")
-- ✅ Test settings modal (authenticated vs guest views)
-- ✅ Test initialization (waits for auth.js, handles errors)
-- ✅ Run SQL migration on Supabase database
-
-### User Experience Flow
-
-**First Time Setup:**
-1. User navigates to Dashboard → Manage Keys
-2. Page loads with empty form, "Save Keys" button enabled
-3. User enters all 5 API keys (LiveKit URL/Key/Secret, OpenAI, Deepgram)
-4. User clicks "Test Keys" (optional) - validates formats
-5. User clicks "Save Keys" → Button shows "Saving..."
-6. Success modal appears (green) → Auto-redirects to dashboard
-7. Dashboard shows "API Keys Configured ✓"
-
-**Updating Keys:**
-1. User navigates to Dashboard → Manage Keys
-2. Page loads with masked `••••••` values, form disabled
-3. Status shows "API Keys Configured ✓"
-4. Button says "Update Keys" (disabled)
-5. User clicks any field → Mask clears, form enables
-6. User modifies key(s) → Button becomes enabled
-7. User saves → Success modal → Redirect
-
-**Settings Modal (Index Page):**
-- **Guest**: Shows full API keys form (localStorage)
-- **Authenticated**: Shows "Go to Dashboard" and "Manage API Keys" buttons
-
-### Security Implementation
-
-**Encryption**: Fernet (symmetric encryption)
-- **Algorithm**: AES-128-CBC with HMAC for authentication
-- **Key Derivation**: From `ENCRYPTION_KEY` environment variable
-- **Encryption Layer**: Application-level (before database)
-- **Storage**: Only encrypted ciphertext stored in Supabase
-- **Transmission**: Keys encrypted before sending to DB
-
-**Display Security**:
-- Never show full keys in UI after saving
-- Masked display: `••••••••••••••••••••••••••`
-- Status shows minimal info: "API Keys Configured"
-
-### Known Limitations
-
-None - all features working as expected with comprehensive error handling and user feedback.
-
-**Phase 4 Complete**: Users can save and manage API keys
+**Status**: Complete - All 5 API keys (LiveKit URL/Key/Secret, OpenAI, Deepgram) stored encrypted
 
 ---
 
-## Phase 5: Interview Database Integration
+## Phase 5: Database-Only Storage (Remove ALL localStorage & Local Files)
 
-**Goal**: Save interviews and feedback to Supabase, maintain localStorage fallback.
+**Goal**: Eliminate localStorage fallbacks and local file writes. Database is single source of truth.
+
+**Duration**: 1-2 days
 
 **Dependencies**: Phase 4 complete
 
-### Files to Modify
+### Critical Changes
 
-#### 5.1 Update `app.py` - Interview Storage Endpoints
-```python
-@app.route('/api/user/interviews')
-@require_auth
-def get_user_interviews():
-    """Get user's interview history"""
-    try:
-        user_id = get_user_id()
-        limit = request.args.get('limit', 50, type=int)
-        
-        interviews = supabase_client.get_user_interviews(user_id, limit)
-        return jsonify(interviews)
-    except Exception as e:
-        logger.error(f"Failed to fetch interviews: {e}")
-        return jsonify([])
+**REMOVE:**
+- All `localStorage.setItem()` and `localStorage.getItem()` calls
+- All file writes to `interviews/` folder
+- All "localStorage fallback" logic
 
-@app.route('/api/interview/save', methods=['POST'])
-@require_auth
-def save_interview():
-    """Save interview to database (with localStorage fallback)"""
-    try:
-        user_id = get_user_id()
-        data = request.json
-        
-        # Try to save to database
-        interview_id = supabase_client.save_interview(user_id, data)
-        
-        if interview_id:
-            logger.info(f"Interview saved to database: {interview_id}")
-            return jsonify({
-                'success': True,
-                'interview_id': interview_id,
-                'saved_to': 'database'
-            })
-        else:
-            # Database save failed, rely on localStorage fallback
-            logger.warning("Database save failed, using localStorage fallback")
-            return jsonify({
-                'success': False,
-                'message': 'Database save failed, data saved locally',
-                'saved_to': 'localStorage'
-            }), 500
-    except Exception as e:
-        logger.error(f"Interview save error: {e}")
-        return jsonify({
-            'success': False,
-            'message': str(e),
-            'saved_to': 'localStorage'
-        }), 500
-
-@app.route('/api/feedback/save', methods=['POST'])
-@require_auth
-def save_feedback_endpoint():
-    """Save feedback to database (with localStorage fallback)"""
-    try:
-        user_id = get_user_id()
-        data = request.json
-        
-        interview_id = data.get('interview_id')
-        feedback_data = data.get('feedback')
-        
-        if not interview_id:
-            return jsonify({'error': 'interview_id required'}), 400
-        
-        success = supabase_client.save_feedback(user_id, interview_id, feedback_data)
-        
-        if success:
-            return jsonify({
-                'success': True,
-                'saved_to': 'database'
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'message': 'Database save failed, using localStorage',
-                'saved_to': 'localStorage'
-            }), 500
-    except Exception as e:
-        logger.error(f"Feedback save error: {e}")
-        return jsonify({
-            'success': False,
-            'message': str(e),
-            'saved_to': 'localStorage'
-        }), 500
-
-@app.route('/api/feedback/<interview_id>')
-@require_auth
-def get_feedback(interview_id):
-    """Get feedback for interview"""
-    try:
-        user_id = get_user_id()
-        
-        # First check database
-        feedback = supabase_client.get_feedback(interview_id)
-        
-        if feedback:
-            # Verify user owns this interview
-            interview = supabase_client.get_interview_by_room(interview_id)
-            if interview and interview['user_id'] == user_id:
-                return jsonify(feedback['feedback_data'])
-        
-        # Fallback to localStorage will be handled by frontend
-        return jsonify({}), 404
-    except Exception as e:
-        logger.error(f"Feedback fetch error: {e}")
-        return jsonify({}), 500
-```
-
-#### 5.2 Update `templates/interview.html` - Add Save Logic
-**Add at end of file before closing `</body>`**:
-
-```javascript
-// Save interview after completion
-async function saveInterviewData(interviewData) {
-    try {
-        // First, try to save to database
-        const response = await fetch('/api/interview/save', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(interviewData)
-        });
-        
-        const result = await response.json();
-        
-        if (result.success && result.saved_to === 'database') {
-            console.log('Interview saved to database:', result.interview_id);
-            
-            // Also save to localStorage as backup
-            const roomName = interviewData.roomName;
-            localStorage.setItem(`interview_${roomName}`, JSON.stringify(interviewData));
-            
-            return result.interview_id;
-        } else {
-            // Database failed, rely on localStorage
-            console.warn('Database save failed, using localStorage fallback');
-            const roomName = interviewData.roomName;
-            localStorage.setItem(`interview_${roomName}`, JSON.stringify(interviewData));
-            return null;
-        }
-    } catch (error) {
-        console.error('Failed to save interview:', error);
-        
-        // Always save to localStorage as fallback
-        const roomName = interviewData.roomName;
-        localStorage.setItem(`interview_${roomName}`, JSON.stringify(interviewData));
-        return null;
-    }
-}
-
-// Hook into existing disconnect handler
-const originalOnDisconnect = room.on('disconnected', async () => {
-    // ... existing code ...
-    
-    // Save interview data
-    const interviewData = {
-        candidateName: '{{ name }}',
-        roomName: roomName,
-        jobRole: '{{ role }}',
-        experienceLevel: '{{ level }}',
-        conversation: conversation,
-        // ... other fields ...
-    };
-    
-    await saveInterviewData(interviewData);
-});
-```
-
-#### 5.3 Update `templates/feedback.html` - Database Integration
-**Add at start of `<script>` section**:
-
-```javascript
-async function loadFeedback() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const interviewId = urlParams.get('id');
-    const roomName = urlParams.get('room');
-    
-    if (!interviewId && !roomName) {
-        showError('No interview specified');
-        return;
-    }
-    
-    try {
-        // Try to load from database first
-        if (interviewId) {
-            const response = await fetch(`/api/feedback/${interviewId}`);
-            if (response.ok) {
-                const feedback = await response.json();
-                displayFeedback(feedback);
-                return;
-            }
-        }
-        
-        // Fallback to localStorage
-        if (roomName) {
-            const localData = localStorage.getItem(`feedback_${roomName}`);
-            if (localData) {
-                const feedback = JSON.parse(localData);
-                displayFeedback(feedback);
-                return;
-            }
-        }
-        
-        showError('Feedback not found');
-    } catch (error) {
-        console.error('Failed to load feedback:', error);
-        
-        // Try localStorage fallback
-        if (roomName) {
-            const localData = localStorage.getItem(`feedback_${roomName}`);
-            if (localData) {
-                const feedback = JSON.parse(localData);
-                displayFeedback(feedback);
-                return;
-            }
-        }
-        
-        showError('Failed to load feedback');
-    }
-}
-
-// Call on page load
-document.addEventListener('DOMContentLoaded', loadFeedback);
-```
-
-#### 5.4 Update `templates/past_calls.html` - Database Integration
-**Replace existing localStorage code**:
-
-```javascript
-async function loadInterviews() {
-    try {
-        // Try to load from database
-        const response = await fetch('/api/user/interviews?limit=50');
-        
-        if (response.ok) {
-            const interviews = await response.json();
-            
-            if (interviews.length > 0) {
-                displayInterviews(interviews, 'database');
-                
-                // Also check localStorage for any not in database
-                mergeLocalStorageInterviews(interviews);
-                return;
-            }
-        }
-        
-        // Fallback to localStorage only
-        loadLocalStorageInterviews();
-    } catch (error) {
-        console.error('Failed to load interviews:', error);
-        loadLocalStorageInterviews();
-    }
-}
-
-function displayInterviews(interviews, source) {
-    const container = document.getElementById('interviewsList');
-    
-    if (interviews.length === 0) {
-        container.innerHTML = '<p style="color: #666;">No interviews yet.</p>';
-        return;
-    }
-    
-    container.innerHTML = interviews.map(interview => `
-        <div class="interview-card" onclick="viewInterview('${interview.id}', '${interview.room_name}')">
-            <div class="interview-header">
-                <h3>${interview.job_role}</h3>
-                <span class="badge">${interview.experience_level}</span>
-            </div>
-            <p class="interview-date">${new Date(interview.interview_date).toLocaleDateString()}</p>
-            <p class="interview-meta">
-                Final Stage: ${interview.final_stage} | 
-                ${interview.conversation?.length || 0} messages
-            </p>
-            ${source === 'localStorage' ? '<span class="local-badge">Local Only</span>' : ''}
-        </div>
-    `).join('');
-}
-
-function mergeLocalStorageInterviews(dbInterviews) {
-    const dbRoomNames = new Set(dbInterviews.map(i => i.room_name));
-    const localInterviews = [];
-    
-    // Check localStorage for interviews not in database
-    for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key.startsWith('interview_')) {
-            try {
-                const data = JSON.parse(localStorage.getItem(key));
-                if (!dbRoomNames.has(data.roomName)) {
-                    localInterviews.push({
-                        ...data,
-                        id: null,
-                        room_name: data.roomName,
-                        interview_date: data.timestamp || new Date().toISOString()
-                    });
-                }
-            } catch (e) {
-                console.error('Failed to parse local interview:', e);
-            }
-        }
-    }
-    
-    if (localInterviews.length > 0) {
-        const allInterviews = [...dbInterviews, ...localInterviews];
-        displayInterviews(allInterviews, 'mixed');
-    }
-}
-
-function loadLocalStorageInterviews() {
-    const interviews = [];
-    
-    for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key.startsWith('interview_')) {
-            try {
-                const data = JSON.parse(localStorage.getItem(key));
-                interviews.push({
-                    ...data,
-                    id: null,
-                    room_name: data.roomName,
-                    interview_date: data.timestamp || new Date().toISOString()
-                });
-            } catch (e) {
-                console.error('Failed to parse local interview:', e);
-            }
-        }
-    }
-    
-    displayInterviews(interviews, 'localStorage');
-}
-
-function viewInterview(id, roomName) {
-    if (id) {
-        window.location.href = `/feedback?id=${id}`;
-    } else {
-        window.location.href = `/feedback?room=${roomName}`;
-    }
-}
-
-// Load on page load
-document.addEventListener('DOMContentLoaded', loadInterviews);
-```
-
-### Tasks Checklist
-
-- [x] Update `app.py` with interview/feedback endpoints
-- [x] Modify `templates/interview.html` to save to database
-- [x] Update `templates/feedback.html` with fallback logic
-- [x] Update `templates/past_calls.html` with merge logic
-- [ ] Test database save success case
-- [ ] Test localStorage fallback when database fails
-- [ ] Test loading from both sources
-- [ ] Test merge logic for mixed data
-- [x] Add CSS for "Local Only" badge
-- [ ] Commit changes: "Phase 5: Add database storage with fallback"
-
-**Phase 5 Complete**: Interviews save to database with localStorage fallback
+**REASON:** Render's filesystem is ephemeral - files disappear on service restart. localStorage doesn't work across devices.
 
 ---
 
-## Phase 6: Agent BYOK Integration
+### 5.1 Update `agent.py` - Direct Database Save (NO File Writes)
 
-**Goal**: Modify agent to use user-provided API keys from participant attributes.
+**Location**: Root directory
 
-**Dependencies**: Phase 5 complete
-
-### Files to Modify
-
-#### 6.1 Update `app.py` - Token Generation with Keys
-**Modify `/api/token` endpoint**:
-
+**DELETE** file writing logic (around lines 830-878):
 ```python
-@app.route("/api/token", methods=["POST"])
-@require_auth
-def api_token():
-    """Generate LiveKit token with user's API keys"""
-    try:
-        user_id = get_user_id()
-        data = request.json
-        
-        room_name = data.get("roomName")
-        participant_name = data.get("participantName")
-        
-        if not room_name or not participant_name:
-            return jsonify({"error": "Missing required fields"}), 400
-        
-        # Get user's API keys
-        keys = supabase_client.get_api_keys(user_id)
-        
-        if not keys:
-            return jsonify({"error": "Please configure your API keys first"}), 400
-        
-        # Create token with API keys in participant attributes
-        token = api.AccessToken(
-            os.getenv("LIVEKIT_API_KEY"),
-            os.getenv("LIVEKIT_API_SECRET")
-        )
-        
-        token.with_identity(participant_name)
-        token.with_name(participant_name)
-        token.with_grants(api.VideoGrants(
-            room_join=True,
-            room=room_name,
-        ))
-        
-        # Add user's API keys to participant attributes
-        token.with_attributes({
-            "user_id": user_id,
-            "openai_api_key": keys['openai_key'],
-            "deepgram_api_key": keys['deepgram_key'],
-            "job_role": data.get("jobRole", ""),
-            "experience_level": data.get("experienceLevel", ""),
-        })
-        
-        jwt_token = token.to_jwt()
-        
-        logger.info(f"Token generated for user {user_id} in room {room_name}")
-        
-        return jsonify({"token": jwt_token})
-    except Exception as e:
-        logger.error(f"Token generation failed: {e}")
-        return jsonify({"error": "Token generation failed"}), 500
+# DELETE THIS ENTIRE SECTION:
+os.makedirs("interviews", exist_ok=True)
+filepath = f"interviews/{just_filename}"
+with open(filepath, 'w', encoding='utf-8') as f:
+    json_module.dump(history_data, f, indent=2, ensure_ascii=False)
 ```
 
-#### 6.2 Update `agent.py` - Extract Keys from Attributes
-**Modify at the start of `entrypoint()` function** (around line 482):
-
+**REPLACE** `finalize_and_disconnect()` function:
 ```python
-async def entrypoint(ctx: JobContext):
+async def finalize_and_disconnect(ctx: JobContext, participant, conversation_history, state):
+    """Save interview to database and disconnect"""
     try:
-        logger.info("[ENTRY] Starting agent job")
+        import json as json_module
+        from datetime import datetime
         
-        # Connect to room
-        await ctx.connect()
-        
-        # Get participant attributes with API keys
-        participant = await ctx.wait_for_participant()
-        attrs = participant.attributes
-        
-        # Extract user's API keys from participant attributes
-        openai_api_key = attrs.get('openai_api_key')
-        deepgram_api_key = attrs.get('deepgram_api_key')
+        # Extract user_id from participant attributes
+        attrs = participant.attributes if hasattr(participant, 'attributes') else {}
         user_id = attrs.get('user_id')
         
-        logger.info(f"[BYOK] User ID: {user_id}")
-        logger.info(f"[BYOK] OpenAI key present: {bool(openai_api_key)}")
-        logger.info(f"[BYOK] Deepgram key present: {bool(deepgram_api_key)}")
-        
-        # Validate keys are present
-        if not openai_api_key or not deepgram_api_key:
-            logger.error("[BYOK] Missing API keys in participant attributes")
+        if not user_id:
+            logger.error("[FINALIZE] No user_id found in participant attributes")
             await ctx.room.disconnect()
             return
         
-        # Override environment variables for this session
-        os.environ['OPENAI_API_KEY'] = openai_api_key
-        os.environ['DEEPGRAM_API_KEY'] = deepgram_api_key
+        logger.info(f"[FINALIZE] Saving interview to database for user: {user_id}")
         
-        logger.info("[BYOK] API keys injected for this session")
+        # Build interview data
+        now = datetime.now()
+        interview_data = {
+            'candidate_name': state.candidate_name,
+            'interview_date': now.isoformat(),
+            'room_name': ctx.room.name,
+            'job_role': state.job_role,
+            'experience_level': state.experience_level,
+            'conversation': conversation_history,
+            'total_messages': {
+                'agent': len(conversation_history.get('agent', [])),
+                'user': len(conversation_history.get('user', []))
+            },
+            'skipped_stages': state.skipped_stages,
+            'final_stage': state.stage.value,
+            'ended_by': 'natural_completion',
+            'has_resume': bool(state.uploaded_resume_text),
+            'has_jd': bool(state.job_description)
+        }
         
-        # Continue with existing agent logic...
-```
-
-**Remove module-level API key loading** (around lines 43-73):
-```python
-# DELETE THESE LINES:
-# OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-# DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY")
-# if not OPENAI_API_KEY or not DEEPGRAM_API_KEY:
-#     raise ValueError("API keys not found")
-```
-
-#### 6.3 Update `agent.py` - Save Interview to Database
-**Modify `finalize_and_disconnect()` function**:
-
-```python
-async def finalize_and_disconnect(ctx: JobContext, participant, interview_data, user_id):
-    """Save interview to database before disconnecting"""
-    try:
-        logger.info("[FINALIZE] Saving interview to database")
-        
-        # Import here to avoid circular dependency
+        # Save to Supabase
         from supabase_client import supabase_client
-        
-        # Save to database
         interview_id = supabase_client.save_interview(user_id, interview_data)
         
         if interview_id:
-            logger.info(f"[FINALIZE] Interview saved: {interview_id}")
+            logger.info(f"[FINALIZE] Interview saved successfully: {interview_id}")
+            
+            # Notify frontend of successful save
+            data_payload = json_module.dumps({
+                "type": "interview_saved",
+                "interview_id": interview_id,
+                "message": "Interview saved successfully"
+            })
+            await ctx.room.local_participant.publish_data(data_payload.encode('utf-8'))
+            
         else:
-            logger.warning("[FINALIZE] Database save failed, data will be in localStorage fallback")
+            logger.error("[FINALIZE] Database save failed")
+            
+            # Notify frontend of save error
+            data_payload = json_module.dumps({
+                "type": "save_error",
+                "message": "Failed to save interview. Please contact support."
+            })
+            await ctx.room.local_participant.publish_data(data_payload.encode('utf-8'))
         
-        # Generate and save feedback if interview completed
-        if interview_data.get('finalStage') == 'completed':
-            feedback = generate_feedback(interview_data)
-            supabase_client.save_feedback(user_id, interview_id, feedback)
-            logger.info("[FINALIZE] Feedback saved")
-        
-    except Exception as e:
-        logger.error(f"[FINALIZE] Error saving interview: {e}")
-    finally:
-        # Always disconnect
+        # Wait for data to send, then disconnect
+        await asyncio.sleep(2.0)
         await ctx.room.disconnect()
         logger.info("[FINALIZE] Disconnected from room")
+        
+    except Exception as e:
+        logger.error(f"[FINALIZE] Error: {e}", exc_info=True)
+        
+        # Attempt to notify frontend
+        try:
+            import json as json_module
+            data_payload = json_module.dumps({
+                "type": "save_error",
+                "message": f"Save error: {str(e)}"
+            })
+            await ctx.room.local_participant.publish_data(data_payload.encode('utf-8'))
+        except:
+            pass
+        
+        # Disconnect anyway
+        try:
+            await ctx.room.disconnect()
+        except:
+            pass
 ```
 
-### Tasks Checklist
+**UPDATE** `save_transcript_on_disconnect()` (around line 916):
+```python
+async def save_transcript_on_disconnect():
+    """Save interview transcript when room disconnects"""
+    try:
+        # Don't save if already finalized
+        if closing_finalized.get("done"):
+            logger.info("[HISTORY] Transcript already saved via finalize_and_disconnect")
+            return
+        
+        # Check if we have any conversation to save
+        if not conversation_history["agent"] and not conversation_history["user"]:
+            logger.info("[HISTORY] No conversation to save")
+            return
+        
+        # Extract user_id from participant
+        if not ctx.room.remote_participants:
+            logger.error("[HISTORY] No remote participants found")
+            return
+        
+        participant = list(ctx.room.remote_participants.values())[0]
+        attrs = participant.attributes if hasattr(participant, 'attributes') else {}
+        user_id = attrs.get('user_id')
+        
+        if not user_id:
+            logger.error("[HISTORY] No user_id found in participant attributes")
+            return
+        
+        import json as json_module
+        from datetime import datetime
+        
+        now = datetime.now()
+        interview_data = {
+            'candidate_name': candidate_name,
+            'interview_date': now.isoformat(),
+            'room_name': ctx.room.name,
+            'job_role': interview_state.job_role,
+            'experience_level': interview_state.experience_level,
+            'conversation': conversation_history,
+            'total_messages': {
+                'agent': len(conversation_history['agent']),
+                'user': len(conversation_history['user'])
+            },
+            'skipped_stages': interview_state.skipped_stages,
+            'final_stage': interview_state.stage.value,
+            'ended_by': 'user_disconnect'
+        }
+        
+        # Save to database
+        from supabase_client import supabase_client
+        interview_id = supabase_client.save_interview(user_id, interview_data)
+        
+        if interview_id:
+            logger.info(f"[HISTORY] Saved transcript on disconnect: {interview_id}")
+            
+            # Emit the interview_id to frontend
+            try:
+                data_payload = json_module.dumps({
+                    "type": "interview_saved",
+                    "interview_id": interview_id
+                })
+                await ctx.room.local_participant.publish_data(data_payload.encode('utf-8'))
+            except Exception as e:
+                logger.warning(f"[HISTORY] Failed to emit interview_id: {e}")
+        else:
+            logger.error("[HISTORY] Database save failed on disconnect")
+        
+    except Exception as e:
+        logger.error(f"[HISTORY] Error saving on disconnect: {e}", exc_info=True)
+```
 
-- [ ] Update `app.py` token generation with API keys
-- [ ] Remove module-level API keys from `agent.py`
-- [ ] Add key extraction from participant attributes
-- [ ] Add per-session key injection
-- [ ] Update interview saving to database
-- [ ] Add feedback saving to database
-- [ ] Test BYOK flow end-to-end
-- [ ] Test key isolation between sessions
-- [ ] Verify database saves work
-- [ ] Test fallback when database fails
-- [ ] Add logging for debugging
-- [ ] Commit changes: "Phase 6: Implement BYOK in agent"
-
-**Phase 6 Complete**: Agent uses user-provided API keys per session
+**UPDATE** `entrypoint()` - Call finalize with correct params (around line 890):
+```python
+# In the finalize_and_disconnect call
+await finalize_and_disconnect(ctx, participant, conversation_history, interview_state)
+```
 
 ---
 
-## Phase 7: Final Integration & Testing
+### 5.2 Update `templates/interview.html` - Remove localStorage, Handle Database Events
 
-**Goal**: End-to-end testing, bug fixes, and production readiness.
+**Location**: `templates/interview.html`
+
+**DELETE** all localStorage save calls:
+- Remove: `localStorage.setItem('interview_${roomName}', ...)`
+- Remove: `saveInterviewData()` function
+- Remove: `uploadInterviewToDatabase()` function
+
+**REPLACE** `onDataReceived()` handler (around line 850):
+```javascript
+function onDataReceived(payload, participant) {
+    try {
+        var data = JSON.parse(new TextDecoder().decode(payload));
+        
+        if (data.type === 'stage_change' && data.stage) {
+            updateStage(data.stage);
+        }
+        
+        if (data.type === 'agent_caption') {
+            updateAgentCaption(data.text);
+        }
+        
+        if (data.type === 'user_caption') {
+            updateCandidateCaption(data.text);
+        }
+        
+        if (data.type === 'interview_saved') {
+            // Store interview_id for feedback navigation
+            state.interviewDatabaseId = data.interview_id;
+            console.log('[INTERVIEW] Saved to database:', data.interview_id);
+        }
+        
+        if (data.type === 'save_error') {
+            console.error('[INTERVIEW] Save error:', data.message);
+            updateStatus('Save Error: ' + data.message, 'error');
+        }
+        
+        if (data.type === 'interview_ending') {
+            updateAgentCaption('Interview complete.');
+            updateStatus('Interview Complete', 'connected');
+            
+            setTimeout(function() {
+                showInterviewCompleteModal();
+            }, 2000);
+        }
+        
+    } catch (err) {
+        console.error('[DATA] Parse error:', err);
+    }
+}
+```
+
+**REPLACE** `showInterviewCompleteModal()` function:
+```javascript
+function showInterviewCompleteModal() {
+    document.getElementById('modalTitle').textContent = 'Interview Complete';
+    document.getElementById('modalMessage').textContent = 'Thank you for participating! Would you like to get feedback?';
+    document.getElementById('modalIcon').className = 'modal-icon success';
+    document.getElementById('modalIcon').innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
+    
+    // Hide the confirm/cancel actions, show feedback actions
+    document.getElementById('modalActions').style.display = 'none';
+    document.getElementById('modalFeedbackActions').style.display = 'flex';
+    
+    // Set up feedback button
+    var feedbackBtn = document.getElementById('getFeedbackBtn');
+    feedbackBtn.onclick = function() {
+        if (state.interviewDatabaseId) {
+            // Redirect to feedback page with interview_id
+            window.location.href = '/feedback/' + encodeURIComponent(state.interviewDatabaseId);
+        } else {
+            // No interview_id received - show error
+            alert('Interview was not saved properly. Please check your Past Interviews page.');
+            window.location.href = '/past-calls';
+        }
+    };
+    
+    // Set up return home button
+    document.getElementById('returnHomeBtn').onclick = function() {
+        window.location.href = '/';
+    };
+    
+    showModal();
+}
+```
+
+**DELETE** `uploadInterviewToDatabase()` function entirely
+
+---
+
+### 5.3 Update `templates/feedback.html` - Database-Only Load
+
+**Location**: `templates/feedback.html`
+
+**DELETE** all localStorage references:
+- Remove: `localStorage.getItem('feedback_...')`
+- Remove: `localStorage.setItem('feedback_...')`
+- Remove: `localStorage.getItem('interview_...')`
+
+**REPLACE** `loadInterview()` function (around line 180):
+```javascript
+function loadInterview() {
+    // filename is actually interview_id from URL parameter
+    fetch('/api/interview/' + encodeURIComponent(filename))
+        .then(function(response) {
+            if (!response.ok) throw new Error('Interview not found');
+            return response.json();
+        })
+        .then(function(data) {
+            elements.loadingState.style.display = 'none';
+            
+            if (data.error) {
+                showError('Interview not found in database: ' + data.error);
+                return;
+            }
+
+            renderInterview(data);
+            checkCachedFeedback();
+        })
+        .catch(function(err) {
+            console.error('[FEEDBACK] Load error:', err);
+            elements.loadingState.style.display = 'none';
+            showError('Failed to load interview. Please check your Past Interviews page.');
+        });
+}
+```
+
+**REPLACE** `checkCachedFeedback()` function:
+```javascript
+function checkCachedFeedback() {
+    // Check backend for cached feedback
+    fetch('/api/feedback/get/' + encodeURIComponent(filename))
+        .then(function(response) {
+            if (!response.ok) return null;
+            return response.json();
+        })
+        .then(function(data) {
+            if (data && data.feedback_data) {
+                console.log('[FEEDBACK] Found cached feedback in database');
+                
+                if (data.feedback_data.scores) {
+                    renderScores(data.feedback_data.scores, true);
+                    feedbackState.scoresGenerated = true;
+                }
+                
+                if (data.feedback_data.feedback) {
+                    renderFeedback(data.feedback_data.feedback, true);
+                    feedbackState.reportGenerated = true;
+                }
+                
+                elements.generateSection.style.display = 'none';
+            } else {
+                console.log('[FEEDBACK] No cached feedback found');
+            }
+        })
+        .catch(function(err) {
+            console.log('[FEEDBACK] No cached feedback available');
+        });
+}
+```
+
+**REPLACE** `saveFeedbackToDatabase()` function:
+```javascript
+function saveFeedbackToDatabase(interviewId, feedbackData) {
+    fetch('/api/feedback/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+            interview_id: interviewId,
+            feedback: feedbackData
+        })
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(result) {
+        if (result.success) {
+            console.log('[FEEDBACK] Saved to database successfully');
+        } else {
+            console.error('[FEEDBACK] Save failed:', result.message);
+        }
+    })
+    .catch(function(err) {
+        console.error('[FEEDBACK] Save error:', err);
+    });
+}
+```
+
+**UPDATE** `generateReport()` - Remove localStorage cache, only save to DB:
+```javascript
+function generateReport() {
+    console.log('[FEEDBACK] Stage 2: Generating detailed report...');
+    elements.feedbackPlaceholder.style.display = 'none';
+    elements.feedbackLoading.style.display = 'flex';
+
+    // Animate loading phases
+    var phases = [
+        'Reading transcript...',
+        'Matching candidate info...',
+        'Looking through job requirements...',
+        'Contemplating insights...'
+    ];
+    var phaseIndex = 0;
+
+    var phaseInterval = setInterval(function() {
+        phaseIndex = (phaseIndex + 1) % phases.length;
+        elements.loadingPhase.textContent = phases[phaseIndex];
+
+        var dots = document.querySelectorAll('.phase-dot');
+        dots.forEach(function(dot, i) {
+            dot.classList.toggle('active', i <= phaseIndex);
+        });
+    }, 3000);
+
+    fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            interview_id: filename,
+            scores: feedbackState.scoresData
+        })
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        clearInterval(phaseInterval);
+
+        if (data.error) {
+            showFeedbackError(data.message || data.error);
+            return;
+        }
+
+        console.log('[FEEDBACK] Report generated successfully');
+        feedbackState.reportGenerated = true;
+
+        // Save to database (no localStorage)
+        saveFeedbackToDatabase(filename, {
+            feedback: data.feedback,
+            scores: feedbackState.scoresData
+        });
+
+        renderFeedback(data.feedback, false);
+    })
+    .catch(function(err) {
+        clearInterval(phaseInterval);
+        console.error('[FEEDBACK] Report generation error:', err);
+        showFeedbackError('Failed to generate report: ' + err.message);
+    });
+}
+```
+
+---
+
+### 5.4 Update `templates/past_calls.html` - Database-Only Load
+
+**Location**: `templates/past_calls.html`
+
+**DELETE** all localStorage functions:
+- Remove: `getLocalStorageInterviews()`
+- Remove: `mergeInterviews()`
+- Remove: `loadFromLocalStorageOnly()`
+- Remove: `loadFromDatabaseWithLocalStorageMerge()`
+
+**REPLACE** `loadInterviews()` function (around line 240):
+```javascript
+function loadInterviews() {
+    checkAuth().then(function(isAuthenticated) {
+        if (isAuthenticated) {
+            loadFromDatabase();
+        } else {
+            showError('Please log in to view your interviews');
+        }
+    }).catch(function() {
+        showError('Authentication check failed. Please log in.');
+    });
+}
+
+function loadFromDatabase() {
+    fetch('/api/user/interviews?limit=50')
+        .then(function(response) {
+            if (!response.ok) throw new Error('Failed to load interviews');
+            return response.json();
+        })
+        .then(function(dbInterviews) {
+            console.log('[PAST_CALLS] Loaded ' + dbInterviews.length + ' interviews from database');
+            
+            elements.loadingState.style.display = 'none';
+
+            if (dbInterviews.length === 0) {
+                showEmptyState();
+                return;
+            }
+
+            renderInterviews(dbInterviews);
+        })
+        .catch(function(err) {
+            console.error('[PAST_CALLS] Database load error:', err);
+            elements.loadingState.style.display = 'none';
+            showError('Failed to load interviews: ' + err.message);
+        });
+}
+```
+
+**UPDATE** `renderInterviews()` - Use database fields:
+```javascript
+function renderInterviews(interviews) {
+    var html = interviews.map(function(interview) {
+        var date = interview.interview_date ? formatDate(interview.interview_date) : 'Unknown date';
+        var messageCount = interview.total_messages || {};
+        var totalMessages = (messageCount.agent || 0) + (messageCount.user || 0);
+        
+        // interview.id is the database ID
+        var interviewId = interview.id;
+
+        var tagsHtml = '';
+        if (interview.job_role) {
+            tagsHtml += '<span class="interview-tag role">' + escapeHtml(interview.job_role) + '</span>';
+        }
+        if (interview.experience_level) {
+            tagsHtml += '<span class="interview-tag level">' + formatLevel(interview.experience_level) + '</span>';
+        }
+
+        return '<a href="/feedback/' + encodeURIComponent(interviewId) + '" class="interview-card">' +
+            '<div class="card-content">' +
+                '<div class="interview-name">' + escapeHtml(interview.candidate_name || 'Unknown') + '</div>' +
+                '<div class="interview-date">' + date + '</div>' +
+                (tagsHtml ? '<div class="interview-tags">' + tagsHtml + '</div>' : '') +
+                '<div class="interview-meta">' +
+                    '<span class="interview-meta-item">' +
+                        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>' +
+                        totalMessages + ' msgs' +
+                    '</span>' +
+                '</div>' +
+            '</div>' +
+            '<svg class="card-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">' +
+                '<path d="M9 18l6-6-6-6"/>' +
+            '</svg>' +
+        '</a>';
+    }).join('');
+
+    elements.interviewsGrid.innerHTML = html;
+}
+```
+
+---
+
+### 5.5 Update `app.py` - Database-Only Endpoints
+
+**Location**: `app.py`
+
+**REPLACE** `/api/interview/<interview_id>` endpoint:
+```python
+@app.route('/api/interview/<interview_id>')
+@require_auth
+def get_interview(interview_id):
+    """Get interview by ID from database"""
+    try:
+        user_id = get_user_id()
+        
+        # Validate UUID format
+        import uuid
+        try:
+            uuid.UUID(interview_id)
+        except ValueError:
+            return jsonify({'error': 'Invalid interview ID format'}), 400
+        
+        # Load from database
+        interview = supabase_client.get_interview_by_id(user_id, interview_id)
+        
+        if not interview:
+            return jsonify({'error': 'Interview not found'}), 404
+        
+        logger.info(f"[API] Loaded interview {interview_id} for user {user_id}")
+        
+        # Format conversation for frontend
+        ordered_conversation = format_conversation(interview.get('conversation', {}))
+        
+        # Format for frontend
+        return jsonify({
+            'success': True,
+            'meta': {
+                'candidate': interview.get('candidate_name', 'Unknown'),
+                'interview_date': interview.get('interview_date'),
+                'job_role': interview.get('job_role'),
+                'experience_level': interview.get('experience_level'),
+                'source': 'database'
+            },
+            'ordered_conversation': ordered_conversation
+        })
+        
+    except Exception as e:
+        logger.error(f"[API] Get interview error: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
+def format_conversation(conversation_dict):
+    """Convert DB conversation format to ordered list for frontend"""
+    try:
+        agent_msgs = conversation_dict.get('agent', [])
+        user_msgs = conversation_dict.get('user', [])
+        
+        # Merge by timestamp
+        all_msgs = []
+        
+        for msg in agent_msgs:
+            all_msgs.append({
+                'role': 'agent',
+                'text': msg.get('text', ''),
+                'timestamp': msg.get('timestamp', 0),
+                'stage': msg.get('stage', '')
+            })
+        
+        for msg in user_msgs:
+            all_msgs.append({
+                'role': 'user',
+                'text': msg.get('text', ''),
+                'timestamp': msg.get('timestamp', 0)
+            })
+        
+        # Sort by timestamp
+        all_msgs.sort(key=lambda x: x.get('timestamp', 0))
+        
+        return all_msgs
+        
+    except Exception as e:
+        logger.error(f"[FORMAT] Conversation format error: {e}", exc_info=True)
+        return []
+```
+
+**DELETE** old file-based endpoints:
+- Remove: `/api/interviews` (old file listing)
+- Remove: `/api/interview/<filename>/summary` (old file-based summary)
+
+**UPDATE** `/api/feedback/get/<interview_id>`:
+```python
+@app.route('/api/feedback/get/<interview_id>')
+@require_auth
+def get_feedback_by_id(interview_id):
+    """Get feedback for interview from database"""
+    try:
+        user_id = get_user_id()
+        
+        # Validate UUID format
+        import uuid
+        try:
+            uuid.UUID(interview_id)
+        except ValueError:
+            return jsonify({'error': 'Invalid interview ID'}), 400
+        
+        # Get feedback from database
+        feedback = supabase_client.get_feedback(interview_id)
+        
+        if not feedback:
+            return jsonify({}), 404
+        
+        # Verify user owns this interview
+        if feedback.get('user_id') != user_id:
+            return jsonify({'error': 'Unauthorized'}), 403
+        
+        logger.info(f"[API] Feedback retrieved for interview: {interview_id}")
+        return jsonify(feedback)
+        
+    except Exception as e:
+        logger.error(f"[API] Feedback fetch error: {e}", exc_info=True)
+        return jsonify({}), 500
+```
+
+---
+
+### 5.6 Update `supabase_client.py` - Add Missing Method
+
+**Location**: `supabase_client.py`
+
+**ADD** new method:
+```python
+def get_interview_by_id(self, user_id: str, interview_id: str) -> Optional[Dict[str, Any]]:
+    """Get interview by ID for specific user"""
+    try:
+        response = self.client.table('interviews').select('*').eq('id', interview_id).eq('user_id', user_id).execute()
+        return response.data[0] if response.data else None
+    except Exception as e:
+        logger.error(f"Error fetching interview by ID: {e}", exc_info=True)
+        return None
+```
+
+---
+
+### Phase 5 Tasks Checklist
+
+- [x] Update `agent.py` - Remove file writes, add database save with error handling
+- [x] Update `agent.py` - Modify `finalize_and_disconnect()` to save to DB and emit events
+- [x] Update `agent.py` - Modify `save_transcript_on_disconnect()` to save to DB
+- [x] Update `templates/interview.html` - Remove localStorage, handle `interview_saved` event
+- [x] Update `templates/feedback.html` - Database-only load, remove localStorage
+- [x] Update `templates/past_calls.html` - Database-only load, remove localStorage merge
+- [x] Update `app.py` - Add `format_conversation()` helper
+- [x] Update `app.py` - Update `/api/interview/<interview_id>` to use database
+- [x] Update `app.py` - Update `/api/feedback/get/<interview_id>`
+- [x] Update `supabase_client.py` - Add `get_interview_by_id()` method
+- [x] Test interview save to database (check agent logs)
+- [x] Test feedback load from database
+- [x] Test past calls list from database
+- [x] Verify NO localStorage usage remains (search codebase for `localStorage`)
+- [x] Verify NO file writes remain (search for `open(`, `makedirs`)
+- [x] Commit changes: "Phase 5: Database-only storage, remove localStorage"
+
+### Critical Corrections (Not in Original Plan)
+
+During implementation, two critical issues were discovered and fixed:
+
+**Correction 5.7: Authentication & user_id in Token Generation**
+- **File**: `app.py` - `/api/token` endpoint (line 342)
+- **Issue**: Token generation was not requiring authentication and was missing `user_id` in participant attributes
+- **Fix**: Added `@require_auth` decorator, extracted `user_id` using `get_user_id()`, and included it in participant attributes dict
+- **Impact**: Without this, agent couldn't save interviews (no user_id), causing cascade of failures
+
+**Correction 5.8: Database Loading in Feedback Pipeline**
+- **File**: `app.py` - `_load_interview_context()` function (line 972)
+- **Issue**: Feedback generation was still using file-based `resequence_interview()` function with database UUIDs
+- **Fix**: Rewrote function to load directly from database using `supabase_client.get_interview_by_id()`, removed file-based import
+- **Impact**: Fixed feedback generation 404 errors when interviews stored as database UUIDs
+
+**Phase 5 Complete** ✅: All storage is database-only, no localStorage or file writes
+
+---
+
+## Phase 6: On-Demand Agent Worker (Spawn & Terminate)
+
+**Goal**: Agent spawns as subprocess when interview starts, terminates when complete. Uses user's API keys from participant attributes.
 
 **Duration**: 2-3 days
 
-**Dependencies**: Phases 1-6 complete
+**Dependencies**: Phase 5 complete
 
-### Testing Checklist
+### Architecture Overview
+```
+User Flow:
+1. User submits form → POST /api/start-interview
+2. Backend:
+   - Validates user has API keys
+   - Spawns agent subprocess with user's decrypted keys
+   - Waits for agent "ready" signal (3-5 seconds)
+   - Returns room URL + token
+3. User redirects to interview page → connects to LiveKit
+4. Agent handles interview (isolated subprocess)
+5. Interview ends:
+   - Agent saves to database
+   - Subprocess terminates automatically
+   - Frontend redirects to feedback page
+```
 
-#### 7.1 Authentication Flow
-- [ ] Test Google OAuth login
-- [ ] Test session persistence
-- [ ] Test logout functionality
-- [ ] Test protected routes redirect to login
-- [ ] Test auth status API endpoint
-
-#### 7.2 API Key Management
-- [ ] Test key saving and encryption
-- [ ] Test key retrieval and masking
-- [ ] Test key validation
-- [ ] Test UI shows correct status
-- [ ] Test error messages display correctly
-
-#### 7.3 Interview Flow
-- [ ] Test starting interview with configured keys
-- [ ] Test interview blocks without keys
-- [ ] Test agent receives keys correctly
-- [ ] Test interview saves to database
-- [ ] Test localStorage fallback works
-- [ ] Test feedback generation
-- [ ] Test feedback saves to database
-
-#### 7.4 Data Display
-- [ ] Test dashboard shows user info
-- [ ] Test dashboard shows key status
-- [ ] Test past interviews load from database
-- [ ] Test past interviews merge with localStorage
-- [ ] Test feedback displays correctly
-- [ ] Test interview details display correctly
-
-#### 7.5 Error Handling
-- [ ] Test database connection failures
-- [ ] Test invalid API keys
-- [ ] Test network errors
-- [ ] Test missing participant attributes
-- [ ] Test concurrent sessions with different keys
-
-#### 7.6 UI Consistency
-- [ ] Verify all pages use consistent theme
-- [ ] Verify buttons match existing styles
-- [ ] Verify modals reuse existing CSS
-- [ ] Verify forms match existing design
-- [ ] Verify color scheme is consistent
-
-### Bug Fixes Checklist
-- [ ] Fix any auth edge cases
-- [ ] Fix any database query issues
-- [ ] Fix any UI inconsistencies
-- [ ] Fix any error handling gaps
-- [ ] Fix any logging issues
-
-### Performance Testing
-- [ ] Test with multiple concurrent users
-- [ ] Test database query performance
-- [ ] Test encryption/decryption speed
-- [ ] Test page load times
-- [ ] Test interview latency
-
-### Security Audit
-- [ ] Verify RLS policies work
-- [ ] Verify keys are encrypted
-- [ ] Verify service key not exposed
-- [ ] Verify session security
-- [ ] Verify CORS settings
-- [ ] Verify input validation
-
-### Documentation Updates
-- [ ] Update README with new setup steps
-- [ ] Add BYOK explanation
-- [ ] Document environment variables
-- [ ] Add troubleshooting section
-- [ ] Update architecture diagrams
-
-### Deployment Preparation
-- [ ] Create `.env.production`
-- [ ] Test production build
-- [ ] Verify all migrations applied
-- [ ] Test with production Supabase
-- [ ] Configure production LiveKit
-- [ ] Set up monitoring/logging
-
-### Final Tasks
-- [ ] Code cleanup and comments
-- [ ] Remove debug logging
-- [ ] Optimize database queries
-- [ ] Run security scan
-- [ ] Final commit: "Phase 7: Production ready"
-
-**Phase 7 Complete**: Application ready for production deployment
+**Key Changes:**
+- Agent receives API keys via **environment variables** (subprocess isolated)
+- Agent runs per-interview, not 24/7
+- Clean termination after interview ends
 
 ---
 
-## Deployment Commands
+### 6.1 Create `agent_worker.py`
 
-### Local Testing
-```bash
-# Load development environment
-source .env.development
+**Location**: Root directory
 
-# Start Flask app
-python app.py
+**Purpose**: Standalone agent that accepts runtime environment variables
 
-# In another terminal, start agent worker
-python agent.py
+**Implementation**:
+
+This is a **copy of `agent.py`** with these modifications:
+```python
+"""
+MockFlow-AI Interview Agent Worker
+
+Standalone agent that runs as subprocess with API keys passed via environment variables.
+Terminates automatically after interview ends.
+"""
+
+import asyncio
+import logging
+import os
+import sys
+from pathlib import Path
+from dotenv import load_dotenv
+
+# DO NOT load .env file - keys come from subprocess environment
+# load_dotenv()  # REMOVE THIS LINE
+
+from livekit.agents import (
+    AgentServer,
+    AgentSession,
+    JobContext,
+    cli,
+    Agent,
+    RunContext,
+    function_tool,
+)
+from livekit.plugins import openai, deepgram, silero
+
+from fsm import InterviewState, InterviewStage, STAGE_TIME_LIMITS, STAGE_MIN_QUESTIONS
+from prompts import (
+    build_stage_instructions,
+    get_transition_ack,
+    get_fallback_ack,
+    build_role_context,
+    build_personality_note,
+    WELCOME,
+    SKIP_STAGE,
+    CLOSING_FALLBACK,
+)
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='[%(asctime)s] [%(name)s] [%(levelname)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger("agent-worker")
+
+# Suppress noisy logs
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+
+# Verify API keys are in environment (passed by parent process)
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+DEEPGRAM_API_KEY = os.getenv('DEEPGRAM_API_KEY')
+LIVEKIT_URL = os.getenv('LIVEKIT_URL')
+LIVEKIT_API_KEY = os.getenv('LIVEKIT_API_KEY')
+LIVEKIT_API_SECRET = os.getenv('LIVEKIT_API_SECRET')
+
+if not all([OPENAI_API_KEY, DEEPGRAM_API_KEY, LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET]):
+    logger.error("[CONFIG] Missing required API keys in environment")
+    logger.error(f"[CONFIG] OpenAI: {bool(OPENAI_API_KEY)}, Deepgram: {bool(DEEPGRAM_API_KEY)}")
+    logger.error(f"[CONFIG] LiveKit URL: {bool(LIVEKIT_URL)}, Key: {bool(LIVEKIT_API_KEY)}, Secret: {bool(LIVEKIT_API_SECRET)}")
+    sys.exit(1)
+
+logger.info("[CONFIG] API keys loaded from environment")
+logger.info(f"[CONFIG] LiveKit URL: {LIVEKIT_URL}")
+
+# Create agent server
+server = AgentServer()
+
+# ... REST OF AGENT.PY CODE EXACTLY THE SAME ...
+# (Copy all classes, functions, decorators from agent.py)
+
+if __name__ == "__main__":
+    logger.info("[WORKER] Starting agent worker subprocess")
+    cli.run_app(server)
 ```
 
-### Production Deployment
-```bash
-# Load production environment
-source .env.production
+**Key Differences from `agent.py`:**
+1. **No `load_dotenv()`** - keys come from subprocess environment
+2. **Strict validation** - exits if keys missing
+3. **Different logger name** - `"agent-worker"` for easy identification
 
-# Apply Supabase migrations
-supabase db push
+---
 
-# Build and deploy (adjust for your hosting)
-docker build -t mockflow-ai-web .
-docker build -t mockflow-ai-agent -f Dockerfile.agent .
+### 6.2 Create `worker_manager.py`
 
-# Deploy to your hosting platform
-# (Kubernetes, Heroku, AWS, etc.)
+**Location**: Root directory
+
+**Purpose**: Manages agent worker subprocesses (spawn, monitor, terminate)
+
+**Implementation**:
+```python
+"""
+Agent Worker Manager
+
+Spawns and manages agent worker subprocesses for interviews.
+Each interview gets a dedicated subprocess with user's API keys.
+"""
+
+import os
+import subprocess
+import logging
+import asyncio
+import time
+from typing import Optional, Dict
+
+logger = logging.getLogger(__name__)
+
+class WorkerManager:
+    def __init__(self):
+        self.active_workers: Dict[str, subprocess.Popen] = {}
+        self.worker_script = os.path.join(os.path.dirname(__file__), 'agent_worker.py')
+        
+    def spawn_worker(
+        self,
+        room_name: str,
+        livekit_url: str,
+        livekit_api_key: str,
+        livekit_api_secret: str,
+        openai_api_key: str,
+        deepgram_api_key: str
+    ) -> bool:
+        """
+        Spawn agent worker subprocess with user's API keys.
+        
+        Returns:
+            bool: True if worker started successfully, False otherwise
+        """
+        try:
+            logger.info(f"[WORKER] Spawning worker for room: {room_name}")
+            
+            # Build environment with user's API keys
+            worker_env = os.environ.copy()
+            worker_env.update({
+                'LIVEKIT_URL': livekit_url,
+                'LIVEKIT_API_KEY': livekit_api_key,
+                'LIVEKIT_API_SECRET': livekit_api_secret,
+                'OPENAI_API_KEY': openai_api_key,
+                'DEEPGRAM_API_KEY': deepgram_api_key,
+                'PYTHONUNBUFFERED': '1'  # Force unbuffered output
+            })
+            
+            # Spawn subprocess
+            process = subprocess.Popen(
+                ['python', self.worker_script],
+                env=worker_env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                bufsize=1  # Line buffered
+            )
+            
+            # Store process reference
+            self.active_workers[room_name] = process
+            
+            logger.info(f"[WORKER] Worker spawned (PID: {process.pid}) for room: {room_name}")
+            
+            # Wait for worker to be ready (check for startup log)
+            return self._wait_for_worker_ready(process, timeout=10)
+            
+        except Exception as e:
+            logger.error(f"[WORKER] Failed to spawn worker: {e}", exc_info=True)
+            return False
+    
+    def _wait_for_worker_ready(self, process: subprocess.Popen, timeout: int = 10) -> bool:
+        """
+        Wait for worker to emit ready signal.
+        
+        Returns:
+            bool: True if worker ready within timeout, False otherwise
+        """
+        start_time = time.time()
+        
+        while time.time() - start_time < timeout:
+            # Check if process is still alive
+            if process.poll() is not None:
+                # Process died
+                stdout, stderr = process.communicate()
+                logger.error(f"[WORKER] Process died during startup")
+                logger.error(f"[WORKER] STDOUT: {stdout}")
+                logger.error(f"[WORKER] STDERR: {stderr}")
+                return False
+            
+            # Check for ready signal in logs
+            # For now, just wait 5 seconds (agent startup time)
+            # In production, parse stdout for "Starting agent worker" log
+            if time.time() - start_time >= 5:
+                logger.info("[WORKER] Worker assumed ready after 5 seconds")
+                return True
+            
+            time.sleep(0.5)
+        
+        logger.error(f"[WORKER] Worker not ready within {timeout}s timeout")
+        return False
+    
+    def terminate_worker(self, room_name: str):
+        """Terminate worker subprocess for room"""
+        try:
+            if room_name not in self.active_workers:
+                logger.warning(f"[WORKER] No active worker for room: {room_name}")
+                return
+            
+            process = self.active_workers[room_name]
+            
+            if process.poll() is None:
+                # Process still running - terminate
+                logger.info(f"[WORKER] Terminating worker (PID: {process.pid}) for room: {room_name}")
+                process.terminate()
+                
+                # Wait for graceful shutdown (max 5 seconds)
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    logger.warning(f"[WORKER] Worker did not terminate gracefully, forcing kill")
+                    process.kill()
+                    process.wait()
+            
+            # Remove from active workers
+            del self.active_workers[room_name]
+            logger.info(f"[WORKER] Worker terminated for room: {room_name}")
+            
+        except Exception as e:
+            logger.error(f"[WORKER] Error terminating worker: {e}", exc_info=True)
+    
+    def cleanup_all_workers(self):
+        """Terminate all active workers (called on server shutdown)"""
+        logger.info(f"[WORKER] Cleaning up {len(self.active_workers)} active workers")
+        
+        for room_name in list(self.active_workers.keys()):
+            self.terminate_worker(room_name)
+        
+        logger.info("[WORKER] All workers terminated")
+    
+    def get_worker_status(self, room_name: str) -> Optional[str]:
+        """
+        Get worker status for room.
+        
+        Returns:
+            str: 'running', 'terminated', or None if not found
+        """
+        if room_name not in self.active_workers:
+            return None
+        
+        process = self.active_workers[room_name]
+        
+        if process.poll() is None:
+            return 'running'
+        else:
+            return 'terminated'
+
+
+# Global worker manager instance
+worker_manager = WorkerManager()
 ```
 
 ---
 
-## Post-Migration Verification
+### 6.3 Update `app.py` - Add Worker Spawn Endpoint
 
-After completing all phases:
+**Location**: `app.py`
 
-1. **User Flow**:
-   - [ ] User can sign in with Google
-   - [ ] User can configure API keys
-   - [ ] User can start interview
-   - [ ] Interview data saves to database
-   - [ ] Feedback generates correctly
-   - [ ] User can view past interviews
-   - [ ] User can view feedback reports
+**ADD** import at top:
+```python
+from worker_manager import worker_manager
+import atexit
+```
 
-2. **Technical**:
-   - [ ] Database has all expected data
-   - [ ] RLS policies enforced
-   - [ ] API keys encrypted
-   - [ ] localStorage fallback works
-   - [ ] All endpoints return correct status codes
-   - [ ] Logs show no errors
+**ADD** cleanup handler:
+```python
+# Register cleanup on server shutdown
+atexit.register(worker_manager.cleanup_all_workers)
+```
 
-3. **UI/UX**:
-   - [ ] All pages use consistent theme
-   - [ ] Navigation works smoothly
-   - [ ] Loading states display correctly
-   - [ ] Error messages are helpful
-   - [ ] Mobile responsive
+**REPLACE** `/api/token` endpoint:
+```python
+@app.route('/api/token', methods=['POST'])
+@require_auth
+def generate_token():
+    """
+    Spawn agent worker and generate LiveKit token.
+    
+    This endpoint:
+    1. Validates user has API keys
+    2. Spawns dedicated agent worker subprocess with user's keys
+    3. Waits for worker ready signal
+    4. Generates LiveKit token
+    5. Returns token + room info
+    """
+    try:
+        user_id = get_user_id()
+        data = request.json or {}
+        
+        name = data.get('name', 'Anonymous')
+        email = data.get('email', '')
+        role = data.get('role', '')
+        level = data.get('level', '')
+        resume_cache_key = data.get('resumeCacheKey', '')
+        job_description = data.get('jobDescription', '')
+        include_profile = data.get('includeProfile', True)
+        
+        logger.info(f"[TOKEN] Token request from user {user_id} ({name})")
+        
+        # Get user's API keys from database
+        keys = supabase_client.get_api_keys(user_id)
+        
+        if not keys:
+            logger.error(f"[TOKEN] No API keys found for user: {user_id}")
+            return jsonify({
+                'error': 'API keys not configured',
+                'message': 'Please configure your API keys in Settings before starting an interview.'
+            }), 400
+        
+        # Validate keys are present
+        required_keys = ['livekit_url', 'livekit_api_key', 'livekit_api_secret', 'openai_key', 'deepgram_key']
+        missing_keys = [k for k in required_keys if not keys.get(k)]
+        
+        if missing_keys:
+            logger.error(f"[TOKEN] Missing keys for user {user_id}: {missing_keys}")
+            return jsonify({
+                'error': 'Incomplete API keys',
+                'message': f'Missing keys: {", ".join(missing_keys)}'
+            }), 400
+        
+        # Create unique room name
+        timestamp = int(time.time())
+        room_name = f"interview-{name.lower().replace(' ', '-')}-{timestamp}"
+        
+        logger.info(f"[TOKEN] Spawning worker for room: {room_name}")
+        
+        # Spawn agent worker subprocess with user's API keys
+        worker_started = worker_manager.spawn_worker(
+            room_name=room_name,
+            livekit_url=keys['livekit_url'],
+            livekit_api_key=keys['livekit_api_key'],
+            livekit_api_secret=keys['livekit_api_secret'],
+            openai_api_key=keys['openai_key'],
+            deepgram_api_key=keys['deepgram_key']
+        )
+        
+        if not worker_started:
+            logger.error(f"[TOKEN] Worker failed to start for room: {room_name}")
+            return jsonify({
+                'error': 'Worker startup failed',
+                'message': 'Failed to start interview agent. Please try again.'
+            }), 500
+        
+        logger.info(f"[TOKEN] Worker ready for room: {room_name}")
+        
+        # Build participant attributes (without API keys - already in worker)
+        attributes = {
+            'user_id': user_id,
+            'role': role,
+            'level': level,
+            'email': email,
+            'include_profile': str(include_profile).lower(),
+        }
+        
+        # Add resume text if cached
+        if resume_cache_key:
+            resume_text = doc_processor.get_cached_text(resume_cache_key)
+            if resume_text:
+                attributes['resume_text'] = resume_text[:3000]  # Truncate to fit
+                logger.info(f"[TOKEN] Attached resume text ({len(resume_text)} chars)")
+        
+        # Add job description if provided
+        if job_description:
+            attributes['job_description'] = job_description[:2000]  # Truncate
+            logger.info(f"[TOKEN] Attached job description ({len(job_description)} chars)")
+        
+        # Create LiveKit access token using USER'S keys
+        token = api.AccessToken(
+            keys['livekit_api_key'],
+            keys['livekit_api_secret']
+        )
+        
+        token.with_identity(name).with_name(name).with_grants(
+            api.VideoGrants(
+                room_join=True,
+                room=room_name,
+                can_publish=True,
+                can_subscribe=True,
+            )
+        ).with_attributes(attributes)
+        
+        # Generate JWT
+        jwt_token = token.to_jwt()
+        
+        logger.info(f"[TOKEN] Token generated successfully for room: {room_name}")
+        
+        return jsonify({
+            'token': jwt_token,
+            'url': keys['livekit_url'],  # Use user's LiveKit URL
+            'room': room_name,
+            'candidate': {
+                'name': name,
+                'email': email,
+                'role': role,
+                'level': level
+            }
+        })
+        
+    except Exception as e:
+        logger.error(f"[TOKEN] Token generation error: {e}", exc_info=True)
+        return jsonify({
+            'error': 'Token generation failed',
+            'message': str(e)
+        }), 500
+```
+
+**ADD** worker status endpoint:
+```python
+@app.route('/api/worker/status/<room_name>')
+@require_auth
+def worker_status(room_name):
+    """Check worker status for room"""
+    try:
+        status = worker_manager.get_worker_status(room_name)
+        
+        return jsonify({
+            'room_name': room_name,
+            'status': status or 'not_found'
+        })
+        
+    except Exception as e:
+        logger.error(f"[WORKER] Status check error: {e}")
+        return jsonify({'error': str(e)}), 500
+```
+
+---
+
+### 6.4 Update `templates/interview.html` - Handle Worker Startup Delay
+
+**Location**: `templates/interview.html`
+
+**UPDATE** `connectToRoom()` function to show "Waiting for agent..." status:
+```javascript
+async function connectToRoom() {
+    updateStatus('Starting agent worker...', 'connecting');
+    
+    try {
+        // ... existing token generation code ...
+        
+        var response = await fetch('/api/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(tokenData)
+        });
+        
+        var data = await response.json();
+        
+        if (data.error) {
+            throw new Error(data.message || data.error);
+        }
+        
+        // Store room name
+        state.roomName = data.room;
+        
+        updateStatus('Agent worker ready. Connecting to room...', 'connecting');
+        
+        // ... rest of connection code ...
+        
+    } catch (err) {
+        console.error('[CONNECT] Error:', err);
+        updateStatus('Connection failed: ' + err.message, 'error');
+    }
+}
+```
+
+---
+
+### Phase 6 Tasks Checklist
+
+- [ ] Create `agent_worker.py` - Copy from `agent.py` with environment key loading
+- [ ] Create `worker_manager.py` - Subprocess management
+- [ ] Update `app.py` - Import `worker_manager`, add cleanup handler
+- [ ] Update `app.py` - Replace `/api/token` to spawn worker before token generation
+- [ ] Update `app.py` - Add `/api/worker/status/<room_name>` endpoint
+- [ ] Update `templates/interview.html` - Show "Starting agent..." status
+- [ ] Test worker spawn (check logs for "Worker spawned (PID: ...)")
+- [ ] Test interview flow end-to-end
+- [ ] Test worker termination after interview ends
+- [ ] Verify worker isolation (run 2 concurrent interviews with different keys)
+- [ ] Test worker cleanup on server shutdown
+- [ ] Commit changes: "Phase 6: On-demand agent workers with BYOK"
+
+**Phase 6 Complete**: Agent spawns per interview, uses user's API keys, terminates cleanly
+
+---
+
+## Phase 7: Production Deployment & Testing
+
+**Goal**: Deploy to Render, verify all functionality, optimize for free tier limits.
+
+**Duration**: 2-3 days
+
+**Dependencies**: Phase 6 complete
+
+### 7.1 Render Configuration
+
+**Create `render.yaml`**
+
+**Location**: Root directory
+```yaml
+services:
+  - type: web
+    name: mockflow-ai
+    env: python
+    region: oregon
+    plan: free
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "gunicorn app:app"
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+```
+
+**Update `requirements.txt`**
+
+Add production dependencies:
+```txt
+# Existing dependencies...
+gunicorn==21.2.0
+psycopg2-binary==2.9.9
+```
+
+---
+
+### 7.2 Production Environment Variables
+
+**Set in Render Dashboard:**
+```bash
+# Supabase
+SUPABASE_URL=https://your-project.supabase.co
+SUPABASE_SERVICE_KEY=eyJ...
+SUPABASE_ANON_KEY=eyJ...
+
+# Security
+ENCRYPTION_KEY=<your-fernet-key>
+SECRET_KEY=<your-flask-secret>
+
+# Python
+PYTHON_VERSION=3.11.0
+```
+
+**Note**: User API keys (LiveKit, OpenAI, Deepgram) are NOT in environment - they come from database.
+
+---
+
+### 7.3 Performance Optimizations for Free Tier
+
+**Update `app.py` - Add Worker Limits**
+```python
+# At top of app.py
+MAX_CONCURRENT_WORKERS = 3  # Free tier limit
+```
+
+**Update `worker_manager.py`**
+```python
+class WorkerManager:
+    def __init__(self):
+        self.active_workers: Dict[str, subprocess.Popen] = {}
+        self.max_workers = int(os.getenv('MAX_CONCURRENT_WORKERS', '3'))
+        
+    def spawn_worker(self, ...):
+        # Check worker limit
+        if len(self.active_workers) >= self.max_workers:
+            logger.error(f"[WORKER] Max concurrent workers ({self.max_workers}) reached")
+            return False
+        
+        # ... rest of spawn logic ...
+```
+
+**Add Worker Timeout Cleanup**
+```python
+# In worker_manager.py
+class WorkerManager:
+    async def cleanup_stale_workers(self):
+        """Terminate workers that have been running too long (60 minutes)"""
+        import time
+        
+        MAX_WORKER_AGE = 3600  # 60 minutes
+        
+        for room_name, process in list(self.active_workers.items()):
+            if process.poll() is not None:
+                # Already terminated
+                del self.active_workers[room_name]
+                continue
+            
+            # Check process age (requires tracking start time - add to spawn_worker)
+            # For now, just rely on natural termination
+            pass
+```
+
+---
+
+### 7.4 Database Indexes for Performance
+
+**Run in Supabase SQL Editor:**
+```sql
+-- Index for fast user interview lookups
+CREATE INDEX IF NOT EXISTS idx_interviews_user_date 
+ON interviews(user_id, interview_date DESC);
+
+-- Index for feedback lookups
+CREATE INDEX IF NOT EXISTS idx_feedback_interview 
+ON feedback(interview_id);
+
+-- Index for API key lookups
+CREATE INDEX IF NOT EXISTS idx_api_keys_user 
+ON user_api_keys(user_id);
+```
+
+---
+
+### 7.5 Error Monitoring & Logging
+
+**Update `app.py` - Add Request Logging**
+```python
+import logging
+from logging.handlers import RotatingFileHandler
+
+# Configure logging
+if not app.debug:
+    # Production logging
+    file_handler = RotatingFileHandler('logs/mockflow.log', maxBytes=10240, backupCount=10)
+    file_handler.setFormatter(logging.Formatter(
+        '%(asctime)s %(levelname)s: %(message)s [in %(pathname)s:%(lineno)d]'
+    ))
+    file_handler.setLevel(logging.INFO)
+    app.logger.addHandler(file_handler)
+    app.logger.setLevel(logging.INFO)
+    app.logger.info('MockFlow-AI startup')
+```
+
+---
+
+### 7.6 Health Check Endpoint
+```python
+@app.route('/health')
+def health_check():
+    """Health check for Render"""
+    try:
+        # Check database connection
+        user = supabase_client.get_user('test')  # Will return None, but tests connection
+        
+        return jsonify({
+            'status': 'healthy',
+            'database': 'connected',
+            'active_workers': len(worker_manager.active_workers)
+        }), 200
+        
+    except Exception as e:
+        logger.error(f"[HEALTH] Health check failed: {e}")
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e)
+        }), 500
+```
+
+---
+
+### 7.7 Testing Checklist
+
+**Authentication Flow**
+- [ ] Google OAuth login works
+- [ ] Session persists across page reloads
+- [ ] Logout clears session
+- [ ] Protected routes redirect to login
+- [ ] Auth status API returns correct state
+
+**API Key Management**
+- [ ] Keys save to database encrypted
+- [ ] Keys load with masking
+- [ ] Update keys works (INSERT vs UPDATE)
+- [ ] Validation catches invalid formats
+- [ ] Test keys validates formats
+
+**Interview Flow**
+- [ ] Worker spawns on "Start Interview"
+- [ ] Interview page loads after worker ready
+- [ ] Agent connects to room
+- [ ] Voice transcription works (STT)
+- [ ] Agent responds (LLM + TTS)
+- [ ] Stage transitions work
+- [ ] Skip stage buttons work
+- [ ] Interview saves to database on completion
+- [ ] No localStorage writes occur
+- [ ] Worker terminates after interview
+
+**Feedback Flow**
+- [ ] Feedback page loads interview from database
+- [ ] Generate scores works
+- [ ] Generate report works
+- [ ] Feedback saves to database
+- [ ] No localStorage reads/writes
+
+**Past Calls**
+- [ ] Past calls loads from database
+- [ ] Interview cards display correctly
+- [ ] Clicking card opens feedback page
+- [ ] No localStorage merge logic runs
+
+**Error Handling**
+- [ ] Missing API keys shows error
+- [ ] Worker spawn failure shows error
+- [ ] Database save failure shows error
+- [ ] Invalid interview_id returns 404
+- [ ] Unauthorized access returns 403
+
+**Performance**
+- [ ] Max 3 concurrent workers enforced
+- [ ] Workers terminate cleanly
+- [ ] No memory leaks (check logs)
+- [ ] Page load times <3 seconds
+- [ ] Database queries <500ms
+
+---
+
+### 7.8 Deployment Steps
+
+**1. Push to GitHub**
+```bash
+git add .
+git commit -m "Production ready: Database-only storage + on-demand workers"
+git push origin main
+```
+
+**2. Create Render Service**
+
+1. Go to Render Dashboard
+2. New → Web Service
+3. Connect GitHub repo
+4. Select `main` branch
+5. Use `render.yaml` configuration
+6. Add environment variables
+7. Deploy
+
+**3. Configure Supabase**
+
+1. Run SQL migrations (indexes, RLS policies)
+2. Verify Google OAuth callback URLs
+3. Test database connection from Render
+
+**4. Verify Deployment**
+```bash
+# Check health endpoint
+curl https://mockflow-ai.onrender.com/health
+
+# Check logs in Render dashboard
+# Look for: "MockFlow-AI startup"
+# Look for: "Worker spawned (PID: ...)"
+```
+
+---
+
+### 7.9 Post-Deployment Monitoring
+
+**Daily Checks**
+- [ ] Health endpoint returns 200
+- [ ] No error spikes in logs
+- [ ] Worker count stays <3
+- [ ] Database queries remain fast
+
+**Weekly Checks**
+- [ ] Review Supabase usage (should stay in free tier)
+- [ ] Review Render usage (512MB RAM limit)
+- [ ] Check for zombie workers (should be 0)
+- [ ] User feedback/bug reports
+
+---
+
+### Phase 7 Tasks Checklist
+
+- [ ] Create `render.yaml` deployment config
+- [ ] Update `requirements.txt` with production deps
+- [ ] Add database indexes in Supabase
+- [ ] Update `app.py` - Add worker limits
+- [ ] Update `app.py` - Add health check endpoint
+- [ ] Update `app.py` - Add production logging
+- [ ] Test all flows locally before deployment
+- [ ] Push to GitHub
+- [ ] Deploy to Render
+- [ ] Configure environment variables in Render
+- [ ] Run database migrations in Supabase
+- [ ] Test live site end-to-end
+- [ ] Monitor logs for errors
+- [ ] Verify no localStorage usage (check browser DevTools)
+- [ ] Commit changes: "Phase 7: Production deployment"
+
+**Phase 7 Complete**: Application deployed and tested in production
 
 ---
 
@@ -1810,12 +1631,14 @@ After completing all phases:
 Migration is complete when:
 - ✅ All 7 phases completed
 - ✅ All tests passing
-- ✅ No console errors
-- ✅ Database properly configured
-- ✅ BYOK working correctly
-- ✅ localStorage fallback functional
-- ✅ UI theme consistent throughout
-- ✅ Production environment ready
+- ✅ No localStorage usage anywhere
+- ✅ No local file writes
+- ✅ Database properly configured with indexes
+- ✅ BYOK working correctly (user keys isolated)
+- ✅ On-demand workers spawn and terminate
+- ✅ Production environment deployed to Render
+- ✅ Health check endpoint returns healthy
+- ✅ <5 concurrent users can use system
 
 ---
 
@@ -1823,13 +1646,13 @@ Migration is complete when:
 
 If issues arise:
 
-1. **Phase 7 Issues**: Revert to Phase 6 commit
-2. **Database Issues**: Use localStorage-only mode
-3. **Auth Issues**: Temporarily disable auth (dev only)
-4. **Critical Bugs**: Revert entire migration
+1. **Phase 7 Issues**: Revert to Phase 6 commit, run locally
+2. **Database Issues**: Check Supabase logs, verify RLS policies
+3. **Worker Issues**: Check Render logs for subprocess errors
+4. **Critical Bugs**: Revert entire migration, use local dev mode
 
 Always keep backups of:
-- Database schema
+- Database schema dumps
 - Environment variables
 - Working code commits
 
@@ -1839,20 +1662,50 @@ Always keep backups of:
 
 After deployment:
 
-1. **Monitor**:
-   - Database performance
-   - API key usage
-   - Error rates
-   - User feedback
+**1. Monitor:**
+- Worker spawn/terminate logs
+- Database query performance
+- Render memory usage (should stay <400MB)
+- API key usage (user's responsibility)
 
-2. **Regular Tasks**:
-   - Review logs weekly
-   - Update dependencies monthly
-   - Backup database daily
-   - Rotate encryption keys quarterly
+**2. Regular Tasks:**
+- Review logs weekly
+- Clean up stale database entries (optional)
+- Update dependencies monthly
+- Backup database weekly (Supabase auto-backup enabled)
 
-3. **User Support**:
-   - Document common issues
-   - Create FAQ section
-   - Provide email support
-   - Monitor user feedback
+**3. User Support:**
+- Document common issues in README
+- Provide email support
+- Monitor GitHub issues
+
+---
+
+## Known Limitations
+
+**1. Free Tier Constraints:**
+- Max 3 concurrent interviews
+- 512MB RAM (Render)
+- 500MB database (Supabase)
+- No persistent filesystem (ephemeral)
+
+**2. Worker Startup Delay:**
+- 3-5 seconds to spawn worker
+- User sees "Starting agent..." message
+
+**3. No Worker Pooling:**
+- Each interview spawns fresh worker
+- Slightly slower than persistent workers
+- Acceptable for <5 concurrent users
+
+---
+
+## Migration Complete
+
+You now have a production-ready mock interview platform with:
+- ✅ Google OAuth authentication
+- ✅ Encrypted BYOK API key storage
+- ✅ Database-only persistence (no localStorage)
+- ✅ On-demand agent workers (spawn per interview)
+- ✅ Clean worker termination
+- ✅ Free tier optimized deployment

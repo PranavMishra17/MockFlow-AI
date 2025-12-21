@@ -967,42 +967,33 @@
             
             function showInterviewCompleteModal() {
                 document.getElementById('modalTitle').textContent = 'Interview Complete';
-                document.getElementById('modalMessage').textContent = 'Thank you for participating! Would you like to get feedback on your interview?';
+                document.getElementById('modalMessage').textContent = 'Thank you for participating! Would you like to get feedback?';
                 document.getElementById('modalIcon').className = 'modal-icon success';
                 document.getElementById('modalIcon').innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>';
-                
+
                 // Hide the confirm/cancel actions, show feedback actions
                 document.getElementById('modalActions').style.display = 'none';
                 document.getElementById('modalFeedbackActions').style.display = 'flex';
-                
+
                 // Set up feedback button
                 var feedbackBtn = document.getElementById('getFeedbackBtn');
                 feedbackBtn.onclick = function() {
-                    var filename = getInterviewFilename();
-                    if (filename) {
-                        window.location.href = '/feedback/' + encodeURIComponent(filename) + '?request_feedback=1';
+                    if (state.interviewDatabaseId) {
+                        // Redirect to feedback page with interview_id
+                        window.location.href = '/feedback/' + encodeURIComponent(state.interviewDatabaseId);
                     } else {
-                        // Fallback to past calls page
+                        // No interview_id received - show error
+                        alert('Interview was not saved properly. Please check your Past Interviews page.');
                         window.location.href = '/past-calls';
                     }
                 };
-                
+
                 // Set up return home button
                 document.getElementById('returnHomeBtn').onclick = function() {
                     window.location.href = '/';
                 };
-                
+
                 showModal();
-            }
-            
-            function getInterviewFilename() {
-                // Use the actual filename received from the agent if available
-                if (state.interviewFilename) {
-                    return state.interviewFilename;
-                }
-                
-                // Fallback: return null to trigger past-calls redirect
-                return null;
             }
             
             function onTrackSubscribed(track, publication, participant) {
@@ -1086,42 +1077,39 @@
             function onDataReceived(payload, participant) {
                 try {
                     var data = JSON.parse(new TextDecoder().decode(payload));
-                    
+
                     if (data.type === 'stage_change' && data.stage) {
                         updateStage(data.stage);
                     }
-                    
+
                     if (data.type === 'agent_caption') {
                         updateAgentCaption(data.text);
                     }
-                    
+
                     if (data.type === 'user_caption') {
                         updateCandidateCaption(data.text);
                     }
-                    
+
+                    if (data.type === 'interview_saved') {
+                        // Store interview_id for feedback navigation
+                        state.interviewDatabaseId = data.interview_id;
+                        console.log('[INTERVIEW] Saved to database:', data.interview_id);
+                    }
+
+                    if (data.type === 'save_error') {
+                        console.error('[INTERVIEW] Save error:', data.message);
+                        updateStatus('Save Error: ' + data.message, 'error');
+                    }
+
                     if (data.type === 'interview_ending') {
                         updateAgentCaption('Interview complete.');
                         updateStatus('Interview Complete', 'connected');
-                        
-                        // Store the actual filename from the agent
-                        if (data.filename) {
-                            state.interviewFilename = data.filename;
-                            console.log('[INTERVIEW] Transcript filename:', data.filename);
-                        }
-                        
+
                         setTimeout(function() {
                             showInterviewCompleteModal();
                         }, 2000);
                     }
-                    
-                    if (data.type === 'transcript_saved') {
-                        // Transcript saved after disconnect - store filename and upload to DB
-                        if (data.filename) {
-                            state.interviewFilename = data.filename;
-                            console.log('[INTERVIEW] Transcript saved:', data.filename);
-                            uploadInterviewToDatabase(data.filename);
-                        }
-                    }
+
                 } catch (err) {
                     console.error('[DATA] Parse error:', err);
                 }
@@ -1129,46 +1117,6 @@
             
             function onParticipantConnected(participant) {
                 console.log('[PARTICIPANT] Connected:', participant.identity);
-            }
-
-            async function uploadInterviewToDatabase(filename) {
-                console.log('[UPLOAD] Uploading interview to database:', filename);
-                try {
-                    // Load the raw interview JSON
-                    var response = await fetch('/interviews/' + encodeURIComponent(filename));
-                    if (!response.ok) {
-                        console.warn('[UPLOAD] Could not load interview file');
-                        return;
-                    }
-
-                    var interviewData = await response.json();
-
-                    // Upload to database
-                    var uploadResponse = await fetch('/api/interview/save', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include',
-                        body: JSON.stringify(interviewData)
-                    });
-
-                    var result = await uploadResponse.json();
-
-                    if (result.success && result.interview_id) {
-                        console.log('[UPLOAD] Interview uploaded to database:', result.interview_id);
-                        state.interviewDatabaseId = result.interview_id;
-
-                        // Store ID mapping for later use
-                        var roomName = interviewData.room_name;
-                        if (roomName) {
-                            localStorage.setItem('interview_id_map_' + roomName, result.interview_id);
-                            localStorage.setItem('interview_id_map_' + filename, result.interview_id);
-                        }
-                    } else {
-                        console.log('[UPLOAD] Upload skipped or failed:', result.message);
-                    }
-                } catch (error) {
-                    console.error('[UPLOAD] Failed to upload interview:', error);
-                }
             }
         }
     })();

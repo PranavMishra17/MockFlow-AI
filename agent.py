@@ -659,57 +659,109 @@ async def entrypoint(ctx: JobContext):
                 logger.error(f"[DATA] Error processing data: {e}", exc_info=True)
 
         async def finalize_and_disconnect():
-            """Finalize interview and disconnect."""
+            """Save interview to database and disconnect"""
             try:
-                import json
+                import json as json_module
                 from datetime import datetime
 
-                now = datetime.now()
-                just_filename = f"{candidate_name.lower().replace(' ', '_')}_{now.strftime('%Y%m%d_%H%M%S')}.json"
-                
-                # Emit ending notification with filename
-                try:
-                    data_payload = json.dumps({
-                        "type": "interview_ending", 
-                        "message": "Interview Complete",
-                        "filename": just_filename
-                    })
-                    await ctx.room.local_participant.publish_data(data_payload.encode('utf-8'))
-                except Exception as e:
-                    logger.warning(f"[UI] Failed to emit ending: {e}")
+                # Extract user_id from participant attributes
+                if not ctx.room.remote_participants:
+                    logger.error("[FINALIZE] No remote participants found")
+                    await ctx.room.disconnect()
+                    return
 
-                # Save conversation
-                history_data = {
-                    "candidate": candidate_name,
-                    "interview_date": now.isoformat(),
-                    "room_name": ctx.room.name,
-                    "job_role": interview_state.job_role,
-                    "experience_level": interview_state.experience_level,
-                    "conversation": conversation_history,
-                    "total_messages": {
-                        "agent": len(conversation_history['agent']),
-                        "user": len(conversation_history['user'])
+                participant = list(ctx.room.remote_participants.values())[0]
+                attrs = participant.attributes if hasattr(participant, 'attributes') else {}
+                user_id = attrs.get('user_id')
+
+                if not user_id:
+                    logger.error("[FINALIZE] No user_id found in participant attributes")
+                    await ctx.room.disconnect()
+                    return
+
+                logger.info(f"[FINALIZE] Saving interview to database for user: {user_id}")
+
+                # Build interview data
+                now = datetime.now()
+                interview_data = {
+                    'candidate_name': interview_state.candidate_name,
+                    'interview_date': now.isoformat(),
+                    'room_name': ctx.room.name,
+                    'job_role': interview_state.job_role,
+                    'experience_level': interview_state.experience_level,
+                    'conversation': conversation_history,
+                    'total_messages': {
+                        'agent': len(conversation_history.get('agent', [])),
+                        'user': len(conversation_history.get('user', []))
                     },
-                    "skipped_stages": interview_state.skipped_stages,
-                    "final_stage": interview_state.stage.value,
-                    "ended_by": "natural_completion"
+                    'skipped_stages': interview_state.skipped_stages,
+                    'final_stage': interview_state.stage.value,
+                    'ended_by': 'natural_completion',
+                    'has_resume': bool(interview_state.uploaded_resume_text),
+                    'has_jd': bool(interview_state.job_description)
                 }
 
-                os.makedirs("interviews", exist_ok=True)
-                filepath = f"interviews/{just_filename}"
+                # Save to Supabase
+                from supabase_client import supabase_client
+                interview_id = supabase_client.save_interview(user_id, interview_data)
 
-                with open(filepath, 'w', encoding='utf-8') as f:
-                    import json as json_module
-                    json_module.dump(history_data, f, indent=2, ensure_ascii=False)
+                if interview_id:
+                    logger.info(f"[FINALIZE] Interview saved successfully: {interview_id}")
 
-                logger.info(f"[HISTORY] Saved to {filepath}")
+                    # Notify frontend of successful save
+                    data_payload = json_module.dumps({
+                        "type": "interview_saved",
+                        "interview_id": interview_id,
+                        "message": "Interview saved successfully"
+                    })
+                    await ctx.room.local_participant.publish_data(data_payload.encode('utf-8'))
+
+                    # Emit ending notification
+                    data_payload = json_module.dumps({
+                        "type": "interview_ending",
+                        "message": "Interview Complete"
+                    })
+                    await ctx.room.local_participant.publish_data(data_payload.encode('utf-8'))
+
+                else:
+                    logger.error("[FINALIZE] Database save failed")
+
+                    # Notify frontend of save error
+                    data_payload = json_module.dumps({
+                        "type": "save_error",
+                        "message": "Failed to save interview. Please contact support."
+                    })
+                    await ctx.room.local_participant.publish_data(data_payload.encode('utf-8'))
+
+                # Mark as complete
                 closing_finalized["done"] = True
                 interview_complete.set()
+
+                # Wait for data to send, then disconnect
                 await asyncio.sleep(2.0)
                 await ctx.room.disconnect()
+                logger.info("[FINALIZE] Disconnected from room")
 
             except Exception as e:
                 logger.error(f"[FINALIZE] Error: {e}", exc_info=True)
+
+                # Attempt to notify frontend
+                try:
+                    import json as json_module
+                    data_payload = json_module.dumps({
+                        "type": "save_error",
+                        "message": f"Save error: {str(e)}"
+                    })
+                    await ctx.room.local_participant.publish_data(data_payload.encode('utf-8'))
+                except:
+                    pass
+
+                # Disconnect anyway
+                try:
+                    await ctx.room.disconnect()
+                except:
+                    pass
+
                 interview_complete.set()
 
         @ctx.room.on("disconnected")
@@ -720,57 +772,72 @@ async def entrypoint(ctx: JobContext):
             interview_complete.set()
         
         async def save_transcript_on_disconnect():
-            """Save interview transcript when room disconnects."""
+            """Save interview transcript when room disconnects"""
             try:
-                import json as json_module
-                from datetime import datetime
-                
                 # Don't save if already finalized
                 if closing_finalized.get("done"):
                     logger.info("[HISTORY] Transcript already saved via finalize_and_disconnect")
                     return
-                
+
                 # Check if we have any conversation to save
                 if not conversation_history["agent"] and not conversation_history["user"]:
                     logger.info("[HISTORY] No conversation to save")
                     return
-                
+
+                # Extract user_id from participant
+                if not ctx.room.remote_participants:
+                    logger.error("[HISTORY] No remote participants found")
+                    return
+
+                participant = list(ctx.room.remote_participants.values())[0]
+                attrs = participant.attributes if hasattr(participant, 'attributes') else {}
+                user_id = attrs.get('user_id')
+
+                if not user_id:
+                    logger.error("[HISTORY] No user_id found in participant attributes")
+                    return
+
+                import json as json_module
+                from datetime import datetime
+
                 now = datetime.now()
-                history_data = {
-                    "candidate": candidate_name,
-                    "interview_date": now.isoformat(),
-                    "room_name": ctx.room.name,
-                    "job_role": interview_state.job_role,
-                    "experience_level": interview_state.experience_level,
-                    "conversation": conversation_history,
-                    "total_messages": {
-                        "agent": len(conversation_history['agent']),
-                        "user": len(conversation_history['user'])
+                interview_data = {
+                    'candidate_name': candidate_name,
+                    'interview_date': now.isoformat(),
+                    'room_name': ctx.room.name,
+                    'job_role': interview_state.job_role,
+                    'experience_level': interview_state.experience_level,
+                    'conversation': conversation_history,
+                    'total_messages': {
+                        'agent': len(conversation_history['agent']),
+                        'user': len(conversation_history['user'])
                     },
-                    "skipped_stages": interview_state.skipped_stages,
-                    "final_stage": interview_state.stage.value,
-                    "ended_by": "user_disconnect"
+                    'skipped_stages': interview_state.skipped_stages,
+                    'final_stage': interview_state.stage.value,
+                    'ended_by': 'user_disconnect',
+                    'has_resume': bool(interview_state.uploaded_resume_text),
+                    'has_jd': bool(interview_state.job_description)
                 }
-                
-                os.makedirs("interviews", exist_ok=True)
-                just_filename = f"{candidate_name.lower().replace(' ', '_')}_{now.strftime('%Y%m%d_%H%M%S')}.json"
-                filepath = f"interviews/{just_filename}"
-                
-                with open(filepath, 'w', encoding='utf-8') as f:
-                    json_module.dump(history_data, f, indent=2, ensure_ascii=False)
 
-                logger.info(f"[HISTORY] Saved transcript on disconnect: {filepath}")
+                # Save to database
+                from supabase_client import supabase_client
+                interview_id = supabase_client.save_interview(user_id, interview_data)
 
-                # Emit the filename so frontend can navigate to it
-                try:
-                    data_payload = json_module.dumps({
-                        "type": "transcript_saved",
-                        "filename": just_filename
-                    })
-                    await ctx.room.local_participant.publish_data(data_payload.encode('utf-8'))
-                except Exception as e:
-                    logger.warning(f"[UI] Failed to emit transcript filename: {e}")
-                
+                if interview_id:
+                    logger.info(f"[HISTORY] Saved transcript on disconnect: {interview_id}")
+
+                    # Emit the interview_id to frontend
+                    try:
+                        data_payload = json_module.dumps({
+                            "type": "interview_saved",
+                            "interview_id": interview_id
+                        })
+                        await ctx.room.local_participant.publish_data(data_payload.encode('utf-8'))
+                    except Exception as e:
+                        logger.warning(f"[HISTORY] Failed to emit interview_id: {e}")
+                else:
+                    logger.error("[HISTORY] Database save failed on disconnect")
+
             except Exception as e:
                 logger.error(f"[HISTORY] Error saving on disconnect: {e}", exc_info=True)
 

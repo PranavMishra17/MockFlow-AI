@@ -406,25 +406,7 @@
         }
         
         function loadInterview() {
-            // First, try to load RAW interview JSON for database upload
-            fetch('/interviews/' + encodeURIComponent(filename))
-                .then(function(response) {
-                    if (response.ok) {
-                        return response.json();
-                    }
-                    return null;
-                })
-                .then(function(rawData) {
-                    if (rawData && rawData.conversation && rawData.total_messages) {
-                        console.log('[FEEDBACK] Loaded raw interview JSON');
-                        uploadInterviewToDatabase(rawData);
-                    }
-                })
-                .catch(function(err) {
-                    console.log('[FEEDBACK] Could not load raw JSON:', err);
-                });
-
-            // Then load the resequenced version for display
+            // filename is actually interview_id from URL parameter
             fetch('/api/interview/' + encodeURIComponent(filename))
                 .then(function(response) {
                     if (!response.ok) throw new Error('Interview not found');
@@ -432,8 +414,9 @@
                 })
                 .then(function(data) {
                     elements.loadingState.style.display = 'none';
+
                     if (data.error) {
-                        tryLoadFromLocalStorage();
+                        showError('Interview not found in database: ' + data.error);
                         return;
                     }
 
@@ -442,62 +425,9 @@
                 })
                 .catch(function(err) {
                     console.error('[FEEDBACK] Load error:', err);
-                    tryLoadFromLocalStorage();
+                    elements.loadingState.style.display = 'none';
+                    showError('Failed to load interview. Please check your Past Interviews page.');
                 });
-        }
-
-        function uploadInterviewToDatabase(interviewData) {
-            console.log('[FEEDBACK] Uploading interview to database...');
-            fetch('/api/interview/save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify(interviewData)
-            })
-            .then(function(response) { return response.json(); })
-            .then(function(result) {
-                if (result.success && result.interview_id) {
-                    console.log('[FEEDBACK] Interview uploaded to database:', result.interview_id);
-                    // Store the ID mapping
-                    var roomName = interviewData.room_name;
-                    if (roomName) {
-                        localStorage.setItem('interview_id_map_' + roomName, result.interview_id);
-                        localStorage.setItem('interview_id_map_' + filename, result.interview_id);
-                    }
-                } else {
-                    console.log('[FEEDBACK] Upload skipped:', result.message);
-                }
-            })
-            .catch(function(err) {
-                console.log('[FEEDBACK] Upload failed:', err);
-            });
-        }
-
-        function tryLoadFromLocalStorage() {
-            console.log('[FEEDBACK] Trying localStorage fallback...');
-            var localData = localStorage.getItem('interview_' + filename);
-            if (localData) {
-                try {
-                    var interview = JSON.parse(localData);
-                    console.log('[FEEDBACK] Loaded from localStorage');
-                    var mockData = {
-                        meta: {
-                            candidate: interview.candidateName || 'Unknown',
-                            interview_date: interview.endedAt || new Date().toISOString(),
-                            job_role: interview.jobRole,
-                            experience_level: interview.experienceLevel,
-                            source: 'localStorage'
-                        },
-                        ordered_conversation: []
-                    };
-                    renderInterview(mockData);
-                    checkCachedFeedback();
-                    return;
-                } catch (e) {
-                    console.error('[FEEDBACK] Failed to parse localStorage data:', e);
-                }
-            }
-            showError('Interview not found. It may take a moment to save after the interview ends.');
         }
 
         function showError(message) {
@@ -559,42 +489,33 @@
         }
         
         function checkCachedFeedback() {
-            // Check for cached feedback (from previous session stored in localStorage or backend)
-            var cachedFeedback = localStorage.getItem('feedback_' + filename);
-            if (cachedFeedback) {
-                try {
-                    var cached = JSON.parse(cachedFeedback);
-                    feedbackState.scoresData = cached.scores;
-                    if (cached.scores) {
-                        renderScores(cached.scores, true);
-                        feedbackState.scoresGenerated = true;
-                    }
-                    if (cached.feedback) {
-                        renderFeedback(cached.feedback, true);
-                        feedbackState.reportGenerated = true;
-                    }
-                    elements.generateSection.style.display = 'none';
-                    return;
-                } catch (e) {
-                    console.error('[FEEDBACK] Failed to parse cached feedback', e);
-                }
-            }
-
-            // Also check backend cache
-            fetch('/api/feedback/cached/' + encodeURIComponent(filename))
+            // Check backend for cached feedback
+            fetch('/api/feedback/get/' + encodeURIComponent(filename))
                 .then(function(response) {
                     if (!response.ok) return null;
                     return response.json();
                 })
                 .then(function(data) {
-                    if (data && data.feedback) {
-                        renderFeedback(data.feedback, true);
-                        feedbackState.reportGenerated = true;
+                    if (data && data.feedback_data) {
+                        console.log('[FEEDBACK] Found cached feedback in database');
+
+                        if (data.feedback_data.scores) {
+                            renderScores(data.feedback_data.scores, true);
+                            feedbackState.scoresGenerated = true;
+                        }
+
+                        if (data.feedback_data.feedback) {
+                            renderFeedback(data.feedback_data.feedback, true);
+                            feedbackState.reportGenerated = true;
+                        }
+
                         elements.generateSection.style.display = 'none';
+                    } else {
+                        console.log('[FEEDBACK] No cached feedback found');
                     }
                 })
                 .catch(function(err) {
-                    console.log('[FEEDBACK] No cached feedback found');
+                    console.log('[FEEDBACK] No cached feedback available');
                 });
         }
 
@@ -626,11 +547,6 @@
                 console.log('[FEEDBACK] Scores generated successfully');
                 feedbackState.scoresData = data.scores;
                 feedbackState.scoresGenerated = true;
-
-                // Cache scores in localStorage
-                var cached = JSON.parse(localStorage.getItem('feedback_' + filename) || '{}');
-                cached.scores = data.scores;
-                localStorage.setItem('feedback_' + filename, JSON.stringify(cached));
 
                 renderScores(data.scores, false);
 
@@ -688,13 +604,7 @@
                 console.log('[FEEDBACK] Report generated successfully');
                 feedbackState.reportGenerated = true;
 
-                // Cache feedback in localStorage
-                var cached = JSON.parse(localStorage.getItem('feedback_' + filename) || '{}');
-                cached.feedback = data.feedback;
-                cached.scores = feedbackState.scoresData;
-                localStorage.setItem('feedback_' + filename, JSON.stringify(cached));
-
-                // Try to save to database if authenticated
+                // Save to database (no localStorage)
                 saveFeedbackToDatabase(filename, {
                     feedback: data.feedback,
                     scores: feedbackState.scoresData
@@ -710,41 +620,25 @@
         }
 
         function saveFeedbackToDatabase(interviewId, feedbackData) {
-            var databaseId = localStorage.getItem('interview_id_map_' + interviewId);
-
-            if (!databaseId) {
-                var localData = localStorage.getItem('interview_' + interviewId);
-                if (localData) {
-                    try {
-                        var parsed = JSON.parse(localData);
-                        databaseId = parsed.databaseId;
-                    } catch (e) {}
-                }
-            }
-
-            if (!databaseId) {
-                console.log('[FEEDBACK] No database ID found, using localStorage only');
-                return;
-            }
-
             fetch('/api/feedback/save', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
                 body: JSON.stringify({
-                    interview_id: databaseId,
+                    interview_id: interviewId,
                     feedback: feedbackData
                 })
             })
             .then(function(response) { return response.json(); })
             .then(function(result) {
                 if (result.success) {
-                    console.log('[FEEDBACK] Saved to database');
+                    console.log('[FEEDBACK] Saved to database successfully');
                 } else {
-                    console.log('[FEEDBACK] Using localStorage only:', result.message);
+                    console.error('[FEEDBACK] Save failed:', result.message);
                 }
             })
             .catch(function(err) {
-                console.log('[FEEDBACK] Database save failed, localStorage fallback active:', err);
+                console.error('[FEEDBACK] Save error:', err);
             });
         }
 
