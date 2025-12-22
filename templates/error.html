@@ -11,8 +11,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/modals.css">
+    <link rel="stylesheet" href="/static/header-additions.css">
 </head>
 <body>
+    <!-- Action Buttons (Right Side) - populated by header.js -->
+    <div class="action-buttons" id="actionButtons"></div>
+
     <div class="hero">
         <div class="hero-content" style="display: flex; flex-direction: column; align-items: center; text-align: center;">
             <div class="logo-mark" style="background: rgba(229, 57, 53, 0.1);">
@@ -37,5 +42,20 @@
             </a>
         </div>
     </div>
+
+    <script src="/static/header.js"></script>
+    <script src="/static/modal.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            window.MockFlowHeader.init({
+                showHome: true,
+                showInfo: true,
+                showGithub: true,
+                showSponsor: true,
+                showSettings: false,
+                showAuth: false
+            });
+        });
+    </script>
 </body>
 </html>

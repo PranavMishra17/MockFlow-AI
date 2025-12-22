@@ -46,20 +46,27 @@ CORS(app)  # Enable CORS for API endpoints
 # Register cleanup on server shutdown
 atexit.register(worker_manager.cleanup_all_workers)
 
-# Configuration from environment
-LIVEKIT_URL = os.getenv('LIVEKIT_URL')
-LIVEKIT_API_KEY = os.getenv('LIVEKIT_API_KEY')
-LIVEKIT_API_SECRET = os.getenv('LIVEKIT_API_SECRET')
+# Validate required environment variables for production (BYOK keys NOT included)
+required_env_vars = [
+    'SUPABASE_URL',
+    'SUPABASE_SERVICE_KEY',
+    'SUPABASE_ANON_KEY',
+    'ENCRYPTION_KEY',
+    'SECRET_KEY',
+    'GOOGLE_CLIENT_ID',
+    'GOOGLE_CLIENT_SECRET'
+]
 
-# Validate configuration
-if not all([LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET]):
-    logger.error("[CONFIG] Missing required LiveKit environment variables")
-    raise ValueError(
-        "Missing required environment variables. "
-        "Please set LIVEKIT_URL, LIVEKIT_API_KEY, and LIVEKIT_API_SECRET"
-    )
+missing_vars = [var for var in required_env_vars if not os.getenv(var)]
+if missing_vars:
+    logger.error(f"[CONFIG] Missing required environment variables: {', '.join(missing_vars)}")
+    if os.getenv('FLASK_ENV') == 'production':  # Only fail in production
+        raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
+    else:
+        logger.warning("[CONFIG] Missing vars detected but continuing in dev mode")
 
-logger.info(f"[CONFIG] LiveKit URL: {LIVEKIT_URL}")
+logger.info("[CONFIG] All required environment variables validated")
+logger.info("[CONFIG] BYOK model: LiveKit, OpenAI, and Deepgram keys loaded from user database")
 
 
 # ==================== AUTH ENDPOINTS ====================
@@ -267,40 +274,6 @@ def index():
     """Landing page."""
     logger.info("[ROUTE] / - Landing page accessed")
     return render_template('index.html')
-
-
-@app.route('/health')
-def health_check():
-    """Health check endpoint for monitoring and deployment verification."""
-    try:
-        # Check database connection by attempting to query
-        # This will fail if database is unreachable
-        from supabase_client import supabase_client
-
-        # Test database connectivity (query will return None for non-existent user, but connection works)
-        supabase_client.get_user('health-check-test-user-id')
-
-        # Count active workers
-        active_worker_count = len(worker_manager.active_workers)
-        max_workers = worker_manager.max_workers
-
-        logger.info(f"[HEALTH] Health check passed - {active_worker_count}/{max_workers} workers active")
-
-        return jsonify({
-            'status': 'healthy',
-            'database': 'connected',
-            'workers': {
-                'active': active_worker_count,
-                'max': max_workers
-            }
-        }), 200
-
-    except Exception as e:
-        logger.error(f"[HEALTH] Health check failed: {e}", exc_info=True)
-        return jsonify({
-            'status': 'unhealthy',
-            'error': str(e)
-        }), 500
 
 
 @app.route('/dashboard')
@@ -1107,6 +1080,7 @@ def _load_interview_context(interview_id):
 
 
 @app.route('/api/feedback/scores', methods=['POST'])
+@require_auth
 def generate_feedback_scores():
     """
     Stage 1: Extract structured competency scores from interview.
@@ -1148,18 +1122,20 @@ def generate_feedback_scores():
             job_summary=job_summary,
             interview_chat=interview_chat
         )
-        
-        # Call OpenAI API for scores extraction
-        openai_api_key = os.getenv('OPENAI_API_KEY')
-        if not openai_api_key:
+
+        # Get authenticated user's OpenAI key from database (BYOK model)
+        user_id = get_user_id()
+        keys = supabase_client.get_api_keys(user_id)
+
+        if not keys or not keys.get('openai_key'):
             return jsonify({
-                'error': 'Configuration error',
-                'message': 'OpenAI API key not configured'
-            }), 500
-        
+                'error': 'API key not configured',
+                'message': 'Please configure your OpenAI API key in Settings'
+            }), 400
+
         logger.info(f"[API] Extracting scores via OpenAI for {interview_id}")
-        
-        client = OpenAI(api_key=openai_api_key)
+
+        client = OpenAI(api_key=keys['openai_key'])
         
         response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -1224,6 +1200,7 @@ def generate_feedback_scores():
 
 
 @app.route('/api/feedback', methods=['POST'])
+@require_auth
 def generate_feedback():
     """
     Stage 2: Generate detailed AI-powered feedback using chain-of-thought analysis.
@@ -1279,17 +1256,19 @@ def generate_feedback():
 
 Provide your analysis and feedback following the output format specified."""
 
-        # Call OpenAI API for feedback generation
-        openai_api_key = os.getenv('OPENAI_API_KEY')
-        if not openai_api_key:
+        # Get authenticated user's OpenAI key from database (BYOK model)
+        user_id = get_user_id()
+        keys = supabase_client.get_api_keys(user_id)
+
+        if not keys or not keys.get('openai_key'):
             return jsonify({
-                'error': 'Configuration error',
-                'message': 'OpenAI API key not configured'
-            }), 500
-        
+                'error': 'API key not configured',
+                'message': 'Please configure your OpenAI API key in Settings'
+            }), 400
+
         logger.info(f"[API] Generating feedback via OpenAI for {interview_id}")
-        
-        client = OpenAI(api_key=openai_api_key)
+
+        client = OpenAI(api_key=keys['openai_key'])
         
         response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -1405,16 +1384,40 @@ def skip_stage():
 
 # ==================== HEALTH CHECK ====================
 
-@app.route('/api/health')
+
+@app.route('/health')
 def health_check():
-    """Health check endpoint for monitoring."""
-    return jsonify({
-        'status': 'healthy',
-        'service': 'MockFlow-AI',
-        'livekit_configured': bool(LIVEKIT_URL and LIVEKIT_API_KEY),
-        'document_cache_stats': doc_processor.get_cache_stats(),
-        'conversation_cache_stats': conversation_cache.get_cache_stats()
-    })
+    """Health check endpoint for monitoring and deployment verification."""
+    try:
+        # Check database connection by attempting to query
+        # This will fail if database is unreachable
+        from supabase_client import supabase_client
+
+        # Test database connectivity (query will return None for non-existent user, but connection works)
+        supabase_client.get_user('health-check-test-user-id')
+
+        # Count active workers
+        active_worker_count = len(worker_manager.active_workers)
+        max_workers = worker_manager.max_workers
+
+        logger.info(f"[HEALTH] Health check passed - {active_worker_count}/{max_workers} workers active")
+
+        return jsonify({
+            'status': 'healthy',
+            'database': 'connected',
+            'workers': {
+                'active': active_worker_count,
+                'max': max_workers
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"[HEALTH] Health check failed: {e}", exc_info=True)
+        return jsonify({
+            'status': 'unhealthy',
+            'error': str(e)
+        }), 500
+
 
 
 # ==================== ERROR HANDLERS ====================

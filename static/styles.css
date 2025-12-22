@@ -164,8 +164,8 @@ h1, h2, h3, h4 {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 64px;
-    height: 64px;
+    width: 90px;
+    height: 90px;
     background: var(--bg-card);
     border-radius: var(--radius-xl);
     margin-bottom: var(--spacing-md);
@@ -173,8 +173,8 @@ h1, h2, h3, h4 {
 }
 
 .logo-mark svg {
-    width: 40px;
-    height: 40px;
+    width: 65px;
+    height: 65px;
 }
 
 h1 {
@@ -1918,4 +1918,93 @@ footer a:hover {
     display: flex;
     align-items: center;
     gap: 0.625rem;
+}
+
+
+/**
+ * MockFlow-AI Header Component Additions
+ * Additional styles for header.js components
+ */
+
+/* Sponsor button - Pink heart style */
+.action-btn-sponsor {
+    color: #db61a2;
+    border-color: rgb(0, 0, 0);
+}
+
+.action-btn-sponsor:hover {
+    background: rgba(219, 97, 162, 0.08);
+    border-color: #db61a2;
+    color: #db61a2;
+}
+
+.action-btn-sponsor svg {
+    stroke: #db61a2;
+    fill: none;
+    transition: fill 0.2s ease;
+}
+
+.action-btn-sponsor:hover svg {
+    fill: rgba(219, 97, 162, 0.15);
+}
+
+/* Settings dropdown */
+.settings-dropdown {
+    position: relative;
+}
+
+.settings-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    min-width: 160px;
+    background: white;
+    border: 1px solid rgba(26, 26, 26, 0.1);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-8px);
+    transition: all 0.2s ease;
+    z-index: 200;
+}
+
+.settings-dropdown-menu.visible {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.settings-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    color: var(--text-primary, #1a1a1a);
+    text-decoration: none;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: background 0.15s ease;
+}
+
+.settings-dropdown-item:first-child {
+    border-radius: 8px 8px 0 0;
+}
+
+.settings-dropdown-item:last-child {
+    border-radius: 0 0 8px 8px;
+}
+
+.settings-dropdown-item:hover {
+    background: var(--bg-secondary, #fafafa);
+}
+
+.settings-dropdown-item svg {
+    width: 16px;
+    height: 16px;
+    color: var(--text-secondary, #666);
+}
+
+.settings-dropdown-item:hover svg {
+    color: var(--primary, #81c784);
 }
