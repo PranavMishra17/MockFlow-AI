@@ -2,6 +2,7 @@
 MockFlow-AI Interview Agent Worker
 
 Standalone agent that runs as subprocess with API keys passed via environment variables.
+FIXED: Uses explicit room connection instead of LiveKit dispatch system.
 Terminates automatically after interview ends.
 """
 
@@ -9,19 +10,17 @@ import asyncio
 import logging
 import os
 import sys
-from pathlib import Path
 from typing import Annotated
 from pydantic import Field
 
+from livekit import api as livekit_api
 from livekit.agents import (
-    AgentServer,
     AgentSession,
-    JobContext,
-    cli,
     Agent,
     RunContext,
     function_tool,
 )
+from livekit.rtc import Room, RoomOptions
 from livekit.plugins import openai, deepgram, silero
 
 from fsm import InterviewState, InterviewStage, STAGE_TIME_LIMITS, STAGE_MIN_QUESTIONS
@@ -36,8 +35,6 @@ from prompts import (
     CLOSING_FALLBACK,
 )
 
-# DO NOT load .env file - keys come from subprocess environment
-
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -50,7 +47,7 @@ logger = logging.getLogger("agent-worker")
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 
-# Verify API keys are in environment (passed by parent process)
+# Get environment variables (passed by parent process)
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 DEEPGRAM_API_KEY = os.getenv('DEEPGRAM_API_KEY')
 LIVEKIT_URL = os.getenv('LIVEKIT_URL')
@@ -68,65 +65,6 @@ if not all([OPENAI_API_KEY, DEEPGRAM_API_KEY, LIVEKIT_URL, LIVEKIT_API_KEY, LIVE
 logger.info("[CONFIG] API keys loaded from environment")
 logger.info(f"[CONFIG] LiveKit URL: {LIVEKIT_URL}")
 logger.info(f"[CONFIG] Target Room: {INTERVIEW_ROOM_NAME}")
-
-# Create agent server with explicit name for dispatch
-server = AgentServer(agent_name="interview-agent")
-
-
-async def execute_skip_transition(
-    session: AgentSession,
-    interview_state: InterviewState,
-    target_stage: InterviewStage,
-    agent: 'InterviewAgent',
-    ctx: JobContext
-):
-    """Execute a skip transition directly without relying on LLM tool calls."""
-    try:
-        current_stage = interview_state.stage
-        logger.info(
-            f"[SKIP] Executing forced skip: {current_stage.value} -> {target_stage.value}"
-        )
-
-        # Execute the transition
-        interview_state.transition_to(target_stage, forced=False, skipped=True)
-
-        # Update agent instructions
-        stage_instructions = agent._get_stage_instructions(interview_state, target_stage)
-        await agent.update_instructions(stage_instructions)
-
-        # Emit stage change to UI
-        try:
-            import json
-            data_payload = json.dumps({
-                "type": "stage_change",
-                "stage": target_stage.value
-            })
-            await ctx.room.local_participant.publish_data(
-                data_payload.encode('utf-8')
-            )
-            logger.info(f"[SKIP] UI notified of stage change to {target_stage.value}")
-        except Exception as e:
-            logger.error(f"[SKIP] Failed to emit stage change: {e}")
-
-        # Get and deliver transition acknowledgement
-        from prompts import get_transition_ack
-        ack = get_transition_ack(
-            target_stage,
-            agent.candidate_name,
-            interview_state.job_role or 'this position'
-        )
-
-        if ack:
-            logger.info(f"[SKIP] Delivering acknowledgement: {ack[:50]}...")
-            try:
-                await session.say(ack, allow_interruptions=False)
-            except Exception as e:
-                logger.warning(f"[SKIP] Failed to deliver acknowledgement: {e}")
-
-        logger.info(f"[SKIP] Skip transition complete to {target_stage.value}")
-
-    except Exception as e:
-        logger.error(f"[SKIP] Error executing skip transition: {e}", exc_info=True)
 
 
 class InterviewAgent(Agent):
@@ -165,7 +103,6 @@ class InterviewAgent(Agent):
 
             time_in_stage = ctx.userdata.time_in_current_stage()
 
-            # Minimum time gates (reduced for efficiency)
             MIN_TIMES = {
                 InterviewStage.WELCOME: 0,
                 InterviewStage.SELF_INTRO: 30,
@@ -180,12 +117,9 @@ class InterviewAgent(Agent):
                     f"Current: {time_in_stage:.0f}s, Minimum: {min_time}s"
                 )
 
-            # Execute transition
             ctx.userdata.transition_to(next_stage, forced=False, skipped=False)
 
-            # Get stage instructions
             stage_instructions = self._get_stage_instructions(ctx.userdata, next_stage)
-
             await self.update_instructions(stage_instructions)
 
             logger.info(
@@ -193,9 +127,8 @@ class InterviewAgent(Agent):
                 f"(reason: {reason}, time_in_stage: {time_in_stage:.1f}s)"
             )
 
-            await self._emit_stage_change(ctx, next_stage)
+            await self._emit_stage_change(next_stage)
 
-            # Get transition acknowledgement from prompts
             acknowledgement = get_transition_ack(
                 next_stage,
                 self.candidate_name,
@@ -226,35 +159,25 @@ class InterviewAgent(Agent):
 
     def _get_stage_instructions(self, state: InterviewState, stage: InterviewStage) -> str:
         """Build personalized stage instructions with stage-specific document context."""
-        # Get base instructions from prompts module
         base_instructions = build_stage_instructions(stage)
-
-        # Replace placeholders
         instructions = base_instructions.replace("[ROLE]", state.job_role or "this position")
 
-        # Add stage-specific document context
         doc_context = ""
         placeholder = "[DOCUMENT_CONTEXT]"
 
-        # Only inject document context for specific stages
         if stage in [InterviewStage.PAST_EXPERIENCE, InterviewStage.COMPANY_FIT]:
             doc_context = state.get_document_context(stage=stage)
 
         if doc_context:
-            instructions = instructions.replace(
-                placeholder,
-                f"\n{doc_context}\n"
-            )
+            instructions = instructions.replace(placeholder, f"\n{doc_context}\n")
         else:
             instructions = instructions.replace(placeholder, "")
 
-        # Add role context
         role_context = build_role_context(
             state.job_role or "this position",
             state.experience_level or "mid"
         )
 
-        # Add personality note
         personality_note = build_personality_note(
             self.candidate_name,
             state.job_role or "a technical position",
@@ -264,7 +187,7 @@ class InterviewAgent(Agent):
 
         return instructions + personality_note
 
-    async def _emit_stage_change(self, ctx: RunContext[InterviewState], new_stage: InterviewStage):
+    async def _emit_stage_change(self, new_stage: InterviewStage):
         """Emit stage change event to the room for UI updates."""
         try:
             import json
@@ -293,7 +216,6 @@ class InterviewAgent(Agent):
             stage_questions = ctx.userdata.questions_per_stage.get(current_stage, 0)
             minimum = STAGE_MIN_QUESTIONS.get(current_stage, 2)
 
-            # Check for pending acknowledgement
             pending_ack = None
             should_clear_ack = False
 
@@ -304,28 +226,23 @@ class InterviewAgent(Agent):
                 if current_stage == pending_stage:
                     should_clear_ack = True
 
-            # Get time status
             time_status = ctx.userdata.get_time_status()
             time_remaining_pct = time_status['remaining_pct']
             remaining_sec = time_status['remaining_seconds']
 
-            # Normalize for comparison
             normalized = question.lower().strip().rstrip('?.,!')
 
-            # Check duplicates
             for asked in ctx.userdata.questions_asked:
                 asked_normalized = asked.lower().strip().rstrip('?.,!')
                 if normalized == asked_normalized or normalized in asked_normalized or asked_normalized in normalized:
                     return f"You already asked a similar question: '{asked}'. Please ask something different."
 
-            # Approve and track
             ctx.userdata.questions_asked.append(question)
             ctx.userdata.questions_per_stage[current_stage] = stage_questions + 1
             new_count = stage_questions + 1
 
             logger.info(f"[AGENT] Approved question #{len(ctx.userdata.questions_asked)} ({new_count}/{minimum} in {current_stage})")
 
-            # Build response
             response = f"Question approved ({new_count}/{minimum}). Time: {time_remaining_pct:.0f}% ({remaining_sec:.0f}s). "
 
             if new_count >= minimum:
@@ -338,7 +255,6 @@ class InterviewAgent(Agent):
 
             response += f"Now ask: '{question}'"
 
-            # Prepend pending acknowledgement
             if pending_ack:
                 response = f"STAGE TRANSITION - First say: \"{pending_ack}\" Then ask your question.\n\n{response}"
                 if should_clear_ack:
@@ -384,7 +300,6 @@ class InterviewAgent(Agent):
 
             status_line = f"[STATUS] Q: {q_status['asked']}/{q_status['minimum']} | Time: {time_remaining_pct:.0f}% ({remaining_sec:.0f}s)"
 
-            # Transition guidance
             if time_remaining_pct <= 10:
                 guidance = f"{status_line}\nTIME CRITICAL: Transition NOW."
             elif met_minimum and time_remaining_pct <= 25:
@@ -422,7 +337,6 @@ class InterviewAgent(Agent):
             logger.error(f"[AGENT] Record response error: {e}", exc_info=True)
             return "Error recording response"
 
-
     async def on_enter(self):
         """Called when agent becomes active - delivers welcome greeting."""
         logger.info(f"[AGENT] on_enter() called - Agent activated for {self.candidate_name}")
@@ -435,88 +349,147 @@ class InterviewAgent(Agent):
         logger.info("[AGENT] Agent deactivating")
 
 
-async def emit_user_caption(ctx: JobContext, text: str):
+async def emit_user_caption(room: Room, text: str):
     """Emit user caption to the UI."""
     try:
         import json
         data_payload = json.dumps({"type": "user_caption", "text": text})
-        await ctx.room.local_participant.publish_data(data_payload.encode('utf-8'))
+        await room.local_participant.publish_data(data_payload.encode('utf-8'))
     except Exception as e:
         logger.error(f"[UI] Failed to emit user caption: {e}")
 
 
-async def emit_agent_caption(ctx: JobContext, text: str):
+async def emit_agent_caption(room: Room, text: str):
     """Emit agent caption to the UI."""
     try:
         import json
         data_payload = json.dumps({"type": "agent_caption", "text": text})
-        await ctx.room.local_participant.publish_data(data_payload.encode('utf-8'))
+        await room.local_participant.publish_data(data_payload.encode('utf-8'))
     except Exception as e:
         logger.error(f"[UI] Failed to emit agent caption: {e}")
 
 
-@server.rtc_session()
-async def entrypoint(ctx: JobContext):
-    """Main entry point for LiveKit agent."""
-    logger.info(f"[SESSION] Entrypoint called for room: {ctx.room.name}")
-    logger.info(f"[SESSION] Expected room: {INTERVIEW_ROOM_NAME}")
-
-    # Only handle the specific room this worker was spawned for
-    if ctx.room.name != INTERVIEW_ROOM_NAME:
-        logger.warning(f"[SESSION] Ignoring room {ctx.room.name}, waiting for {INTERVIEW_ROOM_NAME}")
-        return
-
-    logger.info(f"[SESSION] Room name matches! Accepting connection to: {ctx.room.name}")
-
-    fallback_task = None
-    interview_complete = asyncio.Event()
-
+async def execute_skip_transition(
+    session: AgentSession,
+    interview_state: InterviewState,
+    target_stage: InterviewStage,
+    agent: InterviewAgent,
+    room: Room
+):
+    """Execute a skip transition directly without relying on LLM tool calls."""
     try:
-        logger.info("[SESSION] Calling ctx.connect()...")
-        await ctx.connect()
-        logger.info(f"[SESSION] Successfully connected to room: {ctx.room.name}")
+        current_stage = interview_state.stage
+        logger.info(f"[SKIP] Executing forced skip: {current_stage.value} -> {target_stage.value}")
 
-        # Extract candidate info
-        room_parts = ctx.room.name.split('-')
+        interview_state.transition_to(target_stage, forced=False, skipped=True)
+
+        stage_instructions = agent._get_stage_instructions(interview_state, target_stage)
+        await agent.update_instructions(stage_instructions)
+
+        try:
+            import json
+            data_payload = json.dumps({
+                "type": "stage_change",
+                "stage": target_stage.value
+            })
+            await room.local_participant.publish_data(data_payload.encode('utf-8'))
+            logger.info(f"[SKIP] UI notified of stage change to {target_stage.value}")
+        except Exception as e:
+            logger.error(f"[SKIP] Failed to emit stage change: {e}")
+
+        ack = get_transition_ack(
+            target_stage,
+            agent.candidate_name,
+            interview_state.job_role or 'this position'
+        )
+
+        if ack:
+            logger.info(f"[SKIP] Delivering acknowledgement: {ack[:50]}...")
+            try:
+                await session.say(ack, allow_interruptions=False)
+            except Exception as e:
+                logger.warning(f"[SKIP] Failed to deliver acknowledgement: {e}")
+
+        logger.info(f"[SKIP] Skip transition complete to {target_stage.value}")
+
+    except Exception as e:
+        logger.error(f"[SKIP] Error executing skip transition: {e}", exc_info=True)
+
+
+async def run_interview():
+    """
+    Main entry point - EXPLICITLY connects to specific room.
+    
+    This bypasses LiveKit's dispatch system entirely.
+    The worker connects directly to the room it was spawned for.
+    """
+    logger.info(f"[MAIN] Starting interview agent for room: {INTERVIEW_ROOM_NAME}")
+    
+    interview_complete = asyncio.Event()
+    fallback_task = None
+    
+    try:
+        # Generate agent token for this specific room
+        token = livekit_api.AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET)
+        token.with_identity("interview-agent")
+        token.with_name("AI Interviewer")
+        token.with_grants(livekit_api.VideoGrants(
+            room_join=True,
+            room=INTERVIEW_ROOM_NAME,
+            can_publish=True,
+            can_subscribe=True,
+        ))
+        agent_token = token.to_jwt()
+        
+        logger.info(f"[MAIN] Generated agent token for room: {INTERVIEW_ROOM_NAME}")
+        
+        # Create room and connect DIRECTLY (no dispatch)
+        room = Room()
+        
+        logger.info(f"[MAIN] Connecting to LiveKit: {LIVEKIT_URL}")
+        await room.connect(LIVEKIT_URL, agent_token)
+        logger.info(f"[MAIN] Connected to room: {room.name}")
+        
+        # Wait for participant to join
+        logger.info("[MAIN] Waiting for participant to join...")
+        
+        # Extract candidate info from room name or wait for participant
+        room_parts = room.name.split('-')
         candidate_name = ' '.join(room_parts[1:-1]).title() if len(room_parts) > 2 else "Candidate"
-
+        
         role = 'this position'
         level = 'mid'
         email = ''
         resume_text = None
         job_description = None
         include_profile = True
-
-        if ctx.room.remote_participants:
-            participant = list(ctx.room.remote_participants.values())[0]
-            if hasattr(participant, 'attributes') and participant.attributes:
-                attrs = participant.attributes
-                role = attrs.get('role', 'this position')
-                level = attrs.get('level', 'mid')
-                email = attrs.get('email', '')
-                resume_text = attrs.get('resume_text')
-                job_description = attrs.get('job_description')
-                include_profile = attrs.get('include_profile', 'true').lower() == 'true'
-                logger.info(f"[SESSION] Metadata - Role: {role}, Level: {level}, Resume: {bool(resume_text)}")
-
+        user_id = None
+        
+        # Wait for remote participant with timeout
+        wait_start = asyncio.get_event_loop().time()
+        while not room.remote_participants:
+            if asyncio.get_event_loop().time() - wait_start > 60:
+                logger.error("[MAIN] Timeout waiting for participant")
+                await room.disconnect()
+                return
+            await asyncio.sleep(0.5)
+        
+        # Get participant attributes
+        participant = list(room.remote_participants.values())[0]
+        if hasattr(participant, 'attributes') and participant.attributes:
+            attrs = participant.attributes
+            role = attrs.get('role', 'this position')
+            level = attrs.get('level', 'mid')
+            email = attrs.get('email', '')
+            resume_text = attrs.get('resume_text')
+            job_description = attrs.get('job_description')
+            include_profile = attrs.get('include_profile', 'true').lower() == 'true'
+            user_id = attrs.get('user_id')
+            logger.info(f"[MAIN] Participant attributes - Role: {role}, Level: {level}, Resume: {bool(resume_text)}")
+        
         candidate_info = {'name': candidate_name, 'role': role}
-        logger.info(f"[SESSION] Candidate: {candidate_name} (Role: {role}, Level: {level})")
-
-        if resume_text:
-            logger.info(
-                f"[SESSION] Resume context available: {len(resume_text)} chars - "
-                f"will be injected in PAST_EXPERIENCE stage only"
-            )
-
-        if job_description:
-            logger.info(
-                f"[SESSION] Job description available: {len(job_description)} chars - "
-                f"will be injected in COMPANY_FIT stage only"
-            )
-
-        if not resume_text and not job_description:
-            logger.info("[SESSION] No document context available")
-
+        logger.info(f"[MAIN] Candidate: {candidate_name} (Role: {role}, Level: {level})")
+        
         # Initialize interview state
         interview_state = InterviewState()
         interview_state.candidate_name = candidate_name
@@ -527,43 +500,41 @@ async def entrypoint(ctx: JobContext):
         interview_state.job_description = job_description
         interview_state.include_profile = include_profile
         interview_state.transition_to(InterviewStage.WELCOME)
-
+        
         # Initialize components
         try:
             stt = deepgram.STT(model="nova-2", language="en-US", smart_format=True)
-            logger.info("[SESSION] Deepgram STT initialized")
+            logger.info("[MAIN] Deepgram STT initialized")
         except Exception as e:
-            logger.error(f"[SESSION] Deepgram STT init error: {e}")
+            logger.error(f"[MAIN] Deepgram STT init error: {e}")
             raise
-
+        
         try:
             llm = openai.LLM(model="gpt-4o-mini", temperature=0.7)
-            logger.info("[SESSION] OpenAI LLM initialized")
+            logger.info("[MAIN] OpenAI LLM initialized")
         except Exception as e:
-            logger.error(f"[SESSION] OpenAI LLM init error: {e}")
+            logger.error(f"[MAIN] OpenAI LLM init error: {e}")
             raise
-
+        
         try:
             tts = openai.TTS(voice="alloy", speed=1.0)
-            logger.info("[SESSION] OpenAI TTS initialized")
+            logger.info("[MAIN] OpenAI TTS initialized")
         except Exception as e:
-            logger.error(f"[SESSION] OpenAI TTS init error: {e}")
+            logger.error(f"[MAIN] OpenAI TTS init error: {e}")
             raise
-
+        
         try:
             vad = silero.VAD.load()
-            logger.info("[SESSION] Silero VAD initialized")
+            logger.info("[MAIN] Silero VAD initialized")
         except Exception as e:
-            logger.error(f"[SESSION] Silero VAD init error: {e}")
+            logger.error(f"[MAIN] Silero VAD init error: {e}")
             raise
-
+        
         # Create agent
-        logger.info("[SESSION] Creating InterviewAgent...")
-        agent = InterviewAgent(room=ctx.room, candidate_info=candidate_info)
-        logger.info(f"[SESSION] InterviewAgent created for candidate: {candidate_name}")
-
+        agent = InterviewAgent(room=room, candidate_info=candidate_info)
+        logger.info(f"[MAIN] InterviewAgent created for candidate: {candidate_name}")
+        
         # Create session
-        logger.info("[SESSION] Creating AgentSession...")
         session = AgentSession(
             userdata=interview_state,
             stt=stt,
@@ -574,12 +545,12 @@ async def entrypoint(ctx: JobContext):
             min_endpointing_delay=0.5,
             max_endpointing_delay=3.0,
         )
-        logger.info("[SESSION] AgentSession created successfully")
-
+        logger.info("[MAIN] AgentSession created")
+        
         # Conversation history
         conversation_history = {"agent": [], "user": []}
         closing_finalized = {"done": False}
-
+        
         @session.on("user_input_transcribed")
         def on_user_speech(event):
             if event.is_final:
@@ -593,8 +564,8 @@ async def entrypoint(ctx: JobContext):
                     "text": transcript,
                     "timestamp": time.time()
                 })
-                asyncio.create_task(emit_user_caption(ctx, transcript))
-
+                asyncio.create_task(emit_user_caption(room, transcript))
+        
         @session.on("conversation_item_added")
         def on_conversation_item(event):
             try:
@@ -610,9 +581,8 @@ async def entrypoint(ctx: JobContext):
                             "timestamp": time.time(),
                             "stage": interview_state.stage.value
                         })
-                        asyncio.create_task(emit_agent_caption(ctx, agent_text))
-
-                        # Check for closing message
+                        asyncio.create_task(emit_agent_caption(room, agent_text))
+                        
                         if interview_state.stage == InterviewStage.CLOSING and not closing_finalized["done"]:
                             text_lower = agent_text.lower()
                             closing_indicators = [
@@ -631,31 +601,27 @@ async def entrypoint(ctx: JobContext):
                                 asyncio.create_task(schedule_finalization())
             except Exception as e:
                 logger.error(f"[CONVERSATION] Error: {e}", exc_info=True)
-
-        # Handle skip stage requests via data channel
-        @ctx.room.on("data_received")
+        
+        @room.on("data_received")
         def on_data_received(data_packet):
             try:
                 import json
                 payload = json.loads(data_packet.data.decode('utf-8'))
-
+                
                 if payload.get('type') == 'skip_stage':
                     target_stage_name = payload.get('target_stage')
                     logger.info(f"[SKIP] Received skip request to: {target_stage_name}")
-
+                    
                     target_stage = interview_state.get_stage_by_name(target_stage_name)
-
+                    
                     if not target_stage:
                         logger.warning(f"[SKIP] Invalid stage name: {target_stage_name}")
                         return
-
+                    
                     if not interview_state.can_skip_to(target_stage):
-                        logger.warning(
-                            f"[SKIP] Cannot skip to {target_stage_name} from {interview_state.stage.value}"
-                        )
+                        logger.warning(f"[SKIP] Cannot skip to {target_stage_name} from {interview_state.stage.value}")
                         return
-
-                    # Execute skip transition directly
+                    
                     logger.info(f"[SKIP] Initiating forced skip to {target_stage.value}")
                     asyncio.create_task(
                         execute_skip_transition(
@@ -663,42 +629,30 @@ async def entrypoint(ctx: JobContext):
                             interview_state=interview_state,
                             target_stage=target_stage,
                             agent=agent,
-                            ctx=ctx
+                            room=room
                         )
                     )
-
             except Exception as e:
                 logger.error(f"[DATA] Error processing data: {e}", exc_info=True)
-
+        
         async def finalize_and_disconnect():
             """Save interview to database and disconnect"""
             try:
                 import json as json_module
                 from datetime import datetime
-
-                # Extract user_id from participant attributes
-                if not ctx.room.remote_participants:
-                    logger.error("[FINALIZE] No remote participants found")
-                    await ctx.room.disconnect()
-                    return
-
-                participant = list(ctx.room.remote_participants.values())[0]
-                attrs = participant.attributes if hasattr(participant, 'attributes') else {}
-                user_id = attrs.get('user_id')
-
+                
                 if not user_id:
-                    logger.error("[FINALIZE] No user_id found in participant attributes")
-                    await ctx.room.disconnect()
+                    logger.error("[FINALIZE] No user_id found")
+                    await room.disconnect()
                     return
-
+                
                 logger.info(f"[FINALIZE] Saving interview to database for user: {user_id}")
-
-                # Build interview data
+                
                 now = datetime.now()
                 interview_data = {
                     'candidate_name': interview_state.candidate_name,
                     'interview_date': now.isoformat(),
-                    'room_name': ctx.room.name,
+                    'room_name': room.name,
                     'job_role': interview_state.job_role,
                     'experience_level': interview_state.experience_level,
                     'conversation': conversation_history,
@@ -712,110 +666,77 @@ async def entrypoint(ctx: JobContext):
                     'has_resume': bool(interview_state.uploaded_resume_text),
                     'has_jd': bool(interview_state.job_description)
                 }
-
-                # Save to Supabase
+                
                 from supabase_client import supabase_client
                 interview_id = supabase_client.save_interview(user_id, interview_data)
-
+                
                 if interview_id:
                     logger.info(f"[FINALIZE] Interview saved successfully: {interview_id}")
-
-                    # Notify frontend of successful save
+                    
                     data_payload = json_module.dumps({
                         "type": "interview_saved",
                         "interview_id": interview_id,
                         "message": "Interview saved successfully"
                     })
-                    await ctx.room.local_participant.publish_data(data_payload.encode('utf-8'))
-
-                    # Emit ending notification
+                    await room.local_participant.publish_data(data_payload.encode('utf-8'))
+                    
                     data_payload = json_module.dumps({
                         "type": "interview_ending",
                         "message": "Interview Complete"
                     })
-                    await ctx.room.local_participant.publish_data(data_payload.encode('utf-8'))
-
+                    await room.local_participant.publish_data(data_payload.encode('utf-8'))
                 else:
                     logger.error("[FINALIZE] Database save failed")
-
-                    # Notify frontend of save error
                     data_payload = json_module.dumps({
                         "type": "save_error",
                         "message": "Failed to save interview. Please contact support."
                     })
-                    await ctx.room.local_participant.publish_data(data_payload.encode('utf-8'))
-
-                # Mark as complete
+                    await room.local_participant.publish_data(data_payload.encode('utf-8'))
+                
                 closing_finalized["done"] = True
                 interview_complete.set()
-
-                # Wait for data to send, then disconnect
+                
                 await asyncio.sleep(2.0)
-                await ctx.room.disconnect()
+                await room.disconnect()
                 logger.info("[FINALIZE] Disconnected from room")
-
+                
             except Exception as e:
                 logger.error(f"[FINALIZE] Error: {e}", exc_info=True)
-
-                # Attempt to notify frontend
                 try:
-                    import json as json_module
-                    data_payload = json_module.dumps({
-                        "type": "save_error",
-                        "message": f"Save error: {str(e)}"
-                    })
-                    await ctx.room.local_participant.publish_data(data_payload.encode('utf-8'))
-                except:
+                    await room.disconnect()
+                except Exception:
                     pass
-
-                # Disconnect anyway
-                try:
-                    await ctx.room.disconnect()
-                except:
-                    pass
-
                 interview_complete.set()
-
-        @ctx.room.on("disconnected")
+        
+        @room.on("disconnected")
         def on_room_disconnected():
             logger.info("[ROOM] Room disconnected")
             asyncio.create_task(save_transcript_on_disconnect())
             interview_complete.set()
-
+        
         async def save_transcript_on_disconnect():
             """Save interview transcript when room disconnects"""
             try:
-                # Don't save if already finalized
                 if closing_finalized.get("done"):
                     logger.info("[HISTORY] Transcript already saved via finalize_and_disconnect")
                     return
-
-                # Check if we have any conversation to save
+                
                 if not conversation_history["agent"] and not conversation_history["user"]:
                     logger.info("[HISTORY] No conversation to save")
                     return
-
-                # Extract user_id from participant
-                if not ctx.room.remote_participants:
-                    logger.error("[HISTORY] No remote participants found")
-                    return
-
-                participant = list(ctx.room.remote_participants.values())[0]
-                attrs = participant.attributes if hasattr(participant, 'attributes') else {}
-                user_id = attrs.get('user_id')
-
+                
                 if not user_id:
-                    logger.error("[HISTORY] No user_id found in participant attributes")
+                    logger.error("[HISTORY] No user_id found")
                     return
-
+                
                 import json as json_module
                 from datetime import datetime
-
+                
                 now = datetime.now()
                 interview_data = {
                     'candidate_name': candidate_name,
                     'interview_date': now.isoformat(),
-                    'room_name': ctx.room.name,
+                    'room_name': room.name,
                     'job_role': interview_state.job_role,
                     'experience_level': interview_state.experience_level,
                     'conversation': conversation_history,
@@ -829,47 +750,43 @@ async def entrypoint(ctx: JobContext):
                     'has_resume': bool(interview_state.uploaded_resume_text),
                     'has_jd': bool(interview_state.job_description)
                 }
-
-                # Save to database
+                
                 from supabase_client import supabase_client
                 interview_id = supabase_client.save_interview(user_id, interview_data)
-
+                
                 if interview_id:
                     logger.info(f"[HISTORY] Saved transcript on disconnect: {interview_id}")
-
-                    # Emit the interview_id to frontend
                     try:
                         data_payload = json_module.dumps({
                             "type": "interview_saved",
                             "interview_id": interview_id
                         })
-                        await ctx.room.local_participant.publish_data(data_payload.encode('utf-8'))
+                        await room.local_participant.publish_data(data_payload.encode('utf-8'))
                     except Exception as e:
                         logger.warning(f"[HISTORY] Failed to emit interview_id: {e}")
                 else:
                     logger.error("[HISTORY] Database save failed on disconnect")
-
+                    
             except Exception as e:
                 logger.error(f"[HISTORY] Error saving on disconnect: {e}", exc_info=True)
-
+        
         # Start fallback timer
-        logger.info("[SESSION] Starting fallback timer...")
         fallback_task = asyncio.create_task(
-            stage_fallback_timer(session, interview_state, ctx, agent, interview_complete)
+            stage_fallback_timer(session, interview_state, room, agent, interview_complete)
         )
-
-        logger.info("[SESSION] Starting agent session (this will trigger agent.on_enter())...")
-        await session.start(agent=agent, room=ctx.room)
-        logger.info("[SESSION] Session started successfully! Agent should now be speaking welcome message.")
-
-        logger.info("[SESSION] Waiting for interview to complete...")
+        
+        # Start the agent session
+        logger.info("[MAIN] Starting agent session...")
+        await session.start(agent=agent, room=room)
+        logger.info("[MAIN] Agent session started, waiting for interview to complete...")
+        
         await interview_complete.wait()
-        logger.info("[SESSION] Interview complete")
-
+        logger.info("[MAIN] Interview complete")
+        
     except asyncio.CancelledError:
-        logger.info("[SESSION] Session cancelled")
+        logger.info("[MAIN] Interview cancelled")
     except Exception as e:
-        logger.error(f"[SESSION] Agent error: {e}", exc_info=True)
+        logger.error(f"[MAIN] Error: {e}", exc_info=True)
     finally:
         if fallback_task and not fallback_task.done():
             fallback_task.cancel()
@@ -877,13 +794,14 @@ async def entrypoint(ctx: JobContext):
                 await fallback_task
             except asyncio.CancelledError:
                 pass
-        logger.info("[SESSION] Cleanup complete")
+        logger.info("[MAIN] Cleanup complete, exiting")
+        sys.exit(0)
 
 
 async def stage_fallback_timer(
     session: AgentSession,
     state: InterviewState,
-    ctx: JobContext,
+    room: Room,
     agent: InterviewAgent,
     interview_complete: asyncio.Event
 ):
@@ -894,95 +812,87 @@ async def stage_fallback_timer(
         InterviewStage.COMPANY_FIT
     }
     CLOSING_TIMEOUT = 60
-
+    
     logged_milestones = set()
     last_logged_stage = None
     closing_timeout_logged = False
-
+    
     logger.info("[TIMER] Fallback timer started")
-
+    
     try:
         while not interview_complete.is_set():
             await asyncio.sleep(5)
-
+            
             if interview_complete.is_set():
                 break
-
+            
             current_stage = state.stage
-
-            # Handle CLOSING stage timeout
+            
             if current_stage == InterviewStage.CLOSING:
                 elapsed = state.time_in_current_stage()
                 if not closing_timeout_logged:
                     logger.info(f"[TIMER] Closing stage - timeout: {CLOSING_TIMEOUT}s")
                     closing_timeout_logged = True
-
+                
                 if elapsed > CLOSING_TIMEOUT and not state.closing_message_delivered:
-                    logger.warning(f"[FALLBACK] Closing timeout - forcing finalization")
+                    logger.warning("[FALLBACK] Closing timeout - forcing finalization")
                     try:
                         closing_msg = CLOSING_FALLBACK.message.replace("[CANDIDATE_NAME]", agent.candidate_name)
-                        await session.say(
-                            closing_msg,
-                            allow_interruptions=False
-                        )
+                        await session.say(closing_msg, allow_interruptions=False)
                         await asyncio.sleep(3.0)
                     except Exception as e:
                         logger.warning(f"[FALLBACK] Closing say failed: {e}")
                     interview_complete.set()
                     try:
-                        await ctx.room.disconnect()
+                        await room.disconnect()
                     except Exception:
                         pass
                     break
                 continue
-
+            
             if current_stage not in MONITORED_STAGES:
                 if current_stage != last_logged_stage:
                     last_logged_stage = current_stage
                     logged_milestones = set()
                 continue
-
+            
             time_status = state.get_time_status()
             q_status = state.get_question_status()
             elapsed = time_status['elapsed']
             limit = time_status['limit']
             elapsed_pct = time_status['elapsed_pct']
-
+            
             if current_stage != last_logged_stage:
                 logger.info(f"[TIMER] Stage '{current_stage.value}' - Limit: {limit}s")
                 logged_milestones = set()
                 last_logged_stage = current_stage
-
-            # Log milestones
+            
             for pct in [50, 75, 90, 100]:
                 if elapsed_pct >= pct and pct not in logged_milestones:
                     logger.info(f"[TIMER] {current_stage.value} at {pct}% ({elapsed:.0f}/{limit}s)")
                     logged_milestones.add(pct)
-
-            # Force transition if limit exceeded
+            
             if elapsed > limit:
                 next_stage = state.get_next_stage()
                 if next_stage:
                     logger.warning(f"[FALLBACK] FORCING: {current_stage.value} -> {next_stage.value}")
-
+                    
                     state.transition_to(next_stage, forced=True)
-
+                    
                     try:
                         instructions = agent._get_stage_instructions(state, next_stage)
                         await agent.update_instructions(instructions)
                     except Exception as e:
                         logger.error(f"[FALLBACK] Instruction update error: {e}")
-
-                    # Emit stage change
+                    
                     try:
                         import json
-                        await ctx.room.local_participant.publish_data(
+                        await room.local_participant.publish_data(
                             json.dumps({"type": "stage_change", "stage": next_stage.value}).encode('utf-8')
                         )
                     except Exception as e:
                         logger.error(f"[UI] Stage change emit error: {e}")
-
-                    # Get fallback acknowledgement from prompts
+                    
                     ack = get_fallback_ack(next_stage, agent.candidate_name)
                     if ack:
                         state.pending_acknowledgement = ack
@@ -991,10 +901,10 @@ async def stage_fallback_timer(
                             await session.say(ack)
                         except Exception as e:
                             logger.warning(f"[FALLBACK] Say failed: {e}")
-
+                    
                     logged_milestones = set()
                     last_logged_stage = next_stage
-
+                    
     except asyncio.CancelledError:
         logger.info("[TIMER] Fallback timer cancelled")
     except Exception as e:
@@ -1002,5 +912,5 @@ async def stage_fallback_timer(
 
 
 if __name__ == "__main__":
-    logger.info("[WORKER] Starting agent worker subprocess")
-    cli.run_app(server)
+    logger.info("[WORKER] Starting agent worker - DIRECT ROOM CONNECTION MODE")
+    asyncio.run(run_interview())

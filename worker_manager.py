@@ -3,6 +3,8 @@ Agent Worker Manager
 
 Spawns and manages agent worker subprocesses for interviews.
 Each interview gets a dedicated subprocess with user's API keys.
+
+FIXED: Workers now connect directly to rooms instead of using LiveKit dispatch.
 """
 
 import os
@@ -20,7 +22,6 @@ def _log_subprocess_output(process: subprocess.Popen, room_name: str):
     try:
         for line in iter(process.stdout.readline, ''):
             if line:
-                # Forward worker logs to main app logger with [WORKER-room] prefix
                 logger.info(f"[WORKER-{room_name[-8:]}] {line.rstrip()}")
     except Exception as e:
         logger.error(f"[WORKER] Error reading subprocess output: {e}")
@@ -30,7 +31,7 @@ class WorkerManager:
     def __init__(self):
         self.active_workers: Dict[str, subprocess.Popen] = {}
         self.worker_script = os.path.join(os.path.dirname(__file__), 'agent_worker.py')
-        self.max_workers = int(os.getenv('MAX_CONCURRENT_WORKERS', '3'))
+        self.max_workers = int(os.getenv('MAX_CONCURRENT_WORKERS', '10'))
 
     def cleanup_terminated_workers(self):
         """Remove terminated workers from active list"""
@@ -38,7 +39,7 @@ class WorkerManager:
         for room_name, process in list(self.active_workers.items()):
             if process.poll() is not None:
                 terminated.append(room_name)
-                logger.info(f"[WORKER] Worker for room {room_name} has terminated, cleaning up")
+                logger.info(f"[WORKER] Worker for room {room_name} has terminated (exit code: {process.returncode})")
 
         for room_name in terminated:
             del self.active_workers[room_name]
@@ -57,15 +58,16 @@ class WorkerManager:
     ) -> bool:
         """
         Spawn agent worker subprocess with user's API keys.
+        
+        The worker connects DIRECTLY to the specified room.
+        No LiveKit dispatch system involved.
 
         Returns:
             bool: True if worker started successfully, False otherwise
         """
         try:
-            # Clean up any terminated workers first
             self.cleanup_terminated_workers()
 
-            # Check worker limit
             if len(self.active_workers) >= self.max_workers:
                 logger.error(f"[WORKER] Max concurrent workers ({self.max_workers}) reached")
                 return False
@@ -80,15 +82,15 @@ class WorkerManager:
                 'LIVEKIT_API_SECRET': livekit_api_secret,
                 'OPENAI_API_KEY': openai_api_key,
                 'DEEPGRAM_API_KEY': deepgram_api_key,
-                'INTERVIEW_ROOM_NAME': room_name,  # Pass specific room to join
+                'INTERVIEW_ROOM_NAME': room_name,
                 'PYTHONUNBUFFERED': '1'
             })
 
-            # Spawn subprocess with 'dev' command
-            # Agent will receive callbacks for room connections via @server.rtc_session()
-            # Pipe stdout/stderr to parent process so logs appear in Render
+            # Spawn subprocess WITHOUT 'dev' command
+            # Worker runs asyncio.run(run_interview()) directly
+            # This means worker connects directly to room, not via LiveKit dispatch
             process = subprocess.Popen(
-                ['python', self.worker_script, 'dev'],
+                ['python', self.worker_script],  # NO 'dev' command!
                 env=worker_env,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
@@ -96,12 +98,11 @@ class WorkerManager:
                 universal_newlines=True
             )
 
-            # Store process reference
             self.active_workers[room_name] = process
 
             logger.info(f"[WORKER] Worker spawned (PID: {process.pid}) for room: {room_name}")
 
-            # Start thread to forward subprocess logs to main logger
+            # Start thread to forward subprocess logs
             log_thread = threading.Thread(
                 target=_log_subprocess_output,
                 args=(process, room_name),
@@ -109,43 +110,52 @@ class WorkerManager:
             )
             log_thread.start()
 
-            # Wait for worker to be ready (agent loads ONNX models and initializes)
-            return self._wait_for_worker_ready(process, timeout=20)
+            # Wait for worker to initialize (load models, connect to room)
+            return self._wait_for_worker_ready(process, timeout=30)
 
         except Exception as e:
             logger.error(f"[WORKER] Failed to spawn worker: {e}", exc_info=True)
             return False
 
-    def _wait_for_worker_ready(self, process: subprocess.Popen, timeout: int = 20) -> bool:
+    def _wait_for_worker_ready(self, process: subprocess.Popen, timeout: int = 30) -> bool:
         """
-        Wait for worker to start and initialize.
+        Wait for worker to start and connect to room.
 
-        The worker subprocess needs to:
+        The worker needs to:
         1. Load ONNX models (Silero VAD) - ~5-10 seconds
-        2. Initialize LiveKit FFI - ~2-5 seconds
-        3. Connect to LiveKit server
-
-        This typically takes 10-15 seconds on cold start.
+        2. Generate agent token
+        3. Connect to LiveKit room
+        4. Wait for participant
 
         Returns:
-            bool: True if worker started successfully, False otherwise
+            bool: True if worker started, False if it died during startup
         """
         start_time = time.time()
+        check_interval = 0.5
+        
+        # Initial delay for model loading
+        time.sleep(3)
 
         while time.time() - start_time < timeout:
-            # Check if process is still alive
-            if process.poll() is not None:
-                # Process died during startup
-                logger.error(f"[WORKER] Process died during startup with code: {process.returncode}")
+            # Check if process died
+            exit_code = process.poll()
+            if exit_code is not None:
+                logger.error(f"[WORKER] Process died during startup with code: {exit_code}")
                 return False
 
-            # Wait for agent to initialize (10-15 seconds is typical on cold start)
-            if time.time() - start_time >= 10:
-                logger.info("[WORKER] Worker process started, agent should be ready soon")
+            # Worker is still running - after initial model load time, consider ready
+            elapsed = time.time() - start_time
+            if elapsed >= 8:
+                logger.info(f"[WORKER] Worker process running after {elapsed:.1f}s, considered ready")
                 return True
 
-            time.sleep(0.5)
+            time.sleep(check_interval)
 
+        # Timeout reached but process still running - assume success
+        if process.poll() is None:
+            logger.info(f"[WORKER] Worker still running after {timeout}s timeout, considered ready")
+            return True
+            
         logger.error(f"[WORKER] Worker not ready within {timeout}s timeout")
         return False
 
@@ -159,11 +169,9 @@ class WorkerManager:
             process = self.active_workers[room_name]
 
             if process.poll() is None:
-                # Process still running - terminate
                 logger.info(f"[WORKER] Terminating worker (PID: {process.pid}) for room: {room_name}")
                 process.terminate()
 
-                # Wait for graceful shutdown (max 5 seconds)
                 try:
                     process.wait(timeout=5)
                 except subprocess.TimeoutExpired:
@@ -171,7 +179,6 @@ class WorkerManager:
                     process.kill()
                     process.wait()
 
-            # Remove from active workers
             del self.active_workers[room_name]
             logger.info(f"[WORKER] Worker terminated for room: {room_name}")
 
@@ -188,12 +195,7 @@ class WorkerManager:
         logger.info("[WORKER] All workers terminated")
 
     def get_worker_status(self, room_name: str) -> Optional[str]:
-        """
-        Get worker status for room.
-
-        Returns:
-            str: 'running', 'terminated', or None if not found
-        """
+        """Get worker status for room."""
         if room_name not in self.active_workers:
             return None
 
