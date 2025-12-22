@@ -72,10 +72,12 @@ class WorkerManager:
                 'PYTHONUNBUFFERED': '1'
             })
 
-            # Spawn subprocess with 'dev' command to connect to specific room
+            # Spawn subprocess with 'connect' command to directly join specific room
+            # In BYOK model, agent connects directly to room (no Cloud Agent Dispatch)
+            # The 'connect' command uses LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET from env
             # Don't pipe stdout/stderr so we can see agent logs in real-time
             process = subprocess.Popen(
-                ['python', self.worker_script, 'dev'],
+                ['python', self.worker_script, 'connect', '--room', room_name],
                 env=worker_env
             )
 
