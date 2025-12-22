@@ -550,8 +550,17 @@ async def run_interview():
             raise RuntimeError(f"Failed to initialize OpenAI TTS: {e}")
         
         try:
-            vad = silero.VAD.load()
-            logger.info("[MAIN] Silero VAD initialized")
+            # Silero VAD with optimized settings for lower CPU usage
+            # Default settings cause "inference is slower than realtime" on limited CPU
+            vad = silero.VAD.load(
+                min_speech_duration=0.1,      # Minimum speech duration to detect (default: 0.05)
+                min_silence_duration=0.3,     # Silence needed to end speech (default: 0.1)  
+                padding_duration=0.1,         # Padding around speech (default: 0.1)
+                max_buffered_speech=30.0,     # Max buffered speech in seconds (default: 60)
+                activation_threshold=0.5,     # Confidence threshold (default: 0.5)
+                sample_rate=16000,            # Use 16kHz for lower CPU (matches Deepgram)
+            )
+            logger.info("[MAIN] Silero VAD initialized with optimized settings")
         except Exception as e:
             logger.error(f"[MAIN] Silero VAD init error: {e}", exc_info=True)
             raise RuntimeError(f"Failed to initialize Silero VAD: {e}")
@@ -560,7 +569,7 @@ async def run_interview():
         agent = InterviewAgent(room=room, candidate_info=candidate_info)
         logger.info(f"[MAIN] InterviewAgent created for candidate: {candidate_name}")
         
-        # Create session
+        # Create session with optimized settings for Render's limited CPU
         session = AgentSession(
             userdata=interview_state,
             stt=stt,
@@ -568,10 +577,10 @@ async def run_interview():
             tts=tts,
             vad=vad,
             allow_interruptions=True,
-            min_endpointing_delay=0.5,
-            max_endpointing_delay=3.0,
+            min_endpointing_delay=0.8,   # Increased from 0.5 - more tolerance for pauses
+            max_endpointing_delay=4.0,   # Increased from 3.0 - wait longer before cutting off
         )
-        logger.info("[MAIN] AgentSession created")
+        logger.info("[MAIN] AgentSession created with optimized settings")
         
         # Conversation history
         conversation_history = {"agent": [], "user": []}

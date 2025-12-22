@@ -12,6 +12,7 @@ import subprocess
 import logging
 import time
 import threading
+import signal
 from typing import Optional, Dict
 
 logger = logging.getLogger(__name__)

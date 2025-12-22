@@ -232,6 +232,8 @@ Example output: `a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f
 
 **IMPORTANT**: Use `--workers 1` (single worker) because the BYOK model uses subprocess management for agent workers. Multiple gunicorn workers create separate memory spaces, preventing proper subprocess tracking across requests.
 
+**CRITICAL ARCHITECTURE NOTE**: Agent workers use **direct room connection** mode, NOT LiveKit's dispatch system. This prevents old workers from interfering with new deployments. See troubleshooting section for details.
+
 **Instance Type:**
 - Select **Free** tier (512MB RAM, 0.1 CPU)
 
@@ -332,6 +334,111 @@ Expected response:
 - **Supabase**: 500MB database, 2GB bandwidth/month
 - **Max Concurrent Interviews**: 3 (configurable via `MAX_CONCURRENT_WORKERS`)
 
+### Architecture Details
+
+#### Direct Room Connection (CRITICAL)
+
+**Why This Matters:**
+
+The agent workers use **direct room connection** instead of LiveKit's dispatch-based system. This is a critical architectural decision that prevents deployment issues.
+
+**How It Works:**
+
+```
+Traditional Dispatch (PROBLEMATIC):
+1. Worker runs: python agent_worker.py dev
+2. Registers with LiveKit Cloud as "available agent"
+3. LiveKit dispatches ANY room to ANY available worker
+4. Old workers from previous deploys compete with new workers
+5. Result: User connects to wrong worker, interview freezes
+
+Direct Connection (CURRENT):
+1. Worker runs: python agent_worker.py (NO 'dev')
+2. Generates agent token for specific room
+3. Connects directly via Room.connect()
+4. Handles interview, exits cleanly
+5. No registration, no competition, no old workers
+```
+
+**Key Code Patterns:**
+
+```python
+# agent_worker.py - Direct connection
+async def run_interview():
+    # Generate agent token for specific room
+    token = livekit_api.AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET)
+    token.with_identity("interview-agent")
+    token.with_grants(livekit_api.VideoGrants(
+        room_join=True,
+        room=INTERVIEW_ROOM_NAME,
+        can_publish=True,
+        can_subscribe=True,
+    ))
+
+    # Connect directly to room
+    room = Room()
+    await room.connect(LIVEKIT_URL, token.to_jwt())
+
+    # Handle interview...
+    # Exit when done
+
+# worker_manager.py - Spawn worker
+subprocess.Popen(['python', 'agent_worker.py'], ...)  # No 'dev'!
+```
+
+#### Plugin HTTP Session Management
+
+**The Problem:**
+
+LiveKit plugins (Deepgram STT, OpenAI LLM/TTS) expect to run inside `cli.run_app()` which provides a shared `aiohttp.ClientSession`. When using direct connection, there's no session available.
+
+**The Solution:**
+
+```python
+# Create and pass http_session to plugins that need it
+http_session = aiohttp.ClientSession()
+
+try:
+    # Deepgram STT needs http_session
+    stt = deepgram.STT(
+        model="nova-2",
+        http_session=http_session  # Required
+    )
+
+    # OpenAI plugins do NOT take http_session
+    llm = openai.LLM(model="gpt-4o-mini")
+    tts = openai.TTS(voice="alloy")
+
+finally:
+    await http_session.close()
+```
+
+#### Silero VAD Optimization (CPU Constraints)
+
+**The Problem:**
+
+Render free tier has limited CPU (0.1 CPU). Silero VAD (Voice Activity Detection) runs "inference slower than realtime" causing voice to break or hang.
+
+**The Solution:**
+
+```python
+# Optimized VAD settings for low-CPU environments
+vad = silero.VAD.load(
+    min_speech_duration=0.1,      # Less sensitive detection
+    min_silence_duration=0.3,     # Wait longer before ending speech
+    padding_duration=0.1,
+    max_buffered_speech=30.0,     # Reduced buffer (from 60s)
+    activation_threshold=0.5,
+    sample_rate=16000,            # Standard rate
+)
+```
+
+**Trade-offs:**
+- Less aggressive interruption detection
+- Longer silence needed to end speech
+- Better performance on limited CPU
+- Smoother voice experience
+
 ### Troubleshooting
 
 **Issue: Health check fails**
@@ -346,6 +453,77 @@ Expected response:
 - Check Render logs for subprocess errors
 - Verify user has entered API keys in Settings
 - Check memory usage (may hit 512MB limit with multiple workers)
+
+**Issue: User connects but interview freezes / no agent voice**
+
+This is the most common issue. Caused by old workers still registered with LiveKit Cloud.
+
+**Symptoms:**
+- User joins room successfully
+- Loading indicator never disappears
+- No agent voice
+- Logs show: `Connected to room: interview-xxx` but nothing happens
+- LiveKit dashboard shows multiple agents registered
+
+**Root Cause:**
+
+Old workers from previous deployments are still registered with LiveKit Cloud and competing for room connections.
+
+**Solution A: Clear LiveKit Cloud Agent Cache**
+
+1. Go to [LiveKit Cloud Dashboard](https://cloud.livekit.io)
+2. Navigate to your project
+3. Go to **Agents** or **Workers** section
+4. Terminate ALL registered agents (look for IDs like `AW_4YwS9uFDcCiw`)
+5. Redeploy your Render service
+
+**Solution B: Render Hard Reset**
+
+1. Go to Render Dashboard
+2. Select your service
+3. Click **Manual Deploy** → **Clear build cache & deploy**
+4. This kills all old containers and starts fresh
+
+**Solution C: Verify Direct Connection Mode**
+
+Check your logs for:
+
+```bash
+# GOOD - Direct connection mode
+[WORKER] Starting agent worker - DIRECT ROOM CONNECTION MODE
+[MAIN] Connected to room: interview-xxx
+[MAIN] Waiting for participant to join...
+
+# BAD - Dispatch mode (should NOT see this)
+[WORKER] Starting dispatch worker...
+[AGENT] Registered with LiveKit Cloud
+```
+
+If you see dispatch mode logs, your code is using the old architecture. Verify:
+- `agent_worker.py` uses `asyncio.run(run_interview())` NOT `cli.run_app(server)`
+- `worker_manager.py` spawns with `['python', 'agent_worker.py']` NOT `['python', 'agent_worker.py', 'dev']`
+
+**Issue: Voice breaks / hangs / "inference slower than realtime"**
+
+**Cause:** Silero VAD running too aggressively on limited CPU.
+
+**Solution:** Already optimized in latest code. If still happening:
+1. Check CPU usage in Render dashboard
+2. Consider upgrading to higher tier (512MB → 2GB RAM, 0.5 CPU)
+3. Or reduce `max_buffered_speech` further in `agent_worker.py`
+
+**Issue: RuntimeError: Attempted to use an http session outside of a job context**
+
+**Cause:** Plugin trying to use HTTP without session.
+
+**Solution:** Already fixed in latest code. Verify:
+```python
+# Deepgram gets http_session
+stt = deepgram.STT(..., http_session=http_session)
+
+# OpenAI plugins do NOT
+llm = openai.LLM(...)  # No http_session parameter
+```
 
 **Issue: Database queries slow**
 - Verify indexes are created (Part 1.2)
@@ -411,17 +589,32 @@ If deployment fails:
 
 ## Summary Checklist
 
+**Pre-Deployment:**
 - [ ] Supabase project created and migrations run
 - [ ] Google Cloud OAuth configured with correct redirect URIs
 - [ ] Encryption key and secret key generated
 - [ ] Render service created and connected to GitHub
 - [ ] All 7 required environment variables set in Render
+
+**Post-Deployment:**
 - [ ] Service deployed successfully (check logs)
 - [ ] `/health` endpoint returns 200 OK
+- [ ] Logs show: `[WORKER] Starting agent worker - DIRECT ROOM CONNECTION MODE`
+- [ ] NO logs about "dispatch worker" or "registering with LiveKit Cloud"
 - [ ] Google OAuth login works
 - [ ] Users can save API keys
+
+**Interview Testing:**
 - [ ] Interview flow works end-to-end (spawn worker, connect, save to DB)
+- [ ] Agent voice is heard within 5 seconds of joining
+- [ ] User voice is detected (check logs for transcription)
+- [ ] Interview completes and saves to database
 - [ ] Feedback generation works
 - [ ] Past interviews loads from database
 
-**Deployment Complete!** 🎉
+**Troubleshooting:**
+- [ ] If interview freezes: Clear old LiveKit agents (see Troubleshooting section)
+- [ ] If voice breaks: Check CPU usage, verify VAD settings
+- [ ] If http session error: Verify Deepgram STT has `http_session` parameter
+
+**Deployment Complete!**
