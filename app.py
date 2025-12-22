@@ -1400,7 +1400,7 @@ def health_check():
         active_worker_count = len(worker_manager.active_workers)
         max_workers = worker_manager.max_workers
 
-        logger.info(f"[HEALTH] Health check passed - {active_worker_count}/{max_workers} workers active")
+        # logger.info(f"[HEALTH] Health check passed - {active_worker_count}/{max_workers} workers active")
 
         return jsonify({
             'status': 'healthy',

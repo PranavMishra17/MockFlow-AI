@@ -509,7 +509,14 @@ async def run_interview():
         interview_state.include_profile = include_profile
         interview_state.transition_to(InterviewStage.WELCOME)
         
-        # Initialize components with shared HTTP session
+        # Initialize components
+        # Note: Only Deepgram STT requires http_session when running outside cli.run_app()
+        # OpenAI plugins use their own internal client
+        stt = None
+        llm = None
+        tts = None
+        vad = None
+        
         try:
             stt = deepgram.STT(
                 model="nova-2",
@@ -519,37 +526,35 @@ async def run_interview():
             )
             logger.info("[MAIN] Deepgram STT initialized")
         except Exception as e:
-            logger.error(f"[MAIN] Deepgram STT init error: {e}")
-            raise
+            logger.error(f"[MAIN] Deepgram STT init error: {e}", exc_info=True)
+            raise RuntimeError(f"Failed to initialize Deepgram STT: {e}")
         
         try:
             llm = openai.LLM(
                 model="gpt-4o-mini",
-                temperature=0.7,
-                http_session=http_session
+                temperature=0.7
             )
             logger.info("[MAIN] OpenAI LLM initialized")
         except Exception as e:
-            logger.error(f"[MAIN] OpenAI LLM init error: {e}")
-            raise
+            logger.error(f"[MAIN] OpenAI LLM init error: {e}", exc_info=True)
+            raise RuntimeError(f"Failed to initialize OpenAI LLM: {e}")
         
         try:
             tts = openai.TTS(
                 voice="alloy",
-                speed=1.0,
-                http_session=http_session
+                speed=1.0
             )
             logger.info("[MAIN] OpenAI TTS initialized")
         except Exception as e:
-            logger.error(f"[MAIN] OpenAI TTS init error: {e}")
-            raise
+            logger.error(f"[MAIN] OpenAI TTS init error: {e}", exc_info=True)
+            raise RuntimeError(f"Failed to initialize OpenAI TTS: {e}")
         
         try:
             vad = silero.VAD.load()
             logger.info("[MAIN] Silero VAD initialized")
         except Exception as e:
-            logger.error(f"[MAIN] Silero VAD init error: {e}")
-            raise
+            logger.error(f"[MAIN] Silero VAD init error: {e}", exc_info=True)
+            raise RuntimeError(f"Failed to initialize Silero VAD: {e}")
         
         # Create agent
         agent = InterviewAgent(room=room, candidate_info=candidate_info)
@@ -825,7 +830,7 @@ async def run_interview():
                 logger.warning(f"[MAIN] Error closing HTTP session: {e}")
         
         # Disconnect room if still connected
-        if room and room.isconnected():
+        if room:
             try:
                 await room.disconnect()
                 logger.info("[MAIN] Room disconnected in cleanup")
