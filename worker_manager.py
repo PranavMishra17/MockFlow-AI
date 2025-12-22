@@ -9,9 +9,21 @@ import os
 import subprocess
 import logging
 import time
+import threading
 from typing import Optional, Dict
 
 logger = logging.getLogger(__name__)
+
+
+def _log_subprocess_output(process: subprocess.Popen, room_name: str):
+    """Read subprocess stdout/stderr and forward to parent logger"""
+    try:
+        for line in iter(process.stdout.readline, ''):
+            if line:
+                # Forward worker logs to main app logger with [WORKER-room] prefix
+                logger.info(f"[WORKER-{room_name[-8:]}] {line.rstrip()}")
+    except Exception as e:
+        logger.error(f"[WORKER] Error reading subprocess output: {e}")
 
 
 class WorkerManager:
@@ -72,19 +84,30 @@ class WorkerManager:
                 'PYTHONUNBUFFERED': '1'
             })
 
-            # Spawn subprocess with 'connect' command to directly join specific room
-            # In BYOK model, agent connects directly to room (no Cloud Agent Dispatch)
-            # The 'connect' command uses LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET from env
-            # Don't pipe stdout/stderr so we can see agent logs in real-time
+            # Spawn subprocess with 'dev' command
+            # Agent will receive callbacks for room connections via @server.rtc_session()
+            # Pipe stdout/stderr to parent process so logs appear in Render
             process = subprocess.Popen(
-                ['python', self.worker_script, 'connect', '--room', room_name],
-                env=worker_env
+                ['python', self.worker_script, 'dev'],
+                env=worker_env,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT,
+                bufsize=1,
+                universal_newlines=True
             )
 
             # Store process reference
             self.active_workers[room_name] = process
 
             logger.info(f"[WORKER] Worker spawned (PID: {process.pid}) for room: {room_name}")
+
+            # Start thread to forward subprocess logs to main logger
+            log_thread = threading.Thread(
+                target=_log_subprocess_output,
+                args=(process, room_name),
+                daemon=True
+            )
+            log_thread.start()
 
             # Wait for worker to be ready (agent loads ONNX models and initializes)
             return self._wait_for_worker_ready(process, timeout=20)
