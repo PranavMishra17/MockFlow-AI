@@ -69,8 +69,8 @@ logger.info("[CONFIG] API keys loaded from environment")
 logger.info(f"[CONFIG] LiveKit URL: {LIVEKIT_URL}")
 logger.info(f"[CONFIG] Target Room: {INTERVIEW_ROOM_NAME}")
 
-# Create agent server
-server = AgentServer()
+# Create agent server with explicit name for dispatch
+server = AgentServer(agent_name="interview-agent")
 
 
 async def execute_skip_transition(
