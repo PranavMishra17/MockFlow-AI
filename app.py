@@ -17,7 +17,7 @@ from livekit import api
 from dotenv import load_dotenv
 
 from document_processor import doc_processor, DocumentMetadata
-from postprocess import list_interviews, get_interview_summary
+from postprocess import list_interviews, get_interview_summary, merge_by_agent_turns
 from conversation_cache import conversation_cache, ConversationMetadata
 from supabase_client import supabase_client
 from auth_helpers import require_auth, get_current_user, get_user_id, is_authenticated
@@ -872,34 +872,28 @@ def get_feedback_by_id(interview_id):
         return jsonify({}), 500
 
 
-def format_conversation(conversation_dict):
-    """Convert DB conversation format to ordered list for frontend"""
+def format_conversation_with_merge(conversation_dict):
+    """
+    Convert DB conversation format to ordered list for frontend.
+    Uses merge_by_agent_turns to properly group user partial transcripts.
+
+    Args:
+        conversation_dict: {'agent': [...], 'user': [...]}
+
+    Returns:
+        List of merged conversation turns in chronological order
+    """
     try:
         agent_msgs = conversation_dict.get('agent', [])
         user_msgs = conversation_dict.get('user', [])
 
-        # Merge by timestamp
-        all_msgs = []
+        if not agent_msgs and not user_msgs:
+            return []
 
-        for msg in agent_msgs:
-            all_msgs.append({
-                'role': 'agent',
-                'text': msg.get('text', ''),
-                'timestamp': msg.get('timestamp', 0),
-                'stage': msg.get('stage', '')
-            })
+        # Use postprocess merge function for proper grouping
+        merged_turns = merge_by_agent_turns(agent_msgs, user_msgs)
 
-        for msg in user_msgs:
-            all_msgs.append({
-                'role': 'user',
-                'text': msg.get('text', ''),
-                'timestamp': msg.get('timestamp', 0)
-            })
-
-        # Sort by timestamp
-        all_msgs.sort(key=lambda x: x.get('timestamp', 0))
-
-        return all_msgs
+        return merged_turns
 
     except Exception as e:
         logger.error(f"[FORMAT] Conversation format error: {e}", exc_info=True)
@@ -909,7 +903,20 @@ def format_conversation(conversation_dict):
 @app.route('/api/interview/<interview_id>')
 @require_auth
 def get_interview(interview_id):
-    """Get interview by ID from database"""
+    """
+    Get interview by ID with properly merged transcript.
+
+    Returns:
+        {
+            "ordered_conversation": [...],  # Merged turns
+            "meta": {
+                "candidate": "...",
+                "interview_date": "...",
+                "stages_covered": [...],
+                ...
+            }
+        }
+    """
     try:
         user_id = get_user_id()
 
@@ -920,33 +927,70 @@ def get_interview(interview_id):
         except ValueError:
             return jsonify({'error': 'Invalid interview ID format'}), 400
 
-        # Load from database
+        # Fetch from database
         interview = supabase_client.get_interview_by_id(user_id, interview_id)
 
         if not interview:
-            return jsonify({'error': 'Interview not found'}), 404
+            # Try by room_name as fallback (for backward compatibility)
+            interview = supabase_client.get_interview_by_room_name(user_id, interview_id)
 
-        logger.info(f"[API] Loaded interview {interview_id} for user {user_id}")
+        if not interview:
+            logger.warning(f"[API] Interview not found: {interview_id}")
+            return jsonify({
+                'error': 'Interview not found',
+                'message': f'No interview found with ID: {interview_id}'
+            }), 404
 
-        # Format conversation for frontend
-        ordered_conversation = format_conversation(interview.get('conversation', {}))
+        # Get conversation data
+        conversation_dict = interview.get('conversation', {})
+        agent_msgs = conversation_dict.get('agent', [])
+        user_msgs = conversation_dict.get('user', [])
 
-        # Format for frontend
+        # Merge using postprocess for proper grouping
+        ordered_conversation = merge_by_agent_turns(agent_msgs, user_msgs)
+
+        # Calculate merged user turn count (for metadata)
+        merged_user_count = len([t for t in ordered_conversation if t.get('role') == 'candidate'])
+
+        # Extract stages covered from agent messages
+        stages_covered = list(set(
+            msg.get('stage') for msg in agent_msgs
+            if msg.get('stage')
+        ))
+
+        # Build metadata
+        meta = {
+            'candidate': interview.get('candidate_name', 'Unknown'),
+            'interview_date': interview.get('interview_date'),
+            'room_name': interview.get('room_name', ''),
+            'job_role': interview.get('job_role', ''),
+            'experience_level': interview.get('experience_level', ''),
+            'final_stage': interview.get('final_stage', ''),
+            'ended_by': interview.get('ended_by', 'unknown'),
+            'total_agent_messages': len(agent_msgs),
+            'total_user_messages': len(user_msgs),
+            'merged_user_turns': merged_user_count,
+            'total_turns': len(ordered_conversation),
+            'stages_covered': stages_covered,
+            'source': 'database'
+        }
+
+        logger.info(
+            f"[API] Retrieved interview {interview_id}: "
+            f"{len(ordered_conversation)} turns ({len(agent_msgs)} agent, {merged_user_count} candidate merged)"
+        )
+
         return jsonify({
-            'success': True,
-            'meta': {
-                'candidate': interview.get('candidate_name', 'Unknown'),
-                'interview_date': interview.get('interview_date'),
-                'job_role': interview.get('job_role'),
-                'experience_level': interview.get('experience_level'),
-                'source': 'database'
-            },
-            'ordered_conversation': ordered_conversation
+            'ordered_conversation': ordered_conversation,
+            'meta': meta
         })
 
     except Exception as e:
         logger.error(f"[API] Get interview error: {e}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
+        return jsonify({
+            'error': 'Failed to load interview',
+            'message': str(e)
+        }), 500
 
 
 @app.route('/api/interview/<filename>/summary')
@@ -1040,8 +1084,8 @@ def _load_interview_context(interview_id):
         if not interview:
             return None, None, None, None, None, f'Could not find interview: {interview_id}'
 
-        # Format conversation from database format
-        conversation = format_conversation(interview.get('conversation', {}))
+        # Format conversation from database format with proper merging
+        conversation = format_conversation_with_merge(interview.get('conversation', {}))
 
         if not conversation:
             return None, None, None, None, None, 'No conversation found in this interview'

@@ -121,30 +121,100 @@ class SupabaseClient:
             return None
 
     def save_interview(self, user_id: str, interview_data: Dict[str, Any]) -> Optional[str]:
-        """Save interview to database, returns interview_id"""
+        """
+        Save interview to database, returns interview_id.
+
+        Handles multiple input formats:
+        - From agent_worker.py: uses 'candidate_name', 'job_role', etc.
+        - From frontend: uses 'candidateName', 'jobRole', etc.
+        """
         try:
-            # Handle both formats: JSON file format and frontend format
+            # Extract candidate name - check ALL possible keys
+            candidate_name = (
+                interview_data.get('candidate_name') or  # From agent_worker.py (PRIMARY)
+                interview_data.get('candidate') or       # From some formats
+                interview_data.get('candidateName') or   # From frontend
+                'Unknown'
+            )
+
+            # Extract other fields with fallbacks
+            room_name = (
+                interview_data.get('room_name') or
+                interview_data.get('roomName') or
+                ''
+            )
+
+            job_role = (
+                interview_data.get('job_role') or
+                interview_data.get('jobRole') or
+                ''
+            )
+
+            experience_level = (
+                interview_data.get('experience_level') or
+                interview_data.get('experienceLevel') or
+                ''
+            )
+
+            final_stage = (
+                interview_data.get('final_stage') or
+                interview_data.get('finalStage') or
+                ''
+            )
+
+            ended_by = (
+                interview_data.get('ended_by') or
+                interview_data.get('endedBy') or
+                'unknown'
+            )
+
+            skipped_stages = (
+                interview_data.get('skipped_stages') or
+                interview_data.get('skippedStages') or
+                []
+            )
+
+            has_resume = (
+                interview_data.get('has_resume') or
+                interview_data.get('hasResume') or
+                False
+            )
+
+            has_jd = (
+                interview_data.get('has_jd') or
+                interview_data.get('hasJobDescription') or
+                False
+            )
+
             data = {
                 'user_id': user_id,
-                'candidate_name': interview_data.get('candidate') or interview_data.get('candidateName'),
-                'room_name': interview_data.get('room_name') or interview_data.get('roomName'),
-                'job_role': interview_data.get('job_role') or interview_data.get('jobRole'),
-                'experience_level': interview_data.get('experience_level') or interview_data.get('experienceLevel'),
-                'final_stage': interview_data.get('final_stage') or interview_data.get('finalStage'),
-                'ended_by': interview_data.get('ended_by') or interview_data.get('endedBy'),
-                'skipped_stages': interview_data.get('skipped_stages') or interview_data.get('skippedStages', []),
-                'has_resume': interview_data.get('has_resume', False) or interview_data.get('hasResume', False),
-                'has_jd': interview_data.get('has_jd', False) or interview_data.get('hasJobDescription', False),
+                'candidate_name': candidate_name,
+                'room_name': room_name,
+                'job_role': job_role,
+                'experience_level': experience_level,
+                'final_stage': final_stage,
+                'ended_by': ended_by,
+                'skipped_stages': skipped_stages,
+                'has_resume': has_resume,
+                'has_jd': has_jd,
                 'conversation': interview_data.get('conversation', {}),
-                'total_messages': interview_data.get('total_messages') or interview_data.get('totalMessages', {}),
+                'total_messages': interview_data.get('total_messages', {}),
                 'metadata': interview_data.get('metadata', {}),
                 'interview_date': interview_data.get('interview_date')
             }
 
+            logger.info(f"[SUPABASE] Saving interview for candidate: {candidate_name}")
             response = self.client.table('interviews').insert(data).execute()
-            return response.data[0]['id'] if response.data else None
+
+            if response.data:
+                interview_id = response.data[0]['id']
+                logger.info(f"[SUPABASE] Interview saved with ID: {interview_id}")
+                return interview_id
+
+            return None
+
         except Exception as e:
-            logger.error(f"Error saving interview: {e}")
+            logger.error(f"[SUPABASE] Error saving interview: {e}", exc_info=True)
             return None
 
     def get_user_interviews(self, user_id: str, limit: int = 50) -> List[Dict[str, Any]]:

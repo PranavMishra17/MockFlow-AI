@@ -823,29 +823,47 @@ async def run_interview():
     except Exception as e:
         logger.error(f"[MAIN] Error: {e}", exc_info=True)
     finally:
+        logger.info("[MAIN] Starting cleanup...")
+
+        # 1. Cancel fallback task if running
         if fallback_task and not fallback_task.done():
             fallback_task.cancel()
             try:
                 await fallback_task
             except asyncio.CancelledError:
                 pass
-        
-        # Close HTTP session
+
+        # 2. Give the agent session time to finish any pending operations
+        # This allows STT/TTS to complete gracefully
+        try:
+            await asyncio.sleep(1.0)
+        except asyncio.CancelledError:
+            pass
+
+        # 3. Disconnect from room (this triggers session cleanup)
+        if room:
+            try:
+                logger.info("[MAIN] Disconnecting from room...")
+                await room.disconnect()
+                logger.info("[MAIN] Room disconnected")
+            except Exception as e:
+                logger.warning(f"[MAIN] Room disconnect error (non-fatal): {e}")
+
+        # 4. Wait a bit more for websockets to close gracefully
+        try:
+            await asyncio.sleep(0.5)
+        except asyncio.CancelledError:
+            pass
+
+        # 5. Close HTTP session LAST (after all plugins are done)
         if http_session:
             try:
+                logger.info("[MAIN] Closing HTTP session...")
                 await http_session.close()
                 logger.info("[MAIN] HTTP session closed")
             except Exception as e:
-                logger.warning(f"[MAIN] Error closing HTTP session: {e}")
-        
-        # Disconnect room if still connected
-        if room:
-            try:
-                await room.disconnect()
-                logger.info("[MAIN] Room disconnected in cleanup")
-            except Exception as e:
-                logger.warning(f"[MAIN] Error disconnecting room: {e}")
-        
+                logger.warning(f"[MAIN] HTTP session close error (non-fatal): {e}")
+
         logger.info("[MAIN] Cleanup complete, exiting")
         sys.exit(0)
 
