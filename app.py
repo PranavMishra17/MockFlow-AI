@@ -1389,12 +1389,12 @@ def skip_stage():
 def health_check():
     """Health check endpoint for monitoring and deployment verification."""
     try:
-        # Check database connection by attempting to query
-        # This will fail if database is unreachable
-        from supabase_client import supabase_client
+        # Verify Supabase environment credentials are set
+        supabase_url = os.getenv('SUPABASE_URL')
+        supabase_key = os.getenv('SUPABASE_SERVICE_KEY')
 
-        # Test database connectivity (query will return None for non-existent user, but connection works)
-        supabase_client.get_user('health-check-test-user-id')
+        if not supabase_url or not supabase_key:
+            raise ValueError("Supabase credentials not configured")
 
         # Count active workers
         active_worker_count = len(worker_manager.active_workers)
@@ -1404,7 +1404,7 @@ def health_check():
 
         return jsonify({
             'status': 'healthy',
-            'database': 'connected',
+            'database': 'configured',
             'workers': {
                 'active': active_worker_count,
                 'max': max_workers
