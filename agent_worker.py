@@ -12,6 +12,7 @@ import os
 import sys
 from typing import Annotated
 from pydantic import Field
+import aiohttp
 
 from livekit import api as livekit_api
 from livekit.agents import (
@@ -427,8 +428,15 @@ async def run_interview():
     
     interview_complete = asyncio.Event()
     fallback_task = None
+    http_session = None
+    room = None
     
     try:
+        # Create shared HTTP session for plugins
+        # This is required when not using cli.run_app()
+        http_session = aiohttp.ClientSession()
+        logger.info("[MAIN] Created shared HTTP session for plugins")
+        
         # Generate agent token for this specific room
         token = livekit_api.AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET)
         token.with_identity("interview-agent")
@@ -501,23 +509,36 @@ async def run_interview():
         interview_state.include_profile = include_profile
         interview_state.transition_to(InterviewStage.WELCOME)
         
-        # Initialize components
+        # Initialize components with shared HTTP session
         try:
-            stt = deepgram.STT(model="nova-2", language="en-US", smart_format=True)
+            stt = deepgram.STT(
+                model="nova-2",
+                language="en-US",
+                smart_format=True,
+                http_session=http_session
+            )
             logger.info("[MAIN] Deepgram STT initialized")
         except Exception as e:
             logger.error(f"[MAIN] Deepgram STT init error: {e}")
             raise
         
         try:
-            llm = openai.LLM(model="gpt-4o-mini", temperature=0.7)
+            llm = openai.LLM(
+                model="gpt-4o-mini",
+                temperature=0.7,
+                http_session=http_session
+            )
             logger.info("[MAIN] OpenAI LLM initialized")
         except Exception as e:
             logger.error(f"[MAIN] OpenAI LLM init error: {e}")
             raise
         
         try:
-            tts = openai.TTS(voice="alloy", speed=1.0)
+            tts = openai.TTS(
+                voice="alloy",
+                speed=1.0,
+                http_session=http_session
+            )
             logger.info("[MAIN] OpenAI TTS initialized")
         except Exception as e:
             logger.error(f"[MAIN] OpenAI TTS init error: {e}")
@@ -794,6 +815,23 @@ async def run_interview():
                 await fallback_task
             except asyncio.CancelledError:
                 pass
+        
+        # Close HTTP session
+        if http_session:
+            try:
+                await http_session.close()
+                logger.info("[MAIN] HTTP session closed")
+            except Exception as e:
+                logger.warning(f"[MAIN] Error closing HTTP session: {e}")
+        
+        # Disconnect room if still connected
+        if room and room.isconnected():
+            try:
+                await room.disconnect()
+                logger.info("[MAIN] Room disconnected in cleanup")
+            except Exception as e:
+                logger.warning(f"[MAIN] Error disconnecting room: {e}")
+        
         logger.info("[MAIN] Cleanup complete, exiting")
         sys.exit(0)
 
