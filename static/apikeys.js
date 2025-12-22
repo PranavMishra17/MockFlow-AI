@@ -206,6 +206,12 @@ async function testKeys() {
     const openaiKey = document.getElementById('openaiKey').value.trim();
     const deepgramKey = document.getElementById('deepgramKey').value.trim();
 
+    // Find test button and show loading state
+    const testBtn = event.target;
+    const originalText = testBtn.textContent;
+    testBtn.disabled = true;
+    testBtn.textContent = 'Testing...';
+
     try {
         const response = await fetch('/api/user/keys/validate', {
             method: 'POST',
@@ -222,13 +228,17 @@ async function testKeys() {
         const result = await response.json();
 
         if (result.valid) {
-            showModal('Validation Success', 'All API keys have valid formats', 'success');
+            showModal('✅ Validation Success', 'All API keys have valid formats and are ready to use!', 'success');
         } else {
-            showModal('Validation Failed', result.message || 'One or more keys have invalid formats', 'error');
+            showModal('❌ Validation Failed', result.message || 'One or more keys have invalid formats', 'error');
         }
     } catch (error) {
         console.error('[APIKEYS] Key validation failed:', error);
-        showModal('Validation Error', 'Failed to validate keys. Please try again.', 'error');
+        showModal('⚠️ Validation Error', 'Failed to validate keys. Please try again.', 'error');
+    } finally {
+        // Restore button state
+        testBtn.disabled = false;
+        testBtn.textContent = originalText;
     }
 }
 
@@ -266,23 +276,25 @@ document.getElementById('apiKeysForm')?.addEventListener('submit', async (e) => 
 
         if (response.ok && result.success) {
             showModal(
-                hasExistingKeys ? 'Keys Updated' : 'Keys Saved',
-                'Your API keys have been encrypted and saved securely. Redirecting to dashboard...',
+                hasExistingKeys ? '✅ Keys Updated Successfully' : '✅ Keys Configured Successfully',
+                'Your API keys have been encrypted and saved securely. You can now start interviews! Redirecting to dashboard...',
                 'success',
                 () => {
-                    window.location.href = '/dashboard';
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1500);
                 }
             );
         } else {
             saveBtn.disabled = false;
             saveBtn.textContent = originalText;
-            showModal('Save Failed', result.error || result.message || 'Failed to save keys', 'error');
+            showModal('❌ Save Failed', result.error || result.message || 'Failed to save keys', 'error');
         }
     } catch (error) {
         console.error('[APIKEYS] Failed to save keys:', error);
         saveBtn.disabled = false;
         saveBtn.textContent = originalText;
-        showModal('Network Error', 'Failed to save keys. Please check your connection and try again.', 'error');
+        showModal('⚠️ Network Error', 'Failed to save keys. Please check your connection and try again.', 'error');
     }
 });
 
@@ -303,6 +315,8 @@ function showModal(title, message, type = 'info', callback = null) {
         titleEl.style.color = '';
     }
 
+    // Show modal - must override inline style and add visible class
+    modal.style.display = 'flex';
     modal.classList.add('visible');
 
     if (callback) {
@@ -312,6 +326,7 @@ function showModal(title, message, type = 'info', callback = null) {
 
 function closeModal() {
     const modal = document.getElementById('messageModal');
+    modal.style.display = 'none';
     modal.classList.remove('visible');
     if (window.modalCallback) {
         window.modalCallback();

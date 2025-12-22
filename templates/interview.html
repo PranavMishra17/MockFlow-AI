@@ -788,6 +788,15 @@
                     var url = sessionStorage.getItem('mockflow_url');
                     var room = sessionStorage.getItem('mockflow_room');
 
+                    console.log('[CONNECT] Connection data retrieved:', {
+                        hasToken: !!token,
+                        hasUrl: !!url,
+                        hasRoom: !!room,
+                        url: url,
+                        room: room,
+                        tokenLength: token ? token.length : 0
+                    });
+
                     // Clear from sessionStorage after retrieval
                     sessionStorage.removeItem('mockflow_token');
                     sessionStorage.removeItem('mockflow_url');
@@ -802,7 +811,7 @@
 
                     console.log('[CONNECT] Using pre-spawned worker for room:', room);
                     updateStatus('Connecting to room...', 'connecting');
-                    
+
                     state.room = new LK.Room({
                         adaptiveStream: true,
                         dynacast: true,
@@ -812,7 +821,7 @@
                             autoGainControl: true
                         }
                     });
-                    
+
                     state.room.on(LK.RoomEvent.Connected, onConnected);
                     state.room.on(LK.RoomEvent.Disconnected, onDisconnected);
                     state.room.on(LK.RoomEvent.TrackSubscribed, onTrackSubscribed);
@@ -820,11 +829,38 @@
                     state.room.on(LK.RoomEvent.ParticipantConnected, onParticipantConnected);
                     state.room.on(LK.RoomEvent.LocalTrackPublished, onLocalTrackPublished);
 
+                    console.log('[CONNECT] Attempting to connect to LiveKit server...', {url: url, room: room});
                     await state.room.connect(url, token);
-                    
+                    console.log('[CONNECT] Successfully connected to LiveKit server');
+
                 } catch (err) {
-                    console.error('[CONNECT] Error:', err);
-                    updateStatus('Connection failed: ' + err.message, 'error');
+                    console.error('[CONNECT] Connection failed:', err);
+                    console.error('[CONNECT] Error details:', {
+                        name: err.name,
+                        message: err.message,
+                        stack: err.stack,
+                        code: err.code
+                    });
+
+                    // Provide user-friendly error messages based on error type
+                    var userMessage = 'Connection failed: ' + err.message;
+
+                    if (err.message && err.message.includes('token')) {
+                        userMessage = 'Invalid authentication token. Please check your LiveKit API keys in Settings.';
+                    } else if (err.message && err.message.includes('timeout')) {
+                        userMessage = 'Connection timeout. The agent may still be initializing. Please wait 20 seconds and refresh.';
+                    } else if (err.message && err.message.includes('network')) {
+                        userMessage = 'Network error. Please check your internet connection.';
+                    } else if (err.message && err.message.includes('websocket')) {
+                        userMessage = 'WebSocket connection failed. Please check your LiveKit URL in Settings.';
+                    }
+
+                    updateStatus(userMessage, 'error');
+
+                    // Show diagnostic information in console for debugging
+                    console.error('[DIAGNOSTICS] LiveKit URL:', sessionStorage.getItem('mockflow_url') || 'Not found in sessionStorage');
+                    console.error('[DIAGNOSTICS] Room name:', sessionStorage.getItem('mockflow_room') || 'Not found in sessionStorage');
+                    console.error('[DIAGNOSTICS] Token available:', !!sessionStorage.getItem('mockflow_token'));
                 }
             }
             

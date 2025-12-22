@@ -84,16 +84,23 @@ class WorkerManager:
 
             logger.info(f"[WORKER] Worker spawned (PID: {process.pid}) for room: {room_name}")
 
-            # Wait for worker to be ready (check for startup log)
-            return self._wait_for_worker_ready(process, timeout=10)
+            # Wait for worker to be ready (agent loads ONNX models and initializes)
+            return self._wait_for_worker_ready(process, timeout=20)
 
         except Exception as e:
             logger.error(f"[WORKER] Failed to spawn worker: {e}", exc_info=True)
             return False
 
-    def _wait_for_worker_ready(self, process: subprocess.Popen, timeout: int = 10) -> bool:
+    def _wait_for_worker_ready(self, process: subprocess.Popen, timeout: int = 20) -> bool:
         """
-        Wait for worker to start.
+        Wait for worker to start and initialize.
+
+        The worker subprocess needs to:
+        1. Load ONNX models (Silero VAD) - ~5-10 seconds
+        2. Initialize LiveKit FFI - ~2-5 seconds
+        3. Connect to LiveKit server
+
+        This typically takes 10-15 seconds on cold start.
 
         Returns:
             bool: True if worker started successfully, False otherwise
@@ -107,9 +114,9 @@ class WorkerManager:
                 logger.error(f"[WORKER] Process died during startup with code: {process.returncode}")
                 return False
 
-            # Wait for agent to initialize (5 seconds is typical)
-            if time.time() - start_time >= 5:
-                logger.info("[WORKER] Worker process started, agent initializing")
+            # Wait for agent to initialize (10-15 seconds is typical on cold start)
+            if time.time() - start_time >= 10:
+                logger.info("[WORKER] Worker process started, agent should be ready soon")
                 return True
 
             time.sleep(0.5)

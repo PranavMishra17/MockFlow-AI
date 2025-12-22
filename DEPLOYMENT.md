@@ -228,7 +228,9 @@ Example output: `a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f
 - **Branch**: `main`
 - **Runtime**: Python 3
 - **Build Command**: `pip install -r requirements.txt`
-- **Start Command**: `gunicorn app:app --workers 2 --timeout 120`
+- **Start Command**: `gunicorn app:app --workers 1 --timeout 120`
+
+**IMPORTANT**: Use `--workers 1` (single worker) because the BYOK model uses subprocess management for agent workers. Multiple gunicorn workers create separate memory spaces, preventing proper subprocess tracking across requests.
 
 **Instance Type:**
 - Select **Free** tier (512MB RAM, 0.1 CPU)
