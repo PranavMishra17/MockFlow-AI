@@ -6,12 +6,13 @@
 
 **AI-Powered Mock Interview Platform with Real-Time Voice Interaction**
 
+[![LIVE](https://img.shields.io/badge/LIVE-mockflow--ai.onrender.com-brightgreen.svg)](https://mockflow-ai.onrender.com)
 [![Python](https://img.shields.io/badge/Python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
 [![LiveKit](https://img.shields.io/badge/LiveKit-Agents-00ADD8.svg)](https://docs.livekit.io/agents/)
 [![OpenAI](https://img.shields.io/badge/OpenAI-GPT--4o--mini-412991.svg)](https://platform.openai.com/)
 [![Deepgram](https://img.shields.io/badge/Deepgram-Nova--2-13EF93.svg)](https://deepgram.com/)
-[![Flask](https://img.shields.io/badge/Flask-3.0-000000.svg)](https://flask.palletsprojects.com/)
 [![License: SAOUL](https://img.shields.io/badge/License-SAOUL-blue.svg)](LICENSE)
+
 [Features](#features) • [Architecture](#architecture) • [Installation](#installation) • [Usage](#usage) • [Documentation](#documentation)
 
 </div>
@@ -22,12 +23,15 @@
 
 MockFlow-AI is a cutting-edge mock interview platform that leverages LiveKit's multi-agent AI framework to conduct realistic, voice-based job interviews. Built with industry best practices for real-time voice agents, it provides candidates with an authentic interview experience to practice and improve their skills.
 
+**Launch Video**: [Watch on YouTube](https://youtu.be/FUFKHy19oGA?si=bgUxkGAZfik8ABhp)
+**Full Interview Demo**: [Watch on YouTube](https://youtu.be/iJ7ihwlPEhQ)
+
 ### Key Highlights
 
 - **Real-Time Voice Conversation**: Natural, low-latency voice interaction using LiveKit's WebRTC infrastructure
-- **Intelligent Stage Management**: FSM-based interview flow with two distinct stages (self-introduction and past experience)
-- **Stable Performance**: Time-based fallback mechanisms ensure continuous workflow progression
-- **Production-Ready Architecture**: Built following voice agent best practices from industry leaders
+- **Context-Aware Questioning**: Adaptive questions based on resume and job description
+- **BYOK Architecture**: Users bring their own API keys for privacy and cost efficiency
+- **Production-Ready**: Direct room connections with per-session worker spawning
 
 ---
 
@@ -42,19 +46,23 @@ MockFlow-AI is a cutting-edge mock interview platform that leverages LiveKit's m
 
 ### 🔄 Intelligent Interview Flow
 
-- **Stage 1: Self-Introduction** (3-4 minutes)
-  - Candidate introduces themselves
-  - AI asks natural follow-up questions
-  - Smooth conversation flow with active listening
+- **Stage 1: Self-Introduction** (2-3 minutes)
+  - Candidate introduces their background and interests
+  - AI asks natural, conversational follow-up questions
+  - Focus on education, current situation, and motivations
 
-- **Stage 2: Past Experience** (5-7 minutes)
-  - Deep dive into candidate's work history
-  - STAR method questioning (Situation, Task, Action, Result)
-  - Technical skill evaluation
+- **Stage 2: Past Experience** (4-5 minutes)
+  - Deep dive into candidate's work history and projects
+  - Context-aware questions based on uploaded resume
+  - Natural probing for challenges, solutions, and impact
 
+- **Stage 3: Company Fit** (3-4 minutes)
+  - Role alignment and motivation assessment
+  - Questions tailored to job description if provided
+  - Career goals and culture fit evaluation
 
 ![MockFlow-AI screenshot](static/mf3.png)
-  - A screenshot from the interview room
+*Screenshot from the interview room*
 
 ### 🛡️ Robust State Management
 
@@ -72,6 +80,7 @@ MockFlow-AI is a cutting-edge mock interview platform that leverages LiveKit's m
 
 ### 🔮 Future-Ready Architecture
 
+- **Multiple Interview Tracks**: Option to choose between INTRO CALL / Behavioral / TECHNICAL tracks for interview
 - **Document Processing Module**: Ready for RAG (Retrieval-Augmented Generation)
 - **Resume Analysis**: Infrastructure for PDF parsing and context injection
 - **Extensible Design**: Easy to add new stages or customize behavior
@@ -122,17 +131,17 @@ MockFlow-AI follows a microservices architecture with clear separation of concer
 
 ### Current Architecture (Single-Worker Model)
 
-**Current Setup**: One shared agent worker handles all interview sessions via async concurrency.
+**Current Setup**: A single, shared agent worker handles multiple interview sessions concurrently inside one process using async coroutines.
 
 **How It Works**:
-- LiveKit dispatches a new coroutine per room connection
-- Each session gets isolated `InterviewState` instance
-- Worker process is multi-session via Python async/await
+- The worker runs long-lived coroutines for each room connection
+- Each session uses an isolated `InterviewState` instance
+- Async/await concurrency keeps sessions in one process
 
 **Limitations**:
-- Resource contention at scale (100+ concurrent interviews)
-- No cost isolation - server pays all API costs
-- Limited horizontal scaling capabilities
+- Resource contention at scale and CPU/memory exhaustion
+- No per-user cost isolation (the server bears API costs)
+- Harder to horizontally scale and isolate failures
 
 ### Production-Ready Architecture (Recommended)
 
@@ -140,32 +149,35 @@ MockFlow-AI follows a microservices architecture with clear separation of concer
 
 ```
 [Frontend] → [LiveKit SFU] → [Worker Pool (K8s/Auto-scale)]
-    ↓ User API Keys              ↓ Per-room worker
+  ↓ User API Keys              ↓ Per-room ephemeral worker
 [Client Storage]            [Ephemeral Agent Worker]
-                                 ↓ Uses client keys
-                            [OpenAI API] [Deepgram API]
+                 ↓ Uses client keys
+              [OpenAI API] [Deepgram API]
 ```
 
+Key deployment guidance (from DEPLOYMENT.md):
+- Use direct room connection (agent connects to a specific room) instead of LiveKit dispatch to avoid stale worker registration.
+- Spawn a per-room worker process (ephemeral) that exits after the interview finishes.
+- Run worker processes without the dispatch/dev registration flag (e.g. `python agent_worker.py`, not `python agent_worker.py dev`).
+- In production use `gunicorn app:app --workers 1 --timeout 120` so subprocess worker management remains reliable.
+- Provide an `aiohttp.ClientSession` for plugins that require it (e.g. Deepgram STT) and close it cleanly.
+- Optimize Silero VAD settings for low-CPU environments (increase silence thresholds, reduce buffered speech).
+
 **Benefits**:
-- Cost isolation - each user pays for their API usage
-- Resource isolation - worker crash affects one session
-- Elastic scaling - auto-scale based on active rooms
-- Privacy - API keys never touch server logs
+- Cost and resource isolation per session
+- Better crash isolation and horizontal scalability
+- Keeps user API keys private (BYOK)
 
-**Implementation Notes**:
-- Frontend collects OpenAI + Deepgram keys (stored in session/local storage)
-- Keys passed via LiveKit participant attributes
-- Kubernetes HPA scales worker pods based on room count
-- Workers terminate after interview ends (ephemeral)
-
-See [AGENT_DESIGN.md](AGENT_DESIGN.md) for detailed production architecture design.
+See [DEPLOYMENT.md](DEPLOYMENT.md) and [AGENT_DESIGN.md](AGENT_DESIGN.md) for full deployment notes.
 
 ### Key Components
 
 1. **FSM Module (`fsm.py`)**: Defines interview stages, state transitions, and progress tracking
-2. **Agent Module (`agent.py`)**: Implements voice agent with FSM-driven tools and fallback timers
-3. **Flask App (`app.py`)**: Web server for UI and LiveKit token generation
-4. **Document Processor (`document_processor.py`)**: Foundation for future RAG implementation
+2. **Agent Worker (`agent_worker.py`)**: Implements voice agent with FSM-driven tools and fallback timers
+3. **Flask App (`app.py`)**: Web server for UI, OAuth, token generation, and per-session worker spawning
+4. **Prompts Module (`prompts.py`)**: Stage-specific instructions and feedback generation prompts
+5. **Supabase Client (`supabase_client.py`)**: Encrypted storage for user API keys and interview data
+6. **Document Processor (`document_processor.py`)**: Text extraction from resumes (PDF, DOCX, TXT)
 
 ---
 
@@ -215,12 +227,11 @@ LOG_LEVEL=INFO
 ### Step 4: Verify Installation
 
 ```bash
-# Test Flask server
+# Start the Flask server
 python app.py
-
-# In another terminal, test agent
-python agent.py dev
 ```
+
+**Note**: In BYOK mode, agent workers are spawned automatically per-session. You don't need to run a separate agent process.
 
 ---
 
@@ -228,14 +239,10 @@ python agent.py dev
 
 ### Running the Application
 
-#### Development Mode (Recommended for Testing)
+The application uses a BYOK (Bring Your Own Keys) model with automatic worker spawning.
 
-**Terminal 1: Start the Agent**
-```bash
-python agent.py dev
-```
+#### Development Mode
 
-**Terminal 2: Start the Web Server**
 ```bash
 python app.py
 ```
@@ -244,31 +251,36 @@ Access the application at: **http://localhost:5000**
 
 #### Production Mode
 
-**Terminal 1: Start Agent Worker**
 ```bash
-python agent.py start
+gunicorn app:app --workers 1 --timeout 120
 ```
 
-**Terminal 2: Start Web Server**
-```bash
-gunicorn -w 4 -b 0.0.0.0:5000 app:app
-```
+**Note**: Use `--workers 1` as the application manages agent workers via subprocess spawning.
+
+### First-Time Setup
+
+1. **Visit Homepage**: Navigate to `http://localhost:5000`
+2. **Sign In**: Authenticate with Google OAuth
+3. **Configure API Keys** (Settings page):
+   - LiveKit credentials (URL, API Key, API Secret)
+   - OpenAI API Key
+   - Deepgram API Key
+4. Your keys are encrypted and stored securely
 
 ### Conducting an Interview
 
-1. **Visit Homepage**: Navigate to `http://localhost:5000`
-2. **Fill Registration Form**:
-   - Enter your name
-   - Provide email address
-   - Specify target job role
-   - Select experience level
-3. **Start Interview**: Click "Start Interview"
-4. **Interview Stages**:
+1. **Start Interview**: Click "Start Interview" from dashboard
+2. **Fill Interview Form**:
+   - Enter your name and email
+   - Specify target job role and experience level
+   - (Optional) Upload resume
+   - (Optional) Paste job description
+3. **Interview Flow**:
    - **Greeting**: Brief introduction from AI interviewer
-   - **Stage 1**: Self-introduction discussion (3-4 min)
-   - **Stage 2**: Past experience deep dive (5-7 min)
-   - **Closing**: Wrap-up and thank you
-5. **End Interview**: Click "End Interview" or wait for natural completion
+   - **Stage 1**: Self-introduction discussion (2-3 min)
+   - **Stage 2**: Past experience deep dive (4-5 min)
+   - **Stage 3**: Company fit and role-specific questions (3-4 min)
+4. **Receive Feedback**: Generate detailed feedback after interview completion
 
 ### Tips for Best Experience
 
@@ -300,61 +312,84 @@ gunicorn -w 4 -b 0.0.0.0:5000 app:app
 
 ```
 MockFlow-AI/
-├── agent.py                    # LiveKit agent with FSM
-├── app.py                      # Flask web server
-├── fsm.py                      # Finite State Machine
-├── document_processor.py       # Document processing (future RAG)
+├── app.py                      # Flask server, OAuth, token generation, worker spawning
+├── agent_worker.py             # LiveKit agent with FSM and voice pipeline
+├── fsm.py                      # Finite State Machine for interview stages
+├── prompts.py                  # Stage instructions and feedback prompts
+├── supabase_client.py          # Database client with encrypted API keys
+├── auth_helpers.py             # Google OAuth authentication helpers
+├── worker_manager.py           # Per-session worker process management
+├── postprocess.py              # Transcript merging and formatting utilities
+├── conversation_cache.py       # Resume/JD text caching for sessions
+├── document_processor.py       # Document text extraction (PDF, DOCX, TXT)
 ├── requirements.txt            # Python dependencies
-├── .env                        # Environment configuration
-├── templates/                  # HTML templates
-│   ├── index.html              # Landing page
-│   ├── form.html               # Registration form
-│   ├── interview.html          # Interview room
-│   └── error.html              # Error pages
-├── static/                     # Static assets
-│   ├── styles.css              # Application styles
-│   └── script.js               # Client-side JavaScript
-├── logs/                       # Application logs
-└── agents/                     # LiveKit agents repository
+├── .env                        # Environment configuration (see env.template)
+│
+├── templates/                  # HTML templates (Jinja2)
+│   ├── index.html              # Landing page with feature overview
+│   ├── form.html               # Interview setup form (resume/JD upload)
+│   ├── interview.html          # LiveKit interview room
+│   ├── dashboard.html          # User dashboard with past sessions
+│   ├── feedback.html           # Detailed feedback display
+│   ├── settings.html           # User API key management (BYOK)
+│   └── error.html              # Error pages (403, 404, 500)
+│
+├── static/                     # Static frontend assets
+│   ├── styles.css              # Main application styles
+│   ├── form.css                # Form-specific styles
+│   ├── modals.css              # Modal component styles
+│   ├── header-additions.css    # Header action button styles
+│   ├── header.js               # Reusable header component
+│   ├── modal.js                # Modal dialog utilities
+│   └── [images, icons]         # Static assets
+│
+├── logs/                       # Application logs (auto-generated)
+├── DEPLOYMENT.md               # Production deployment guide
+├── AGENT_DESIGN.md             # System architecture documentation
+├── LIVEKIT_ANALYSIS.md         # LiveKit framework analysis
+└── VOICE_AGENT_ARCHITECTURE.md # Voice agent best practices
 ```
 
 ---
 
 ## Configuration
 
-### Agent Configuration
+### Stage Instructions
 
-Edit stage instructions in `agent.py`:
+Edit interview stage prompts in `prompts.py`:
 
 ```python
-INSTRUCTIONS = {
-    InterviewStage.GREETING: "Your greeting instructions...",
-    InterviewStage.SELF_INTRO: "Your self-intro instructions...",
+SELF_INTRO = StagePrompt(
+    name="Self-Introduction",
+    objective="Learn about candidate's background...",
+    style="Natural, conversational tone...",
     # ...
-}
+)
 ```
 
 ### Timing Configuration
 
-Adjust stage time limits in `agent.py`:
+Adjust stage time limits in `fsm.py`:
 
 ```python
-STAGE_LIMITS = {
-    InterviewStage.GREETING: 90,       # 1.5 minutes
-    InterviewStage.SELF_INTRO: 360,    # 6 minutes
-    InterviewStage.PAST_EXPERIENCE: 480,  # 8 minutes
+STAGE_TIME_LIMITS = {
+    InterviewStage.GREETING: 90,           # 1.5 minutes
+    InterviewStage.SELF_INTRO: 180,        # 3 minutes
+    InterviewStage.PAST_EXPERIENCE: 300,   # 5 minutes
+    InterviewStage.COMPANY_FIT: 240,       # 4 minutes
 }
 ```
 
 ### Voice Pipeline Configuration
 
-Customize STT, LLM, and TTS settings in `agent.py`:
+Customize STT, LLM, and TTS settings in `agent_worker.py`:
 
 ```python
-session = AgentSession(
-    stt=deepgram.STT(model="nova-2"),
+session = VoicePipelineAgent(
+    stt=deepgram.STT(model="nova-2-general"),
     llm=openai.LLM(model="gpt-4o-mini", temperature=0.7),
     tts=openai.TTS(voice="alloy", speed=1.0),
+    vad=silero.VAD.load(),
     # ...
 )
 ```
@@ -366,12 +401,14 @@ session = AgentSession(
 ### Common Issues
 
 **Issue**: "Connection failed" error
-- **Solution**: Verify LiveKit server URL and credentials in `.env`
-- Check that LiveKit server is accessible
+- **Solution**: Verify LiveKit credentials in Settings page (or check Supabase)
+- Ensure LiveKit server is accessible
+- Check that user has configured all required API keys
 
-**Issue**: Agent doesn't respond
-- **Solution**: Ensure `agent.py` is running in another terminal
-- Check logs for errors: `tail -f logs/*.log`
+**Issue**: Agent doesn't respond or interview freezes
+- **Solution**: Check that user API keys are valid and have sufficient credits
+- Review logs for errors: Check browser console and server logs
+- Verify worker process spawned correctly (check `worker_manager.py` logs)
 
 **Issue**: Poor audio quality
 - **Solution**:
@@ -387,108 +424,19 @@ session = AgentSession(
 
 ### Debug Mode
 
-Enable detailed logging:
+Enable detailed logging in your `.env` file:
 
 ```bash
-export LOG_LEVEL=DEBUG
-python agent.py dev
+LOG_LEVEL=DEBUG
 ```
+
+Then restart the Flask server. Worker logs will show detailed information about agent sessions.
 
 ### Health Check
 
 ```bash
 curl http://localhost:5000/api/health
 ```
-
----
-
-## Roadmap
-
-### Upcoming Features
-
-#### 1. Pluggable Interview Stages (Role-Driven or Custom)
-- [ ] **YAML/JSON Stage Configuration**: Define stages externally without code changes
-- [ ] **Dynamic FSM Generation**: Load and validate stage definitions at runtime
-- [ ] **Role-Specific Stages**: Automatically include SYSTEM_DESIGN for senior engineers, BEHAVIORAL for managers
-- [ ] **Multi-Round Interview Support**: PHONE_SCREEN → TECHNICAL → BEHAVIORAL → CULTURE_FIT workflows
-- [ ] **Admin UI**: Web interface to create and manage custom stage templates
-
-**Use Cases**:
-- Tailor interviews to specific roles (e.g., add CODING_CHALLENGE stage for developers)
-- Support company-specific interview formats
-- A/B test different question flows
-
-#### 2. Document Analysis (Resume/Portfolio Tailoring)
-- [ ] **Resume Upload**: PDF/DOCX parsing via `pypdf` or `python-docx`
-- [ ] **Portfolio Context Injection**: Extract projects, skills, and experience highlights
-- [ ] **Tailored Questioning**: Agent asks follow-ups about specific resume items
-  - Example: "You mentioned scaling to 10k concurrent users - how did you approach that?"
-- [ ] **Privacy-First**: Resume text deleted after interview ends
-
-**Implementation**:
-- `/api/upload-resume` endpoint stores parsed text in participant attributes
-- Agent retrieves via `InterviewState.uploaded_resume_text`
-- LLM summarizes resume highlights and injects into stage instructions
-
-#### 3. Job Description & Company Research (Web Search Integration)
-- [ ] **JD Analysis**: Extract key requirements (skills, experience, technologies)
-- [ ] **Company Research**: Automated web search for:
-  - Recent news (funding, product launches)
-  - Tech stack (from job postings, engineering blogs)
-  - Culture insights (Glassdoor, LinkedIn)
-- [ ] **Contextualized Questions**: Connect candidate's experience to company needs
-  - Example: "TechCorp uses Python and AWS - tell me about your experience with those."
-
-**Implementation**:
-- Use SerpAPI or Tavily for web search
-- `analyze_jd(jd_text)` helper extracts requirements
-- Cache company research in Redis (TTL: 1 hour)
-- Inject into agent instructions as COMPANY_CONTEXT
-
-#### 4. Actionable Feedback (Chat History Analysis)
-- [ ] **Response Quality Analysis**: Evaluate depth scores, STAR method usage, technical detail
-- [ ] **Communication Assessment**: Clarity, conciseness, active listening indicators
-- [ ] **Strengths Identification**: Highlight what candidate did well
-- [ ] **Improvement Pointers**: Specific, actionable tips per question
-  - Example: "Your response to the bug fix question was good, but consider mentioning debugging tools used."
-- [ ] **Feedback Delivery**: Email report, downloadable PDF, or in-app page
-
-**Example Feedback Structure**:
-```
-Strengths:
-- Detailed STAR-structured responses for 4 out of 5 experience questions
-- Strong technical depth when discussing microservices and scaling
-
-Areas for Improvement:
-- Responses to behavioral questions lacked specific metrics (try quantifying impact)
-- Consider pausing briefly before answering to organize thoughts
-
-Question-Specific Feedback:
-Q: "Tell me about a challenging bug you fixed."
-→ You described the bug well, but didn't mention debugging process or tools used.
-   Interviewers want to understand your problem-solving approach.
-```
-
-**Implementation**:
-- `/api/feedback` endpoint loads conversation JSON
-- GPT-4o analyzes transcript with structured prompt
-- Returns JSON with `strengths`, `improvements`, `question_feedback` arrays
-
-#### 5. Other Enhancements
-- [ ] **Custom Question Banks**: User-defined question sets for specific roles
-- [ ] **Multi-Language Support**: Interviews in Spanish, Mandarin, Hindi, etc.
-- [ ] **Recording & Playback**: Save and review interview sessions (audio + transcript)
-- [ ] **Advanced Analytics Dashboard**: Track performance trends across multiple practice sessions
-- [ ] **Team Collaboration**: Peer mock interviews with feedback exchange
-- [ ] **Integration with Job Boards**: Import JDs directly from LinkedIn, Indeed, etc.
-
-### Production-Ready Enhancements
-
-- [ ] **Per-Session Worker Architecture**: Kubernetes-based auto-scaling with BYOK
-- [ ] **Secure Key Management**: Client-side API key injection with encryption
-- [ ] **Real-Time UI Sync**: WebSocket-based stage/progress updates
-- [ ] **Monitoring & Observability**: Prometheus metrics, Grafana dashboards
-- [ ] **Cost Tracking**: Per-user API usage analytics for BYOK model
 
 ---
 
@@ -501,13 +449,6 @@ Contributions are welcome! Please follow these guidelines:
 3. Follow the coding standards in `.claude/rules.md`
 4. Test your changes thoroughly
 5. Submit a pull request with a clear description
-
-### Development Guidelines
-
-- **No emojis in code** - Use text indicators only
-- **Comprehensive logging** - Log all important operations
-- **High contrast UI** - Follow WCAG AA standards (see `.claude/rules.md`)
-- **Error handling** - All external calls must have try-except blocks
 
 ---
 
@@ -523,14 +464,6 @@ This project is licensed under the SAOUL License - see the [LICENSE](LICENSE) fi
 - **[OpenAI](https://openai.com/)** - Language model and text-to-speech
 - **[Deepgram](https://deepgram.com/)** - Speech-to-text transcription
 - **[Silero VAD](https://github.com/snakers4/silero-vad)** - Voice activity detection
-
----
-
-## Contact & Support
-
-- **GitHub Issues**: [Report bugs or request features](https://github.com/yourusername/MockFlow-AI/issues)
-- **Documentation**: [Full documentation](https://github.com/yourusername/MockFlow-AI/wiki)
-- **Email**: support@mockflow-ai.example.com
 
 ---
 

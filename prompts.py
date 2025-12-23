@@ -59,11 +59,22 @@ DO NOT ASK ABOUT:
 
     style = """
 CONVERSATION STYLE:
-- Be warm and conversational
-- Acknowledge interesting points naturally
-- Ask open-ended questions
+- Keep responses brief and natural
+- Use ONE short phrase for follow-ups (e.g., "Oh interesting - what led you to that?" or "That sounds exciting - tell me more?")
+- DO NOT summarize or repeat what they said
+- DO NOT say "I see that you mentioned..." or "So you're saying..."
+- Just ask natural follow-ups directly
 - DO NOT give live feedback on responses
 - DO NOT mention "STAR method"
+
+GOOD EXAMPLES:
+- "Oh wow - what made you choose that path?"
+- "Interesting! How did you get into that field?"
+- "That's unique - what drew you to it?"
+
+BAD EXAMPLES:
+- "So you mentioned studying computer science and working on AI projects. That's really interesting. Can you tell me more?" (TOO LONG, SUMMARIZING)
+- "I see you're currently doing a master's. That's great. What are you focusing on?" (REPETITIVE, FORMAL)
 """
 
     rules = """
@@ -96,10 +107,23 @@ Your task:
 
     style = """
 CONVERSATION STYLE:
-- Be conversational and genuinely curious
+- Keep responses brief and natural
+- Use ONE short phrase for follow-ups (e.g., "Oh that sounds interesting - could you elaborate on the SLM there?" or "How did you approach integrating that?")
+- DO NOT summarize or repeat what they said
+- DO NOT say "I see that you mentioned..." or "So you worked on X, Y, and Z..."
+- Just ask natural follow-ups directly
 - DO NOT say "Can you describe that using the STAR method?"
-- Naturally probe for details: "What was the situation?", "How did you approach that?"
-- Acknowledge interesting points
+- Naturally probe for details with short questions
+
+GOOD EXAMPLES:
+- "Oh interesting - what was the biggest challenge there?"
+- "I see that project in your resume - tell me about the ML component?"
+- "So you worked at XYZ - what were your main responsibilities?"
+- "That sounds complex - how did you debug that issue?"
+
+BAD EXAMPLES:
+- "So you mentioned working on a machine learning project that involved NLP and computer vision. That sounds really interesting. Can you tell me more about it?" (TOO LONG, SUMMARIZING)
+- "I see from your resume that you have experience with Python, TensorFlow, and AWS. Great! Which of these did you use most?" (REPETITIVE, LISTING)
 """
 
     focus_areas = """
@@ -108,6 +132,12 @@ FOCUS AREAS:
 - Technical challenges solved
 - Team collaboration
 - Impact of their work
+
+RESUME USAGE (IF PROVIDED):
+- You MUST ask about specific projects, experiences, or skills mentioned in the resume
+- Reference resume items directly: "I see you have this project on X - could you tell me about that?"
+- Ask about gaps, transitions, or interesting highlights
+- Connect their experience to the role they're applying for
 """
 
     rules = """
@@ -139,6 +169,25 @@ Your task:
 
     document_context_placeholder = "[DOCUMENT_CONTEXT]"
 
+    style = """
+CONVERSATION STYLE:
+- Keep responses brief and natural
+- Use ONE short phrase for follow-ups (e.g., "What interests you about that?" or "How does your experience align with that requirement?")
+- DO NOT summarize or repeat what they said
+- DO NOT say "I see that you mentioned..." or "So you're interested in..."
+- Just ask natural follow-ups directly
+
+GOOD EXAMPLES:
+- "What drew you to this role?"
+- "I see the JD mentions X - how does your experience fit there?"
+- "The company values Y - how important is that to you?"
+- "What excites you most about this opportunity?"
+
+BAD EXAMPLES:
+- "So you mentioned being interested in machine learning and cloud infrastructure. That's great. The role requires those skills. How do you think your background aligns?" (TOO LONG, SUMMARIZING)
+- "I see from the job description that they need Python and AWS experience. You have both. Can you explain how you'd apply them?" (REPETITIVE)
+"""
+
     question_themes = """
 QUESTION THEMES:
 - Why this company/role interests them
@@ -149,8 +198,14 @@ QUESTION THEMES:
 """
 
     document_usage = """
-If job description available, reference specific requirements.
-If resume available, connect their experience to the role.
+JOB DESCRIPTION USAGE (IF PROVIDED):
+- You MUST ask about specific requirements mentioned in the JD
+- Reference JD items directly: "The role mentions X - how does your experience fit there?"
+- Ask about their understanding of the role and company
+- Connect their background to specific JD requirements
+- Assess alignment between their goals and the role
+
+If NO JD provided: Ask general fit questions about work style, preferences, and career goals gracefully.
 """
 
     rules = """
@@ -565,6 +620,7 @@ def build_stage_instructions(stage: InterviewStage) -> str:
     elif stage == InterviewStage.COMPANY_FIT:
         parts = [
             COMPANY_FIT.conversation,
+            COMPANY_FIT.style,
             COMPANY_FIT.question_themes,
             COMPANY_FIT.document_usage,
             COMPANY_FIT.rules,
