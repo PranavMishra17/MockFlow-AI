@@ -366,17 +366,7 @@ Write 3-4 sentences that:
 
 Example: "For an AI Engineer role at this level, interviewers expect candidates to quantify model performance and explain technical trade-offs clearly. You showed strong enthusiasm and relevant project experience, but many answers stayed high-level without the metrics or system-level thinking that distinguishes senior candidates. The key growth area is translating your work into measurable impact statements."
 
-## 2. Competency Scores
-
-Rate 3-5 core competencies for this role on a 1-5 scale:
-
-| Competency | Score | Quick Take |
-|------------|-------|------------|
-| Technical Depth | 3/5 | Good intuition but missing metrics and formal terminology |
-| Problem-Solving | 4/5 | Strong debugging story with clear approach |
-| Communication Clarity | 2/5 | Answers rambled; needed tighter structure |
-
-## 3. Key Strengths (2-3 items)
+## 2. Key Strengths (2-3 items)
 
 For each strength, provide:
 - **Strength Name**
@@ -390,7 +380,7 @@ You've shipped real AI features to production, not just toy projects.
 *"We deployed the computer vision feature and I improved the latency by optimizing the pipeline"*
 This matters because AI engineering roles require candidates who understand production constraints, not just model accuracy.
 
-## 4. Development Areas (3-4 items)
+## 3. Development Areas (3-4 items)
 
 For each area, provide:
 - **What to Improve**
@@ -410,7 +400,7 @@ Example:
 *Your computer vision explanation mixed problem, solution, and deployment in one long sentence.*
 **Micro-technique**: Use "3-Part Technical Story": (1) Problem and constraints in 2 sentences, (2) Your approach and key technical decisions, (3) One specific challenge and how you solved it. Practice this structure until it's automatic.
 
-## 5. Answer Rewrite Example
+## 4. Answer Rewrite Example : 1-4 rewrite example
 
 Take one weak answer and show the before/after:
 
@@ -422,10 +412,9 @@ Take one weak answer and show the before/after:
 
 **What Changed:**
 - Removed filler words ("basically", "stuff")
-- Added specific numbers (400ms → 120ms, 35%)
 - Used clear structure: Situation → Challenge → Action → Result
 
-## 6. Practice Plan (1-2 Weeks)
+## 5. Practice Plan (1-2 Weeks)
 
 Create a focused plan tied to their specific weaknesses:
 

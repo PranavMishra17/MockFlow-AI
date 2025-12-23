@@ -1810,6 +1810,17 @@ footer a:hover {
     height: 1rem;
 }
 
+.action-btn-back {
+    position: fixed;
+    top: var(--spacing-lg);
+    left: var(--spacing-lg);
+    z-index: 1000;
+}
+
+.action-btn-back:hover {
+    background: var(--bg-soft);
+}
+
 @media (max-width: 768px) {
     .action-buttons {
         top: var(--spacing-sm);
@@ -1825,6 +1836,11 @@ footer a:hover {
     .action-btn svg {
         width: 1.125rem;
         height: 1.125rem;
+    }
+
+    .action-btn-back {
+        top: var(--spacing-sm);
+        left: var(--spacing-sm);
     }
 }
 /* ==================== AUTH HEADER ==================== */
