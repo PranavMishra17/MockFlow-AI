@@ -241,6 +241,14 @@
         window.addEventListener('load', initInterview);
 
         function initInterview() {
+            // Guard: must arrive from form page with a valid session token.
+            // If missing, the user navigated here directly (back button, bookmark, etc.) — redirect away.
+            if (!sessionStorage.getItem('mockflow_token') || !sessionStorage.getItem('mockflow_room')) {
+                console.warn('[GUARD] No session token — redirecting to /start');
+                window.location.replace('/start');
+                return;
+            }
+
             var LK = null;
             var LIVEKIT_CDN = 'https://cdn.jsdelivr.net/npm/livekit-client@2.5.0/dist/livekit-client.umd.min.js';
             var statusEl = document.getElementById('statusText');
