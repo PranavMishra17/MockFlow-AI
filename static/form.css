@@ -100,3 +100,149 @@
     height: 1px;
     background: var(--border);
 }
+
+/* === Track Selector Redesign === */
+.track-selector-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 10px;
+}
+
+.track-cards {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+}
+
+.track-card {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0 !important;
+    padding: 13px 16px !important;
+    border: 1px solid var(--bg-soft) !important;
+    border-radius: var(--radius-sm) !important;
+    cursor: pointer !important;
+    transition: border-color 0.15s, background 0.15s, box-shadow 0.15s !important;
+    background: var(--bg-card) !important;
+    position: relative !important;
+    overflow: hidden !important;
+}
+
+.track-card-accent {
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--track-accent, var(--accent-green));
+    opacity: 0.35;
+    transition: opacity 0.15s, width 0.15s;
+    border-radius: 0;
+}
+
+.track-card.selected .track-card-accent {
+    opacity: 1;
+    width: 4px;
+}
+
+.track-card:hover {
+    border-color: var(--track-accent, var(--accent-green-deep)) !important;
+    box-shadow: 0 0 0 1px var(--track-accent, var(--accent-green-deep)) inset;
+}
+
+.track-card.selected {
+    border-color: var(--track-accent, var(--accent-green-deep)) !important;
+    background: var(--bg-soft) !important;
+}
+
+.track-card-body {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex: 1;
+    padding-left: 14px;
+}
+
+.track-card-title {
+    font-weight: 700;
+    font-size: 0.875rem;
+    color: var(--text-primary);
+    white-space: nowrap;
+}
+
+.track-card-sep {
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    flex-shrink: 0;
+}
+
+.track-card-desc {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.3;
+}
+
+.track-card-check {
+    opacity: 0;
+    transition: opacity 0.15s;
+    color: var(--accent-green-deep);
+    flex-shrink: 0;
+    margin-left: 8px;
+}
+
+.track-card.selected .track-card-check {
+    opacity: 1;
+}
+
+/* Track detail box */
+.track-detail-box {
+    border: 1.5px dashed var(--bg-soft);
+    border-radius: var(--radius-sm);
+    background: transparent;
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 0.3s ease, padding 0.3s ease, border-color 0.3s ease;
+    padding: 0 16px;
+    margin-top: 4px;
+}
+
+.track-detail-box.visible {
+    max-height: 120px;
+    padding: 12px 16px;
+}
+
+.track-detail-content {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.7;
+}
+
+/* Required field markers */
+.required-mark {
+    color: var(--accent-green-deep);
+    font-size: 0.75rem;
+    margin-left: 2px;
+    font-weight: 600;
+}
+
+.required-note {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-align: center;
+    margin-top: 6px;
+    margin-bottom: 0;
+}
+
+/* Section label (replaces "Optional Enhancements") */
+.form-section-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 4px 0;
+    border-bottom: 1px solid var(--bg-soft);
+    margin: 16px 0 8px;
+    grid-column: 1 / -1;
+}

@@ -55,54 +55,80 @@
     <div class="form-page">
         <div class="form-container">
             <div class="form-main">
-                <div class="form-header">
-                    <h2>Let's get started</h2>
-                    <p class="form-subtitle">Tell us about yourself to personalize your interview</p>
-                </div>
-
                 <form id="candidateForm">
                     <div class="form-grid">
                         <!-- Track Selector -->
                         <div class="form-group full-width track-selector">
-                            <label>Interview Track</label>
+                            <div class="track-selector-label">Interview Track</div>
                             <div class="track-cards" id="trackCards">
                                 <div class="track-card selected" data-track="intro">
-                                    <div class="track-card-title">Intro Call</div>
-                                    <div class="track-card-desc">General background and experience</div>
+                                    <div class="track-card-accent"></div>
+                                    <div class="track-card-body">
+                                        <span class="track-card-title">Intro Call</span>
+                                        <span class="track-card-sep">—</span>
+                                        <span class="track-card-desc">General background, experience &amp; culture fit</span>
+                                    </div>
+                                    <div class="track-card-check">
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><polyline points="3,8 7,12 13,4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    </div>
                                 </div>
                                 <div class="track-card" data-track="behavioral">
-                                    <div class="track-card-title">Behavioral Interview</div>
-                                    <div class="track-card-desc">Past experiences and leadership principles</div>
+                                    <div class="track-card-accent"></div>
+                                    <div class="track-card-body">
+                                        <span class="track-card-title">Behavioral</span>
+                                        <span class="track-card-sep">—</span>
+                                        <span class="track-card-desc">Past experiences, leadership &amp; STAR-format questions</span>
+                                    </div>
+                                    <div class="track-card-check">
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><polyline points="3,8 7,12 13,4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    </div>
                                 </div>
                                 <div class="track-card" data-track="technical_voice">
-                                    <div class="track-card-title">Technical Voice</div>
-                                    <div class="track-card-desc">Conceptual tech questions by topic</div>
+                                    <div class="track-card-accent"></div>
+                                    <div class="track-card-body">
+                                        <span class="track-card-title">Technical Voice</span>
+                                        <span class="track-card-sep">—</span>
+                                        <span class="track-card-desc">Concept-deep questions on topics you choose</span>
+                                    </div>
+                                    <div class="track-card-check">
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><polyline points="3,8 7,12 13,4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    </div>
                                 </div>
                                 <div class="track-card" data-track="coding">
-                                    <div class="track-card-title">Technical Coding</div>
-                                    <div class="track-card-desc">Coding problems with Monaco editor</div>
+                                    <div class="track-card-accent"></div>
+                                    <div class="track-card-body">
+                                        <span class="track-card-title">Technical Coding</span>
+                                        <span class="track-card-sep">—</span>
+                                        <span class="track-card-desc">Live Monaco editor with LLM-generated coding problems</span>
+                                    </div>
+                                    <div class="track-card-check">
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><polyline points="3,8 7,12 13,4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    </div>
                                 </div>
                             </div>
+                            <div class="track-detail-box" id="trackDetailBox">
+                                <div class="track-detail-content" id="trackDetailContent"></div>
+                            </div>
+                            <input type="hidden" id="selectedTrack" name="selectedTrack" value="intro">
                         </div>
-                        <input type="hidden" id="selectedTrack" name="selectedTrack" value="intro">
 
                         <div class="form-group">
-                            <label for="name">Full Name</label>
+                            <label for="name">Full Name <span class="required-mark">*</span></label>
                             <input type="text" id="name" name="name" placeholder="Jane Smith" required class="form-input" autocomplete="name">
                         </div>
 
                         <div class="form-group">
-                            <label for="email">Email Address</label>
+                            <label for="email">Email Address <span class="required-mark">*</span></label>
                             <input type="email" id="email" name="email" placeholder="jane@example.com" required class="form-input" autocomplete="email">
                         </div>
 
                         <div class="form-group">
-                            <label for="role">Target Role</label>
+                            <label for="role">Target Role <span class="required-mark">*</span></label>
                             <input type="text" id="role" name="role" placeholder="Software Engineer, PM..." required class="form-input">
                         </div>
 
                         <div class="form-group">
-                            <label for="level">Experience Level</label>
+                            <label for="level">Experience Level <span class="required-mark">*</span></label>
                             <select id="level" name="level" required class="form-input">
                                 <option value="">Select level</option>
                                 <option value="entry">Entry (0-2 yrs)</option>
@@ -111,7 +137,7 @@
                             </select>
                         </div>
 
-                        <div class="section-divider">Optional Enhancements</div>
+                        <div class="form-section-label">Optional</div>
 
                         <!-- Behavioral Track Section -->
                         <div class="track-section" id="behavioralSection">
@@ -248,17 +274,6 @@
 
                     <input type="hidden" id="resumeCacheKey" name="resumeCacheKey" value="">
                 </form>
-
-                <div class="interview-info">
-                    <h3>What to expect</h3>
-                    <ul>
-                        <li><strong>Stage 1:</strong> Self-introduction (2-3 min)</li>
-                        <li><strong>Stage 2:</strong> Experience discussion (4-5 min)</li>
-                        <li><strong>Stage 3:</strong> Company fit (3-4 min)</li>
-                        <li>Speak naturally - real-time AI responses</li>
-                        <li>You can skip stages if needed</li>
-                    </ul>
-                </div>
             </div>
 
             <div class="form-sidebar">
@@ -283,6 +298,8 @@
                     </div>
                     <span class="btn-form-game-label">Begin Interview</span>
                 </button>
+
+                <p class="required-note"><span class="required-mark">*</span> Required fields</p>
 
                 <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(255, 152, 0, 0.1); border-left: 3px solid var(--warning); border-radius: 8px;">
                     <p style="font-size: 0.8125rem; line-height: 1.5; color: var(--text-secondary); margin: 0;">
@@ -342,6 +359,7 @@
             initInputValidation();
             initFileUpload();
             initTrackSelector();
+            applyTrackColors();
             initStarModal();
             initSuggestTopics();
             updateButtonState();
@@ -611,18 +629,48 @@
             var submitBtn = document.getElementById('submitBtn');
             var requiredInputs = form.querySelectorAll('.form-input[required]');
             var allFilled = true;
-            
+
             requiredInputs.forEach(function(input) {
                 if (!input.value.trim()) {
                     allFilled = false;
                 }
             });
-            
+
             if (allFilled) {
                 submitBtn.classList.add('active');
             } else {
                 submitBtn.classList.remove('active');
             }
+        }
+
+        var TRACK_COLORS = {
+            intro: '#22c55e',
+            behavioral: '#f59e0b',
+            technical_voice: '#3b82f6',
+            coding: '#8b5cf6'
+        };
+
+        var TRACK_DETAILS = {
+            intro: '5 stages · ~20 min · Self-intro \u2192 Experience \u2192 Company fit · Speak naturally, real-time AI responses · You can skip stages',
+            behavioral: '4 stages · ~25 min · STAR-format questions · Framework-aligned (Amazon / Google / Meta / Generic) · Follow-up depth configurable',
+            technical_voice: '5 stages · ~30 min · Concept-deep questions on selected topics · Resume-aware topic suggestions available',
+            coding: '5 stages · ~35 min · Live Monaco code editor · 1\u20132 LLM-generated problems · 15 min timer per problem · Up to 3 attempts · Code evaluated in real-time'
+        };
+
+        function updateTrackDetailBox(track) {
+            var box = document.getElementById('trackDetailBox');
+            var content = document.getElementById('trackDetailContent');
+            if (!box || !content) return;
+            content.textContent = TRACK_DETAILS[track] || '';
+            box.classList.add('visible');
+        }
+
+        function applyTrackColors() {
+            document.querySelectorAll('.track-card[data-track]').forEach(function(card) {
+                var track = card.getAttribute('data-track');
+                var color = TRACK_COLORS[track];
+                if (color) card.style.setProperty('--track-accent', color);
+            });
         }
 
         function initTrackSelector() {
@@ -633,10 +681,12 @@
                     card.classList.add('selected');
                     var track = card.getAttribute('data-track');
                     document.getElementById('selectedTrack').value = track;
+                    updateTrackDetailBox(track);
                     showTrackSection(track);
                     updateButtonState();
                 });
             });
+            updateTrackDetailBox('intro');
         }
 
         function showTrackSection(track) {

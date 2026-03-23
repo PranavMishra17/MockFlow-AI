@@ -831,27 +831,29 @@ select.form-input {
 
 .progress-stages {
     display: flex;
-    align-items: center;
+    flex-direction: row;
+    align-items: flex-start;
     justify-content: space-between;
     position: relative;
+    width: 100%;
 }
 
 .progress-line {
     position: absolute;
-    top: 50%;
+    top: 14px;
     left: 0;
     right: 0;
     height: 3px;
     background: var(--bg-soft);
-    transform: translateY(-50%);
+    transform: none;
     z-index: 0;
 }
 
 .progress-fill {
     height: 100%;
+    width: 0%;
     background: var(--accent-green-deep);
     transition: width 0.5s ease, background 0.5s ease;
-    width: 0%;
 }
 
 /* Stage-specific progress fill colors */

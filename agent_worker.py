@@ -1003,6 +1003,7 @@ async def run_interview():
         interview_state.uploaded_resume_text = resume_text
         interview_state.job_description = job_description
         interview_state.include_profile = include_profile
+        interview_state.track = track_type
 
         if track_type == 'intro':
             interview_state.transition_to(InterviewStage.WELCOME)
@@ -1270,8 +1271,10 @@ async def run_interview():
                 
                 from supabase_client import supabase_client
                 interview_id = supabase_client.save_interview(user_id, interview_data)
-                
+
                 if interview_id:
+                    interview_state._interview_id = interview_id
+                    interview_state._user_id = user_id
                     logger.info(f"[FINALIZE] Interview saved successfully: {interview_id}")
                     
                     data_payload = json_module.dumps({
@@ -1364,8 +1367,10 @@ async def run_interview():
                 
                 from supabase_client import supabase_client
                 interview_id = supabase_client.save_interview(user_id, interview_data)
-                
+
                 if interview_id:
+                    interview_state._interview_id = interview_id
+                    interview_state._user_id = user_id
                     logger.info(f"[HISTORY] Saved transcript on disconnect: {interview_id}")
                     try:
                         data_payload = json_module.dumps({
