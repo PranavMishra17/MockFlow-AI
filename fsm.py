@@ -10,7 +10,7 @@ Stage Flow: WELCOME -> SELF_INTRO -> PAST_EXPERIENCE -> COMPANY_FIT -> CLOSING
 from enum import Enum
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Any
 import logging
 
 logger = logging.getLogger(__name__)
@@ -469,3 +469,589 @@ class InterviewState:
             "has_job_description": bool(self.job_description),
             "include_profile": self.include_profile,
         }
+
+
+# ============================================================================
+# Multi-Track Interview System - New Stage Enums and State Classes
+# ============================================================================
+
+
+class BehavioralStage(Enum):
+    """Behavioral interview stages with STAR-based questioning."""
+    GREETING = "greeting"
+    SELF_INTRO = "self_intro"
+    BEHAVIORAL_Q1 = "behavioral_q1"
+    BEHAVIORAL_Q2 = "behavioral_q2"
+    BEHAVIORAL_Q3 = "behavioral_q3"
+    CLOSING = "closing"
+
+
+class TechnicalVoiceStage(Enum):
+    """Technical voice interview stages with concept-based discussion."""
+    GREETING = "greeting"
+    SELF_INTRO = "self_intro"
+    EXPERIENCE_DISCUSSION = "experience_discussion"
+    TECHNICAL_CONCEPTS_1 = "technical_concepts_1"
+    TECHNICAL_CONCEPTS_2 = "technical_concepts_2"
+    TECHNICAL_CONCEPTS_3 = "technical_concepts_3"
+    CLOSING = "closing"
+
+
+class CodingStage(Enum):
+    """Coding interview stages with problem-solving focus."""
+    GREETING = "greeting"
+    SELF_INTRO = "self_intro"
+    WARM_UP = "warm_up"
+    CODING_PROBLEM_1 = "coding_problem_1"
+    CODING_PROBLEM_2 = "coding_problem_2"
+    CLOSING = "closing"
+
+
+# Behavioral interview stage configurations
+BEHAVIORAL_STAGE_TIME_LIMITS = {
+    BehavioralStage.GREETING: 30,
+    BehavioralStage.SELF_INTRO: 120,
+    BehavioralStage.BEHAVIORAL_Q1: 300,
+    BehavioralStage.BEHAVIORAL_Q2: 300,
+    BehavioralStage.BEHAVIORAL_Q3: 300,
+    BehavioralStage.CLOSING: 45,
+}
+
+BEHAVIORAL_STAGE_MIN_QUESTIONS = {
+    'greeting': 0,
+    'self_intro': 1,
+    'behavioral_q1': 2,
+    'behavioral_q2': 2,
+    'behavioral_q3': 2,
+    'closing': 0,
+}
+
+# Technical voice interview stage configurations
+TECHNICAL_VOICE_STAGE_TIME_LIMITS = {
+    TechnicalVoiceStage.GREETING: 30,
+    TechnicalVoiceStage.SELF_INTRO: 120,
+    TechnicalVoiceStage.EXPERIENCE_DISCUSSION: 180,
+    TechnicalVoiceStage.TECHNICAL_CONCEPTS_1: 240,
+    TechnicalVoiceStage.TECHNICAL_CONCEPTS_2: 240,
+    TechnicalVoiceStage.TECHNICAL_CONCEPTS_3: 240,
+    TechnicalVoiceStage.CLOSING: 45,
+}
+
+TECHNICAL_VOICE_STAGE_MIN_QUESTIONS = {
+    'greeting': 0,
+    'self_intro': 1,
+    'experience_discussion': 2,
+    'technical_concepts_1': 2,
+    'technical_concepts_2': 2,
+    'technical_concepts_3': 2,
+    'closing': 0,
+}
+
+
+@dataclass
+class BehavioralInterviewState(InterviewState):
+    """
+    State management for behavioral interviews with STAR framework.
+
+    Supports dynamic question count (2 or 3 behavioral questions) and
+    multiple competency frameworks (Amazon, Google, Meta, Generic).
+    """
+
+    # Override stage with behavioral default
+    stage: Any = field(default=BehavioralStage.GREETING)
+
+    # Track type identifier
+    track_type: str = "behavioral"
+
+    # Framework selection
+    framework: str = "amazon"  # amazon|google|meta|generic
+
+    # Depth setting for follow-up questions
+    depth_setting: str = "medium"  # light|medium|deep
+
+    # Custom questions provided by user
+    custom_questions: List[str] = field(default_factory=list)
+
+    # LLM-generated questions with metadata
+    generated_questions: List[dict] = field(default_factory=list)
+
+    # Active question count (determines stage sequence)
+    active_question_count: int = 2
+
+    # Current question index
+    current_question_index: int = 0
+
+    # Per-question STAR assessments
+    question_assessments: List[dict] = field(default_factory=list)
+
+    # Override pending transition to allow any stage type
+    pending_transition: Optional[Any] = None
+
+    # Override skip queue to allow any stage type
+    skip_stage_queue: List = field(default_factory=list)
+
+    def get_active_stages(self) -> List[BehavioralStage]:
+        """
+        Get the active stage sequence based on question count.
+
+        Returns:
+            List of active BehavioralStage enums in order
+        """
+        base_stages = [
+            BehavioralStage.GREETING,
+            BehavioralStage.SELF_INTRO,
+            BehavioralStage.BEHAVIORAL_Q1,
+            BehavioralStage.BEHAVIORAL_Q2,
+        ]
+
+        if self.active_question_count >= 3:
+            base_stages.append(BehavioralStage.BEHAVIORAL_Q3)
+
+        base_stages.append(BehavioralStage.CLOSING)
+
+        logger.debug(f"[FSM] Behavioral active stages: {[s.value for s in base_stages]}")
+        return base_stages
+
+    def get_next_behavioral_stage(self) -> Optional[BehavioralStage]:
+        """
+        Get the next stage in behavioral interview flow.
+
+        Returns:
+            Next BehavioralStage, or None if at CLOSING
+        """
+        active_stages = self.get_active_stages()
+
+        try:
+            current_index = active_stages.index(self.stage)
+            if current_index < len(active_stages) - 1:
+                next_stage = active_stages[current_index + 1]
+                logger.debug(f"[FSM] Next behavioral stage: {self.stage.value} -> {next_stage.value}")
+                return next_stage
+        except (ValueError, AttributeError):
+            logger.warning(f"[FSM] Current stage {self.stage} not in active stages")
+
+        return None
+
+    def get_stage_time_limit(self) -> float:
+        """Get the time limit for current stage in seconds."""
+        if isinstance(self.stage, BehavioralStage):
+            limit = BEHAVIORAL_STAGE_TIME_LIMITS.get(self.stage, 300)
+            logger.debug(f"[FSM] Behavioral stage {self.stage.value} time limit: {limit}s")
+            return limit
+        return super().get_stage_time_limit()
+
+    def get_question_status(self) -> dict:
+        """
+        Get question count status for current stage.
+
+        Returns:
+            Dict with asked, minimum, met_minimum, remaining_to_min
+        """
+        if isinstance(self.stage, BehavioralStage):
+            stage_key = self.stage.value
+            asked = self.questions_per_stage.get(stage_key, 0)
+            minimum = BEHAVIORAL_STAGE_MIN_QUESTIONS.get(stage_key, 0)
+
+            return {
+                'asked': asked,
+                'minimum': minimum,
+                'met_minimum': asked >= minimum,
+                'remaining_to_min': max(0, minimum - asked)
+            }
+        return super().get_question_status()
+
+    def get_document_context(self, stage: Optional[Any] = None) -> str:
+        """
+        Get formatted document context for agent prompt injection.
+
+        Behavioral stages: Inject resume and JD for all question stages.
+
+        Args:
+            stage: The interview stage to get context for
+
+        Returns:
+            Formatted string with stage-appropriate document highlights
+        """
+        if not self.include_profile:
+            return ""
+
+        context_parts = []
+
+        # Check if this is a behavioral question stage
+        is_question_stage = False
+        if isinstance(stage, BehavioralStage):
+            is_question_stage = stage in [
+                BehavioralStage.BEHAVIORAL_Q1,
+                BehavioralStage.BEHAVIORAL_Q2,
+                BehavioralStage.BEHAVIORAL_Q3
+            ]
+
+        if is_question_stage:
+            # Resume context for behavioral questions
+            if self.uploaded_resume_text:
+                resume_snippet = self.uploaded_resume_text[:1500]
+                if len(self.uploaded_resume_text) > 1500:
+                    resume_snippet += "..."
+                context_parts.append(
+                    f"CANDIDATE RESUME HIGHLIGHTS:\n{resume_snippet}\n\n"
+                    f"INSTRUCTION: Use the resume to identify relevant experiences "
+                    f"for behavioral questions. Reference specific projects and roles."
+                )
+
+            # Job description context for behavioral questions
+            if self.job_description:
+                jd_snippet = self.job_description[:1000]
+                if len(self.job_description) > 1000:
+                    jd_snippet += "..."
+                context_parts.append(
+                    f"JOB DESCRIPTION:\n{jd_snippet}\n\n"
+                    f"INSTRUCTION: Align behavioral questions with role requirements "
+                    f"and competencies needed for this position."
+                )
+
+        if context_parts:
+            return "\n\n".join(context_parts)
+
+        return ""
+
+
+@dataclass
+class TechnicalVoiceInterviewState(InterviewState):
+    """
+    State management for technical voice interviews.
+
+    Supports dynamic topic count (1-3 technical concept stages) and
+    custom topic selection.
+    """
+
+    # Override stage with technical default
+    stage: Any = field(default=TechnicalVoiceStage.GREETING)
+
+    # Track type identifier
+    track_type: str = "technical_voice"
+
+    # Selected topics for discussion
+    selected_topics: List[str] = field(default_factory=list)
+
+    # Custom topics provided by user
+    custom_topics: List[str] = field(default_factory=list)
+
+    # Active topic count (determines stage sequence)
+    active_topic_count: int = 1
+
+    # Per-topic assessments
+    topic_assessments: List[dict] = field(default_factory=list)
+
+    # Override pending transition to allow any stage type
+    pending_transition: Optional[Any] = None
+
+    # Override skip queue to allow any stage type
+    skip_stage_queue: List = field(default_factory=list)
+
+    def get_active_stages(self) -> List[TechnicalVoiceStage]:
+        """
+        Get the active stage sequence based on topic count.
+
+        Returns:
+            List of active TechnicalVoiceStage enums in order
+        """
+        stages = [
+            TechnicalVoiceStage.GREETING,
+            TechnicalVoiceStage.SELF_INTRO,
+            TechnicalVoiceStage.EXPERIENCE_DISCUSSION,
+            TechnicalVoiceStage.TECHNICAL_CONCEPTS_1,
+        ]
+
+        if self.active_topic_count >= 2:
+            stages.append(TechnicalVoiceStage.TECHNICAL_CONCEPTS_2)
+
+        if self.active_topic_count >= 3:
+            stages.append(TechnicalVoiceStage.TECHNICAL_CONCEPTS_3)
+
+        stages.append(TechnicalVoiceStage.CLOSING)
+
+        logger.debug(f"[FSM] Technical voice active stages: {[s.value for s in stages]}")
+        return stages
+
+    def get_next_technical_voice_stage(self) -> Optional[TechnicalVoiceStage]:
+        """
+        Get the next stage in technical voice interview flow.
+
+        Returns:
+            Next TechnicalVoiceStage, or None if at CLOSING
+        """
+        active_stages = self.get_active_stages()
+
+        try:
+            current_index = active_stages.index(self.stage)
+            if current_index < len(active_stages) - 1:
+                next_stage = active_stages[current_index + 1]
+                logger.debug(f"[FSM] Next technical stage: {self.stage.value} -> {next_stage.value}")
+                return next_stage
+        except (ValueError, AttributeError):
+            logger.warning(f"[FSM] Current stage {self.stage} not in active stages")
+
+        return None
+
+    def get_stage_time_limit(self) -> float:
+        """Get the time limit for current stage in seconds."""
+        if isinstance(self.stage, TechnicalVoiceStage):
+            limit = TECHNICAL_VOICE_STAGE_TIME_LIMITS.get(self.stage, 240)
+            logger.debug(f"[FSM] Technical stage {self.stage.value} time limit: {limit}s")
+            return limit
+        return super().get_stage_time_limit()
+
+    def get_question_status(self) -> dict:
+        """
+        Get question count status for current stage.
+
+        Returns:
+            Dict with asked, minimum, met_minimum, remaining_to_min
+        """
+        if isinstance(self.stage, TechnicalVoiceStage):
+            stage_key = self.stage.value
+            asked = self.questions_per_stage.get(stage_key, 0)
+            minimum = TECHNICAL_VOICE_STAGE_MIN_QUESTIONS.get(stage_key, 0)
+
+            return {
+                'asked': asked,
+                'minimum': minimum,
+                'met_minimum': asked >= minimum,
+                'remaining_to_min': max(0, minimum - asked)
+            }
+        return super().get_question_status()
+
+    def get_document_context(self, stage: Optional[Any] = None) -> str:
+        """
+        Get formatted document context for agent prompt injection.
+
+        Technical stages: Inject resume and JD for experience and concept stages.
+
+        Args:
+            stage: The interview stage to get context for
+
+        Returns:
+            Formatted string with stage-appropriate document highlights
+        """
+        if not self.include_profile:
+            return ""
+
+        context_parts = []
+
+        # Check if this is a technical discussion stage
+        is_technical_stage = False
+        if isinstance(stage, TechnicalVoiceStage):
+            is_technical_stage = stage in [
+                TechnicalVoiceStage.EXPERIENCE_DISCUSSION,
+                TechnicalVoiceStage.TECHNICAL_CONCEPTS_1,
+                TechnicalVoiceStage.TECHNICAL_CONCEPTS_2,
+                TechnicalVoiceStage.TECHNICAL_CONCEPTS_3
+            ]
+
+        if is_technical_stage:
+            # Resume context for technical stages
+            if self.uploaded_resume_text:
+                resume_snippet = self.uploaded_resume_text[:1500]
+                if len(self.uploaded_resume_text) > 1500:
+                    resume_snippet += "..."
+                context_parts.append(
+                    f"CANDIDATE RESUME HIGHLIGHTS:\n{resume_snippet}\n\n"
+                    f"INSTRUCTION: Reference technical skills, projects, and experience "
+                    f"from the resume when discussing concepts and asking follow-ups."
+                )
+
+            # Job description context for technical stages
+            if self.job_description:
+                jd_snippet = self.job_description[:1000]
+                if len(self.job_description) > 1000:
+                    jd_snippet += "..."
+                context_parts.append(
+                    f"JOB DESCRIPTION:\n{jd_snippet}\n\n"
+                    f"INSTRUCTION: Align technical discussions with role requirements "
+                    f"and technologies mentioned in the job description."
+                )
+
+        if context_parts:
+            return "\n\n".join(context_parts)
+
+        return ""
+
+
+# ============================================================================
+# Coding Track - Stage Configuration
+# ============================================================================
+
+CODING_STAGE_TIME_LIMITS = {
+    CodingStage.GREETING: 30,
+    CodingStage.SELF_INTRO: 120,
+    CodingStage.WARM_UP: 300,
+    CodingStage.CODING_PROBLEM_1: 900,
+    CodingStage.CODING_PROBLEM_2: 900,
+    CodingStage.CLOSING: 45,
+}
+
+CODING_STAGE_MIN_QUESTIONS = {
+    'greeting': 0,
+    'self_intro': 1,
+    'warm_up': 2,
+    'coding_problem_1': 0,
+    'coding_problem_2': 0,
+    'closing': 0,
+}
+
+
+@dataclass
+class CodingInterviewState(InterviewState):
+    """
+    State management for coding interviews with Monaco editor integration.
+
+    Supports dynamic problem count (1 or 2 problems) and tracks code
+    submissions per problem with retry limits.
+    """
+
+    # Override stage with coding default
+    stage: Any = field(default=CodingStage.GREETING)
+
+    # Track type identifier
+    track_type: str = "coding"
+
+    # Candidate's preferred language (set from form, confirmed during self-intro)
+    preferred_language: str = "python"  # python|javascript|java|cpp|go
+
+    # Number of coding problems to present (1 or 2)
+    active_problem_count: int = 2
+
+    # LLM-generated problems: [{title, description, examples, constraints, difficulty, time_limit_minutes, hints}]
+    generated_problems: List[dict] = field(default_factory=list)
+
+    # Which problem we're currently on (0-based index)
+    current_problem_index: int = 0
+
+    # All code submissions: [{problem_index, attempt, code, language, evaluation, timestamp}]
+    submissions: List[dict] = field(default_factory=list)
+
+    # Submission count per problem: {problem_index_str: attempt_count}
+    submissions_per_problem: dict = field(default_factory=dict)
+
+    # When each problem was started: {problem_index_str: ISO timestamp string}
+    problem_start_times: dict = field(default_factory=dict)
+
+    # True when agent should stay silent (user is actively coding)
+    coding_stage_active: bool = False
+
+    # Track skipped problems
+    skipped_problems: List[int] = field(default_factory=list)
+
+    def get_active_stages(self) -> list:
+        """
+        Return the active stage sequence based on active_problem_count.
+
+        Returns:
+            List of CodingStage members in order
+        """
+        base = [CodingStage.GREETING, CodingStage.SELF_INTRO, CodingStage.WARM_UP]
+        problems = [CodingStage.CODING_PROBLEM_1]
+        if self.active_problem_count >= 2:
+            problems.append(CodingStage.CODING_PROBLEM_2)
+        return base + problems + [CodingStage.CLOSING]
+
+    def get_next_coding_stage(self) -> Optional[CodingStage]:
+        """
+        Get next stage in the coding interview flow, skipping inactive problem stages.
+
+        Returns:
+            Next CodingStage or None if at CLOSING
+        """
+        active = self.get_active_stages()
+        if self.stage not in active:
+            logger.warning(f"[FSM] Current coding stage {self.stage} not in active stages")
+            return None
+
+        current_idx = active.index(self.stage)
+        if current_idx + 1 < len(active):
+            return active[current_idx + 1]
+        return None
+
+    def get_attempts_for_problem(self, problem_index: int) -> int:
+        """
+        Return how many submissions have been made for a given problem.
+
+        Args:
+            problem_index: 0-based problem index
+
+        Returns:
+            Number of submissions attempted
+        """
+        return self.submissions_per_problem.get(str(problem_index), 0)
+
+    def record_submission(self, problem_index: int, code: str, language: str, evaluation: dict) -> int:
+        """
+        Record a code submission for a problem.
+
+        Args:
+            problem_index: 0-based problem index
+            code: Submitted code string
+            language: Programming language used
+            evaluation: Evaluation result dict from code evaluator
+
+        Returns:
+            Attempt number (1-based)
+        """
+        from datetime import datetime
+        key = str(problem_index)
+        attempt = self.submissions_per_problem.get(key, 0) + 1
+        self.submissions_per_problem[key] = attempt
+
+        self.submissions.append({
+            'problem_index': problem_index,
+            'attempt': attempt,
+            'code': code,
+            'language': language,
+            'evaluation': evaluation,
+            'timestamp': datetime.now().isoformat(),
+        })
+        logger.info(f"[FSM] Recorded submission for problem {problem_index}, attempt {attempt}")
+        return attempt
+
+    def get_stage_time_limit(self) -> float:
+        """Override to use coding-specific time limits."""
+        if isinstance(self.stage, CodingStage):
+            return CODING_STAGE_TIME_LIMITS.get(self.stage, 600)
+        return super().get_stage_time_limit()
+
+    def get_question_status(self) -> dict:
+        """Override to use coding-specific min questions."""
+        stage_key = self.stage.value if hasattr(self.stage, 'value') else str(self.stage)
+        asked = self.questions_per_stage.get(stage_key, 0)
+        minimum = CODING_STAGE_MIN_QUESTIONS.get(stage_key, 0)
+        return {
+            'asked': asked,
+            'minimum': minimum,
+            'met_minimum': asked >= minimum,
+            'remaining_to_min': max(0, minimum - asked),
+        }
+
+    def get_document_context(self, stage: Optional[Any] = None) -> str:
+        """
+        Inject resume context only for WARM_UP stage.
+        No document context during coding problem stages.
+        """
+        if not self.include_profile:
+            return ""
+
+        context_parts = []
+
+        if stage == CodingStage.WARM_UP:
+            if self.uploaded_resume_text:
+                snippet = self.uploaded_resume_text[:1500]
+                if len(self.uploaded_resume_text) > 1500:
+                    snippet += "..."
+                context_parts.append(
+                    f"CANDIDATE RESUME HIGHLIGHTS:\n{snippet}\n\n"
+                    f"INSTRUCTION: Reference their programming experience and projects "
+                    f"when discussing warm-up topics and confirming language preference."
+                )
+
+        if context_parts:
+            return "\n\n".join(context_parts)
+        return ""

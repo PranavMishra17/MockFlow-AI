@@ -251,3 +251,151 @@
     padding: 0.625rem 1.25rem;
     font-size: 0.875rem;
 }
+
+/* ============================================================
+   Coding Track - Split Layout & Monaco Editor
+   ============================================================ */
+
+/* 3-column layout for coding track */
+.interview-main.coding-mode {
+    grid-template-columns: 1fr 2fr 1fr;
+    gap: 1rem;
+    align-items: start;
+}
+
+/* Code editor panel */
+.code-editor-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    height: 100%;
+    min-height: 400px;
+    background: var(--bg-card);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    box-shadow: var(--shadow-soft);
+    overflow: hidden;
+}
+
+/* Problem statement */
+.problem-display {
+    overflow-y: auto;
+    max-height: 180px;
+    border-bottom: 1px solid var(--bg-soft);
+    padding-bottom: 0.5rem;
+}
+
+.problem-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.problem-title {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--text-primary);
+}
+
+.problem-difficulty {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.125rem 0.5rem;
+    border-radius: var(--radius-full);
+    background: var(--bg-soft);
+    color: var(--text-muted);
+}
+
+.problem-description,
+.problem-examples,
+.problem-constraints {
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    margin-top: 0.375rem;
+}
+
+.problem-examples pre,
+.problem-constraints pre {
+    background: var(--bg-soft);
+    padding: 0.5rem;
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    overflow-x: auto;
+}
+
+/* Editor toolbar */
+.editor-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+/* Per-problem countdown timer */
+.problem-timer {
+    font-size: 1.125rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-primary);
+    letter-spacing: 0.05em;
+}
+
+.problem-timer.warning {
+    color: var(--warning);
+}
+
+.problem-timer.critical {
+    color: var(--error);
+}
+
+/* Attempt counter */
+.attempt-counter {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+    margin-left: auto;
+}
+
+/* Submit / Skip buttons */
+.editor-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+}
+
+/* Evaluation result overlay */
+.evaluation-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-card);
+    border-top: 2px solid var(--bg-soft);
+    padding: 0.75rem 1rem;
+    font-size: 0.8125rem;
+    animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+}
+
+/* Responsive: stack on smaller screens */
+@media (max-width: 1200px) {
+    .interview-main.coding-mode {
+        grid-template-columns: 1fr 1.5fr;
+    }
+    .candidate-side {
+        display: none;
+    }
+}
+
+@media (max-width: 900px) {
+    .interview-main.coding-mode {
+        grid-template-columns: 1fr;
+    }
+    .code-editor-panel {
+        min-height: 300px;
+    }
+}

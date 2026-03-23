@@ -586,16 +586,18 @@ Return ONLY valid JSON following the schema specified."""
 def build_stage_instructions(stage: InterviewStage) -> str:
     """
     Build complete stage instructions by combining modular components.
-    
+
     Args:
         stage: The interview stage
-        
+
     Returns:
         Complete instruction string for the stage
     """
+    from fsm import BehavioralStage, TechnicalVoiceStage, CodingStage
+
     if stage == InterviewStage.WELCOME:
         return WELCOME.greeting
-    
+
     elif stage == InterviewStage.SELF_INTRO:
         parts = [
             SELF_INTRO.conversation,
@@ -606,7 +608,7 @@ def build_stage_instructions(stage: InterviewStage) -> str:
             SELF_INTRO.transition,
         ]
         return "\n".join(parts)
-    
+
     elif stage == InterviewStage.PAST_EXPERIENCE:
         parts = [
             PAST_EXPERIENCE.conversation,
@@ -616,7 +618,7 @@ def build_stage_instructions(stage: InterviewStage) -> str:
             PAST_EXPERIENCE.transition,
         ]
         return "\n".join(parts)
-    
+
     elif stage == InterviewStage.COMPANY_FIT:
         parts = [
             COMPANY_FIT.conversation,
@@ -627,26 +629,74 @@ def build_stage_instructions(stage: InterviewStage) -> str:
             COMPANY_FIT.transition,
         ]
         return "\n".join(parts)
-    
+
     elif stage == InterviewStage.CLOSING:
         return CLOSING.conversation
-    
-    else:
-        return ""
+
+    # Behavioral track stages
+    elif hasattr(stage, 'value'):
+        stage_val = stage.value
+
+        if stage_val == 'greeting':
+            # Both behavioral and technical voice have greeting
+            if isinstance(stage, BehavioralStage):
+                return BEHAVIORAL_GREETING.instruction
+            elif isinstance(stage, TechnicalVoiceStage):
+                return TECHNICAL_VOICE_GREETING.instruction
+
+        elif stage_val == 'self_intro' and isinstance(stage, BehavioralStage):
+            return "\n".join([BEHAVIORAL_SELF_INTRO.conversation, BEHAVIORAL_SELF_INTRO.style, BEHAVIORAL_SELF_INTRO.rules, BEHAVIORAL_SELF_INTRO.transition])
+
+        elif stage_val == 'self_intro' and isinstance(stage, TechnicalVoiceStage):
+            return "\n".join([TECHNICAL_VOICE_SELF_INTRO.conversation, TECHNICAL_VOICE_SELF_INTRO.transition])
+
+        elif stage_val in ('behavioral_q1', 'behavioral_q2', 'behavioral_q3'):
+            return BEHAVIORAL_QUESTION_STAGE.conversation
+
+        elif stage_val == 'experience_discussion':
+            return "\n".join([TECHNICAL_VOICE_EXPERIENCE_DISCUSSION.conversation, TECHNICAL_VOICE_EXPERIENCE_DISCUSSION.rules, TECHNICAL_VOICE_EXPERIENCE_DISCUSSION.transition])
+
+        elif stage_val in ('technical_concepts_1', 'technical_concepts_2', 'technical_concepts_3'):
+            return TECHNICAL_VOICE_CONCEPTS_STAGE.conversation
+
+        elif stage_val == 'closing' and isinstance(stage, BehavioralStage):
+            return BEHAVIORAL_CLOSING.conversation
+
+        elif stage_val == 'closing' and isinstance(stage, TechnicalVoiceStage):
+            return TECHNICAL_VOICE_CLOSING.conversation
+
+    # Coding track stages
+    if isinstance(stage, CodingStage):
+        stage_val = stage.value
+
+        if stage_val == 'greeting':
+            return CODING_GREETING.instruction
+        elif stage_val == 'self_intro':
+            return "\n".join([CODING_SELF_INTRO.conversation, CODING_SELF_INTRO.transition])
+        elif stage_val == 'warm_up':
+            return "\n".join([CODING_WARM_UP.conversation, CODING_WARM_UP.transition])
+        elif stage_val in ('coding_problem_1', 'coding_problem_2'):
+            return CODING_PROBLEM_STAGE.conversation  # caller fills {placeholders}
+        elif stage_val == 'closing':
+            return CODING_CLOSING.conversation
+
+    return ""
 
 
 def get_transition_ack(stage: InterviewStage, candidate_name: str, job_role: str = "this position") -> str:
     """
     Get transition acknowledgement message for a stage.
-    
+
     Args:
         stage: The target stage
         candidate_name: Candidate's name
         job_role: Job role description
-        
+
     Returns:
         Formatted acknowledgement message
     """
+    from fsm import BehavioralStage, TechnicalVoiceStage, CodingStage
+
     if stage == InterviewStage.SELF_INTRO:
         return TRANSITION_ACKS.to_self_intro.replace("[CANDIDATE_NAME]", candidate_name)
     elif stage == InterviewStage.PAST_EXPERIENCE:
@@ -655,20 +705,65 @@ def get_transition_ack(stage: InterviewStage, candidate_name: str, job_role: str
         return TRANSITION_ACKS.to_company_fit.replace("[CANDIDATE_NAME]", candidate_name)
     elif stage == InterviewStage.CLOSING:
         return TRANSITION_ACKS.to_closing.replace("[CANDIDATE_NAME]", candidate_name)
+
+    # Behavioral track stages
+    elif isinstance(stage, BehavioralStage):
+        if stage.value == 'self_intro':
+            return BEHAVIORAL_TRANSITION_ACKS.to_self_intro.replace("[CANDIDATE_NAME]", candidate_name)
+        elif stage.value == 'behavioral_q1':
+            return BEHAVIORAL_TRANSITION_ACKS.to_behavioral_q1.replace("[CANDIDATE_NAME]", candidate_name)
+        elif stage.value == 'behavioral_q2':
+            return BEHAVIORAL_TRANSITION_ACKS.to_behavioral_q2.replace("[CANDIDATE_NAME]", candidate_name)
+        elif stage.value == 'behavioral_q3':
+            return BEHAVIORAL_TRANSITION_ACKS.to_behavioral_q3.replace("[CANDIDATE_NAME]", candidate_name)
+        elif stage.value == 'closing':
+            return BEHAVIORAL_TRANSITION_ACKS.to_closing.replace("[CANDIDATE_NAME]", candidate_name)
+
+    # Technical voice track stages
+    elif isinstance(stage, TechnicalVoiceStage):
+        if stage.value == 'self_intro':
+            return TECHNICAL_VOICE_TRANSITION_ACKS.to_self_intro.replace("[CANDIDATE_NAME]", candidate_name)
+        elif stage.value == 'experience_discussion':
+            return TECHNICAL_VOICE_TRANSITION_ACKS.to_experience_discussion.replace("[CANDIDATE_NAME]", candidate_name)
+        elif stage.value == 'technical_concepts_1':
+            return TECHNICAL_VOICE_TRANSITION_ACKS.to_technical_concepts_1.replace("[CANDIDATE_NAME]", candidate_name)
+        elif stage.value == 'technical_concepts_2':
+            return TECHNICAL_VOICE_TRANSITION_ACKS.to_technical_concepts_2.replace("[CANDIDATE_NAME]", candidate_name)
+        elif stage.value == 'technical_concepts_3':
+            return TECHNICAL_VOICE_TRANSITION_ACKS.to_technical_concepts_3.replace("[CANDIDATE_NAME]", candidate_name)
+        elif stage.value == 'closing':
+            return TECHNICAL_VOICE_TRANSITION_ACKS.to_closing.replace("[CANDIDATE_NAME]", candidate_name)
+
+    # Coding track stages
+    elif isinstance(stage, CodingStage):
+        name = candidate_name
+        if stage.value == 'self_intro':
+            return CODING_TRANSITION_ACKS.to_self_intro.replace('[CANDIDATE_NAME]', name)
+        elif stage.value == 'warm_up':
+            return CODING_TRANSITION_ACKS.to_warm_up.replace('[CANDIDATE_NAME]', name)
+        elif stage.value == 'coding_problem_1':
+            return CODING_TRANSITION_ACKS.to_coding_problem_1.replace('[CANDIDATE_NAME]', name)
+        elif stage.value == 'coding_problem_2':
+            return CODING_TRANSITION_ACKS.to_coding_problem_2.replace('[CANDIDATE_NAME]', name)
+        elif stage.value == 'closing':
+            return CODING_TRANSITION_ACKS.to_closing.replace('[CANDIDATE_NAME]', name)
+
     return ""
 
 
 def get_fallback_ack(stage: InterviewStage, candidate_name: str) -> str:
     """
     Get fallback acknowledgement message for a stage.
-    
+
     Args:
         stage: The target stage
         candidate_name: Candidate's name
-        
+
     Returns:
         Formatted fallback acknowledgement message
     """
+    from fsm import BehavioralStage, TechnicalVoiceStage, CodingStage
+
     if stage == InterviewStage.SELF_INTRO:
         return FALLBACK_ACKS.to_self_intro.replace("[CANDIDATE_NAME]", candidate_name)
     elif stage == InterviewStage.PAST_EXPERIENCE:
@@ -677,6 +772,49 @@ def get_fallback_ack(stage: InterviewStage, candidate_name: str) -> str:
         return FALLBACK_ACKS.to_company_fit.replace("[CANDIDATE_NAME]", candidate_name)
     elif stage == InterviewStage.CLOSING:
         return FALLBACK_ACKS.to_closing.replace("[CANDIDATE_NAME]", candidate_name)
+
+    # Behavioral track stages
+    elif isinstance(stage, BehavioralStage):
+        if stage.value == 'self_intro':
+            return BEHAVIORAL_FALLBACK_ACKS.to_self_intro.replace("[CANDIDATE_NAME]", candidate_name)
+        elif stage.value == 'behavioral_q1':
+            return BEHAVIORAL_FALLBACK_ACKS.to_behavioral_q1.replace("[CANDIDATE_NAME]", candidate_name)
+        elif stage.value == 'behavioral_q2':
+            return BEHAVIORAL_FALLBACK_ACKS.to_behavioral_q2.replace("[CANDIDATE_NAME]", candidate_name)
+        elif stage.value == 'behavioral_q3':
+            return BEHAVIORAL_FALLBACK_ACKS.to_behavioral_q3.replace("[CANDIDATE_NAME]", candidate_name)
+        elif stage.value == 'closing':
+            return BEHAVIORAL_FALLBACK_ACKS.to_closing.replace("[CANDIDATE_NAME]", candidate_name)
+
+    # Technical voice track stages
+    elif isinstance(stage, TechnicalVoiceStage):
+        if stage.value == 'self_intro':
+            return TECHNICAL_VOICE_FALLBACK_ACKS.to_self_intro.replace("[CANDIDATE_NAME]", candidate_name)
+        elif stage.value == 'experience_discussion':
+            return TECHNICAL_VOICE_FALLBACK_ACKS.to_experience_discussion.replace("[CANDIDATE_NAME]", candidate_name)
+        elif stage.value == 'technical_concepts_1':
+            return TECHNICAL_VOICE_FALLBACK_ACKS.to_technical_concepts_1.replace("[CANDIDATE_NAME]", candidate_name)
+        elif stage.value == 'technical_concepts_2':
+            return TECHNICAL_VOICE_FALLBACK_ACKS.to_technical_concepts_2.replace("[CANDIDATE_NAME]", candidate_name)
+        elif stage.value == 'technical_concepts_3':
+            return TECHNICAL_VOICE_FALLBACK_ACKS.to_technical_concepts_3.replace("[CANDIDATE_NAME]", candidate_name)
+        elif stage.value == 'closing':
+            return TECHNICAL_VOICE_FALLBACK_ACKS.to_closing.replace("[CANDIDATE_NAME]", candidate_name)
+
+    # Coding track stages
+    elif isinstance(stage, CodingStage):
+        name = candidate_name
+        if stage.value == 'self_intro':
+            return CODING_FALLBACK_ACKS.to_self_intro.replace('[CANDIDATE_NAME]', name)
+        elif stage.value == 'warm_up':
+            return CODING_FALLBACK_ACKS.to_warm_up.replace('[CANDIDATE_NAME]', name)
+        elif stage.value == 'coding_problem_1':
+            return CODING_FALLBACK_ACKS.to_coding_problem_1.replace('[CANDIDATE_NAME]', name)
+        elif stage.value == 'coding_problem_2':
+            return CODING_FALLBACK_ACKS.to_coding_problem_2.replace('[CANDIDATE_NAME]', name)
+        elif stage.value == 'closing':
+            return CODING_FALLBACK_ACKS.to_closing.replace('[CANDIDATE_NAME]', name)
+
     return ""
 
 
@@ -736,4 +874,692 @@ def build_post_interview_feedback_prompt() -> str:
         POSTINTERVIEWFEEDBACK.output_format,
     ]
     return "\n".join(parts)
+
+
+# ==================== BEHAVIORAL TRACK ====================
+
+class BEHAVIORAL_GREETING:
+    """Greeting stage for behavioral interview track."""
+
+    instruction = """You are a friendly interviewer named Alex conducting a behavioral mock interview.
+
+The welcome audio has just played. Now:
+1. Briefly greet the candidate by name and confirm their readiness
+2. Say something like: "Great to have you here, [CANDIDATE_NAME]. Are you ready to begin?"
+3. Once they confirm, call transition_stage with reason "greeting complete"
+
+Keep this extremely brief. Do not re-explain the interview format.
+"""
+
+
+class BEHAVIORAL_SELF_INTRO:
+    """Self-intro stage for behavioral interview track."""
+
+    conversation = """You are in the self-introduction phase of a behavioral interview.
+
+Your task:
+1. Ask the candidate to briefly introduce themselves and their background
+2. Listen and ask 1-2 natural follow-ups about their experience relevant to [ROLE]
+3. Call assess_response after they respond
+4. Call ask_question before asking ANY question
+"""
+
+    style = """
+STYLE:
+- Keep follow-ups short: "What draws you to behavioral-style interviews?" or "Tell me more about your current role?"
+- Do NOT ask technical questions here
+- Do NOT mention STAR method yet
+"""
+
+    rules = """
+RULES:
+- assess_response after every response
+- ask_question before every question
+- 1 question minimum, then transition when ready
+"""
+
+    transition = "TRANSITION: Once you have a sense of their background, call transition_stage."
+
+
+class BEHAVIORAL_QUESTION_STAGE:
+    """Used for BEHAVIORAL_Q1, BEHAVIORAL_Q2, BEHAVIORAL_Q3 stages."""
+
+    conversation = """You are conducting behavioral question {question_index} of {total_questions} in a behavioral interview.
+
+CURRENT QUESTION TO ASK:
+"{question_text}"
+
+This question targets the competency: {competency}
+
+Your task:
+1. Ask the question naturally (rephrase if needed, but keep the core intent)
+2. Listen to their response and probe using the STAR framework (Situation, Task, Action, Result)
+3. Follow-up depth setting: {depth_setting}
+   - light: 1 follow-up maximum
+   - medium: 1-2 follow-ups, probing for missing STAR elements
+   - deep: 2-3 follow-ups, deeply probe Situation, Action taken, and measurable Results
+4. Call assess_response after each response with STAR adherence scoring
+5. Call ask_question before every question
+
+[DOCUMENT_CONTEXT]
+
+STAR PROBING GUIDE:
+- Missing Situation: "Can you give me more context about the situation?"
+- Missing Task: "What exactly was your responsibility in that scenario?"
+- Missing Action: "Walk me through specifically what YOU did."
+- Missing Result: "What was the outcome? Any metrics or concrete impact?"
+
+TRANSITION: When depth is sufficient (based on depth_setting) OR time is running low, call transition_stage.
+"""
+
+    document_context_placeholder = "[DOCUMENT_CONTEXT]"
+
+    rules = """
+RULES:
+- assess_response after every response
+- ask_question before every question
+- Do NOT move on until depth_setting is satisfied
+- Never mention "STAR" explicitly to the candidate
+"""
+
+
+class BEHAVIORAL_CLOSING:
+    """Closing stage for behavioral interview track."""
+
+    conversation = """You are wrapping up a behavioral mock interview.
+
+Tasks:
+- Thank the candidate sincerely
+- Make 1-2 brief, positive generic observations (no detailed scores)
+- Mention that detailed feedback will be available on the platform
+- Say a warm goodbye
+
+Keep it under 30 seconds. Do NOT ask new questions.
+
+Example: "Thank you so much for your time today, [CANDIDATE_NAME]. You shared some great stories about your experience. Detailed feedback will be available shortly on your dashboard. Best of luck!"
+"""
+
+
+# ==================== TECHNICAL VOICE TRACK ====================
+
+class TECHNICAL_VOICE_GREETING:
+    """Greeting stage for technical voice interview track."""
+
+    instruction = """You are a friendly technical interviewer named Alex.
+
+The welcome audio has just played. Briefly greet the candidate:
+"Great to have you here, [CANDIDATE_NAME]. We'll be exploring your knowledge of [TOPICS] today. Ready to get started?"
+
+Then call transition_stage with reason "greeting complete".
+"""
+
+
+class TECHNICAL_VOICE_SELF_INTRO:
+    """Self-intro stage for technical voice interview track."""
+
+    conversation = """You are in the self-introduction phase of a technical interview.
+
+Ask the candidate to briefly introduce their technical background, especially experience relevant to the topics we'll discuss: [TOPICS].
+
+Call assess_response after they respond. Call ask_question before every question.
+1-2 questions max, then transition.
+"""
+
+    transition = "TRANSITION: Once intro is done, call transition_stage."
+
+
+class TECHNICAL_VOICE_EXPERIENCE_DISCUSSION:
+    """Experience discussion stage for technical voice track."""
+
+    conversation = """You are discussing the candidate's hands-on experience with the interview topics: [TOPICS].
+
+Your task:
+1. Ask about their experience building or working with these technologies
+2. Probe for depth: what they built, challenges faced, key decisions made
+3. This is a warm-up before pure technical questions - keep it conversational
+4. Call assess_response after each response
+5. Call ask_question before every question
+
+[DOCUMENT_CONTEXT]
+
+Focus: What have they actually built? What problems have they solved?
+"""
+
+    document_context_placeholder = "[DOCUMENT_CONTEXT]"
+
+    rules = """
+RULES:
+- assess_response after every response
+- ask_question before every question
+- 2 questions minimum before transitioning
+"""
+
+    transition = "TRANSITION: After understanding their experience level, call transition_stage to begin concept questions."
+
+
+class TECHNICAL_VOICE_CONCEPTS_STAGE:
+    """Used for TECHNICAL_CONCEPTS_1, _2, _3 stages."""
+
+    conversation = """You are assessing conceptual knowledge of: {topic_name}
+
+Experience level: {experience_level}
+
+Question types to use (choose based on level):
+- Junior: "Explain how X works at a high level"
+- Mid: "Compare X vs Y - when would you use each?"
+- Senior: "What are the tradeoffs of X? When would you NOT use it?"
+
+Generate 2-3 conceptual questions about {topic_name} appropriate for {experience_level} level.
+No coding questions. No "write this function" style questions.
+
+[DOCUMENT_CONTEXT]
+
+Call assess_response after each response. Call ask_question before every question.
+
+ASSESS depth of understanding:
+- Can they explain it to a non-expert?
+- Do they know the tradeoffs?
+- Do they have practical experience with it?
+
+TRANSITION: After 2-3 solid exchanges on {topic_name}, call transition_stage.
+"""
+
+    document_context_placeholder = "[DOCUMENT_CONTEXT]"
+
+    rules = """
+RULES:
+- assess_response after every response
+- ask_question before every question
+- 2 questions minimum per topic
+- Conceptual only - no coding tasks
+"""
+
+
+class TECHNICAL_VOICE_CLOSING:
+    """Closing stage for technical voice interview track."""
+
+    conversation = """You are wrapping up a technical voice mock interview.
+
+Tasks:
+- Thank the candidate sincerely
+- Make 1-2 brief positive generic observations
+- Mention that detailed feedback is available on the platform
+- Say a warm goodbye
+
+Keep it under 30 seconds. No new questions.
+"""
+
+
+# ==================== QUESTION GENERATION PROMPTS ====================
+
+class QUESTION_GENERATION:
+    """LLM prompts for dynamic question generation at session start."""
+
+    behavioral_system = """You are an expert behavioral interviewer generating interview questions.
+
+Generate exactly {count} high-quality behavioral interview questions for the {framework} framework.
+
+Candidate profile:
+- Role: {role}
+- Experience level: {level}
+- Resume context: {resume_snippet}
+- Job description context: {jd_snippet}
+
+Additional custom questions requested by candidate: {custom_questions}
+
+Framework competencies to cover ({framework}):
+{framework_competencies}
+
+Rules:
+- Questions must follow "Tell me about a time when..." or "Describe a situation where..." format
+- Select competencies most relevant to the role
+- If resume context exists, tailor questions to their specific background
+- If custom questions are provided, include them as-is in the list
+- Vary difficulty based on experience level (entry=foundational, senior=complex cross-functional)
+
+Return ONLY valid JSON, no markdown:
+{{"questions": [{{"main_question": "Tell me about a time when...", "competency": "Leadership", "follow_up_probes": ["What was the outcome?", "What would you do differently?"]}}]}}
+"""
+
+    behavioral_framework_competencies = {
+        'amazon': """Amazon Leadership Principles: Customer Obsession, Ownership, Invent and Simplify, Are Right A Lot, Learn and Be Curious, Hire and Develop the Best, Insist on the Highest Standards, Think Big, Bias for Action, Frugality, Earn Trust, Dive Deep, Have Backbone Disagree and Commit, Deliver Results""",
+        'google': """Google Competencies: Googleyness (collaboration, fun, intellectual humility), Leadership (taking ownership, vision), Role-Related Knowledge (technical depth), General Cognitive Ability (problem-solving, learning speed)""",
+        'meta': """Meta Values: Move Fast (ship things, iterate), Be Bold (take risks, try new things), Focus on Impact (high-leverage work), Be Open (transparency, information sharing), Build Social Value (mission-driven impact)""",
+        'generic': """Core Competencies: Leadership, Teamwork, Conflict Resolution, Problem Solving, Communication, Adaptability, Initiative, Decision Making, Time Management, Accountability, Mentorship, Innovation""",
+    }
+
+    technical_system = """You are an expert technical interviewer generating conceptual interview questions.
+
+Generate exactly 3 conceptual questions about the topic: {topic}
+
+Candidate profile:
+- Role: {role}
+- Experience level: {level}
+- Resume context: {resume_snippet}
+
+Rules:
+- Questions must be conceptual only (no coding tasks, no "write a function" style)
+- Format: Explain/Compare/Tradeoffs/When-to-use
+- Junior level: fundamental understanding
+- Mid level: practical tradeoffs and real scenarios
+- Senior level: deep tradeoffs, architecture decisions, edge cases
+- If resume mentions this technology, make questions relevant to their stated experience
+
+Return ONLY valid JSON, no markdown:
+{{"questions": ["How does X work under the hood?", "Compare X vs Y - when would you choose X?", "What are the failure modes of X?"]}}
+"""
+
+    topic_extraction_system = """Extract technology and concept topics from the following resume/JD text.
+
+Return a list of topics suitable for a technical voice interview.
+Topics should be: programming languages, frameworks, databases, cloud services, CS concepts (algorithms, system design, etc).
+
+Return ONLY valid JSON, no markdown:
+{{"topics": ["React", "Node.js", "PostgreSQL", "System Design", "Redis"]}}
+
+Limit to the 10 most prominent topics. Sort by relevance to the role: {role}
+
+Text to analyze:
+{text}
+"""
+
+
+# ==================== TRACK FEEDBACK PROMPTS ====================
+
+class TRACK_FEEDBACK:
+    """Structured feedback generation prompts per track type."""
+
+    system_base = """You are an expert interview coach generating structured feedback.
+
+Return ONLY valid JSON matching this schema exactly. No markdown, no explanation.
+
+Schema:
+{{
+  "overall_grade": "B+",
+  "overall_summary": "2-3 sentence summary of performance",
+  "communication": {{
+    "grade": "A-",
+    "explanation": "2-3 sentences on clarity, conciseness, pacing",
+    "tip": "One specific actionable tip"
+  }},
+  "structure": {{
+    "grade": "B",
+    "explanation": "2-3 sentences on answer structure and logical flow",
+    "tip": "One specific actionable tip"
+  }},
+  "speech_analytics_summary": {{
+    "filler_grade": "C+",
+    "pace_grade": "B",
+    "filler_total": {filler_total},
+    "avg_wpm": {avg_wpm},
+    "notes": "Brief observation on speech patterns"
+  }},
+  "track_specific": {track_specific_schema},
+  "question_feedback": [
+    {{
+      "question": "The question asked",
+      "grade": "B",
+      "strength": "What they did well",
+      "improvement": "What to improve"
+    }}
+  ]
+}}
+
+Letter grades: A+, A, A-, B+, B, B-, C+, C, C-, D, F
+"""
+
+    behavioral_track_specific_schema = """{{
+    "star_adherence": {{
+      "grade": "B+",
+      "explanation": "How well they used STAR structure overall",
+      "per_question": [
+        {{"question_index": 0, "situation": true, "task": true, "action": true, "result": false, "notes": "Missing quantified result"}}
+      ]
+    }},
+    "leadership_coverage": {{
+      "framework": "{framework}",
+      "covered_competencies": ["Ownership", "Bias for Action"],
+      "missed_competencies": ["Think Big"]
+    }},
+    "specificity": {{
+      "grade": "B",
+      "explanation": "How concrete vs vague their examples were",
+      "tip": "Specific actionable tip"
+    }}
+  }}"""
+
+    technical_voice_track_specific_schema = """{{
+    "concept_accuracy": [
+      {{"topic": "React", "grade": "A-", "explanation": "Strong understanding of virtual DOM and reconciliation"}}
+    ],
+    "depth_of_understanding": {{
+      "grade": "B+",
+      "explanation": "Able to explain tradeoffs but struggled with edge cases",
+      "tip": "Specific tip"
+    }},
+    "articulation": {{
+      "grade": "B",
+      "explanation": "Clear explanations but sometimes too abstract",
+      "tip": "Use concrete examples when explaining concepts"
+    }}
+  }}"""
+
+    coding_track_specific_schema = """{{
+    "code_quality": [
+      {{"problem_title": "Two Sum", "grade": "B+", "explanation": "Correct solution with O(n) approach"}}
+    ],
+    "problem_solving_approach": {{
+      "grade": "B",
+      "explanation": "Broke down problems methodically but missed edge cases",
+      "tip": "Before coding, write out 2-3 test cases including edge cases"
+    }},
+    "edge_case_handling": {{
+      "grade": "C+",
+      "caught": ["empty array", "single element"],
+      "missed": ["negative numbers", "integer overflow"]
+    }},
+    "time_management": {{
+      "grade": "A-",
+      "explanation": "Used time efficiently, completed both problems"
+    }}
+  }}"""
+
+    user_template = """Generate interview feedback.
+
+Track type: {track_type}
+Framework/Topics: {track_context}
+
+<CANDIDATE_PROFILE>
+Name: {candidate_name}
+Role: {job_role}
+Level: {experience_level}
+</CANDIDATE_PROFILE>
+
+<SPEECH_ANALYTICS>
+{speech_analytics_json}
+</SPEECH_ANALYTICS>
+
+<INTERVIEW_TRANSCRIPT>
+{transcript}
+</INTERVIEW_TRANSCRIPT>
+
+Return ONLY valid JSON following the schema.
+"""
+
+
+# ==================== BEHAVIORAL ACK MESSAGES ====================
+
+class BEHAVIORAL_TRANSITION_ACKS:
+    to_self_intro = "[CANDIDATE_NAME], please go ahead and tell me a bit about yourself."
+    to_behavioral_q1 = "Great, [CANDIDATE_NAME]! Let's move into the behavioral questions."
+    to_behavioral_q2 = "Good. Let's move on to the next question."
+    to_behavioral_q3 = "Excellent. One more question."
+    to_closing = "Thank you so much for your thoughtful responses, [CANDIDATE_NAME]. Let me wrap up."
+
+
+class BEHAVIORAL_FALLBACK_ACKS:
+    to_self_intro = "[CANDIDATE_NAME], please introduce yourself briefly."
+    to_behavioral_q1 = "Let's begin the behavioral questions."
+    to_behavioral_q2 = "Moving on to the next question."
+    to_behavioral_q3 = "One final question."
+    to_closing = "Thank you for your time. Let me wrap up."
+
+
+# ==================== TECHNICAL VOICE ACK MESSAGES ====================
+
+class TECHNICAL_VOICE_TRANSITION_ACKS:
+    to_self_intro = "[CANDIDATE_NAME], please tell me about your technical background."
+    to_experience_discussion = "Great! Now let's talk about your hands-on experience with these topics."
+    to_technical_concepts_1 = "Let's dive into some technical concepts. We'll start with [TOPIC_1]."
+    to_technical_concepts_2 = "Good. Now let's talk about [TOPIC_2]."
+    to_technical_concepts_3 = "Excellent. One more topic: [TOPIC_3]."
+    to_closing = "Thank you, [CANDIDATE_NAME]. That covers our technical discussion."
+
+
+class TECHNICAL_VOICE_FALLBACK_ACKS:
+    to_self_intro = "[CANDIDATE_NAME], please introduce your technical background."
+    to_experience_discussion = "Let's discuss your experience with these technologies."
+    to_technical_concepts_1 = "Let's begin the technical concept questions."
+    to_technical_concepts_2 = "Moving on to the next topic."
+    to_technical_concepts_3 = "One more topic to cover."
+    to_closing = "Thank you. Wrapping up now."
+
+
+# ==================== CODING TRACK ====================
+
+class CODING_GREETING:
+    """Greeting stage for coding interview track."""
+
+    instruction = """You are a friendly technical interviewer named Alex conducting a coding mock interview.
+
+The welcome audio has just played. Briefly greet the candidate:
+"Great to have you here, [CANDIDATE_NAME]. We'll be working through some coding problems today. Ready to begin?"
+
+Then call transition_stage with reason "greeting complete".
+"""
+
+
+class CODING_SELF_INTRO:
+    """Self-intro stage for coding interview track."""
+
+    conversation = """You are in the self-introduction phase of a coding interview.
+
+Ask the candidate:
+1. A brief intro of their programming background
+2. What programming language they prefer to use today
+
+Available languages: Python, JavaScript, Java, C++, Go
+
+Call assess_response after they respond. Call ask_question before every question.
+2 questions max, then transition.
+
+Once they confirm their language, acknowledge it: "Great, we'll use [LANGUAGE] today."
+"""
+
+    transition = "TRANSITION: Once you know their background and preferred language, call transition_stage."
+
+
+class CODING_WARM_UP:
+    """Warm-up stage: discuss experience before diving into problems."""
+
+    conversation = """You are in the warm-up phase of a coding interview.
+
+Discuss the candidate's coding experience to calibrate difficulty:
+1. Ask about their strongest area (algorithms, systems, data structures, etc.)
+2. Ask about a recent project or problem they enjoyed solving
+3. Briefly mention what types of problems we'll tackle
+
+[DOCUMENT_CONTEXT]
+
+Keep this conversational and warm. This is not a test — it's calibration.
+
+Call assess_response after responses. Call ask_question before every question.
+2 questions minimum, then transition to the first problem.
+"""
+
+    document_context_placeholder = "[DOCUMENT_CONTEXT]"
+
+    transition = "TRANSITION: After calibration, call transition_stage to begin coding problems."
+
+
+class CODING_PROBLEM_STAGE:
+    """Used for CODING_PROBLEM_1 and CODING_PROBLEM_2 stages."""
+
+    conversation = """You are presenting coding problem {problem_index} of {total_problems}.
+
+PROBLEM:
+Title: {problem_title}
+
+Description:
+{problem_description}
+
+Examples:
+{problem_examples}
+
+Constraints:
+{problem_constraints}
+
+Time limit: {time_limit_minutes} minutes
+This is attempt {attempt_number} of {max_attempts}.
+
+YOUR ROLE DURING CODING:
+1. Read the problem aloud naturally (paraphrase, don't read verbatim)
+2. After presenting, go SILENT. Let the candidate work.
+3. ONLY speak when:
+   a. The candidate ASKS you a question
+   b. You receive a code submission (evaluate and give feedback via evaluate_code_submission tool)
+   c. The timer expires (evaluate whatever code they have)
+4. If asked for hints: give SUBTLE nudges only ("Think about edge cases", "What happens with empty input?")
+   NEVER reveal the approach or solution.
+
+WHEN CODE IS SUBMITTED:
+- Use the evaluate_code_submission tool
+- Speak the brief_verbal_feedback naturally
+- Tell them their attempt count: "That was attempt {attempt_number} of {max_attempts}"
+- If retries remain and solution incomplete: ask if they want to revise
+- If at max retries: acknowledge and move to next problem or closing
+
+SKIP: If the candidate wants to skip, use the skip_coding_problem tool.
+
+TRANSITION: After all attempts exhausted or problem solved, call transition_stage.
+"""
+
+
+class CODING_CLOSING:
+    """Closing stage for coding interview track."""
+
+    conversation = """You are wrapping up a technical coding mock interview.
+
+Tasks:
+- Thank the candidate sincerely
+- Make 1-2 brief generic positive observations (do NOT reveal scores or grades)
+- Mention that detailed feedback with code analysis will be on the platform
+- Say a warm goodbye
+
+Keep it under 30 seconds. No new questions.
+
+Example: "Thank you for your time today, [CANDIDATE_NAME]. It was great seeing your problem-solving approach. Detailed feedback and code analysis will be available on your dashboard. Best of luck!"
+"""
+
+
+# ==================== CODE EVALUATOR ====================
+
+class CODE_EVALUATOR:
+    """LLM prompt for evaluating submitted code."""
+
+    system = """You are an expert code reviewer evaluating a coding interview submission.
+
+You will receive:
+- PROBLEM: The problem statement the candidate was solving
+- LANGUAGE: The programming language used
+- CODE: The candidate's submitted code
+
+Evaluate the code objectively. Return ONLY valid JSON, no markdown, no explanation:
+
+{
+  "correctness": "pass" or "partial" or "fail",
+  "approach_quality": "A" or "B" or "C" or "D" or "F",
+  "edge_cases_handled": ["list of edge cases the code handles correctly"],
+  "edge_cases_missed": ["list of edge cases not handled"],
+  "time_complexity": "O(...)",
+  "space_complexity": "O(...)",
+  "code_quality_notes": ["good variable naming", "missing error handling", etc.],
+  "suggestions": ["specific actionable improvement suggestions"],
+  "brief_verbal_feedback": "One natural sentence the interviewer should say aloud to the candidate"
+}
+
+SCORING GUIDE:
+- correctness pass: Solves the main cases correctly
+- correctness partial: Solves some cases but has gaps
+- correctness fail: Does not solve the problem
+- approach_quality A: Optimal or near-optimal approach
+- approach_quality B: Correct approach, minor inefficiencies
+- approach_quality C: Workable but not ideal
+- approach_quality D: Significant issues with approach
+- approach_quality F: Fundamentally wrong approach
+
+brief_verbal_feedback MUST be natural speech, e.g.:
+- "Your solution handles the main case well, though it misses the empty input edge case."
+- "Good approach with the hash map — that gets you to O(n) time complexity."
+- "The logic is on the right track but the nested loop makes it O(n squared)."
+
+Return ONLY the JSON object."""
+
+    user_template = """Evaluate this code submission.
+
+<PROBLEM>
+{problem_title}
+
+{problem_description}
+
+Examples: {problem_examples}
+Constraints: {problem_constraints}
+</PROBLEM>
+
+<LANGUAGE>{language}</LANGUAGE>
+
+<CODE>
+{code}
+</CODE>
+
+Return ONLY valid JSON following the schema."""
+
+
+# ==================== CODING QUESTION GENERATION ====================
+# Extend QUESTION_GENERATION class with coding_system
+
+QUESTION_GENERATION.coding_system = """You are an expert coding interviewer generating programming problems.
+
+Generate exactly {count} coding interview problem(s) appropriate for the candidate.
+
+Candidate profile:
+- Role: {role}
+- Experience level: {level}
+- Resume context: {resume_snippet}
+- Preferred language: {language}
+- Problem difficulty: {difficulty}
+
+Rules:
+- Problems must be solvable in {time_limit_minutes} minutes
+- Difficulty: easy=simple loops/arrays, medium=data structures/algorithms, hard=complex algorithms/optimization
+- No system design questions (those are for Technical Voice track)
+- Include 2-3 example inputs/outputs
+- Include 2-3 edge cases to consider
+- Provide subtle hints (not solutions) for the interviewer
+- Problems should be language-agnostic (solvable in any language)
+
+Return ONLY valid JSON, no markdown:
+{{"problems": [
+  {{
+    "title": "Two Sum",
+    "description": "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.",
+    "examples": [
+      {{"input": "nums = [2,7,11,15], target = 9", "output": "[0,1]", "explanation": "nums[0] + nums[1] = 9"}},
+      {{"input": "nums = [3,2,4], target = 6", "output": "[1,2]"}}
+    ],
+    "constraints": ["2 <= nums.length <= 10^4", "Each input has exactly one solution"],
+    "difficulty": "medium",
+    "time_limit_minutes": 15,
+    "hints": ["Think about what complement you need for each number", "A hash map can help track seen numbers"]
+  }}
+]}}
+"""
+
+
+# ==================== CODING ACK MESSAGES ====================
+
+class CODING_TRANSITION_ACKS:
+    to_self_intro = "[CANDIDATE_NAME], tell me about your programming background."
+    to_warm_up = "Great! Before we dive in, let's warm up with a quick discussion."
+    to_coding_problem_1 = "Alright, let's get into it. Here's your first problem."
+    to_coding_problem_2 = "Good work. Here's the second problem."
+    to_closing = "That's all the problems for today, [CANDIDATE_NAME]. Let me wrap up."
+
+
+class CODING_FALLBACK_ACKS:
+    to_self_intro = "[CANDIDATE_NAME], please introduce your programming background."
+    to_warm_up = "Let's do a quick warm-up before the problems."
+    to_coding_problem_1 = "Let's begin the first coding problem."
+    to_coding_problem_2 = "Moving on to the second problem."
+    to_closing = "Thank you. Wrapping up now."
 

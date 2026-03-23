@@ -375,6 +375,12 @@ def generate_token():
         resume_cache_key = data.get('resumeCacheKey', '')
         job_description = data.get('jobDescription', '')
         include_profile = data.get('includeProfile', True)
+        track = data.get('track', 'intro')
+        framework = data.get('framework', 'amazon')
+        depth = data.get('depth', 'medium')
+        custom_questions = data.get('customQuestions', '')
+        topics = data.get('topics', [])
+        custom_topics = data.get('customTopics', [])
 
         logger.info(f"[TOKEN] Token request from user {user_id} ({name})")
 
@@ -431,6 +437,12 @@ def generate_token():
             'level': level,
             'email': email,
             'include_profile': str(include_profile).lower(),
+            'track': track,
+            'framework': framework,
+            'depth': depth,
+            'custom_questions': custom_questions,
+            'topics': ','.join(topics) if isinstance(topics, list) else topics,
+            'custom_topics': ','.join(custom_topics) if isinstance(custom_topics, list) else custom_topics,
         }
 
         # Add resume text if cached
@@ -483,6 +495,117 @@ def generate_token():
             'error': 'Token generation failed',
             'message': str(e)
         }), 500
+
+
+@app.route('/api/extract-topics', methods=['POST'])
+@require_auth
+def extract_topics():
+    """Extract technology topics from cached resume text using LLM."""
+    try:
+        data = request.json or {}
+        cache_key = data.get('cache_key', '')
+        role = data.get('role', 'Software Engineer')
+
+        if not cache_key:
+            return jsonify({'topics': []})
+
+        resume_text = doc_processor.get_cached_text(cache_key)
+        if not resume_text:
+            return jsonify({'topics': []})
+
+        user_id = get_user_id()
+        keys = supabase_client.get_api_keys(user_id)
+        if not keys or not keys.get('openai_key'):
+            return jsonify({'topics': []})
+
+        from openai import OpenAI
+        client = OpenAI(api_key=keys['openai_key'])
+
+        from prompts import QUESTION_GENERATION
+        prompt = QUESTION_GENERATION.topic_extraction_system.format(
+            role=role,
+            text=resume_text[:3000]
+        )
+
+        response = client.chat.completions.create(
+            model='gpt-4o-mini',
+            messages=[{'role': 'user', 'content': prompt}],
+            temperature=0.3,
+            max_tokens=200,
+        )
+
+        import json as _json
+        raw = response.choices[0].message.content.strip()
+        parsed = _json.loads(raw)
+        topics = parsed.get('topics', [])[:10]
+
+        logger.info(f"[TOPICS] Extracted {len(topics)} topics from resume for user {user_id}")
+        return jsonify({'topics': topics})
+
+    except Exception as e:
+        logger.error(f"[TOPICS] Failed to extract topics: {e}")
+        return jsonify({'topics': []})
+
+
+@app.route('/api/coding/submit', methods=['POST'])
+@require_auth
+def submit_code():
+    """
+    Store a code submission to the coding_submissions table.
+
+    Called by agent_worker after evaluating submitted code.
+
+    Expected JSON body:
+        - interview_id: The interview database ID
+        - problem_title: Title of the coding problem
+        - problem_description: Full problem description
+        - language: Programming language used
+        - code_submitted: The candidate's code
+        - attempt_number: Attempt number (1-3)
+        - evaluation_result: JSON evaluation from CODE_EVALUATOR
+        - time_spent_seconds: Optional time spent on this attempt
+    """
+    try:
+        data = request.json or {}
+        user_id = get_user_id()
+
+        interview_id = data.get('interview_id')
+        problem_title = data.get('problem_title', 'Coding Problem')
+        problem_description = data.get('problem_description', '')
+        language = data.get('language', 'python')
+        code_submitted = data.get('code_submitted', '')
+        attempt_number = data.get('attempt_number', 1)
+        evaluation_result = data.get('evaluation_result', {})
+        time_spent_seconds = data.get('time_spent_seconds')
+
+        if not interview_id:
+            return jsonify({'error': 'Missing interview_id'}), 400
+
+        if not code_submitted:
+            return jsonify({'error': 'No code submitted'}), 400
+
+        logger.info(f"[API] Saving coding submission for interview {interview_id}, attempt {attempt_number}")
+
+        submission_id = supabase_client.save_coding_submission(
+            user_id=user_id,
+            interview_id=interview_id,
+            problem_title=problem_title,
+            problem_description=problem_description,
+            language=language,
+            code_submitted=code_submitted,
+            attempt_number=attempt_number,
+            evaluation_result=evaluation_result,
+            time_spent_seconds=time_spent_seconds,
+        )
+
+        if submission_id:
+            return jsonify({'success': True, 'submission_id': submission_id})
+        else:
+            return jsonify({'success': False, 'message': 'Failed to save submission'}), 500
+
+    except Exception as e:
+        logger.error(f"[API] Code submission error: {e}", exc_info=True)
+        return jsonify({'error': 'Submission failed', 'message': str(e)}), 500
 
 
 @app.route('/api/worker/status/<room_name>')
@@ -1064,31 +1187,34 @@ def _load_interview_context(interview_id):
     Helper to load interview transcript and context for feedback generation from database.
 
     Returns:
-        tuple: (interview_chat, candidate_profile, job_summary, meta, conversation, error)
+        tuple: (interview_chat, candidate_profile, job_summary, meta, conversation, raw_conversation, error)
     """
     try:
         # Get authenticated user
         user_id = get_user_id()
         if not user_id:
-            return None, None, None, None, None, 'Authentication required'
+            return None, None, None, None, None, None, 'Authentication required'
 
         # Validate UUID format
         import uuid
         try:
             uuid.UUID(interview_id)
         except ValueError:
-            return None, None, None, None, None, f'Invalid interview ID format: {interview_id}'
+            return None, None, None, None, None, None, f'Invalid interview ID format: {interview_id}'
 
         # Load interview from database
         interview = supabase_client.get_interview_by_id(user_id, interview_id)
         if not interview:
-            return None, None, None, None, None, f'Could not find interview: {interview_id}'
+            return None, None, None, None, None, None, f'Could not find interview: {interview_id}'
+
+        # Store raw conversation dict for speech analytics (before merging)
+        raw_conversation = interview.get('conversation', {})
 
         # Format conversation from database format with proper merging
-        conversation = format_conversation_with_merge(interview.get('conversation', {}))
+        conversation = format_conversation_with_merge(raw_conversation)
 
         if not conversation:
-            return None, None, None, None, None, 'No conversation found in this interview'
+            return None, None, None, None, None, None, 'No conversation found in this interview'
 
         # Format transcript for LLM
         transcript_lines = []
@@ -1099,12 +1225,13 @@ def _load_interview_context(interview_id):
 
         interview_chat = "\n\n".join(transcript_lines)
 
-        # Build metadata
+        # Build metadata (include track info)
         meta = {
             'candidate': interview.get('candidate_name', 'Unknown'),
             'interview_date': interview.get('interview_date'),
             'job_role': interview.get('job_role'),
             'experience_level': interview.get('experience_level'),
+            'track': interview.get('track', 'intro'),
             'source': 'database'
         }
 
@@ -1116,11 +1243,11 @@ def _load_interview_context(interview_id):
         job_summary = f"Role: {meta.get('job_role', 'Not specified')}"
 
         logger.info(f"[FEEDBACK] Loaded interview context for {interview_id} from database")
-        return interview_chat, candidate_profile, job_summary, meta, conversation, None
+        return interview_chat, candidate_profile, job_summary, meta, conversation, raw_conversation, None
 
     except Exception as e:
         logger.error(f"[FEEDBACK] Error loading interview context: {e}", exc_info=True)
-        return None, None, None, None, None, f'Error loading interview: {str(e)}'
+        return None, None, None, None, None, None, f'Error loading interview: {str(e)}'
 
 
 @app.route('/api/feedback/scores', methods=['POST'])
@@ -1153,13 +1280,31 @@ def generate_feedback_scores():
             }), 400
             
         logger.info(f"[API] Feedback scores requested for: {interview_id}")
-        
+
         # Load interview context
-        interview_chat, candidate_profile, job_summary, meta, conversation, error = _load_interview_context(interview_id)
-        
+        interview_chat, candidate_profile, job_summary, meta, conversation, raw_conversation, error = _load_interview_context(interview_id)
+
         if error:
             return jsonify({'error': 'Interview not found', 'message': error}), 404
-        
+
+        # Run speech analytics on user conversation
+        from speech_analytics import analyze_transcript
+        try:
+            speech_data = analyze_transcript(raw_conversation if isinstance(raw_conversation, dict) else {})
+        except Exception as e:
+            logger.warning(f"[API] Speech analytics failed: {e}")
+            speech_data = {}
+
+        # Fetch coding submissions if this is a coding track interview
+        coding_submissions = []
+        interview_track = meta.get('track', 'intro')
+        if interview_track == 'coding' and interview_id:
+            try:
+                coding_submissions = supabase_client.get_coding_submissions(interview_id)
+                logger.info(f"[API] Fetched {len(coding_submissions)} coding submissions for feedback")
+            except Exception as e:
+                logger.warning(f"[API] Failed to fetch coding submissions: {e}")
+
         # Build scores extraction prompt
         user_prompt = FEEDBACKSCORES.user_template.format(
             candidate_profile=candidate_profile,
@@ -1222,11 +1367,13 @@ def generate_feedback_scores():
             }
         
         logger.info(f"[API] Scores extracted successfully for {interview_id}")
-        
+
         return jsonify({
             'success': True,
             'interview_id': interview_id,
             'scores': scores_data,
+            'speech_analytics': speech_data,
+            'coding_submissions': coding_submissions,
             'meta': {
                 'candidate': meta.get('candidate'),
                 'interview_date': meta.get('interview_date'),
@@ -1274,16 +1421,39 @@ def generate_feedback():
             }), 400
             
         logger.info(f"[API] Feedback requested for: {interview_id}")
-        
+
         # Load interview context
-        interview_chat, candidate_profile, job_summary, meta, conversation, error = _load_interview_context(interview_id)
-        
+        interview_chat, candidate_profile, job_summary, meta, conversation, raw_conversation, error = _load_interview_context(interview_id)
+
         if error:
             return jsonify({'error': 'Interview not found', 'message': error}), 404
-        
+
+        # Get track info from meta
+        track_type = meta.get('track', 'intro')
+
+        # Run speech analytics
+        from speech_analytics import analyze_transcript
+        try:
+            speech_data = analyze_transcript(raw_conversation if isinstance(raw_conversation, dict) else {})
+        except Exception as e:
+            logger.warning(f"[API] Speech analytics failed: {e}")
+            speech_data = {}
+
+        # Fetch coding submissions if this is a coding track interview
+        coding_submissions = []
+        if track_type == 'coding' and interview_id:
+            try:
+                coding_submissions = supabase_client.get_coding_submissions(interview_id)
+                logger.info(f"[API] Fetched {len(coding_submissions)} coding submissions for feedback")
+            except Exception as e:
+                logger.warning(f"[API] Failed to fetch coding submissions: {e}")
+
+        import json as _json
+        speech_json = _json.dumps(speech_data, indent=2)
+
         # Build the feedback prompt using chain-of-thought approach
         system_prompt = build_post_interview_feedback_prompt()
-        
+
         user_prompt = f"""Please analyze this mock interview and provide detailed feedback.
 
 <CANDIDATE_PROFILE>
@@ -1294,11 +1464,28 @@ def generate_feedback():
 {job_summary}
 </JOB_SUMMARY>
 
+<INTERVIEW_TRACK>
+{track_type}
+</INTERVIEW_TRACK>
+
+<SPEECH_ANALYTICS>
+{speech_json}
+</SPEECH_ANALYTICS>
+
 <INTERVIEW_CHAT>
 {interview_chat}
 </INTERVIEW_CHAT>
 
-Provide your analysis and feedback following the output format specified."""
+Provide your analysis and feedback following the output format specified.
+Include a brief "Speech Analytics" section mentioning filler word count ({speech_data.get('filler_total', 'N/A')}) and average pace ({speech_data.get('avg_words_per_minute', 'N/A')} WPM) if available."""
+
+        # Add coding context if available
+        coding_context = ""
+        if coding_submissions:
+            import json as _json2
+            coding_context = f"\n\n<CODING_SUBMISSIONS>\n{_json2.dumps(coding_submissions, indent=2)[:3000]}\n</CODING_SUBMISSIONS>"
+
+        user_prompt = user_prompt.rstrip() + coding_context
 
         # Get authenticated user's OpenAI key from database (BYOK model)
         user_id = get_user_id()
@@ -1335,11 +1522,13 @@ Provide your analysis and feedback following the output format specified."""
         }
         
         logger.info(f"[API] Feedback generated and cached for {interview_id}")
-        
+
         response_data = {
             'success': True,
             'interview_id': interview_id,
             'feedback': feedback_text,
+            'speech_analytics': speech_data,
+            'coding_submissions_count': len(coding_submissions),
             'meta': {
                 'candidate': meta.get('candidate'),
                 'interview_date': meta.get('interview_date'),
@@ -1347,11 +1536,11 @@ Provide your analysis and feedback following the output format specified."""
                 'model': 'gpt-4o-mini'
             }
         }
-        
+
         # Include scores if provided
         if provided_scores:
             response_data['scores'] = provided_scores
-        
+
         return jsonify(response_data)
         
     except Exception as e:

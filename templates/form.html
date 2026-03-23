@@ -12,6 +12,41 @@
     <link rel="stylesheet" href="/static/form.css">
     <link rel="stylesheet" href="/static/modals.css">
     <link rel="stylesheet" href="/static/header-additions.css">
+    <style>
+/* Track selector */
+.track-selector { margin-bottom: 1.5rem; }
+.track-selector label { display: block; margin-bottom: 0.75rem; font-weight: 600; font-size: 0.875rem; color: var(--text-primary); }
+.track-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+.track-card { border: 2px solid var(--bg-soft); border-radius: var(--radius-md); padding: 0.875rem 1rem; cursor: pointer; transition: border-color 0.15s, background 0.15s; background: var(--bg-card); }
+.track-card:hover:not(.disabled) { border-color: var(--text-secondary); }
+.track-card.selected { border-color: var(--text-primary); background: var(--bg-soft); }
+.track-card.disabled { opacity: 0.5; cursor: not-allowed; }
+.track-card-title { font-weight: 600; font-size: 0.875rem; color: var(--text-primary); }
+.track-card-desc { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; }
+.track-card-badge { display: inline-block; font-size: 0.6875rem; font-weight: 600; padding: 0.125rem 0.5rem; border-radius: var(--radius-full); background: var(--bg-soft); color: var(--text-muted); margin-left: 0.5rem; }
+/* Track-specific sections */
+.track-section { display: none; }
+.track-section.active { display: contents; }
+/* Depth selector */
+.depth-options { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+.depth-option { flex: 1; }
+.depth-option input[type="radio"] { display: none; }
+.depth-option label { display: block; text-align: center; padding: 0.5rem; border: 2px solid var(--bg-soft); border-radius: var(--radius-sm); font-size: 0.8125rem; font-weight: 500; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.depth-option input[type="radio"]:checked + label { border-color: var(--text-primary); background: var(--bg-soft); }
+/* Topic checkboxes */
+.topic-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
+.topic-chip { display: inline-flex; align-items: center; gap: 0.375rem; }
+.topic-chip input[type="checkbox"] { display: none; }
+.topic-chip label { padding: 0.375rem 0.75rem; border: 2px solid var(--bg-soft); border-radius: var(--radius-full); font-size: 0.8125rem; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.topic-chip input[type="checkbox"]:checked + label { border-color: var(--text-primary); background: var(--bg-soft); font-weight: 600; }
+/* STAR modal */
+.star-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+.star-modal-overlay.visible { display: flex; }
+.star-modal { background: var(--bg-card); border-radius: var(--radius-lg); padding: 2rem; max-width: 540px; width: 90%; max-height: 80vh; overflow-y: auto; }
+.star-modal h3 { margin-bottom: 1rem; font-size: 1.125rem; }
+.star-example { background: var(--bg-soft); border-radius: var(--radius-md); padding: 1rem; margin: 1rem 0; font-size: 0.875rem; line-height: 1.6; }
+.star-example strong { color: var(--text-primary); }
+</style>
 </head>
 <body>
     <!-- Action Buttons (Right Side) - populated by header.js -->
@@ -27,6 +62,30 @@
 
                 <form id="candidateForm">
                     <div class="form-grid">
+                        <!-- Track Selector -->
+                        <div class="form-group full-width track-selector">
+                            <label>Interview Track</label>
+                            <div class="track-cards" id="trackCards">
+                                <div class="track-card selected" data-track="intro">
+                                    <div class="track-card-title">Intro Call</div>
+                                    <div class="track-card-desc">General background and experience</div>
+                                </div>
+                                <div class="track-card" data-track="behavioral">
+                                    <div class="track-card-title">Behavioral Interview</div>
+                                    <div class="track-card-desc">Past experiences and leadership principles</div>
+                                </div>
+                                <div class="track-card" data-track="technical_voice">
+                                    <div class="track-card-title">Technical Voice</div>
+                                    <div class="track-card-desc">Conceptual tech questions by topic</div>
+                                </div>
+                                <div class="track-card" data-track="coding">
+                                    <div class="track-card-title">Technical Coding</div>
+                                    <div class="track-card-desc">Coding problems with Monaco editor</div>
+                                </div>
+                            </div>
+                        </div>
+                        <input type="hidden" id="selectedTrack" name="selectedTrack" value="intro">
+
                         <div class="form-group">
                             <label for="name">Full Name</label>
                             <input type="text" id="name" name="name" placeholder="Jane Smith" required class="form-input" autocomplete="name">
@@ -53,6 +112,108 @@
                         </div>
 
                         <div class="section-divider">Optional Enhancements</div>
+
+                        <!-- Behavioral Track Section -->
+                        <div class="track-section" id="behavioralSection">
+                            <div class="form-group full-width">
+                                <label for="framework">Leadership Framework</label>
+                                <select id="framework" name="framework" class="form-input">
+                                    <option value="amazon">Amazon (16 Leadership Principles)</option>
+                                    <option value="google">Google (Googleyness, Leadership, Role Knowledge, GCA)</option>
+                                    <option value="meta">Meta (Move Fast, Be Bold, Focus on Impact)</option>
+                                    <option value="generic">Generic (Leadership, Teamwork, Problem Solving...)</option>
+                                </select>
+                            </div>
+                            <div class="form-group full-width">
+                                <label>Follow-up Depth</label>
+                                <div class="depth-options">
+                                    <div class="depth-option">
+                                        <input type="radio" id="depthLight" name="depth" value="light">
+                                        <label for="depthLight">Light<br><small style="font-weight:400;font-size:0.7rem">1 follow-up</small></label>
+                                    </div>
+                                    <div class="depth-option">
+                                        <input type="radio" id="depthMedium" name="depth" value="medium" checked>
+                                        <label for="depthMedium">Medium<br><small style="font-weight:400;font-size:0.7rem">1-2 follow-ups</small></label>
+                                    </div>
+                                    <div class="depth-option">
+                                        <input type="radio" id="depthDeep" name="depth" value="deep">
+                                        <label for="depthDeep">Deep<br><small style="font-weight:400;font-size:0.7rem">2-3 follow-ups</small></label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="customQuestions" style="display:flex;align-items:center;gap:0.5rem;">
+                                    Custom Questions <span style="color:var(--text-light);font-weight:400;">(optional, one per line)</span>
+                                </label>
+                                <textarea id="customQuestions" name="customQuestions" class="form-input" rows="3" placeholder="Tell me about a time you had to influence without authority.&#10;Describe a project that failed and what you learned."></textarea>
+                            </div>
+                            <div class="form-group full-width">
+                                <button type="button" class="btn-secondary" id="starInfoBtn" style="width:auto;padding:0.5rem 1rem;font-size:0.875rem;">
+                                    What is the STAR Method?
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Technical Voice Track Section -->
+                        <div class="track-section" id="technicalVoiceSection">
+                            <div class="form-group full-width">
+                                <label>Topics to Cover <span style="color:var(--text-light);font-weight:400;">(select up to 3)</span></label>
+                                <div class="topic-grid" id="topicGrid">
+                                    <!-- Default topics, updated by JS based on role -->
+                                </div>
+                                <button type="button" class="btn-secondary" id="suggestTopicsBtn" style="margin-top:0.75rem;width:auto;padding:0.5rem 1rem;font-size:0.875rem;display:none;">
+                                    Suggest topics from resume
+                                </button>
+                            </div>
+                            <div class="form-group full-width">
+                                <label for="customTopics">Custom Topics <span style="color:var(--text-light);font-weight:400;">(optional, comma-separated)</span></label>
+                                <input type="text" id="customTopics" name="customTopics" class="form-input" placeholder="e.g., Redis, Kafka, GraphQL">
+                            </div>
+                        </div>
+
+                        <!-- Coding Track Section -->
+                        <div class="track-section" id="codingSection">
+                            <div class="form-group full-width">
+                                <label for="preferredLanguage">Preferred Language</label>
+                                <select id="preferredLanguage" name="preferredLanguage" class="form-input">
+                                    <option value="python">Python</option>
+                                    <option value="javascript">JavaScript</option>
+                                    <option value="java">Java</option>
+                                    <option value="cpp">C++</option>
+                                    <option value="go">Go</option>
+                                </select>
+                            </div>
+                            <div class="form-group full-width">
+                                <label>Number of Problems</label>
+                                <div class="depth-options">
+                                    <div class="depth-option">
+                                        <input type="radio" id="prob1" name="problem_count" value="1">
+                                        <label for="prob1">1 Problem<br><small style="font-weight:400;font-size:0.7rem">~15 min</small></label>
+                                    </div>
+                                    <div class="depth-option">
+                                        <input type="radio" id="prob2" name="problem_count" value="2" checked>
+                                        <label for="prob2">2 Problems<br><small style="font-weight:400;font-size:0.7rem">~30 min</small></label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-group full-width">
+                                <label>Difficulty</label>
+                                <div class="depth-options">
+                                    <div class="depth-option">
+                                        <input type="radio" id="diffEasy" name="problem_difficulty" value="easy">
+                                        <label for="diffEasy">Easy</label>
+                                    </div>
+                                    <div class="depth-option">
+                                        <input type="radio" id="diffMedium" name="problem_difficulty" value="medium" checked>
+                                        <label for="diffMedium">Medium</label>
+                                    </div>
+                                    <div class="depth-option">
+                                        <input type="radio" id="diffHard" name="problem_difficulty" value="hard">
+                                        <label for="diffHard">Hard</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
                         <div class="form-group full-width">
                             <label>Resume Upload <span style="color: var(--text-light); font-weight: 400;">(PDF, DOCX, TXT)</span></label>
@@ -132,6 +293,26 @@
         </div>
     </div>
 
+    <!-- STAR Method Modal -->
+    <div class="star-modal-overlay" id="starModalOverlay">
+        <div class="star-modal">
+            <h3>The STAR Method</h3>
+            <p style="color:var(--text-secondary);font-size:0.875rem;line-height:1.6;">STAR helps structure behavioral answers so interviewers can assess your actual contribution and impact.</p>
+            <div class="star-example">
+                <p><strong>S - Situation:</strong> Set the context. What was the challenge or background?</p>
+                <p><strong>T - Task:</strong> What was your specific responsibility or goal?</p>
+                <p><strong>A - Action:</strong> What did YOU specifically do? Use "I", not "we".</p>
+                <p><strong>R - Result:</strong> What happened? Include numbers if possible.</p>
+            </div>
+            <div class="star-example">
+                <p><strong>Example:</strong></p>
+                <p><em>"Our checkout conversion was dropping 15% week-over-week (S). I was tasked with diagnosing the regression (T). I added event tracking, identified a broken payment gateway for Safari users, and deployed a hotfix within 6 hours (A). Conversion recovered fully and we added a cross-browser test to prevent recurrence (R)."</em></p>
+            </div>
+            <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;">Tip: Prepare 5-6 STAR stories covering different competencies before your interview.</p>
+            <button type="button" class="btn-primary" id="starModalClose" style="margin-top:1.25rem;width:100%;">Got it</button>
+        </div>
+    </div>
+
     <script src="/static/header.js"></script>
     <script src="/static/modal.js"></script>
     <script>
@@ -160,6 +341,9 @@
             initFormHandler();
             initInputValidation();
             initFileUpload();
+            initTrackSelector();
+            initStarModal();
+            initSuggestTopics();
             updateButtonState();
         }
         
@@ -305,6 +489,14 @@
             if (!submitBtn.classList.contains('active')) return;
 
             var formData = new FormData(form);
+            var selectedTrack = document.getElementById('selectedTrack').value;
+            var topics = [];
+            document.querySelectorAll('#topicGrid .topic-chip input[type="checkbox"]:checked').forEach(function(cb) {
+                topics.push(cb.value);
+            });
+            var customTopicsVal = document.getElementById('customTopics') ? document.getElementById('customTopics').value.trim() : '';
+            var customTopicsArr = customTopicsVal ? customTopicsVal.split(',').map(function(t) { return t.trim(); }).filter(Boolean) : [];
+
             var data = {
                 name: formData.get('name'),
                 email: formData.get('email'),
@@ -312,7 +504,16 @@
                 level: formData.get('level'),
                 jobDescription: formData.get('jobDescription') || '',
                 resumeCacheKey: document.getElementById('resumeCacheKey').value,
-                includeProfile: document.getElementById('includeProfile').checked
+                includeProfile: document.getElementById('includeProfile').checked,
+                track: selectedTrack,
+                framework: formData.get('framework') || 'amazon',
+                depth: formData.get('depth') || 'medium',
+                customQuestions: formData.get('customQuestions') || '',
+                topics: topics,
+                customTopics: customTopicsArr,
+                preferredLanguage: formData.get('preferredLanguage') || 'python',
+                problemCount: formData.get('problem_count') || '2',
+                problemDifficulty: formData.get('problem_difficulty') || 'medium'
             };
 
             var loadingText = loadingEl.querySelector('.loading-text');
@@ -346,7 +547,8 @@
                     level: data.level,
                     resumeCacheKey: data.resumeCacheKey,
                     includeProfile: data.includeProfile,
-                    hasJD: data.jobDescription.length > 0 ? '1' : '0'
+                    hasJD: data.jobDescription.length > 0 ? '1' : '0',
+                    track: data.track
                 });
 
                 if (data.jobDescription) {
@@ -421,6 +623,101 @@
             } else {
                 submitBtn.classList.remove('active');
             }
+        }
+
+        function initTrackSelector() {
+            var cards = document.querySelectorAll('.track-card:not(.disabled)');
+            cards.forEach(function(card) {
+                card.addEventListener('click', function() {
+                    document.querySelectorAll('.track-card').forEach(function(c) { c.classList.remove('selected'); });
+                    card.classList.add('selected');
+                    var track = card.getAttribute('data-track');
+                    document.getElementById('selectedTrack').value = track;
+                    showTrackSection(track);
+                    updateButtonState();
+                });
+            });
+        }
+
+        function showTrackSection(track) {
+            document.querySelectorAll('.track-section').forEach(function(s) { s.classList.remove('active'); });
+            if (track === 'behavioral') {
+                document.getElementById('behavioralSection').classList.add('active');
+            } else if (track === 'technical_voice') {
+                document.getElementById('technicalVoiceSection').classList.add('active');
+                populateDefaultTopics();
+            } else if (track === 'coding') {
+                document.getElementById('codingSection').classList.add('active');
+            }
+        }
+
+        function populateDefaultTopics() {
+            var role = (document.getElementById('role').value || '').toLowerCase();
+            var topicGrid = document.getElementById('topicGrid');
+            var defaultTopics;
+            if (role.includes('frontend') || role.includes('front-end') || role.includes('ui')) {
+                defaultTopics = ['DOM & Browser APIs', 'CSS Architecture', 'React/Vue', 'State Management', 'Web Performance', 'Accessibility'];
+            } else if (role.includes('backend') || role.includes('back-end') || role.includes('api')) {
+                defaultTopics = ['Distributed Systems', 'Databases', 'Caching', 'API Design', 'Authentication', 'Message Queues'];
+            } else if (role.includes('data') || role.includes('ml') || role.includes('machine learning')) {
+                defaultTopics = ['Statistics', 'ML Fundamentals', 'Data Pipelines', 'Feature Engineering', 'Model Evaluation', 'Python'];
+            } else if (role.includes('devops') || role.includes('sre') || role.includes('infrastructure')) {
+                defaultTopics = ['CI/CD', 'Containers & K8s', 'Monitoring', 'Cloud Services', 'Infrastructure as Code', 'Networking'];
+            } else {
+                defaultTopics = ['Data Structures', 'Algorithms', 'System Design', 'Databases', 'Operating Systems', 'Networking'];
+            }
+            topicGrid.innerHTML = '';
+            defaultTopics.forEach(function(topic, i) {
+                var id = 'topic_' + i;
+                topicGrid.innerHTML += '<div class="topic-chip"><input type="checkbox" id="' + id + '" value="' + topic + '"><label for="' + id + '">' + topic + '</label></div>';
+            });
+            // Show suggest button if resume is uploaded
+            if (document.getElementById('resumeCacheKey').value) {
+                document.getElementById('suggestTopicsBtn').style.display = 'inline-block';
+            }
+        }
+
+        function initStarModal() {
+            var btn = document.getElementById('starInfoBtn');
+            var overlay = document.getElementById('starModalOverlay');
+            var closeBtn = document.getElementById('starModalClose');
+            if (btn) btn.addEventListener('click', function() { overlay.classList.add('visible'); });
+            if (closeBtn) closeBtn.addEventListener('click', function() { overlay.classList.remove('visible'); });
+            if (overlay) overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.classList.remove('visible'); });
+        }
+
+        function initSuggestTopics() {
+            var btn = document.getElementById('suggestTopicsBtn');
+            if (!btn) return;
+            btn.addEventListener('click', function() {
+                var cacheKey = document.getElementById('resumeCacheKey').value;
+                var role = document.getElementById('role').value || '';
+                if (!cacheKey) return;
+                btn.textContent = 'Suggesting...';
+                btn.disabled = true;
+                fetch('/api/extract-topics', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cache_key: cacheKey, role: role })
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.topics && data.topics.length > 0) {
+                        var topicGrid = document.getElementById('topicGrid');
+                        topicGrid.innerHTML = '';
+                        data.topics.slice(0, 8).forEach(function(topic, i) {
+                            var id = 'topic_r' + i;
+                            topicGrid.innerHTML += '<div class="topic-chip"><input type="checkbox" id="' + id + '" value="' + topic + '" checked><label for="' + id + '">' + topic + '</label></div>';
+                        });
+                    }
+                    btn.textContent = 'Suggest topics from resume';
+                    btn.disabled = false;
+                })
+                .catch(function() {
+                    btn.textContent = 'Suggest topics from resume';
+                    btn.disabled = false;
+                });
+            });
         }
     })();
     </script>

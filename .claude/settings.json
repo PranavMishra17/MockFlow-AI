@@ -1,0 +1,74 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "description": "Block destructive shell commands",
+        "matcher": "tool == \"Bash\"",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"\nimport json, sys\ndata = json.load(sys.stdin)\ncmd = data.get('tool_input', {}).get('command', '')\nblocklist = ['rm -rf /', 'rm -rf ~', 'DROP TABLE', 'DROP DATABASE', 'DELETE FROM', 'truncate', ':(){:|:&};:']\nfor pattern in blocklist:\n    if pattern.lower() in cmd.lower():\n        print(f'[Hook] BLOCKED: command matches destructive pattern: {pattern}', file=sys.stderr)\n        sys.exit(2)\nsys.exit(0)\n\""
+          }
+        ]
+      },
+      {
+        "description": "Warn before long-running commands — suggest tmux",
+        "matcher": "tool == \"Bash\"",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"\nimport json, sys, os\ndata = json.load(sys.stdin)\ncmd = data.get('tool_input', {}).get('command', '')\nlong_runners = ['npm run', 'pnpm run', 'yarn run', 'streamlit run', 'uvicorn', 'flask run', 'python -m pytest', 'cargo build', 'cargo test']\nif any(p in cmd for p in long_runners) and not os.environ.get('TMUX'):\n    print('[Hook] Long-running command detected. Consider wrapping in tmux for session persistence.', file=sys.stderr)\nsys.exit(0)\n\""
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "description": "Syntax-check Python files after every write or edit",
+        "matcher": "tool == \"Write\" or tool == \"Edit\" or tool == \"str_replace_based_edit_tool\"",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"\nimport json, sys, subprocess\ndata = json.load(sys.stdin)\npath = data.get('tool_input', {}).get('path', '') or data.get('tool_input', {}).get('file_path', '')\nif path.endswith('.py'):\n    result = subprocess.run(['python3', '-m', 'py_compile', path], capture_output=True, text=True)\n    if result.returncode != 0:\n        print(f'[Hook] Syntax error in {path}:', file=sys.stderr)\n        print(result.stderr, file=sys.stderr)\nsys.exit(0)\n\""
+          }
+        ]
+      },
+      {
+        "description": "Warn if console.log or print debug statements are left in source files",
+        "matcher": "tool == \"Write\" or tool == \"Edit\" or tool == \"str_replace_based_edit_tool\"",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"\nimport json, sys\ndata = json.load(sys.stdin)\npath = data.get('tool_input', {}).get('path', '') or data.get('tool_input', {}).get('file_path', '')\nif not path:\n    sys.exit(0)\ntry:\n    content = open(path).read()\nexcept Exception:\n    sys.exit(0)\nwarnings = []\nif 'console.log' in content and path.endswith(('.js', '.ts', '.jsx', '.tsx')):\n    warnings.append('console.log')\nif 'import pdb' in content or 'pdb.set_trace' in content:\n    warnings.append('pdb breakpoint')\nif warnings:\n    print(f'[Hook] Debug artifacts found in {path}: {\", \".join(warnings)} — remove before committing', file=sys.stderr)\nsys.exit(0)\n\""
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "description": "Remind to run /dump before ending a long session",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"\nimport sys\nprint('[Hook] Session ending. If this was a long session, run /dump before /clear to preserve progress for the next agent.', file=sys.stderr)\nsys.exit(0)\n\""
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "description": "Warn when context approaches 60% — suggest /dump and /clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c \"import sys; sys.exit(0)\""
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [],
+    "deny": []
+  }
+}

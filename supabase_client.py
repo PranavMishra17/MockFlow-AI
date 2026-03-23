@@ -200,7 +200,9 @@ class SupabaseClient:
                 'conversation': interview_data.get('conversation', {}),
                 'total_messages': interview_data.get('total_messages', {}),
                 'metadata': interview_data.get('metadata', {}),
-                'interview_date': interview_data.get('interview_date')
+                'interview_date': interview_data.get('interview_date'),
+                'track': interview_data.get('track', 'intro'),
+                'track_config': interview_data.get('track_config', {})
             }
 
             logger.info(f"[SUPABASE] Saving interview for candidate: {candidate_name}")
@@ -274,5 +276,65 @@ class SupabaseClient:
         except Exception as e:
             logger.error(f"Error fetching feedback: {e}")
             return None
+
+    def save_coding_submission(
+        self,
+        user_id: str,
+        interview_id: str,
+        problem_title: str,
+        problem_description: str,
+        language: str,
+        code_submitted: str,
+        attempt_number: int = 1,
+        evaluation_result: Optional[Dict[str, Any]] = None,
+        time_spent_seconds: Optional[int] = None,
+    ) -> Optional[str]:
+        """
+        Save a code submission to the coding_submissions table.
+
+        Returns submission ID or None on error.
+        """
+        try:
+            data = {
+                'user_id': user_id,
+                'interview_id': interview_id,
+                'problem_title': problem_title,
+                'problem_description': problem_description or '',
+                'language': language,
+                'code_submitted': code_submitted,
+                'attempt_number': attempt_number,
+                'evaluation_result': evaluation_result or {},
+            }
+            if time_spent_seconds is not None:
+                data['time_spent_seconds'] = time_spent_seconds
+
+            logger.info(f"[SUPABASE] Saving coding submission for interview {interview_id}, problem: {problem_title}, attempt {attempt_number}")
+            response = self.client.table('coding_submissions').insert(data).execute()
+
+            if response.data:
+                submission_id = response.data[0]['id']
+                logger.info(f"[SUPABASE] Coding submission saved: {submission_id}")
+                return submission_id
+
+            return None
+
+        except Exception as e:
+            logger.error(f"[SUPABASE] Error saving coding submission: {e}", exc_info=True)
+            return None
+
+    def get_coding_submissions(self, interview_id: str) -> List[Dict[str, Any]]:
+        """Get all code submissions for an interview, ordered by creation time."""
+        try:
+            response = (
+                self.client.table('coding_submissions')
+                .select('*')
+                .eq('interview_id', interview_id)
+                .order('created_at', desc=False)
+                .execute()
+            )
+            return response.data or []
+        except Exception as e:
+            logger.error(f"[SUPABASE] Error fetching coding submissions: {e}")
+            return []
 
 supabase_client = SupabaseClient()
