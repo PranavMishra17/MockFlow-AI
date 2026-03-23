@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,41 +14,190 @@
     <link rel="stylesheet" href="/static/modals.css">
     <link rel="stylesheet" href="/static/header-additions.css">
     <style>
-/* Track selector */
-.track-selector { margin-bottom: 1.5rem; }
-.track-selector label { display: block; margin-bottom: 0.75rem; font-weight: 600; font-size: 0.875rem; color: var(--text-primary); }
-.track-cards { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
-.track-card { border: 2px solid var(--bg-soft); border-radius: var(--radius-md); padding: 0.875rem 1rem; cursor: pointer; transition: border-color 0.15s, background 0.15s; background: var(--bg-card); }
-.track-card:hover:not(.disabled) { border-color: var(--text-secondary); }
-.track-card.selected { border-color: var(--text-primary); background: var(--bg-soft); }
-.track-card.disabled { opacity: 0.5; cursor: not-allowed; }
-.track-card-title { font-weight: 600; font-size: 0.875rem; color: var(--text-primary); }
-.track-card-desc { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.25rem; }
-.track-card-badge { display: inline-block; font-size: 0.6875rem; font-weight: 600; padding: 0.125rem 0.5rem; border-radius: var(--radius-full); background: var(--bg-soft); color: var(--text-muted); margin-left: 0.5rem; }
-/* Track-specific sections */
-.track-section { display: none; }
-.track-section.active { display: contents; }
-/* Depth selector */
-.depth-options { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
-.depth-option { flex: 1; }
-.depth-option input[type="radio"] { display: none; }
-.depth-option label { display: block; text-align: center; padding: 0.5rem; border: 2px solid var(--bg-soft); border-radius: var(--radius-sm); font-size: 0.8125rem; font-weight: 500; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
-.depth-option input[type="radio"]:checked + label { border-color: var(--text-primary); background: var(--bg-soft); }
-/* Topic checkboxes */
-.topic-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.5rem; }
-.topic-chip { display: inline-flex; align-items: center; gap: 0.375rem; }
-.topic-chip input[type="checkbox"] { display: none; }
-.topic-chip label { padding: 0.375rem 0.75rem; border: 2px solid var(--bg-soft); border-radius: var(--radius-full); font-size: 0.8125rem; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
-.topic-chip input[type="checkbox"]:checked + label { border-color: var(--text-primary); background: var(--bg-soft); font-weight: 600; }
-/* STAR modal */
-.star-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
-.star-modal-overlay.visible { display: flex; }
-.star-modal { background: var(--bg-card); border-radius: var(--radius-lg); padding: 2rem; max-width: 540px; width: 90%; max-height: 80vh; overflow-y: auto; }
-.star-modal h3 { margin-bottom: 1rem; font-size: 1.125rem; }
-.star-example { background: var(--bg-soft); border-radius: var(--radius-md); padding: 1rem; margin: 1rem 0; font-size: 0.875rem; line-height: 1.6; }
-.star-example strong { color: var(--text-primary); }
-</style>
+        /* Track selector */
+        .track-selector {
+            margin-bottom: 1.5rem;
+        }
+
+        .track-selector label {
+            display: block;
+            margin-bottom: 0.75rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+        }
+
+        .track-cards {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+
+        .track-card {
+            border: 2px solid var(--bg-soft);
+            border-radius: var(--radius-md);
+            padding: 0.875rem 1rem;
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+            background: var(--bg-card);
+        }
+
+        .track-card:hover:not(.disabled) {
+            border-color: var(--text-secondary);
+        }
+
+        .track-card.selected {
+            border-color: var(--text-primary);
+            background: var(--bg-soft);
+        }
+
+        .track-card.disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .track-card-title {
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: var(--text-primary);
+        }
+
+        .track-card-desc {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .track-card-badge {
+            display: inline-block;
+            font-size: 0.6875rem;
+            font-weight: 600;
+            padding: 0.125rem 0.5rem;
+            border-radius: var(--radius-full);
+            background: var(--bg-soft);
+            color: var(--text-muted);
+            margin-left: 0.5rem;
+        }
+
+        /* Track-specific sections */
+        .track-section {
+            display: none;
+        }
+
+        .track-section.active {
+            display: contents;
+        }
+
+        /* Depth selector */
+        .depth-options {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .depth-option {
+            flex: 1;
+        }
+
+        .depth-option input[type="radio"] {
+            display: none;
+        }
+
+        .depth-option label {
+            display: block;
+            text-align: center;
+            padding: 0.5rem;
+            border: 2px solid var(--bg-soft);
+            border-radius: var(--radius-sm);
+            font-size: 0.8125rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+        }
+
+        .depth-option input[type="radio"]:checked+label {
+            border-color: var(--text-primary);
+            background: var(--bg-soft);
+        }
+
+        /* Topic checkboxes */
+        .topic-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .topic-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+        }
+
+        .topic-chip input[type="checkbox"] {
+            display: none;
+        }
+
+        .topic-chip label {
+            padding: 0.375rem 0.75rem;
+            border: 2px solid var(--bg-soft);
+            border-radius: var(--radius-full);
+            font-size: 0.8125rem;
+            cursor: pointer;
+            transition: border-color 0.15s, background 0.15s;
+        }
+
+        .topic-chip input[type="checkbox"]:checked+label {
+            border-color: var(--text-primary);
+            background: var(--bg-soft);
+            font-weight: 600;
+        }
+
+        /* STAR modal */
+        .star-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .star-modal-overlay.visible {
+            display: flex;
+        }
+
+        .star-modal {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 2rem;
+            max-width: 540px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .star-modal h3 {
+            margin-bottom: 1rem;
+            font-size: 1.125rem;
+        }
+
+        .star-example {
+            background: var(--bg-soft);
+            border-radius: var(--radius-md);
+            padding: 1rem;
+            margin: 1rem 0;
+            font-size: 0.875rem;
+            line-height: 1.6;
+        }
+
+        .star-example strong {
+            color: var(--text-primary);
+        }
+    </style>
 </head>
+
 <body>
     <!-- Action Buttons (Right Side) - populated by header.js -->
     <div class="action-buttons" id="actionButtons"></div>
@@ -57,74 +207,23 @@
             <div class="form-main">
                 <form id="candidateForm">
                     <div class="form-grid">
-                        <!-- Track Selector -->
-                        <div class="form-group full-width track-selector">
-                            <div class="track-selector-label">Interview Track</div>
-                            <div class="track-cards" id="trackCards">
-                                <div class="track-card selected" data-track="intro">
-                                    <div class="track-card-accent"></div>
-                                    <div class="track-card-body">
-                                        <span class="track-card-title">Intro Call</span>
-                                        <span class="track-card-sep">—</span>
-                                        <span class="track-card-desc">General background, experience &amp; culture fit</span>
-                                    </div>
-                                    <div class="track-card-check">
-                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><polyline points="3,8 7,12 13,4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                                    </div>
-                                </div>
-                                <div class="track-card" data-track="behavioral">
-                                    <div class="track-card-accent"></div>
-                                    <div class="track-card-body">
-                                        <span class="track-card-title">Behavioral</span>
-                                        <span class="track-card-sep">—</span>
-                                        <span class="track-card-desc">Past experiences, leadership &amp; STAR-format questions</span>
-                                    </div>
-                                    <div class="track-card-check">
-                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><polyline points="3,8 7,12 13,4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                                    </div>
-                                </div>
-                                <div class="track-card" data-track="technical_voice">
-                                    <div class="track-card-accent"></div>
-                                    <div class="track-card-body">
-                                        <span class="track-card-title">Technical Voice</span>
-                                        <span class="track-card-sep">—</span>
-                                        <span class="track-card-desc">Concept-deep questions on topics you choose</span>
-                                    </div>
-                                    <div class="track-card-check">
-                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><polyline points="3,8 7,12 13,4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                                    </div>
-                                </div>
-                                <div class="track-card" data-track="coding">
-                                    <div class="track-card-accent"></div>
-                                    <div class="track-card-body">
-                                        <span class="track-card-title">Technical Coding</span>
-                                        <span class="track-card-sep">—</span>
-                                        <span class="track-card-desc">Live Monaco editor with LLM-generated coding problems</span>
-                                    </div>
-                                    <div class="track-card-check">
-                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><polyline points="3,8 7,12 13,4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="track-detail-box" id="trackDetailBox">
-                                <div class="track-detail-content" id="trackDetailContent"></div>
-                            </div>
-                            <input type="hidden" id="selectedTrack" name="selectedTrack" value="intro">
-                        </div>
-
+                        <!-- Candidate Info -->
                         <div class="form-group">
                             <label for="name">Full Name <span class="required-mark">*</span></label>
-                            <input type="text" id="name" name="name" placeholder="Jane Smith" required class="form-input" autocomplete="name">
+                            <input type="text" id="name" name="name" placeholder="Jane Smith" required
+                                class="form-input" autocomplete="name">
                         </div>
 
                         <div class="form-group">
                             <label for="email">Email Address <span class="required-mark">*</span></label>
-                            <input type="email" id="email" name="email" placeholder="jane@example.com" required class="form-input" autocomplete="email">
+                            <input type="email" id="email" name="email" placeholder="jane@example.com" required
+                                class="form-input" autocomplete="email">
                         </div>
 
                         <div class="form-group">
                             <label for="role">Target Role <span class="required-mark">*</span></label>
-                            <input type="text" id="role" name="role" placeholder="Software Engineer, PM..." required class="form-input">
+                            <input type="text" id="role" name="role" placeholder="Software Engineer, PM..." required
+                                class="form-input">
                         </div>
 
                         <div class="form-group">
@@ -137,7 +236,77 @@
                             </select>
                         </div>
 
-                        <div class="form-section-label">Optional</div>
+                        <div class="form-section-label" style="grid-column: 1 / -1; margin-top: 10px;"></div>
+
+                        <!-- Track Selector -->
+                        <div class="form-group full-width track-selector">
+                            <div class="track-selector-label">Interview Track</div>
+                            <div class="track-cards" id="trackCards">
+                                <div class="track-card selected" data-track="intro">
+                                    <div class="track-card-accent"></div>
+                                    <div class="track-card-body">
+                                        <span class="track-card-title">Intro Call</span>
+                                        <span class="track-card-sep">—</span>
+                                        <span class="track-card-desc">General background, experience &amp; culture
+                                            fit</span>
+                                    </div>
+                                    <div class="track-card-check">
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                            <polyline points="3,8 7,12 13,4" stroke="currentColor" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="track-card" data-track="behavioral">
+                                    <div class="track-card-accent"></div>
+                                    <div class="track-card-body">
+                                        <span class="track-card-title">Behavioral</span>
+                                        <span class="track-card-sep">—</span>
+                                        <span class="track-card-desc">Past experiences, leadership &amp; STAR-format
+                                            questions</span>
+                                    </div>
+                                    <div class="track-card-check">
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                            <polyline points="3,8 7,12 13,4" stroke="currentColor" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="track-card" data-track="technical_voice">
+                                    <div class="track-card-accent"></div>
+                                    <div class="track-card-body">
+                                        <span class="track-card-title">Technical Voice</span>
+                                        <span class="track-card-sep">—</span>
+                                        <span class="track-card-desc">Concept-deep questions on topics you choose</span>
+                                    </div>
+                                    <div class="track-card-check">
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                            <polyline points="3,8 7,12 13,4" stroke="currentColor" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div class="track-card" data-track="coding">
+                                    <div class="track-card-accent"></div>
+                                    <div class="track-card-body">
+                                        <span class="track-card-title">Technical Coding</span>
+                                        <span class="track-card-sep">—</span>
+                                        <span class="track-card-desc">Live Monaco editor with LLM-generated coding
+                                            problems</span>
+                                    </div>
+                                    <div class="track-card-check">
+                                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                            <polyline points="3,8 7,12 13,4" stroke="currentColor" stroke-width="2"
+                                                stroke-linecap="round" stroke-linejoin="round" />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="track-detail-box" id="trackDetailBox">
+                                <div class="track-detail-content" id="trackDetailContent"></div>
+                            </div>
+                            <input type="hidden" id="selectedTrack" name="selectedTrack" value="intro">
+                        </div>
 
                         <!-- Behavioral Track Section -->
                         <div class="track-section" id="behavioralSection">
@@ -145,7 +314,8 @@
                                 <label for="framework">Leadership Framework</label>
                                 <select id="framework" name="framework" class="form-input">
                                     <option value="amazon">Amazon (16 Leadership Principles)</option>
-                                    <option value="google">Google (Googleyness, Leadership, Role Knowledge, GCA)</option>
+                                    <option value="google">Google (Googleyness, Leadership, Role Knowledge, GCA)
+                                    </option>
                                     <option value="meta">Meta (Move Fast, Be Bold, Focus on Impact)</option>
                                     <option value="generic">Generic (Leadership, Teamwork, Problem Solving...)</option>
                                 </select>
@@ -155,26 +325,32 @@
                                 <div class="depth-options">
                                     <div class="depth-option">
                                         <input type="radio" id="depthLight" name="depth" value="light">
-                                        <label for="depthLight">Light<br><small style="font-weight:400;font-size:0.7rem">1 follow-up</small></label>
+                                        <label for="depthLight">Light<br><small
+                                                style="font-weight:400;font-size:0.7rem">1 follow-up</small></label>
                                     </div>
                                     <div class="depth-option">
                                         <input type="radio" id="depthMedium" name="depth" value="medium" checked>
-                                        <label for="depthMedium">Medium<br><small style="font-weight:400;font-size:0.7rem">1-2 follow-ups</small></label>
+                                        <label for="depthMedium">Medium<br><small
+                                                style="font-weight:400;font-size:0.7rem">1-2 follow-ups</small></label>
                                     </div>
                                     <div class="depth-option">
                                         <input type="radio" id="depthDeep" name="depth" value="deep">
-                                        <label for="depthDeep">Deep<br><small style="font-weight:400;font-size:0.7rem">2-3 follow-ups</small></label>
+                                        <label for="depthDeep">Deep<br><small
+                                                style="font-weight:400;font-size:0.7rem">2-3 follow-ups</small></label>
                                     </div>
                                 </div>
                             </div>
                             <div class="form-group full-width">
                                 <label for="customQuestions" style="display:flex;align-items:center;gap:0.5rem;">
-                                    Custom Questions <span style="color:var(--text-light);font-weight:400;">(optional, one per line)</span>
+                                    Custom Questions <span style="color:var(--text-light);font-weight:400;">(optional,
+                                        one per line)</span>
                                 </label>
-                                <textarea id="customQuestions" name="customQuestions" class="form-input" rows="3" placeholder="Tell me about a time you had to influence without authority.&#10;Describe a project that failed and what you learned."></textarea>
+                                <textarea id="customQuestions" name="customQuestions" class="form-input" rows="3"
+                                    placeholder="Tell me about a time you had to influence without authority.&#10;Describe a project that failed and what you learned."></textarea>
                             </div>
                             <div class="form-group full-width">
-                                <button type="button" class="btn-secondary" id="starInfoBtn" style="width:auto;padding:0.5rem 1rem;font-size:0.875rem;">
+                                <button type="button" class="btn-secondary" id="starInfoBtn"
+                                    style="width:auto;padding:0.5rem 1rem;font-size:0.875rem;">
                                     What is the STAR Method?
                                 </button>
                             </div>
@@ -183,17 +359,22 @@
                         <!-- Technical Voice Track Section -->
                         <div class="track-section" id="technicalVoiceSection">
                             <div class="form-group full-width">
-                                <label>Topics to Cover <span style="color:var(--text-light);font-weight:400;">(select up to 3)</span></label>
+                                <label>Topics to Cover <span style="color:var(--text-light);font-weight:400;">(select up
+                                        to 3)</span></label>
                                 <div class="topic-grid" id="topicGrid">
                                     <!-- Default topics, updated by JS based on role -->
                                 </div>
-                                <button type="button" class="btn-secondary" id="suggestTopicsBtn" style="margin-top:0.75rem;width:auto;padding:0.5rem 1rem;font-size:0.875rem;display:none;">
+                                <button type="button" class="btn-secondary" id="suggestTopicsBtn"
+                                    style="margin-top:0.75rem;width:auto;padding:0.5rem 1rem;font-size:0.875rem;display:none;">
                                     Suggest topics from resume
                                 </button>
                             </div>
                             <div class="form-group full-width">
-                                <label for="customTopics">Custom Topics <span style="color:var(--text-light);font-weight:400;">(optional, comma-separated)</span></label>
-                                <input type="text" id="customTopics" name="customTopics" class="form-input" placeholder="e.g., Redis, Kafka, GraphQL">
+                                <label for="customTopics">Custom Topics <span
+                                        style="color:var(--text-light);font-weight:400;">(optional,
+                                        comma-separated)</span></label>
+                                <input type="text" id="customTopics" name="customTopics" class="form-input"
+                                    placeholder="e.g., Redis, Kafka, GraphQL">
                             </div>
                         </div>
 
@@ -214,11 +395,13 @@
                                 <div class="depth-options">
                                     <div class="depth-option">
                                         <input type="radio" id="prob1" name="problem_count" value="1">
-                                        <label for="prob1">1 Problem<br><small style="font-weight:400;font-size:0.7rem">~15 min</small></label>
+                                        <label for="prob1">1 Problem<br><small
+                                                style="font-weight:400;font-size:0.7rem">~15 min</small></label>
                                     </div>
                                     <div class="depth-option">
                                         <input type="radio" id="prob2" name="problem_count" value="2" checked>
-                                        <label for="prob2">2 Problems<br><small style="font-weight:400;font-size:0.7rem">~30 min</small></label>
+                                        <label for="prob2">2 Problems<br><small
+                                                style="font-weight:400;font-size:0.7rem">~30 min</small></label>
                                     </div>
                                 </div>
                             </div>
@@ -230,7 +413,8 @@
                                         <label for="diffEasy">Easy</label>
                                     </div>
                                     <div class="depth-option">
-                                        <input type="radio" id="diffMedium" name="problem_difficulty" value="medium" checked>
+                                        <input type="radio" id="diffMedium" name="problem_difficulty" value="medium"
+                                            checked>
                                         <label for="diffMedium">Medium</label>
                                     </div>
                                     <div class="depth-option">
@@ -241,14 +425,18 @@
                             </div>
                         </div>
 
+                        <div class="form-section-label" style="grid-column: 1 / -1; margin-top: 10px;">Optional</div>
+
                         <div class="form-group full-width">
-                            <label>Resume Upload <span style="color: var(--text-light); font-weight: 400;">(PDF, DOCX, TXT)</span></label>
+                            <label>Resume Upload <span style="color: var(--text-light); font-weight: 400;">(PDF, DOCX,
+                                    TXT)</span></label>
                             <div class="file-upload-area" id="resumeUploadArea">
                                 <input type="file" id="resumeFile" accept=".pdf,.docx,.doc,.txt,.md">
-                                <svg class="file-upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                                    <polyline points="17 8 12 3 7 8"/>
-                                    <line x1="12" y1="3" x2="12" y2="15"/>
+                                <svg class="file-upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                    <polyline points="17 8 12 3 7 8" />
+                                    <line x1="12" y1="3" x2="12" y2="15" />
                                 </svg>
                                 <p class="file-upload-text"><strong>Click to upload</strong> or drag and drop</p>
                             </div>
@@ -260,14 +448,18 @@
                         </div>
 
                         <div class="form-group full-width">
-                            <label for="jobDescription">Job Description <span style="color: var(--text-light); font-weight: 400;">(paste here)</span></label>
-                            <textarea id="jobDescription" name="jobDescription" placeholder="Paste the job description to tailor your interview questions..." class="form-input" rows="4"></textarea>
+                            <label for="jobDescription">Job Description <span
+                                    style="color: var(--text-light); font-weight: 400;">(paste here)</span></label>
+                            <textarea id="jobDescription" name="jobDescription"
+                                placeholder="Paste the job description to tailor your interview questions..."
+                                class="form-input" rows="4"></textarea>
                         </div>
 
                         <div class="form-group full-width">
                             <div class="profile-toggle">
                                 <input type="checkbox" id="includeProfile" name="includeProfile" checked>
-                                <label for="includeProfile">Include my profile text in interview (resume & JD will be used to tailor questions)</label>
+                                <label for="includeProfile">Include my profile text in interview (resume & JD will be
+                                    used to tailor questions)</label>
                             </div>
                         </div>
                     </div>
@@ -284,16 +476,18 @@
 
                 <button type="submit" form="candidateForm" class="btn-form-game" id="submitBtn">
                     <div class="btn-form-game-icon">
-                        <svg class="icon-inactive" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <rect x="5" y="2" width="14" height="20" rx="2"/>
-                            <path d="M9 2v2h6V2"/>
-                            <line x1="8" y1="8" x2="16" y2="8"/>
-                            <line x1="8" y1="12" x2="16" y2="12"/>
-                            <line x1="8" y1="16" x2="12" y2="16"/>
+                        <svg class="icon-inactive" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <rect x="5" y="2" width="14" height="20" rx="2" />
+                            <path d="M9 2v2h6V2" />
+                            <line x1="8" y1="8" x2="16" y2="8" />
+                            <line x1="8" y1="12" x2="16" y2="12" />
+                            <line x1="8" y1="16" x2="12" y2="16" />
                         </svg>
-                        <svg class="icon-active" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                            <polyline points="22 4 12 14.01 9 11.01"/>
+                        <svg class="icon-active" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="1.5">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+                            <polyline points="22 4 12 14.01 9 11.01" />
                         </svg>
                     </div>
                     <span class="btn-form-game-label">Begin Interview</span>
@@ -301,9 +495,14 @@
 
                 <p class="required-note"><span class="required-mark">*</span> Required fields</p>
 
-                <div style="margin-top: 1.5rem; padding: 1rem; background: rgba(255, 152, 0, 0.1); border-left: 3px solid var(--warning); border-radius: 8px;">
+                <div
+                    style="margin-top: 1.5rem; padding: 1rem; background: rgba(255, 152, 0, 0.1); border-left: 3px solid var(--warning); border-radius: 8px;">
                     <p style="font-size: 0.8125rem; line-height: 1.5; color: var(--text-secondary); margin: 0;">
-                        <strong style="color: var(--warning);">Demo Notice:</strong> This service is deployed on Render free tier (0.1 CPU). Voice may break or service might be slow. For better performance, run locally using the <a href="https://github.com/PranavMishra17/MockFlow-AI" target="_blank" rel="noopener" style="color: var(--text-primary); text-decoration: underline;">GitHub repository</a>.
+                        <strong style="color: var(--warning);">Demo Notice:</strong> This service is deployed on Render
+                        free tier (0.1 CPU). Voice may break or service might be slow. For better performance, run
+                        locally using the <a href="https://github.com/PranavMishra17/MockFlow-AI" target="_blank"
+                            rel="noopener" style="color: var(--text-primary); text-decoration: underline;">GitHub
+                            repository</a>.
                     </p>
                 </div>
             </div>
@@ -314,7 +513,8 @@
     <div class="star-modal-overlay" id="starModalOverlay">
         <div class="star-modal">
             <h3>The STAR Method</h3>
-            <p style="color:var(--text-secondary);font-size:0.875rem;line-height:1.6;">STAR helps structure behavioral answers so interviewers can assess your actual contribution and impact.</p>
+            <p style="color:var(--text-secondary);font-size:0.875rem;line-height:1.6;">STAR helps structure behavioral
+                answers so interviewers can assess your actual contribution and impact.</p>
             <div class="star-example">
                 <p><strong>S - Situation:</strong> Set the context. What was the challenge or background?</p>
                 <p><strong>T - Task:</strong> What was your specific responsibility or goal?</p>
@@ -323,17 +523,22 @@
             </div>
             <div class="star-example">
                 <p><strong>Example:</strong></p>
-                <p><em>"Our checkout conversion was dropping 15% week-over-week (S). I was tasked with diagnosing the regression (T). I added event tracking, identified a broken payment gateway for Safari users, and deployed a hotfix within 6 hours (A). Conversion recovered fully and we added a cross-browser test to prevent recurrence (R)."</em></p>
+                <p><em>"Our checkout conversion was dropping 15% week-over-week (S). I was tasked with diagnosing the
+                        regression (T). I added event tracking, identified a broken payment gateway for Safari users,
+                        and deployed a hotfix within 6 hours (A). Conversion recovered fully and we added a
+                        cross-browser test to prevent recurrence (R)."</em></p>
             </div>
-            <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;">Tip: Prepare 5-6 STAR stories covering different competencies before your interview.</p>
-            <button type="button" class="btn-primary" id="starModalClose" style="margin-top:1.25rem;width:100%;">Got it</button>
+            <p style="font-size:0.8rem;color:var(--text-muted);margin-top:0.5rem;">Tip: Prepare 5-6 STAR stories
+                covering different competencies before your interview.</p>
+            <button type="button" class="btn-primary" id="starModalClose" style="margin-top:1.25rem;width:100%;">Got
+                it</button>
         </div>
     </div>
 
     <script src="/static/header.js"></script>
     <script src="/static/modal.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             window.MockFlowHeader.init({
                 showHome: true,
                 showInfo: true,
@@ -346,430 +551,431 @@
     </script>
 
     <script>
-    (function() {
-        'use strict';
-        
-        var resumeCacheKey = '';
-        var uploadedFile = null;
-        
-        document.addEventListener('DOMContentLoaded', init);
-        
-        function init() {
-            initFormHandler();
-            initInputValidation();
-            initFileUpload();
-            initTrackSelector();
-            applyTrackColors();
-            initStarModal();
-            initSuggestTopics();
-            updateButtonState();
-        }
-        
-        function initFileUpload() {
-            var uploadArea = document.getElementById('resumeUploadArea');
-            var fileInput = document.getElementById('resumeFile');
-            var fileInfo = document.getElementById('resumeFileInfo');
-            var fileName = document.getElementById('resumeFileName');
-            var removeBtn = document.getElementById('removeResume');
-            var status = document.getElementById('resumeStatus');
-            
-            uploadArea.addEventListener('click', function() {
-                fileInput.click();
-            });
-            
-            uploadArea.addEventListener('dragover', function(e) {
-                e.preventDefault();
-                uploadArea.classList.add('dragover');
-            });
-            
-            uploadArea.addEventListener('dragleave', function() {
-                uploadArea.classList.remove('dragover');
-            });
-            
-            uploadArea.addEventListener('drop', function(e) {
-                e.preventDefault();
-                uploadArea.classList.remove('dragover');
-                if (e.dataTransfer.files.length > 0) {
-                    handleFile(e.dataTransfer.files[0]);
-                }
-            });
-            
-            fileInput.addEventListener('change', function() {
-                if (this.files.length > 0) {
-                    handleFile(this.files[0]);
-                }
-            });
-            
-            removeBtn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                clearFile();
-            });
-            
-            function handleFile(file) {
-                var validTypes = ['.pdf', '.docx', '.doc', '.txt', '.md'];
-                var ext = '.' + file.name.split('.').pop().toLowerCase();
-                
-                if (!validTypes.includes(ext)) {
-                    showStatus('error', 'Invalid file type. Use PDF, DOCX, or TXT.');
-                    return;
-                }
-                
-                if (file.size > 10 * 1024 * 1024) {
-                    showStatus('error', 'File too large. Max 10MB.');
-                    return;
-                }
-                
-                uploadedFile = file;
-                fileName.textContent = file.name + ' (' + formatBytes(file.size) + ')';
-                fileInfo.style.display = 'flex';
-                uploadArea.classList.add('has-file');
-                
-                uploadFile(file);
+        (function () {
+            'use strict';
+
+            var resumeCacheKey = '';
+            var uploadedFile = null;
+
+            document.addEventListener('DOMContentLoaded', init);
+
+            function init() {
+                initFormHandler();
+                initInputValidation();
+                initFileUpload();
+                initTrackSelector();
+                applyTrackColors();
+                initStarModal();
+                initSuggestTopics();
+                updateButtonState();
             }
-            
-            function uploadFile(file) {
-                showStatus('loading', 'Uploading and extracting text...');
-                
-                var formData = new FormData();
-                formData.append('file', file);
-                formData.append('document_type', 'resume');
-                formData.append('include_profile', document.getElementById('includeProfile').checked);
-                
-                fetch('/api/upload-resume', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(function(response) {
-                    return response.json();
-                })
-                .then(function(data) {
-                    if (data.success) {
-                        resumeCacheKey = data.cache_key;
-                        document.getElementById('resumeCacheKey').value = data.cache_key;
-                        showStatus('success', 'Extracted ' + data.char_count + ' characters');
-                    } else {
-                        showStatus('error', data.message || 'Upload failed');
-                        clearFile();
+
+            function initFileUpload() {
+                var uploadArea = document.getElementById('resumeUploadArea');
+                var fileInput = document.getElementById('resumeFile');
+                var fileInfo = document.getElementById('resumeFileInfo');
+                var fileName = document.getElementById('resumeFileName');
+                var removeBtn = document.getElementById('removeResume');
+                var status = document.getElementById('resumeStatus');
+
+                uploadArea.addEventListener('click', function () {
+                    fileInput.click();
+                });
+
+                uploadArea.addEventListener('dragover', function (e) {
+                    e.preventDefault();
+                    uploadArea.classList.add('dragover');
+                });
+
+                uploadArea.addEventListener('dragleave', function () {
+                    uploadArea.classList.remove('dragover');
+                });
+
+                uploadArea.addEventListener('drop', function (e) {
+                    e.preventDefault();
+                    uploadArea.classList.remove('dragover');
+                    if (e.dataTransfer.files.length > 0) {
+                        handleFile(e.dataTransfer.files[0]);
                     }
-                })
-                .catch(function(err) {
-                    console.error('[UPLOAD] Error:', err);
-                    showStatus('error', 'Upload failed: ' + err.message);
+                });
+
+                fileInput.addEventListener('change', function () {
+                    if (this.files.length > 0) {
+                        handleFile(this.files[0]);
+                    }
+                });
+
+                removeBtn.addEventListener('click', function (e) {
+                    e.stopPropagation();
                     clearFile();
                 });
+
+                function handleFile(file) {
+                    var validTypes = ['.pdf', '.docx', '.doc', '.txt', '.md'];
+                    var ext = '.' + file.name.split('.').pop().toLowerCase();
+
+                    if (!validTypes.includes(ext)) {
+                        showStatus('error', 'Invalid file type. Use PDF, DOCX, or TXT.');
+                        return;
+                    }
+
+                    if (file.size > 10 * 1024 * 1024) {
+                        showStatus('error', 'File too large. Max 10MB.');
+                        return;
+                    }
+
+                    uploadedFile = file;
+                    fileName.textContent = file.name + ' (' + formatBytes(file.size) + ')';
+                    fileInfo.style.display = 'flex';
+                    uploadArea.classList.add('has-file');
+
+                    uploadFile(file);
+                }
+
+                function uploadFile(file) {
+                    showStatus('loading', 'Uploading and extracting text...');
+
+                    var formData = new FormData();
+                    formData.append('file', file);
+                    formData.append('document_type', 'resume');
+                    formData.append('include_profile', document.getElementById('includeProfile').checked);
+
+                    fetch('/api/upload-resume', {
+                        method: 'POST',
+                        body: formData
+                    })
+                        .then(function (response) {
+                            return response.json();
+                        })
+                        .then(function (data) {
+                            if (data.success) {
+                                resumeCacheKey = data.cache_key;
+                                document.getElementById('resumeCacheKey').value = data.cache_key;
+                                showStatus('success', 'Extracted ' + data.char_count + ' characters');
+                            } else {
+                                showStatus('error', data.message || 'Upload failed');
+                                clearFile();
+                            }
+                        })
+                        .catch(function (err) {
+                            console.error('[UPLOAD] Error:', err);
+                            showStatus('error', 'Upload failed: ' + err.message);
+                            clearFile();
+                        });
+                }
+
+                function clearFile() {
+                    uploadedFile = null;
+                    resumeCacheKey = '';
+                    document.getElementById('resumeCacheKey').value = '';
+                    fileInput.value = '';
+                    fileInfo.style.display = 'none';
+                    uploadArea.classList.remove('has-file');
+                    status.style.display = 'none';
+                }
+
+                function showStatus(type, message) {
+                    status.className = 'upload-status ' + type;
+                    status.textContent = message;
+                    status.style.display = 'block';
+                }
+
+                function formatBytes(bytes) {
+                    if (bytes < 1024) return bytes + ' B';
+                    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+                    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+                }
             }
-            
-            function clearFile() {
-                uploadedFile = null;
-                resumeCacheKey = '';
-                document.getElementById('resumeCacheKey').value = '';
-                fileInput.value = '';
-                fileInfo.style.display = 'none';
-                uploadArea.classList.remove('has-file');
-                status.style.display = 'none';
-            }
-            
-            function showStatus(type, message) {
-                status.className = 'upload-status ' + type;
-                status.textContent = message;
-                status.style.display = 'block';
-            }
-            
-            function formatBytes(bytes) {
-                if (bytes < 1024) return bytes + ' B';
-                if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-                return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-            }
-        }
-        
-        function initFormHandler() {
-            var form = document.getElementById('candidateForm');
-            var submitBtn = document.getElementById('submitBtn');
-            
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
-                handleSubmit();
-            });
-            
-            submitBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                if (submitBtn.classList.contains('active')) {
+
+            function initFormHandler() {
+                var form = document.getElementById('candidateForm');
+                var submitBtn = document.getElementById('submitBtn');
+
+                form.addEventListener('submit', function (e) {
+                    e.preventDefault();
                     handleSubmit();
-                }
-            });
-        }
-        
-        async function handleSubmit() {
-            var form = document.getElementById('candidateForm');
-            var submitBtn = document.getElementById('submitBtn');
-            var loadingEl = document.getElementById('loadingIndicator');
-
-            if (!submitBtn.classList.contains('active')) return;
-
-            var formData = new FormData(form);
-            var selectedTrack = document.getElementById('selectedTrack').value;
-            var topics = [];
-            document.querySelectorAll('#topicGrid .topic-chip input[type="checkbox"]:checked').forEach(function(cb) {
-                topics.push(cb.value);
-            });
-            var customTopicsVal = document.getElementById('customTopics') ? document.getElementById('customTopics').value.trim() : '';
-            var customTopicsArr = customTopicsVal ? customTopicsVal.split(',').map(function(t) { return t.trim(); }).filter(Boolean) : [];
-
-            var data = {
-                name: formData.get('name'),
-                email: formData.get('email'),
-                role: formData.get('role'),
-                level: formData.get('level'),
-                jobDescription: formData.get('jobDescription') || '',
-                resumeCacheKey: document.getElementById('resumeCacheKey').value,
-                includeProfile: document.getElementById('includeProfile').checked,
-                track: selectedTrack,
-                framework: formData.get('framework') || 'amazon',
-                depth: formData.get('depth') || 'medium',
-                customQuestions: formData.get('customQuestions') || '',
-                topics: topics,
-                customTopics: customTopicsArr,
-                preferredLanguage: formData.get('preferredLanguage') || 'python',
-                problemCount: formData.get('problem_count') || '2',
-                problemDifficulty: formData.get('problem_difficulty') || 'medium'
-            };
-
-            var loadingText = loadingEl.querySelector('.loading-text');
-            loadingText.textContent = 'Starting agent worker...';
-            loadingEl.classList.add('visible');
-            submitBtn.disabled = true;
-
-            try {
-                var response = await fetch('/api/token', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
                 });
 
-                var result = await response.json();
-
-                if (result.error) {
-                    throw new Error(result.message || result.error);
-                }
-
-                loadingText.textContent = 'Agent ready. Redirecting...';
-
-                sessionStorage.setItem('mockflow_token', result.token);
-                sessionStorage.setItem('mockflow_url', result.url);
-                sessionStorage.setItem('mockflow_room', result.room);
-
-                var params = new URLSearchParams({
-                    name: data.name,
-                    email: data.email,
-                    role: data.role,
-                    level: data.level,
-                    resumeCacheKey: data.resumeCacheKey,
-                    includeProfile: data.includeProfile,
-                    hasJD: data.jobDescription.length > 0 ? '1' : '0',
-                    track: data.track
-                });
-
-                if (data.jobDescription) {
-                    sessionStorage.setItem('mockflow_jd', data.jobDescription);
-                }
-
-                window.location.href = '/interview?' + params.toString();
-
-            } catch (err) {
-                console.error('[FORM] Submit error:', err);
-                loadingEl.classList.remove('visible');
-                submitBtn.disabled = false;
-                alert('Failed to start interview: ' + err.message);
-            }
-        }
-        
-        function initInputValidation() {
-            var inputs = document.querySelectorAll('.form-input');
-            
-            inputs.forEach(function(input) {
-                input.addEventListener('blur', function() {
-                    if (this.hasAttribute('required')) {
-                        validateInput(this);
+                submitBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    if (submitBtn.classList.contains('active')) {
+                        handleSubmit();
                     }
                 });
-                
-                input.addEventListener('input', function() {
-                    this.classList.remove('input-error');
-                    updateButtonState();
+            }
+
+            async function handleSubmit() {
+                var form = document.getElementById('candidateForm');
+                var submitBtn = document.getElementById('submitBtn');
+                var loadingEl = document.getElementById('loadingIndicator');
+
+                if (!submitBtn.classList.contains('active')) return;
+
+                var formData = new FormData(form);
+                var selectedTrack = document.getElementById('selectedTrack').value;
+                var topics = [];
+                document.querySelectorAll('#topicGrid .topic-chip input[type="checkbox"]:checked').forEach(function (cb) {
+                    topics.push(cb.value);
                 });
-                
-                input.addEventListener('change', function() {
-                    updateButtonState();
+                var customTopicsVal = document.getElementById('customTopics') ? document.getElementById('customTopics').value.trim() : '';
+                var customTopicsArr = customTopicsVal ? customTopicsVal.split(',').map(function (t) { return t.trim(); }).filter(Boolean) : [];
+
+                var data = {
+                    name: formData.get('name'),
+                    email: formData.get('email'),
+                    role: formData.get('role'),
+                    level: formData.get('level'),
+                    jobDescription: formData.get('jobDescription') || '',
+                    resumeCacheKey: document.getElementById('resumeCacheKey').value,
+                    includeProfile: document.getElementById('includeProfile').checked,
+                    track: selectedTrack,
+                    framework: formData.get('framework') || 'amazon',
+                    depth: formData.get('depth') || 'medium',
+                    customQuestions: formData.get('customQuestions') || '',
+                    topics: topics,
+                    customTopics: customTopicsArr,
+                    preferredLanguage: formData.get('preferredLanguage') || 'python',
+                    problemCount: formData.get('problem_count') || '2',
+                    problemDifficulty: formData.get('problem_difficulty') || 'medium'
+                };
+
+                var loadingText = loadingEl.querySelector('.loading-text');
+                loadingText.textContent = 'Starting agent worker...';
+                loadingEl.classList.add('visible');
+                submitBtn.disabled = true;
+
+                try {
+                    var response = await fetch('/api/token', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+
+                    var result = await response.json();
+
+                    if (result.error) {
+                        throw new Error(result.message || result.error);
+                    }
+
+                    loadingText.textContent = 'Agent ready. Redirecting...';
+
+                    sessionStorage.setItem('mockflow_token', result.token);
+                    sessionStorage.setItem('mockflow_url', result.url);
+                    sessionStorage.setItem('mockflow_room', result.room);
+
+                    var params = new URLSearchParams({
+                        name: data.name,
+                        email: data.email,
+                        role: data.role,
+                        level: data.level,
+                        resumeCacheKey: data.resumeCacheKey,
+                        includeProfile: data.includeProfile,
+                        hasJD: data.jobDescription.length > 0 ? '1' : '0',
+                        track: data.track
+                    });
+
+                    if (data.jobDescription) {
+                        sessionStorage.setItem('mockflow_jd', data.jobDescription);
+                    }
+
+                    window.location.href = '/interview?' + params.toString();
+
+                } catch (err) {
+                    console.error('[FORM] Submit error:', err);
+                    loadingEl.classList.remove('visible');
+                    submitBtn.disabled = false;
+                    alert('Failed to start interview: ' + err.message);
+                }
+            }
+
+            function initInputValidation() {
+                var inputs = document.querySelectorAll('.form-input');
+
+                inputs.forEach(function (input) {
+                    input.addEventListener('blur', function () {
+                        if (this.hasAttribute('required')) {
+                            validateInput(this);
+                        }
+                    });
+
+                    input.addEventListener('input', function () {
+                        this.classList.remove('input-error');
+                        updateButtonState();
+                    });
+
+                    input.addEventListener('change', function () {
+                        updateButtonState();
+                    });
                 });
-            });
-        }
-        
-        function validateInput(input) {
-            var value = input.value.trim();
-            
-            if (input.type === 'email' && value) {
-                var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRegex.test(value)) {
+            }
+
+            function validateInput(input) {
+                var value = input.value.trim();
+
+                if (input.type === 'email' && value) {
+                    var emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                    if (!emailRegex.test(value)) {
+                        input.classList.add('input-error');
+                        return false;
+                    }
+                }
+
+                if (input.hasAttribute('required') && !value) {
                     input.classList.add('input-error');
                     return false;
                 }
+
+                input.classList.remove('input-error');
+                return true;
             }
-            
-            if (input.hasAttribute('required') && !value) {
-                input.classList.add('input-error');
-                return false;
-            }
-            
-            input.classList.remove('input-error');
-            return true;
-        }
-        
-        function updateButtonState() {
-            var form = document.getElementById('candidateForm');
-            var submitBtn = document.getElementById('submitBtn');
-            var requiredInputs = form.querySelectorAll('.form-input[required]');
-            var allFilled = true;
 
-            requiredInputs.forEach(function(input) {
-                if (!input.value.trim()) {
-                    allFilled = false;
-                }
-            });
+            function updateButtonState() {
+                var form = document.getElementById('candidateForm');
+                var submitBtn = document.getElementById('submitBtn');
+                var requiredInputs = form.querySelectorAll('.form-input[required]');
+                var allFilled = true;
 
-            if (allFilled) {
-                submitBtn.classList.add('active');
-            } else {
-                submitBtn.classList.remove('active');
-            }
-        }
-
-        var TRACK_COLORS = {
-            intro: '#22c55e',
-            behavioral: '#f59e0b',
-            technical_voice: '#3b82f6',
-            coding: '#8b5cf6'
-        };
-
-        var TRACK_DETAILS = {
-            intro: '5 stages · ~20 min · Self-intro \u2192 Experience \u2192 Company fit · Speak naturally, real-time AI responses · You can skip stages',
-            behavioral: '4 stages · ~25 min · STAR-format questions · Framework-aligned (Amazon / Google / Meta / Generic) · Follow-up depth configurable',
-            technical_voice: '5 stages · ~30 min · Concept-deep questions on selected topics · Resume-aware topic suggestions available',
-            coding: '5 stages · ~35 min · Live Monaco code editor · 1\u20132 LLM-generated problems · 15 min timer per problem · Up to 3 attempts · Code evaluated in real-time'
-        };
-
-        function updateTrackDetailBox(track) {
-            var box = document.getElementById('trackDetailBox');
-            var content = document.getElementById('trackDetailContent');
-            if (!box || !content) return;
-            content.textContent = TRACK_DETAILS[track] || '';
-            box.classList.add('visible');
-        }
-
-        function applyTrackColors() {
-            document.querySelectorAll('.track-card[data-track]').forEach(function(card) {
-                var track = card.getAttribute('data-track');
-                var color = TRACK_COLORS[track];
-                if (color) card.style.setProperty('--track-accent', color);
-            });
-        }
-
-        function initTrackSelector() {
-            var cards = document.querySelectorAll('.track-card:not(.disabled)');
-            cards.forEach(function(card) {
-                card.addEventListener('click', function() {
-                    document.querySelectorAll('.track-card').forEach(function(c) { c.classList.remove('selected'); });
-                    card.classList.add('selected');
-                    var track = card.getAttribute('data-track');
-                    document.getElementById('selectedTrack').value = track;
-                    updateTrackDetailBox(track);
-                    showTrackSection(track);
-                    updateButtonState();
-                });
-            });
-            updateTrackDetailBox('intro');
-        }
-
-        function showTrackSection(track) {
-            document.querySelectorAll('.track-section').forEach(function(s) { s.classList.remove('active'); });
-            if (track === 'behavioral') {
-                document.getElementById('behavioralSection').classList.add('active');
-            } else if (track === 'technical_voice') {
-                document.getElementById('technicalVoiceSection').classList.add('active');
-                populateDefaultTopics();
-            } else if (track === 'coding') {
-                document.getElementById('codingSection').classList.add('active');
-            }
-        }
-
-        function populateDefaultTopics() {
-            var role = (document.getElementById('role').value || '').toLowerCase();
-            var topicGrid = document.getElementById('topicGrid');
-            var defaultTopics;
-            if (role.includes('frontend') || role.includes('front-end') || role.includes('ui')) {
-                defaultTopics = ['DOM & Browser APIs', 'CSS Architecture', 'React/Vue', 'State Management', 'Web Performance', 'Accessibility'];
-            } else if (role.includes('backend') || role.includes('back-end') || role.includes('api')) {
-                defaultTopics = ['Distributed Systems', 'Databases', 'Caching', 'API Design', 'Authentication', 'Message Queues'];
-            } else if (role.includes('data') || role.includes('ml') || role.includes('machine learning')) {
-                defaultTopics = ['Statistics', 'ML Fundamentals', 'Data Pipelines', 'Feature Engineering', 'Model Evaluation', 'Python'];
-            } else if (role.includes('devops') || role.includes('sre') || role.includes('infrastructure')) {
-                defaultTopics = ['CI/CD', 'Containers & K8s', 'Monitoring', 'Cloud Services', 'Infrastructure as Code', 'Networking'];
-            } else {
-                defaultTopics = ['Data Structures', 'Algorithms', 'System Design', 'Databases', 'Operating Systems', 'Networking'];
-            }
-            topicGrid.innerHTML = '';
-            defaultTopics.forEach(function(topic, i) {
-                var id = 'topic_' + i;
-                topicGrid.innerHTML += '<div class="topic-chip"><input type="checkbox" id="' + id + '" value="' + topic + '"><label for="' + id + '">' + topic + '</label></div>';
-            });
-            // Show suggest button if resume is uploaded
-            if (document.getElementById('resumeCacheKey').value) {
-                document.getElementById('suggestTopicsBtn').style.display = 'inline-block';
-            }
-        }
-
-        function initStarModal() {
-            var btn = document.getElementById('starInfoBtn');
-            var overlay = document.getElementById('starModalOverlay');
-            var closeBtn = document.getElementById('starModalClose');
-            if (btn) btn.addEventListener('click', function() { overlay.classList.add('visible'); });
-            if (closeBtn) closeBtn.addEventListener('click', function() { overlay.classList.remove('visible'); });
-            if (overlay) overlay.addEventListener('click', function(e) { if (e.target === overlay) overlay.classList.remove('visible'); });
-        }
-
-        function initSuggestTopics() {
-            var btn = document.getElementById('suggestTopicsBtn');
-            if (!btn) return;
-            btn.addEventListener('click', function() {
-                var cacheKey = document.getElementById('resumeCacheKey').value;
-                var role = document.getElementById('role').value || '';
-                if (!cacheKey) return;
-                btn.textContent = 'Suggesting...';
-                btn.disabled = true;
-                fetch('/api/extract-topics', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ cache_key: cacheKey, role: role })
-                })
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    if (data.topics && data.topics.length > 0) {
-                        var topicGrid = document.getElementById('topicGrid');
-                        topicGrid.innerHTML = '';
-                        data.topics.slice(0, 8).forEach(function(topic, i) {
-                            var id = 'topic_r' + i;
-                            topicGrid.innerHTML += '<div class="topic-chip"><input type="checkbox" id="' + id + '" value="' + topic + '" checked><label for="' + id + '">' + topic + '</label></div>';
-                        });
+                requiredInputs.forEach(function (input) {
+                    if (!input.value.trim()) {
+                        allFilled = false;
                     }
-                    btn.textContent = 'Suggest topics from resume';
-                    btn.disabled = false;
-                })
-                .catch(function() {
-                    btn.textContent = 'Suggest topics from resume';
-                    btn.disabled = false;
                 });
-            });
-        }
-    })();
+
+                if (allFilled) {
+                    submitBtn.classList.add('active');
+                } else {
+                    submitBtn.classList.remove('active');
+                }
+            }
+
+            var TRACK_COLORS = {
+                intro: '#22c55e',
+                behavioral: '#f59e0b',
+                technical_voice: '#3b82f6',
+                coding: '#8b5cf6'
+            };
+
+            var TRACK_DETAILS = {
+                intro: '5 stages · ~20 min · Self-intro \u2192 Experience \u2192 Company fit · Speak naturally, real-time AI responses · You can skip stages',
+                behavioral: '4 stages · ~25 min · STAR-format questions · Framework-aligned (Amazon / Google / Meta / Generic) · Follow-up depth configurable',
+                technical_voice: '5 stages · ~30 min · Concept-deep questions on selected topics · Resume-aware topic suggestions available',
+                coding: '5 stages · ~35 min · Live Monaco code editor · 1\u20132 LLM-generated problems · 15 min timer per problem · Up to 3 attempts · Code evaluated in real-time'
+            };
+
+            function updateTrackDetailBox(track) {
+                var box = document.getElementById('trackDetailBox');
+                var content = document.getElementById('trackDetailContent');
+                if (!box || !content) return;
+                content.textContent = TRACK_DETAILS[track] || '';
+                box.classList.add('visible');
+            }
+
+            function applyTrackColors() {
+                document.querySelectorAll('.track-card[data-track]').forEach(function (card) {
+                    var track = card.getAttribute('data-track');
+                    var color = TRACK_COLORS[track];
+                    if (color) card.style.setProperty('--track-accent', color);
+                });
+            }
+
+            function initTrackSelector() {
+                var cards = document.querySelectorAll('.track-card:not(.disabled)');
+                cards.forEach(function (card) {
+                    card.addEventListener('click', function () {
+                        document.querySelectorAll('.track-card').forEach(function (c) { c.classList.remove('selected'); });
+                        card.classList.add('selected');
+                        var track = card.getAttribute('data-track');
+                        document.getElementById('selectedTrack').value = track;
+                        updateTrackDetailBox(track);
+                        showTrackSection(track);
+                        updateButtonState();
+                    });
+                });
+                updateTrackDetailBox('intro');
+            }
+
+            function showTrackSection(track) {
+                document.querySelectorAll('.track-section').forEach(function (s) { s.classList.remove('active'); });
+                if (track === 'behavioral') {
+                    document.getElementById('behavioralSection').classList.add('active');
+                } else if (track === 'technical_voice') {
+                    document.getElementById('technicalVoiceSection').classList.add('active');
+                    populateDefaultTopics();
+                } else if (track === 'coding') {
+                    document.getElementById('codingSection').classList.add('active');
+                }
+            }
+
+            function populateDefaultTopics() {
+                var role = (document.getElementById('role').value || '').toLowerCase();
+                var topicGrid = document.getElementById('topicGrid');
+                var defaultTopics;
+                if (role.includes('frontend') || role.includes('front-end') || role.includes('ui')) {
+                    defaultTopics = ['DOM & Browser APIs', 'CSS Architecture', 'React/Vue', 'State Management', 'Web Performance', 'Accessibility'];
+                } else if (role.includes('backend') || role.includes('back-end') || role.includes('api')) {
+                    defaultTopics = ['Distributed Systems', 'Databases', 'Caching', 'API Design', 'Authentication', 'Message Queues'];
+                } else if (role.includes('data') || role.includes('ml') || role.includes('machine learning')) {
+                    defaultTopics = ['Statistics', 'ML Fundamentals', 'Data Pipelines', 'Feature Engineering', 'Model Evaluation', 'Python'];
+                } else if (role.includes('devops') || role.includes('sre') || role.includes('infrastructure')) {
+                    defaultTopics = ['CI/CD', 'Containers & K8s', 'Monitoring', 'Cloud Services', 'Infrastructure as Code', 'Networking'];
+                } else {
+                    defaultTopics = ['Data Structures', 'Algorithms', 'System Design', 'Databases', 'Operating Systems', 'Networking'];
+                }
+                topicGrid.innerHTML = '';
+                defaultTopics.forEach(function (topic, i) {
+                    var id = 'topic_' + i;
+                    topicGrid.innerHTML += '<div class="topic-chip"><input type="checkbox" id="' + id + '" value="' + topic + '"><label for="' + id + '">' + topic + '</label></div>';
+                });
+                // Show suggest button if resume is uploaded
+                if (document.getElementById('resumeCacheKey').value) {
+                    document.getElementById('suggestTopicsBtn').style.display = 'inline-block';
+                }
+            }
+
+            function initStarModal() {
+                var btn = document.getElementById('starInfoBtn');
+                var overlay = document.getElementById('starModalOverlay');
+                var closeBtn = document.getElementById('starModalClose');
+                if (btn) btn.addEventListener('click', function () { overlay.classList.add('visible'); });
+                if (closeBtn) closeBtn.addEventListener('click', function () { overlay.classList.remove('visible'); });
+                if (overlay) overlay.addEventListener('click', function (e) { if (e.target === overlay) overlay.classList.remove('visible'); });
+            }
+
+            function initSuggestTopics() {
+                var btn = document.getElementById('suggestTopicsBtn');
+                if (!btn) return;
+                btn.addEventListener('click', function () {
+                    var cacheKey = document.getElementById('resumeCacheKey').value;
+                    var role = document.getElementById('role').value || '';
+                    if (!cacheKey) return;
+                    btn.textContent = 'Suggesting...';
+                    btn.disabled = true;
+                    fetch('/api/extract-topics', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ cache_key: cacheKey, role: role })
+                    })
+                        .then(function (r) { return r.json(); })
+                        .then(function (data) {
+                            if (data.topics && data.topics.length > 0) {
+                                var topicGrid = document.getElementById('topicGrid');
+                                topicGrid.innerHTML = '';
+                                data.topics.slice(0, 8).forEach(function (topic, i) {
+                                    var id = 'topic_r' + i;
+                                    topicGrid.innerHTML += '<div class="topic-chip"><input type="checkbox" id="' + id + '" value="' + topic + '" checked><label for="' + id + '">' + topic + '</label></div>';
+                                });
+                            }
+                            btn.textContent = 'Suggest topics from resume';
+                            btn.disabled = false;
+                        })
+                        .catch(function () {
+                            btn.textContent = 'Suggest topics from resume';
+                            btn.disabled = false;
+                        });
+                });
+            }
+        })();
     </script>
 </body>
+
 </html>

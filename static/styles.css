@@ -18,7 +18,7 @@ Mature, minimal, breathable design
     --bg-warm: #F5F2ED;
     --bg-soft: #EFEBE5;
     --bg-card: #FFFFFF;
-    
+
     /* Accent colors - soft pastels */
     --accent-green: #C8E6C9;
     --accent-green-deep: #81C784;
@@ -28,28 +28,28 @@ Mature, minimal, breathable design
     --accent-purple-deep: #BA68C8;
     --accent-cyan: #4AEADC;
     --accent-cyan-glow: rgba(74, 234, 220, 0.6);
-    
+
     /* Text */
     --text-primary: #1A1A1A;
     --text-secondary: #4A4A4A;
     --text-muted: #7A7A7A;
     --text-light: #9A9A9A;
-    
+
     /* Functional colors */
     --success: #4CAF50;
     --warning: #FF9800;
     --error: #E53935;
     --info: #2196F3;
-    
+
     /* Agent soul colors */
     --soul-core: #E8F5E9;
     --soul-glow: rgba(129, 199, 132, 0.4);
     --soul-wave: #81C784;
-    
+
     /* Candidate colors */
     --candidate-bg: #1A1A1A;
     --candidate-wave: #4AEADC;
-    
+
     /* Spacing */
     --spacing-xs: 0.5rem;
     --spacing-sm: 1rem;
@@ -64,14 +64,15 @@ Mature, minimal, breathable design
     --radius-lg: 20px;
     --radius-xl: 32px;
     --radius-full: 9999px;
-    
+
     /* Shadows */
     --shadow-soft: 0 2px 20px rgba(0, 0, 0, 0.05);
     --shadow-medium: 0 4px 30px rgba(0, 0, 0, 0.08);
     --shadow-lifted: 0 8px 40px rgba(0, 0, 0, 0.12);
 }
 
-html, body {
+html,
+body {
     height: 100%;
     overflow: hidden;
 }
@@ -87,7 +88,10 @@ body {
 
 /* ==================== TYPOGRAPHY ==================== */
 
-h1, h2, h3, h4 {
+h1,
+h2,
+h3,
+h4 {
     font-weight: 800;
     letter-spacing: -0.02em;
     color: var(--text-primary);
@@ -228,9 +232,17 @@ h1 {
     font-size: 0.875rem;
 }
 
-.feature-icon.green { background: var(--accent-green); }
-.feature-icon.pink { background: var(--accent-pink); }
-.feature-icon.purple { background: var(--accent-purple); }
+.feature-icon.green {
+    background: var(--accent-green);
+}
+
+.feature-icon.pink {
+    background: var(--accent-pink);
+}
+
+.feature-icon.purple {
+    background: var(--accent-purple);
+}
 
 .tech-stack {
     margin-top: var(--spacing-md);
@@ -485,37 +497,90 @@ a.badge:hover {
     align-items: center;
     justify-content: center;
     padding: var(--spacing-md);
-    background: linear-gradient(135deg, var(--bg-cream) 0%, var(--bg-warm) 50%, var(--bg-soft) 100%);
+    background: var(--bg-cream);
+    position: relative;
     overflow: hidden;
+}
+
+.form-page::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 150vw;
+    height: 150vw;
+    background: radial-gradient(circle,
+            rgba(76, 175, 80, 0.15) 0%, rgba(76, 175, 80, 0.15) 15%,
+            rgba(129, 199, 132, 0.1) 15.1%, rgba(129, 199, 132, 0.1) 35%,
+            rgba(200, 230, 201, 0.05) 35.1%, rgba(200, 230, 201, 0.05) 60%,
+            transparent 60.1%);
+    border-radius: 50%;
+    z-index: 0;
+    transform: translate(-50%, -50%);
+    animation: grow-circles 15s infinite alternate ease-in-out;
+}
+
+.form-page::after {
+    display: none;
+}
+
+@keyframes grow-circles {
+    0% {
+        transform: translate(-50%, -50%) scale(0.85);
+    }
+
+    100% {
+        transform: translate(-50%, -50%) scale(1.15);
+    }
 }
 
 .form-container {
     width: 100%;
-    max-width: 900px;
+    max-width: 1200px;
     display: grid;
-    grid-template-columns: 1fr 180px;
-    gap: var(--spacing-lg);
-    padding: var(--spacing-lg);
-    background: var(--bg-card);
-    border-radius: var(--radius-lg);
-    box-shadow: var(--shadow-lifted);
-    max-height: 95vh;
-    overflow-y: auto;
+    grid-template-columns: 1fr 340px;
+    gap: var(--spacing-xl);
+    padding: var(--spacing-xl);
+    background: transparent;
+    border: none;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    max-height: 100vh;
+    overflow: visible;
+    position: relative;
+    z-index: 1;
+    align-items: flex-start;
 }
 
 .form-main {
     display: flex;
     flex-direction: column;
+    background: rgba(255, 255, 255, 0.70);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+    padding: var(--spacing-xl);
+    max-height: calc(100vh - 4rem);
+    overflow-y: auto;
 }
 
 .form-sidebar {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: var(--spacing-md) 0;
-    border-left: 1px solid var(--bg-soft);
-    padding-left: var(--spacing-lg);
+    align-items: stretch;
+    justify-content: flex-start;
+    padding: var(--spacing-xl);
+    background: rgba(255, 255, 255, 0.70);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: var(--radius-xl);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(255, 255, 255, 0.6) inset;
+    position: sticky;
+    top: 25vh;
 }
 
 .form-header {
@@ -556,20 +621,22 @@ a.badge:hover {
 
 .form-input {
     width: 100%;
-    padding: 0.625rem 0.875rem;
-    background: var(--bg-cream);
+    padding: 0.875rem 1rem;
+    background: rgba(255, 255, 255, 0.5);
     border: 2px solid transparent;
     color: var(--text-primary);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-md);
     font-size: 0.9375rem;
     font-family: inherit;
-    transition: all 0.3s ease;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02) inset;
 }
 
 .form-input:focus {
     outline: none;
-    border-color: var(--text-primary);
-    background: var(--bg-card);
+    border-color: var(--accent-green-deep);
+    background: #FFFFFF;
+    box-shadow: 0 0 0 4px rgba(129, 199, 132, 0.15);
 }
 
 .form-input::placeholder {
@@ -636,7 +703,9 @@ select.form-input {
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* Form Game Button */
@@ -646,14 +715,14 @@ select.form-input {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    width: 130px;
-    height: 130px;
-    background: var(--bg-soft);
-    border: 3px solid var(--bg-soft);
-    border-radius: var(--radius-md);
+    width: 100%;
+    height: 180px;
+    background: var(--surface-2, rgba(0, 0, 0, 0.03));
+    border: none;
+    border-radius: var(--radius-xl);
     cursor: not-allowed;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: var(--shadow-soft);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) inset;
     overflow: hidden;
 }
 
@@ -667,76 +736,106 @@ select.form-input {
 }
 
 .btn-form-game.active {
-    background: var(--text-primary);
-    border-color: var(--text-primary);
+    background: linear-gradient(135deg, var(--accent-green-deep) 0%, var(--success) 100%);
     cursor: pointer;
+    box-shadow: 0 10px 30px rgba(76, 175, 80, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.2) inset;
+}
+
+.btn-form-game.active::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 50%;
+    height: 100%;
+    background: linear-gradient(to right, transparent, rgba(255, 255, 255, 0.4), transparent);
+    transform: skewX(-25deg);
+    animation: cta-shine 4s ease-in-out infinite;
+}
+
+@keyframes cta-shine {
+    0% {
+        left: -100%;
+    }
+
+    20% {
+        left: 200%;
+    }
+
+    100% {
+        left: 200%;
+    }
 }
 
 .btn-form-game.active:hover {
-    transform: scale(1.08);
-    border-color: var(--accent-green-deep);
-    box-shadow: var(--shadow-lifted);
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 15px 40px rgba(76, 175, 80, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.3) inset;
 }
 
 .btn-form-game.active:hover::before {
-    opacity: 0.2;
+    opacity: 0;
 }
 
 .btn-form-game-icon {
     position: relative;
     z-index: 1;
-    width: 48px;
-    height: 48px;
+    width: 56px;
+    height: 56px;
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: var(--spacing-xs);
+    margin-bottom: var(--spacing-sm);
     transition: all 0.3s ease;
 }
 
 .btn-form-game-icon svg {
-    width: 40px;
-    height: 40px;
+    width: 48px;
+    height: 48px;
     stroke: var(--text-muted);
     fill: none;
     transition: all 0.3s ease;
 }
 
 .btn-form-game.active .btn-form-game-icon svg {
-    stroke: var(--text-light);
+    stroke: #FFFFFF;
 }
 
 .btn-form-game.active:hover .btn-form-game-icon {
     transform: scale(1.15);
 }
 
-.btn-form-game.active:hover .btn-form-game-icon svg {
-    stroke: var(--bg-cream);
-}
-
 .btn-form-game-label {
     position: relative;
     z-index: 1;
-    font-size: 0.75rem;
-    font-weight: 700;
+    font-size: 0.9375rem;
+    font-weight: 800;
     color: var(--text-muted);
     text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 1px;
     transition: color 0.3s ease;
 }
 
 .btn-form-game.active .btn-form-game-label {
-    color: rgba(255, 255, 255, 0.7);
-}
-
-.btn-form-game.active:hover .btn-form-game-label {
-    color: var(--bg-cream);
+    color: #FFFFFF;
 }
 
 /* Icon swap */
-.btn-form-game .icon-inactive { display: block; }
-.btn-form-game .icon-active { display: none; }
-.btn-form-game.active .icon-inactive { display: none; }
-.btn-form-game.active .icon-active { display: block; }
+.btn-form-game .icon-inactive {
+    display: block;
+}
+
+.btn-form-game .icon-active {
+    display: none;
+}
+
+.btn-form-game.active .icon-inactive {
+    display: none;
+}
+
+.btn-form-game.active .icon-active {
+    display: block;
+}
 
 .interview-info {
     margin-top: var(--spacing-md);
@@ -856,6 +955,15 @@ select.form-input {
     transition: width 0.5s ease, background 0.5s ease;
 }
 
+#stageDots {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
+    position: relative;
+    z-index: 1;
+}
+
 /* Stage-specific progress fill colors */
 .progress-header[data-current-stage="welcome"] .progress-fill {
     background: rgb(74, 222, 128);
@@ -907,6 +1015,7 @@ select.form-input {
     color: var(--text-primary);
     transition: all 0.3s ease;
 }
+
 /* Stage Progress Colors - Natural Progression */
 /* Green -> Teal -> Blue -> Indigo */
 
@@ -1257,10 +1366,21 @@ select.form-input {
     stroke: white;
 }
 
-.video-toggle .icon-on { display: block; }
-.video-toggle .icon-off { display: none; }
-.video-toggle.off .icon-on { display: none; }
-.video-toggle.off .icon-off { display: block; }
+.video-toggle .icon-on {
+    display: block;
+}
+
+.video-toggle .icon-off {
+    display: none;
+}
+
+.video-toggle.off .icon-on {
+    display: none;
+}
+
+.video-toggle.off .icon-off {
+    display: block;
+}
 
 /* Candidate Info Row */
 .candidate-info-row {
@@ -1448,14 +1568,32 @@ select.form-input {
     animation: pulse-status 2s ease-in-out infinite;
 }
 
-.status-indicator.connecting { background: var(--warning); }
-.status-indicator.connected { background: var(--success); }
-.status-indicator.error { background: var(--error); }
-.status-indicator.disconnected { background: var(--text-light); }
+.status-indicator.connecting {
+    background: var(--warning);
+}
+
+.status-indicator.connected {
+    background: var(--success);
+}
+
+.status-indicator.error {
+    background: var(--error);
+}
+
+.status-indicator.disconnected {
+    background: var(--text-light);
+}
 
 @keyframes pulse-status {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.5; }
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.5;
+    }
 }
 
 /* ==================== CUSTOM MODAL ==================== */
@@ -1562,9 +1700,17 @@ select.form-input {
 }
 
 @keyframes flash-dim {
-    0% { opacity: 0; }
-    50% { opacity: 0.15; }
-    100% { opacity: 0; }
+    0% {
+        opacity: 0;
+    }
+
+    50% {
+        opacity: 0.15;
+    }
+
+    100% {
+        opacity: 0;
+    }
 }
 
 /* ==================== TIMER ==================== */
@@ -1615,20 +1761,21 @@ footer a:hover {
         gap: var(--spacing-md);
         overflow-y: auto;
     }
-    
-    .agent-side, .candidate-side {
+
+    .agent-side,
+    .candidate-side {
         padding: var(--spacing-sm);
     }
-    
+
     .hero-content {
         grid-template-columns: 1fr;
         text-align: center;
     }
-    
+
     .hero-left {
         grid-row: auto;
     }
-    
+
     .hero-buttons {
         grid-column: 1;
         grid-row: auto;
@@ -1637,36 +1784,40 @@ footer a:hover {
         padding-left: 0;
         padding-top: var(--spacing-md);
     }
-    
+
     .features {
         margin-left: auto;
         margin-right: auto;
     }
-    
+}
+
+@media (max-width: 850px) {
     .form-container {
         grid-template-columns: 1fr;
-        max-width: 520px;
+        max-width: 600px;
+        align-items: stretch;
     }
-    
+
     .form-sidebar {
-        border-left: none;
-        border-top: 1px solid var(--bg-soft);
-        padding-left: 0;
-        padding-top: var(--spacing-md);
+        position: relative;
+        top: 0;
+        margin-top: var(--spacing-md);
     }
 }
 
 @media (max-width: 768px) {
-    html, body {
+
+    html,
+    body {
         overflow: auto;
     }
-    
+
     .hero {
         height: auto;
         min-height: 100vh;
         padding: var(--spacing-lg) var(--spacing-md);
     }
-    
+
     h1 {
         font-size: 2rem;
     }
@@ -1674,7 +1825,7 @@ footer a:hover {
     .tagline {
         font-size: 0.9375rem;
     }
-    
+
     .features {
         grid-template-columns: 1fr;
     }
@@ -1683,50 +1834,52 @@ footer a:hover {
         margin: var(--spacing-sm);
         padding: var(--spacing-md);
     }
-    
+
     .form-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .progress-stages {
         gap: var(--spacing-xs);
     }
-    
+
     .stage-label {
         display: none;
     }
-    
+
     .agent-visualizer {
         width: 160px;
         height: 160px;
     }
-    
+
     .voice-circle {
         width: 160px;
         height: 160px;
     }
-    
+
     .voice-circle-bg {
         width: 120px;
         height: 120px;
     }
-    
+
     .bars-container {
         width: 160px;
         height: 160px;
     }
-    
+
     .interview-controls {
         bottom: var(--spacing-xs);
         padding: var(--spacing-xs) var(--spacing-sm);
     }
-    
-    .btn-game, .btn-form-game {
+
+    .btn-game,
+    .btn-form-game {
         width: 110px;
         height: 110px;
     }
-    
-    .btn-game-icon svg, .btn-form-game-icon svg {
+
+    .btn-game-icon svg,
+    .btn-form-game-icon svg {
         width: 36px;
         height: 36px;
     }
@@ -1736,11 +1889,11 @@ footer a:hover {
     .candidate-card {
         padding: var(--spacing-sm);
     }
-    
+
     .candidate-name {
         font-size: 1rem;
     }
-    
+
     .noise-warning {
         right: auto;
         left: 50%;
@@ -1845,6 +1998,7 @@ footer a:hover {
         left: var(--spacing-sm);
     }
 }
+
 /* ==================== AUTH HEADER ==================== */
 
 .auth-header {
