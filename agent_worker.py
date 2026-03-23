@@ -796,6 +796,104 @@ async def emit_user_caption(room: Room, text: str):
         logger.error(f"[UI] Failed to emit user caption: {e}")
 
 
+async def _async_skip_coding_problem(interview_state, room, session):
+    """Handle skip_coding_problem: advance to next problem or closing."""
+    import json as _json
+    try:
+        from fsm import CodingStage
+        current_idx = getattr(interview_state, 'current_problem_index', 0)
+        problems = getattr(interview_state, 'generated_problems', [])
+        active_count = getattr(interview_state, 'active_problem_count', len(problems))
+
+        next_idx = current_idx + 1
+        if next_idx < active_count and next_idx < len(problems):
+            # Push next problem
+            interview_state.current_problem_index = next_idx
+            problem = problems[next_idx]
+            attempts_done = getattr(interview_state, 'submissions_per_problem', {}).get(next_idx, 0)
+            payload_out = _json.dumps({
+                'type': 'coding_problem',
+                'problem': problem,
+                'problem_index': next_idx,
+                'attempt_number': attempts_done + 1,
+                'max_attempts': 3,
+                'time_limit_minutes': problem.get('time_limit_minutes', 15),
+            })
+            await room.local_participant.publish_data(payload_out.encode('utf-8'), reliable=True)
+            logger.info(f"[CODE] Skipped to problem {next_idx}: {problem.get('title', '?')}")
+        else:
+            # Move to closing
+            interview_state.stage = CodingStage.CLOSING
+            interview_state.coding_stage_active = False
+            closing_payload = _json.dumps({'type': 'stage_update', 'stage': 'closing'})
+            await room.local_participant.publish_data(closing_payload.encode('utf-8'), reliable=True)
+            if session:
+                try:
+                    await session.say("Great work on the coding problems. Let's wrap up.", allow_interruptions=True)
+                except Exception:
+                    pass
+            logger.info("[CODE] All problems done, moved to closing")
+    except Exception as e:
+        logger.error(f"[CODE] _async_skip_coding_problem failed: {e}", exc_info=True)
+
+
+async def _async_handle_ready_for_problem(interview_state, room):
+    """Handle ready_for_problem signal: generate problems if needed, then push to frontend."""
+    import json as _json
+    try:
+        # Generate problems on-demand if not yet generated
+        if not getattr(interview_state, 'generated_problems', None):
+            logger.info("[CODING] Generating problems on-demand for ready_for_problem")
+            try:
+                import openai as _openai
+                from prompts import QUESTION_GENERATION
+                _client = _openai.AsyncOpenAI(api_key=OPENAI_API_KEY)
+                role = getattr(interview_state, 'job_role', 'Software Engineer')
+                level = getattr(interview_state, 'experience_level', 'mid')
+                count = getattr(interview_state, 'active_problem_count', 1)
+                difficulty = 'easy' if level in ('entry', 'junior') else ('hard' if level in ('senior', 'lead') else 'medium')
+                resp = await _client.chat.completions.create(
+                    model='gpt-4o-mini',
+                    messages=[
+                        {'role': 'system', 'content': QUESTION_GENERATION.coding_system},
+                        {'role': 'user', 'content': f'Generate {count} {difficulty} coding problem(s) for a {level} {role}. Return valid JSON only.'}
+                    ],
+                    temperature=0.7,
+                    max_tokens=1500,
+                )
+                raw = resp.choices[0].message.content.strip()
+                if raw.startswith('```'):
+                    raw = raw.split('\n', 1)[1].rsplit('```', 1)[0]
+                parsed = _json.loads(raw)
+                interview_state.generated_problems = parsed.get('problems', [])
+                interview_state.active_problem_count = min(len(interview_state.generated_problems), count)
+                logger.info(f"[CODING] Generated {len(interview_state.generated_problems)} problems on-demand")
+            except Exception as _e:
+                logger.error(f"[CODING] Problem generation failed: {_e}")
+                interview_state.generated_problems = []
+
+        # Push first problem to frontend
+        problems = getattr(interview_state, 'generated_problems', [])
+        if problems:
+            problem = problems[0]
+            interview_state.current_problem_index = 0
+            interview_state.coding_stage_active = True
+            payload_out = _json.dumps({
+                'type': 'coding_problem',
+                'problem': problem,
+                'problem_index': 0,
+                'attempt_number': 1,
+                'max_attempts': 3,
+                'time_limit_minutes': problem.get('time_limit_minutes', 15),
+            })
+            await room.local_participant.publish_data(payload_out.encode('utf-8'), reliable=True)
+            logger.info(f"[CODING] Pushed problem to frontend: {problem.get('title', '?')}")
+        else:
+            logger.warning("[CODING] No problems to push after generation attempt")
+    except Exception as e:
+        logger.error(f"[CODING] _async_handle_ready_for_problem failed: {e}", exc_info=True)
+
+
 async def emit_agent_caption(room: Room, text: str):
     """Emit agent caption to the UI."""
     try:
@@ -855,8 +953,8 @@ async def execute_skip_transition(
 
 async def _evaluate_code_async(
     session: AgentSession,
-    agent: 'InterviewAgent',
-    state: InterviewState,
+    _agent,
+    state,
     room: Room,
     problem_index: int,
     code: str,
@@ -864,17 +962,80 @@ async def _evaluate_code_async(
 ):
     """Evaluate code submission asynchronously and have agent speak feedback."""
     try:
-        from livekit.agents import RunContext
-        ctx = RunContext(userdata=state, session=session)
-        result = await agent.evaluate_code_submission(ctx, problem_index=problem_index, code=code, language=language)
-        # Extract verbal feedback and have agent speak it
-        if 'Verbal feedback:' in result:
-            verbal = result.split('Verbal feedback:')[1].split('\n')[0].strip()
-            if verbal:
+        from prompts import CODE_EVALUATOR
+        import openai as _openai
+        import json as _json
+
+        problems = getattr(state, 'generated_problems', [])
+        if not problems or problem_index >= len(problems):
+            logger.warning(f"[CODE] No problem at index {problem_index}")
+            return
+
+        problem = problems[problem_index]
+
+        client = _openai.AsyncOpenAI(api_key=OPENAI_API_KEY)
+        user_prompt = CODE_EVALUATOR.user_template.format(
+            problem_title=problem.get('title', 'Coding Problem'),
+            problem_description=problem.get('description', ''),
+            problem_examples=str(problem.get('examples', [])),
+            problem_constraints=', '.join(problem.get('constraints', [])),
+            language=language,
+            code=code,
+        )
+
+        response = await client.chat.completions.create(
+            model='gpt-4o-mini',
+            messages=[
+                {'role': 'system', 'content': CODE_EVALUATOR.system},
+                {'role': 'user', 'content': user_prompt}
+            ],
+            temperature=0.3,
+            max_tokens=600,
+        )
+
+        raw = response.choices[0].message.content.strip()
+        if raw.startswith('```'):
+            raw = raw.split('\n', 1)[1].rsplit('```', 1)[0]
+        try:
+            evaluation = _json.loads(raw)
+        except Exception:
+            evaluation = {'brief_verbal_feedback': 'Thanks for your submission. Let me review it.'}
+
+        # Record submission in state
+        attempt_num = 1
+        if hasattr(state, 'submissions_per_problem'):
+            state.submissions_per_problem[problem_index] = state.submissions_per_problem.get(problem_index, 0) + 1
+            attempt_num = state.submissions_per_problem[problem_index]
+        if hasattr(state, 'submissions'):
+            state.submissions.append({
+                'problem_index': problem_index,
+                'attempt': attempt_num,
+                'code': code,
+                'language': language,
+                'evaluation': evaluation,
+            })
+
+        # Push evaluation result to frontend
+        eval_payload = _json.dumps({
+            'type': 'evaluation_result',
+            'evaluation': evaluation,
+            'attempt': attempt_num,
+            'max_attempts': 3,
+            'problem_index': problem_index,
+        })
+        await room.local_participant.publish_data(eval_payload.encode('utf-8'), reliable=True)
+        logger.info(f"[CODE] Evaluation sent to frontend for problem {problem_index}, attempt {attempt_num}")
+
+        # Agent speaks brief feedback
+        verbal = evaluation.get('brief_verbal_feedback', '')
+        if verbal and session:
+            try:
                 await session.say(verbal, allow_interruptions=True)
-        logger.info(f"[CODE] Async evaluation complete for problem {problem_index}")
+            except Exception as say_err:
+                logger.warning(f"[CODE] session.say failed: {say_err}")
+
     except Exception as e:
-        logger.error(f"[CODE] Async evaluation failed: {e}", exc_info=True)
+        logger.error(f"[CODE] _evaluate_code_async failed: {e}", exc_info=True)
 
 
 async def run_interview():
@@ -1200,6 +1361,13 @@ async def run_interview():
                     )
                     return
 
+                if payload.get('type') == 'skip_coding_problem':
+                    logger.info("[CODE] skip_coding_problem received")
+                    track_type = getattr(interview_state, 'track', 'intro')
+                    if track_type == 'coding':
+                        asyncio.create_task(_async_skip_coding_problem(interview_state, room, session))
+                    return
+
                 if payload.get('type') == 'skip_stage':
                     target_stage_name = payload.get('target_stage')
                     logger.info(f"[SKIP] Received skip request to: {target_stage_name}")
@@ -1224,6 +1392,13 @@ async def run_interview():
                             room=room
                         )
                     )
+                    return
+
+                if payload.get('type') == 'ready_for_problem':
+                    track_type = getattr(interview_state, 'track', 'intro')
+                    if track_type == 'coding':
+                        logger.info("[CODING] ready_for_problem received — scheduling async problem push")
+                        asyncio.create_task(_async_handle_ready_for_problem(interview_state, room))
             except Exception as e:
                 logger.error(f"[DATA] Error processing data: {e}", exc_info=True)
         
@@ -1257,7 +1432,7 @@ async def run_interview():
                     'ended_by': 'natural_completion',
                     'has_resume': bool(interview_state.uploaded_resume_text),
                     'has_jd': bool(interview_state.job_description),
-                    'track': getattr(interview_state, 'track_type', 'intro'),
+                    'track': getattr(interview_state, 'track', 'intro'),
                     'track_config': {
                         'framework': getattr(interview_state, 'framework', ''),
                         'depth': getattr(interview_state, 'depth_setting', ''),
@@ -1268,7 +1443,7 @@ async def run_interview():
                         'submissions': getattr(interview_state, 'submissions', []),
                     }
                 }
-                
+
                 from supabase_client import supabase_client
                 interview_id = supabase_client.save_interview(user_id, interview_data)
 
@@ -1353,7 +1528,7 @@ async def run_interview():
                     'ended_by': 'user_disconnect',
                     'has_resume': bool(interview_state.uploaded_resume_text),
                     'has_jd': bool(interview_state.job_description),
-                    'track': getattr(interview_state, 'track_type', 'intro'),
+                    'track': getattr(interview_state, 'track', 'intro'),
                     'track_config': {
                         'framework': getattr(interview_state, 'framework', ''),
                         'depth': getattr(interview_state, 'depth_setting', ''),
@@ -1364,7 +1539,7 @@ async def run_interview():
                         'submissions': getattr(interview_state, 'submissions', []),
                     }
                 }
-                
+
                 from supabase_client import supabase_client
                 interview_id = supabase_client.save_interview(user_id, interview_data)
 

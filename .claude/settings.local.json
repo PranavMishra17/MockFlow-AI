@@ -13,7 +13,11 @@
       "Bash(python -c \"from prompts import build_stage_instructions; from fsm import BehavioralStage, TechnicalVoiceStage; print\\(''Behavioral closing length:'', len\\(build_stage_instructions\\(BehavioralStage.CLOSING\\)\\)\\); print\\(''\\\\nTechnical voice closing length:'', len\\(build_stage_instructions\\(TechnicalVoiceStage.CLOSING\\)\\)\\); print\\(''\\\\nBehavioral self intro length:'', len\\(build_stage_instructions\\(BehavioralStage.SELF_INTRO\\)\\)\\); print\\(''\\\\nTechnical experience discussion length:'', len\\(build_stage_instructions\\(TechnicalVoiceStage.EXPERIENCE_DISCUSSION\\)\\)\\)\")",
       "Bash(python -m py_compile prompts.py)",
       "Bash(python:*)",
-      "Bash(OPENAI_API_KEY=test DEEPGRAM_API_KEY=test LIVEKIT_URL=test LIVEKIT_API_KEY=test LIVEKIT_API_SECRET=test INTERVIEW_ROOM_NAME=test python -c \"import agent_worker; print\\(''Import OK''\\)\")"
+      "Bash(OPENAI_API_KEY=test DEEPGRAM_API_KEY=test LIVEKIT_URL=test LIVEKIT_API_KEY=test LIVEKIT_API_SECRET=test INTERVIEW_ROOM_NAME=test python -c \"import agent_worker; print\\(''Import OK''\\)\")",
+      "Bash(find e:/MockFlow-AI -name prompts.py -o -name interview_state.py -o -name *state*.py)",
+      "Bash(xargs grep:*)",
+      "Bash(node -c templates/interview.html)",
+      "Bash(e:/MockFlow-AI/static/interview.css:*)"
     ]
   }
 }

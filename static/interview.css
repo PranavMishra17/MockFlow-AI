@@ -399,3 +399,49 @@
         min-height: 300px;
     }
 }
+
+.skip-intro-area {
+    position: fixed;
+    top: 75px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 50;
+    text-align: center;
+}
+
+/* === LeetCode-style problem display === */
+.problem-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap; }
+.problem-title { font-size: 0.95rem; font-weight: 700; color: var(--text-primary, #1a1a1a); }
+.problem-difficulty { font-size: 0.7rem; font-weight: 700; padding: 2px 8px; border-radius: 10px; text-transform: capitalize; flex-shrink: 0; }
+.diff-easy { background: rgba(34,197,94,0.15); color: #16a34a; }
+.diff-medium { background: rgba(245,158,11,0.15); color: #d97706; }
+.diff-hard { background: rgba(239,68,68,0.15); color: #dc2626; }
+.problem-description { font-size: 0.85rem; color: var(--text-primary, #1a1a1a); line-height: 1.7; margin-bottom: 12px; white-space: pre-wrap; word-break: break-word; }
+.problem-section-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted, #888); margin: 10px 0 5px; }
+.problem-example { margin-bottom: 8px; }
+.example-label { font-size: 0.73rem; font-weight: 600; color: var(--text-muted, #888); margin-bottom: 3px; }
+.example-code { font-family: 'Courier New', monospace; font-size: 0.78rem; background: var(--bg-soft, #f5f5f5); padding: 8px 10px; border-radius: 4px; margin: 0; white-space: pre; overflow-x: auto; line-height: 1.6; }
+.problem-constraints { font-size: 0.8rem; color: var(--text-muted, #888); padding-left: 18px; margin: 0; line-height: 1.9; }
+/* === Evaluation feedback state === */
+#submitCodeBtn.evaluating {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: var(--bg-soft, #eee);
+    color: var(--text-muted, #888);
+    border-color: var(--bg-soft, #eee);
+}
+
+.eval-spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--bg-soft, #ddd);
+    border-top-color: var(--accent-green-deep, #16a34a);
+    border-radius: 50%;
+    animation: eval-spin 0.7s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes eval-spin {
+    to { transform: rotate(360deg); }
+}
