@@ -24,16 +24,16 @@
     <div class="hero">
         <div class="hero-content">
             <div class="hero-left">
-<div class="logo-mark">
+<div class="logo-mark" id="logoMark" style="cursor:pointer;">
     <svg viewBox="0 0 48 48" width="72" height="100" fill="none" xmlns="http://www.w3.org/2000/svg">
         <circle cx="24" cy="24" r="20" fill="#C8E6C9"/>
         <circle cx="24" cy="24" r="12" fill="#81C784"/>
         <circle cx="24" cy="24" r="6" fill="#4CAF50"/>
     </svg>
 </div>
-                
+
                 <h1>MockFlow.ai</h1>
-                <p class="tagline">Practice interviews with an AI that listens, responds, and helps you improve. Real conversations, real feedback.</p>
+                <p class="tagline">Voice-native AI that interviews you, evaluates your live code, and scores your delivery.</p>
 
                 <ul class="features">
                     <li>
@@ -45,7 +45,7 @@
                                 <line x1="8" y1="23" x2="16" y2="23"/>
                             </svg>
                         </span>
-                        <span>Real-time voice conversation</span>
+                        <span>Live voice AI — sub-200ms, fully adaptive</span>
                     </li>
                     <li>
                         <span class="feature-icon pink">
@@ -54,16 +54,16 @@
                                 <polyline points="22 4 12 14.01 9 11.01"/>
                             </svg>
                         </span>
-                        <span>Two-stage interview flow</span>
+                        <span>4 tracks — Intro, Behavioral, Technical, Coding</span>
                     </li>
                     <li>
                         <span class="feature-icon purple">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <circle cx="12" cy="12" r="10"/>
-                                <polyline points="12 6 12 12 16 14"/>
+                                <polyline points="16 18 22 12 16 6"/>
+                                <polyline points="8 6 2 12 8 18"/>
                             </svg>
                         </span>
-                        <span>Instant practice - no scheduling</span>
+                        <span>Monaco code editor with live AI evaluation</span>
                     </li>
                     <li>
                         <span class="feature-icon green">
@@ -71,7 +71,7 @@
                                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                             </svg>
                         </span>
-                        <span>Adaptive follow-up questions</span>
+                        <span>Scored feedback with speech analytics</span>
                     </li>
                 </ul>
 
@@ -117,14 +117,89 @@
     </div>
 
     <footer>
-        <p>MockFlow-AI - Practice makes confidence</p>
+        <p>MockFlow.ai — Practice makes confidence</p>
     </footer>
 
+    <style>
+        /* Ripple rings */
+        .ripple-ring {
+            position: fixed;
+            border-radius: 50%;
+            border: 2px solid rgba(76, 175, 80, 0.65);
+            width: 12px; height: 12px;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            z-index: 0;
+            animation: ripple-out 1.5s cubic-bezier(0.08, 0.55, 0.25, 1) forwards;
+        }
+        @keyframes ripple-out {
+            0%   { width: 12px;              height: 12px;              opacity: 1;   border-width: 2.5px; }
+            20%  { opacity: 0.85; }
+            100% { width: var(--ring-max, 580px); height: var(--ring-max, 580px); opacity: 0; border-width: 0.5px; }
+        }
+
+        /* Logo pulse on click */
+        .logo-mark {
+            transition: transform 0.15s ease-out;
+        }
+        .logo-mark.logo-pulse {
+            animation: logo-pop 0.35s ease-out forwards;
+        }
+        @keyframes logo-pop {
+            0%   { transform: scale(1); }
+            40%  { transform: scale(1.13); }
+            100% { transform: scale(1); }
+        }
+
+        /* Tagline */
+        .tagline {
+            max-width: 500px !important;
+        }
+    </style>
     <script src="/static/header.js"></script>
     <script src="/static/auth.js"></script>
     <script src="/static/modal.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            var logo = document.getElementById('logoMark');
+            if (logo) {
+                logo.addEventListener('click', function() {
+                    var rect = logo.getBoundingClientRect();
+                    var cx = rect.left + rect.width / 2;
+                    var cy = rect.top + rect.height / 2;
+
+                    // Logo pulse
+                    logo.classList.remove('logo-pulse');
+                    void logo.offsetWidth; // reflow to restart animation
+                    logo.classList.add('logo-pulse');
+                    logo.addEventListener('animationend', function() {
+                        logo.classList.remove('logo-pulse');
+                    }, { once: true });
+
+                    // 5 rings — progressively larger and slower, staggered
+                    var rings = [
+                        { delay: 0,   maxSize: 100, dur: 0.9  },
+                        { delay: 90,  maxSize: 240, dur: 1.2  },
+                        { delay: 185, maxSize: 390, dur: 1.55 },
+                        { delay: 280, maxSize: 530, dur: 1.85 },
+                        { delay: 370, maxSize: 660, dur: 2.1  }
+                    ];
+
+                    rings.forEach(function(r) {
+                        setTimeout(function() {
+                            var ring = document.createElement('div');
+                            ring.className = 'ripple-ring';
+                            ring.style.left = cx + 'px';
+                            ring.style.top = cy + 'px';
+                            ring.style.setProperty('--ring-max', r.maxSize + 'px');
+                            ring.style.animationDuration = r.dur + 's';
+                            document.body.appendChild(ring);
+                            ring.addEventListener('animationend', function() { ring.remove(); });
+                        }, r.delay);
+                    });
+                });
+            }
+
             window.MockFlowHeader.init({
                 showHome: false,
                 showInfo: true,
