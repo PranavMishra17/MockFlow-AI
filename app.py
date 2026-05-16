@@ -19,8 +19,15 @@ from dotenv import load_dotenv
 from document_processor import doc_processor, DocumentMetadata
 from postprocess import list_interviews, get_interview_summary, merge_by_agent_turns
 from conversation_cache import conversation_cache, ConversationMetadata
-from supabase_client import supabase_client
-from auth_helpers import require_auth, get_current_user, get_user_id, is_authenticated
+from db import db_client as supabase_client
+from auth_helpers import (
+    init_auth,
+    register_auth_routes,
+    require_auth,
+    get_current_user,
+    get_user_id,
+    is_authenticated,
+)
 from worker_manager import worker_manager
 
 # In-memory feedback cache
@@ -43,21 +50,27 @@ app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-prod')
 CORS(app)  # Enable CORS for API endpoints
 
+# Authlib + Flask-Login (replaces Supabase Auth)
+init_auth(app)
+register_auth_routes(app)
+
 # Register cleanup on server shutdown
 atexit.register(worker_manager.cleanup_all_workers)
 
-# Validate required environment variables for production (BYOK keys NOT included)
+# Validate required environment variables for production (BYOK keys NOT included).
+# Each entry is a tuple of acceptable env var names; the first set value satisfies it.
 required_env_vars = [
-    'SUPABASE_URL',
-    'SUPABASE_SERVICE_KEY',
-    'SUPABASE_ANON_KEY',
-    'ENCRYPTION_KEY',
-    'SECRET_KEY',
-    'GOOGLE_CLIENT_ID',
-    'GOOGLE_CLIENT_SECRET'
+    ('DATABASE_URL',),
+    ('ENCRYPTION_KEY',),
+    ('SECRET_KEY',),
+    ('GOOGLE_CLIENT_ID',),
+    ('GOOGLE_CLIENT_SECRET', 'GOOGLE_CLOUD_CLIENT_SECRET'),
 ]
 
-missing_vars = [var for var in required_env_vars if not os.getenv(var)]
+missing_vars = [
+    names[0] for names in required_env_vars
+    if not any(os.getenv(n) for n in names)
+]
 if missing_vars:
     logger.error(f"[CONFIG] Missing required environment variables: {', '.join(missing_vars)}")
     if os.getenv('FLASK_ENV') == 'production':  # Only fail in production
@@ -70,96 +83,8 @@ logger.info("[CONFIG] BYOK model: LiveKit, OpenAI, and Deepgram keys loaded from
 
 
 # ==================== AUTH ENDPOINTS ====================
-
-@app.route('/auth/login')
-def login():
-    """Redirect to Supabase Google OAuth"""
-    try:
-        redirect_url = f"{request.host_url}auth/callback"
-        auth_url = f"{os.getenv('SUPABASE_URL')}/auth/v1/authorize?provider=google&redirect_to={redirect_url}"
-        logger.info(f"[AUTH] Redirecting to OAuth: {auth_url}")
-        return redirect(auth_url)
-    except Exception as e:
-        logger.error(f"[AUTH] Login error: {e}")
-        return "Login failed", 500
-
-@app.route('/auth/callback')
-def auth_callback():
-    """
-    Handle OAuth callback from Supabase.
-
-    Supabase returns tokens in URL fragment (#access_token=...) not query params.
-    We need to render a page that extracts tokens from fragment using JavaScript.
-    """
-    try:
-        # Log all incoming parameters for debugging
-        logger.info(f"[AUTH] Callback received - Query params: {dict(request.args)}")
-        logger.info(f"[AUTH] Callback received - Full URL: {request.url}")
-
-        # Render a page that will extract tokens from URL fragment using JavaScript
-        return render_template('auth_callback.html')
-    except Exception as e:
-        logger.error(f"[AUTH] Auth callback error: {e}", exc_info=True)
-        return "Authentication failed", 500
-
-@app.route('/auth/session', methods=['POST'])
-def set_session():
-    """Set session from tokens extracted by JavaScript"""
-    try:
-        data = request.json or {}
-        access_token = data.get('access_token')
-        refresh_token = data.get('refresh_token')
-
-        logger.info(f"[AUTH] Setting session - has access_token: {bool(access_token)}, has refresh_token: {bool(refresh_token)}")
-
-        if not access_token:
-            logger.error("[AUTH] No access token provided")
-            return jsonify({'error': 'No access token'}), 400
-
-        session['access_token'] = access_token
-        if refresh_token:
-            session['refresh_token'] = refresh_token
-
-        logger.info("[AUTH] User authenticated successfully")
-        return jsonify({
-            'success': True,
-            'redirect': url_for('dashboard')
-        })
-    except Exception as e:
-        logger.error(f"[AUTH] Set session error: {e}", exc_info=True)
-        return jsonify({'error': str(e)}), 500
-
-@app.route('/auth/logout')
-def logout():
-    """Clear session and logout"""
-    session.clear()
-    logger.info("[AUTH] User logged out")
-    return redirect(url_for('index'))
-
-@app.route('/api/auth/status')
-def auth_status():
-    """Check authentication status"""
-    try:
-        access_token = session.get('access_token')
-        logger.info(f"[AUTH] Status check - has session token: {bool(access_token)}")
-
-        user = get_current_user()
-        if user:
-            logger.info(f"[AUTH] User authenticated: {user.user.email}")
-            return jsonify({
-                'authenticated': True,
-                'user': {
-                    'id': user.user.id,
-                    'email': user.user.email,
-                    'name': user.user.user_metadata.get('full_name'),
-                    'avatar': user.user.user_metadata.get('avatar_url')
-                }
-            })
-        logger.info("[AUTH] No authenticated user found")
-        return jsonify({'authenticated': False})
-    except Exception as e:
-        logger.error(f"[AUTH] Auth status error: {e}", exc_info=True)
-        return jsonify({'authenticated': False})
+# /auth/login, /auth/google/callback, /auth/logout, /api/auth/status
+# are registered in auth_helpers.register_auth_routes(app) above.
 
 
 # ==================== USER API KEYS ENDPOINTS ====================

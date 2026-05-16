@@ -19,7 +19,7 @@ jobs:
           curl --max-time 180 --retry 3 --retry-delay 30 -fsS "${{ vars.RENDER_URL }}/health" || true
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
