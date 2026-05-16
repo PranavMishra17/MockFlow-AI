@@ -1,0 +1,36 @@
+name: Keep Render + Neon warm
+
+# Runs at 12:00 UTC on the 1st and 15th of every month (~every 14 days).
+# Wakes the Render service (which warms the DB transitively) and pings Neon
+# directly with a no-op query so the project's compute endpoint resets its
+# inactivity timer.
+on:
+  schedule:
+    - cron: '0 12 1,15 * *'
+  workflow_dispatch: {}
+
+jobs:
+  warmup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Render /health (warms web service + transitively the DB)
+        if: ${{ vars.RENDER_URL != '' }}
+        run: |
+          curl --max-time 180 --retry 3 --retry-delay 30 -fsS "${{ vars.RENDER_URL }}/health" || true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Direct Neon ping
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          python -m pip install --quiet "psycopg[binary]>=3.2,<4"
+          python -c "
+          import os, psycopg
+          with psycopg.connect(os.environ['DATABASE_URL']) as conn, conn.cursor() as cur:
+              cur.execute('SELECT 1')
+              print('Neon ping OK ->', cur.fetchone())
+          "

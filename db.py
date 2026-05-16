@@ -5,8 +5,8 @@ Drop-in replacement for `supabase_client.SupabaseClient`. Exposes the same
 method signatures and return shapes (None / [] / False on failure), so
 callers can switch by changing one import line.
 
-Connection target is the `XATA_DATABASE_URL` env var (a standard libpq
-connection string from Xata's "Connect with Postgres" page).
+Connection target is the `DATABASE_URL` env var (a standard libpq
+connection string — Neon, Aiven, Xata, or any other Postgres host).
 """
 
 import logging
@@ -27,9 +27,9 @@ logger = logging.getLogger(__name__)
 
 class DB:
     def __init__(self) -> None:
-        dsn = os.getenv("XATA_DATABASE_URL")
+        dsn = os.getenv("DATABASE_URL") or os.getenv("XATA_DATABASE_URL")
         if not dsn:
-            raise ValueError("XATA_DATABASE_URL is not set")
+            raise ValueError("DATABASE_URL is not set")
 
         self.pool = ConnectionPool(
             conninfo=dsn,

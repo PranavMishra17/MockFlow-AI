@@ -104,7 +104,7 @@ def main() -> int:
         cur.execute("DELETE FROM users WHERE id = %s", (user_id,))
     print("[OK] cleanup (cascade deleted interview/feedback/submission/api_keys)")
 
-    print("\nAll db.py methods round-trip correctly against Xata.")
+    print("\nAll db.py methods round-trip correctly against Postgres.")
     return 0
 
 
