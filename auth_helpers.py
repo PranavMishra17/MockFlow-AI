@@ -152,10 +152,21 @@ def register_auth_routes(app) -> None:
 
     @app.route("/auth/logout")
     def logout():
+        # Drop any legacy keys from the Supabase era BEFORE logout_user(),
+        # because logout_user() writes a "clear remember cookie" marker into
+        # the session and session.clear() afterwards would wipe that marker,
+        # leaving the remember cookie alive -> user gets re-logged-in on
+        # the next request via the user_loader.
+        for stale in ("access_token", "refresh_token"):
+            session.pop(stale, None)
         logout_user()
-        session.clear()
         logger.info("[AUTH] User logged out")
-        return redirect(url_for("index"))
+        resp = redirect(url_for("index"))
+        # Belt and suspenders: explicitly expire the remember cookie on the
+        # response in case the session-based clear marker doesn't trigger
+        # (e.g., behind certain proxies that strip cookies).
+        resp.delete_cookie("remember_token")
+        return resp
 
     @app.route("/api/auth/status")
     def auth_status():
