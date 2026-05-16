@@ -976,6 +976,133 @@
             }
         })();
     </script>
+
+    <script>
+    (function () {
+      const STORAGE_KEY = 'mockflow_form_v1';
+      const FILENAME_KEY = 'mockflow_form_v1_resume_name';
+      const form = document.getElementById('candidateForm');
+      if (!form) return;
+
+      const VALUE_IDS = [
+        'name', 'email', 'role',
+        'level', 'framework', 'preferredLanguage',
+        'customQuestions', 'customTopics', 'jobDescription',
+        'selectedTrack'
+      ];
+      const RADIO_NAMES = ['depth', 'problem_count', 'problem_difficulty'];
+      const CHECKBOX_IDS = ['includeProfile'];
+
+      function readState() {
+        try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || {}; }
+        catch (e) { return {}; }
+      }
+
+      function writeState() {
+        const state = { values: {}, radios: {}, checkboxes: {}, topics: {} };
+
+        VALUE_IDS.forEach(function (id) {
+          const el = document.getElementById(id);
+          if (el) state.values[id] = el.value;
+        });
+
+        RADIO_NAMES.forEach(function (name) {
+          const checked = form.querySelector('input[name="' + name + '"]:checked');
+          if (checked) state.radios[name] = checked.value;
+        });
+
+        CHECKBOX_IDS.forEach(function (id) {
+          const el = document.getElementById(id);
+          if (el) state.checkboxes[id] = el.checked;
+        });
+
+        const grid = document.getElementById('topicGrid');
+        if (grid) {
+          grid.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+            const key = cb.value || cb.id || cb.name;
+            if (key) state.topics[key] = cb.checked;
+          });
+        }
+
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+        catch (e) { /* quota / privacy mode */ }
+      }
+
+      function applyTopicState() {
+        const state = readState();
+        const topics = state.topics || {};
+        const grid = document.getElementById('topicGrid');
+        if (!grid) return;
+        grid.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+          const key = cb.value || cb.id || cb.name;
+          if (key in topics) cb.checked = topics[key];
+        });
+      }
+
+      function applyState() {
+        const state = readState();
+
+        Object.entries(state.values || {}).forEach(function (entry) {
+          const id = entry[0], val = entry[1];
+          const el = document.getElementById(id);
+          if (el && val != null) el.value = val;
+        });
+
+        Object.entries(state.radios || {}).forEach(function (entry) {
+          const name = entry[0], val = entry[1];
+          const radio = form.querySelector('input[name="' + name + '"][value="' + val + '"]');
+          if (radio) radio.checked = true;
+        });
+
+        Object.entries(state.checkboxes || {}).forEach(function (entry) {
+          const id = entry[0], checked = entry[1];
+          const el = document.getElementById(id);
+          if (el) el.checked = !!checked;
+        });
+
+        applyTopicState();
+
+        const savedName = localStorage.getItem(FILENAME_KEY);
+        if (savedName) {
+          const hint = document.getElementById('resumeFileName');
+          if (hint && !hint.textContent.trim()) {
+            hint.textContent = 'Previously selected: ' + savedName + ' (re-attach to re-upload)';
+          }
+        }
+      }
+
+      const grid = document.getElementById('topicGrid');
+      if (grid) {
+        new MutationObserver(function () { applyTopicState(); })
+          .observe(grid, { childList: true, subtree: true });
+      }
+
+      const trackEl = document.getElementById('selectedTrack');
+      if (trackEl) {
+        let last = trackEl.value;
+        setInterval(function () {
+          if (trackEl.value !== last) { last = trackEl.value; writeState(); }
+        }, 500);
+      }
+
+      form.addEventListener('input', writeState);
+      form.addEventListener('change', writeState);
+
+      const resumeFile = document.getElementById('resumeFile');
+      if (resumeFile) {
+        resumeFile.addEventListener('change', function () {
+          const f = resumeFile.files && resumeFile.files[0];
+          if (f) localStorage.setItem(FILENAME_KEY, f.name);
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', applyState);
+      } else {
+        applyState();
+      }
+    })();
+    </script>
 </body>
 
 </html>
