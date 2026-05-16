@@ -13,6 +13,7 @@ import atexit
 from pathlib import Path
 from flask import Flask, render_template, request, jsonify, send_from_directory, redirect, url_for, session
 from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix
 from livekit import api
 from dotenv import load_dotenv
 
@@ -48,6 +49,9 @@ logger = logging.getLogger(__name__)
 # Create Flask app
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-prod')
+# Honor X-Forwarded-Proto / X-Forwarded-Host from Render's reverse proxy so
+# url_for(..., _external=True) produces https URLs (OAuth redirect_uri must match exactly).
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 CORS(app)  # Enable CORS for API endpoints
 
 # Authlib + Flask-Login (replaces Supabase Auth)
