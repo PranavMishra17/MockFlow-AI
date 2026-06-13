@@ -6,6 +6,29 @@
 (function() {
     'use strict';
 
+    var THEME_KEY = 'mockflow_theme';
+
+    /**
+     * Apply the stored theme preference as early as possible to minimize
+     * flash-of-wrong-theme. Runs synchronously at script load (before render).
+     * No stored preference => leave data-theme unset so the
+     * prefers-color-scheme media query follows the system setting.
+     */
+    function applyStoredTheme() {
+        try {
+            var stored = localStorage.getItem(THEME_KEY);
+            if (stored === 'dark' || stored === 'light') {
+                document.documentElement.dataset.theme = stored;
+            } else {
+                delete document.documentElement.dataset.theme;
+            }
+        } catch (e) {
+            /* localStorage may be unavailable (private mode) — fall back to system */
+        }
+    }
+
+    applyStoredTheme();
+
     var HeaderConfig = {
         sponsorUrl: 'https://github.com/sponsors/PranavMishra17',
         githubUrl: 'https://github.com/PranavMishra17/MockFlow-AI',
@@ -27,7 +50,13 @@
         
         user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>',
         
-        key: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>'
+        key: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>',
+
+        // Sun shown when current theme is dark (click -> go light)
+        sun: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>',
+
+        // Moon shown when current theme is light (click -> go dark)
+        moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
     };
 
     window.MockFlowHeader = {
@@ -73,8 +102,32 @@
             }
 
             this.initSettingsDropdown();
+            this.initThemeWatcher();
             this.injectDeveloperModal();
             this.injectSettingsModal();
+        },
+
+        /**
+         * When the user has NOT made an explicit choice, keep the toggle icon in
+         * sync with live OS theme changes (the CSS already follows the system via
+         * the prefers-color-scheme media query).
+         */
+        initThemeWatcher: function() {
+            if (!window.matchMedia) return;
+            var self = this;
+            var mq = window.matchMedia('(prefers-color-scheme: dark)');
+            var handler = function() {
+                var hasExplicit = document.documentElement.dataset.theme === 'dark' ||
+                    document.documentElement.dataset.theme === 'light';
+                if (!hasExplicit) {
+                    self.updateThemeToggle();
+                }
+            };
+            if (mq.addEventListener) {
+                mq.addEventListener('change', handler);
+            } else if (mq.addListener) {
+                mq.addListener(handler);
+            }
         },
 
         renderBackButton: function() {
@@ -118,6 +171,11 @@
                 html += '<a href="' + HeaderConfig.sponsorUrl + '" target="_blank" rel="noopener" class="action-btn action-btn-sponsor" title="Sponsor">' + Icons.sponsor + '</a>';
             }
 
+            // Theme toggle (sun/moon) — always shown in the controls area
+            html += '<button id="themeToggleBtn" class="action-btn action-btn-theme" type="button" ' +
+                'onclick="window.MockFlowHeader.toggleTheme()" aria-label="Switch to dark theme" aria-pressed="false">' +
+                Icons.moon + '</button>';
+
             if (this.config.showSettings) {
                 html += '<div class="settings-dropdown" id="settingsDropdown">';
                 html += '<button class="action-btn" title="Settings" onclick="window.MockFlowHeader.toggleSettingsDropdown()">' + Icons.settings + '</button>';
@@ -129,6 +187,7 @@
             }
 
             container.innerHTML = html;
+            this.updateThemeToggle();
         },
 
         renderAuthHeader: function() {
@@ -187,6 +246,67 @@
             if (menu) {
                 menu.classList.toggle('visible');
             }
+        },
+
+        /**
+         * Resolve the currently-rendered theme ('dark' | 'light'), accounting for
+         * an explicit data-theme override OR the system preference when unset.
+         */
+        getEffectiveTheme: function() {
+            var explicit = document.documentElement.dataset.theme;
+            if (explicit === 'dark' || explicit === 'light') {
+                return explicit;
+            }
+            if (window.matchMedia &&
+                window.matchMedia('(prefers-color-scheme: dark)').matches) {
+                return 'dark';
+            }
+            return 'light';
+        },
+
+        /**
+         * Cycle the theme: flips the effective theme, sets an explicit
+         * data-theme override (so the manual choice always wins over system),
+         * and persists it to localStorage under 'mockflow_theme'.
+         */
+        toggleTheme: function() {
+            var next = this.getEffectiveTheme() === 'dark' ? 'light' : 'dark';
+            var root = document.documentElement;
+
+            // Gate the smooth color transition behind reduced-motion preference.
+            var reduce = window.matchMedia &&
+                window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (!reduce) {
+                root.classList.add('theme-transition');
+                window.setTimeout(function() {
+                    root.classList.remove('theme-transition');
+                }, 400);
+            }
+
+            root.dataset.theme = next;
+            try {
+                localStorage.setItem(THEME_KEY, next);
+            } catch (e) {
+                /* persistence unavailable — theme still applies for this session */
+            }
+            this.updateThemeToggle();
+        },
+
+        /**
+         * Sync the toggle button's icon, aria-label and aria-pressed to the
+         * effective theme. aria-pressed=true means dark mode is active.
+         */
+        updateThemeToggle: function() {
+            var btn = document.getElementById('themeToggleBtn');
+            if (!btn) return;
+            var isDark = this.getEffectiveTheme() === 'dark';
+            // Show a sun when dark (click to lighten), a moon when light.
+            btn.innerHTML = isDark ? Icons.sun : Icons.moon;
+            btn.setAttribute('aria-pressed', isDark ? 'true' : 'false');
+            btn.setAttribute('aria-label',
+                isDark ? 'Switch to light theme' : 'Switch to dark theme');
+            btn.setAttribute('title',
+                isDark ? 'Switch to light theme' : 'Switch to dark theme');
         },
 
         injectDeveloperModal: function() {
