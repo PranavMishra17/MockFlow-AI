@@ -6,6 +6,35 @@ Companion docs: [`EPIC_wingD_insights.md`](EPIC_wingD_insights.md) (code-level "
 
 ---
 
+## Status & handoff (read first)
+
+**THE MOAT (most important thing in this app):** the feedback loop evaluates a candidate **from the hiring decision** — *"as a {company-type} {role} interviewer at {level}, would I advance you, and what evidence moves that call?"* — not "how did you do." This is what differentiates us; the voice pipeline and UI are table stakes. The full principle is §0; the rubrics are §3.
+
+**Where the research lives:** this doc (synthesised), `docs/research/feedback_moat_deep_research_2026-06.md` (full primary-source report), `docs/DEEP_RESEARCH_PROMPT.md` (the prompt; re-run it for the per-cell rubric exemplars / mid-2026 refresh). A new agent should read §0–§5 here before changing the evaluator.
+
+**Build branch:** `feat/wing-d-feedback` (pushed; not yet merged — Pranav merges + reverifies).
+
+### Done & verified (committed on the branch)
+- **Phase 0** — `feedback_scoring.py` (TDD): research delivery bands + deterministic metrics injected; the hallucinated filler count is fixed. Migration `003_interview_scores.sql` + `db.py` `save_interview_scores`/`get_interview_scores`/`get_user_score_history` (queryable per-session scores).
+- **Phase 1** — `feedback.html` delivery panel + coding block (surface what we already compute).
+- **Phase 2** — `evaluator.py` (37 tests): the verdict engine — named signals per track×role×seniority, 7-point recommendation + level-read as a **formula over evidence-cited per-signal bands**, evidence-or-`cannot_determine`, down-level-don't-reject, strongest non-interviewer model. `POST /api/feedback/verdict` wires + persists it.
+- **Phase 5** — `feedback.html` rebuilt as the **verdict reveal** (Verdict card → signals with your-own-words quotes + "to raise this" → next rep → delivery). Verified in Chromium.
+- **Legacy retired** — removed `FEEDBACKSCORES`/`POSTINTERVIEWFEEDBACK`/`build_post_interview_feedback_prompt`, the `/api/feedback/scores` + `/api/feedback` endpoints, `finalize_scores`, and the old `renderScores`/`renderFeedback`. **User-turn stage tags** added in `agent_worker.py`.
+
+### Left to build
+- **Phase 3 — longitudinal + dashboard (NEXT).** `interview_scores` already persists per-session verdicts (with a numeric `overall_score` proxy = index on the 7-point scale). Build: canonical-competency mapping across tracks (§4), trends (≥3 sessions), cross-track comparison, the competency **radar vs a target-level reference polygon**, "vs last session" personalization on the report, and the dashboard/"Interview Personality" rebuild + landing surfacing. Entry points: `db.get_user_score_history`, the dashboard route/template, `/api/user/stats`.
+- **Phase 4 — calibration.** Human gold-set harness + agreement (Cohen's κ, target 75–90%); few-shot anchored exemplars per band; don't lean on scores publicly until calibrated.
+
+### To run live
+Run `migrations/003_interview_scores.sql` on Neon. Optionally set `EVALUATOR_MODEL` (defaults to `gpt-4o`; must be a strong model that supports JSON mode). Verdict uses the user's BYOK OpenAI key.
+
+### Gotchas for the next agent
+- The Playwright **smoke server caches Jinja templates** — after editing a template, hard-kill `python.exe` (use PowerShell `Stop-Process`; `pkill` misses it on Windows) and restart, or you'll verify stale HTML.
+- `feedback.html` render functions are **closure-scoped** (not global) — you can't inject them via `page.evaluate`; drive the real button-click path instead, mocking `/api/feedback/verdict`.
+- The verdict's overall recommendation is **recomputed in code** from per-signal bands (`finalize_verdict`) — don't trust the model's own `overall`; it only supplies `confidence` + `headline`.
+
+---
+
 ## 0. The principle (the moat)
 
 Today our evaluator asks: *"How did this answer go? How well did they perform, given their resume?"* That produces generic, coarse feedback that any tool can generate.
