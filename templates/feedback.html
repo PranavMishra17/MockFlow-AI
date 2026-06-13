@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interview Feedback - MockFlow-AI</title>
+    <title>Interview Feedback &mdash; MockFlow-AI</title>
+    <meta name="description" content="AI-powered interview feedback from MockFlow-AI: per-competency scores, top strengths, focus areas, and an actionable narrative report you can print or share.">
+    <meta property="og:title" content="Interview Feedback &mdash; MockFlow-AI">
+    <meta property="og:description" content="AI-powered interview feedback: per-competency scores, top strengths, focus areas, and an actionable narrative report.">
+    <meta property="og:type" content="article">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -89,6 +93,27 @@
             <div class="panel-right">
                 <div class="feedback-header">
                     <h2>Detailed Feedback</h2>
+                    <!-- Report actions: hidden until feedback exists -->
+                    <div class="report-actions" id="reportActions" style="display: none;">
+                        <button type="button" class="btn-report-action" id="downloadPdfBtn"
+                                aria-label="Download this feedback report as a PDF using the browser print dialog">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <path d="M6 9V2h12v7"/>
+                                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                                <rect x="6" y="14" width="12" height="8"/>
+                            </svg>
+                            <span>Download PDF</span>
+                        </button>
+                        <button type="button" class="btn-report-action" id="copyMarkdownBtn"
+                                aria-label="Copy this feedback report to the clipboard as Markdown">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                            </svg>
+                            <span class="btn-action-label" id="copyMarkdownLabel">Copy as Markdown</span>
+                        </button>
+                        <span class="copy-confirm" id="copyConfirm" role="status" aria-live="polite"></span>
+                    </div>
                 </div>
 
                 <!-- Loading State for Feedback Report -->
@@ -160,7 +185,9 @@
             scoresGenerated: false,
             reportGenerated: false,
             scoresData: null,
-            conversationData: null
+            conversationData: null,
+            feedbackText: null,
+            meta: null
         };
 
         var elements = {
@@ -180,6 +207,11 @@
             cachedIndicator: document.getElementById('cachedIndicator'),
 
             feedbackHeader: document.querySelector('.feedback-header'),
+            reportActions: document.getElementById('reportActions'),
+            downloadPdfBtn: document.getElementById('downloadPdfBtn'),
+            copyMarkdownBtn: document.getElementById('copyMarkdownBtn'),
+            copyMarkdownLabel: document.getElementById('copyMarkdownLabel'),
+            copyConfirm: document.getElementById('copyConfirm'),
             feedbackLoading: document.getElementById('feedbackLoading'),
             loadingPhase: document.getElementById('loadingPhase'),
             feedbackContent: document.getElementById('feedbackContent'),
@@ -199,6 +231,8 @@
             elements.viewTranscriptBtn.addEventListener('click', openTranscriptModal);
             elements.closeTranscriptBtn.addEventListener('click', closeTranscriptModal);
             elements.transcriptModalBackdrop.addEventListener('click', closeTranscriptModal);
+            elements.downloadPdfBtn.addEventListener('click', function() { window.print(); });
+            elements.copyMarkdownBtn.addEventListener('click', copyFeedbackAsMarkdown);
         }
         
         function loadInterview() {
@@ -243,6 +277,7 @@
             var meta = data.meta || {};
             var conversation = data.ordered_conversation || [];
             feedbackState.conversationData = conversation;
+            feedbackState.meta = meta;
 
             var stagesHtml = '';
             if (meta.stages_covered && meta.stages_covered.length) {
@@ -291,6 +326,7 @@
                         console.log('[FEEDBACK] Found cached feedback in database');
 
                         if (data.feedback_data.scores) {
+                            feedbackState.scoresData = data.feedback_data.scores;
                             renderScores(data.feedback_data.scores, true);
                             feedbackState.scoresGenerated = true;
                         }
@@ -544,8 +580,113 @@
             elements.feedbackLoading.style.display = 'none';
             elements.feedbackPlaceholder.style.display = 'none';
 
+            feedbackState.feedbackText = feedbackText;
+
             var html = parseMarkdown(feedbackText);
             elements.feedbackContent.innerHTML = '<div class="feedback-text">' + html + '</div>';
+
+            // Report is now a shareable artifact: reveal export/copy actions.
+            elements.reportActions.style.display = 'flex';
+        }
+
+        function buildMarkdown() {
+            var meta = feedbackState.meta || {};
+            var scores = feedbackState.scoresData;
+            var lines = [];
+
+            // Header
+            lines.push('# Interview Feedback');
+            lines.push('');
+            lines.push('- **Candidate:** ' + (meta.candidate || 'Unknown'));
+            if (meta.job_role) lines.push('- **Role:** ' + meta.job_role);
+            if (meta.experience_level) lines.push('- **Level:** ' + meta.experience_level);
+            lines.push('- **Date:** ' + formatDate(meta.interview_date));
+            lines.push('');
+
+            // Scores
+            if (scores) {
+                if (typeof scores.overall_score === 'number') {
+                    lines.push('## Overall Score');
+                    lines.push('');
+                    lines.push('**' + scores.overall_score.toFixed(1) + ' / 5**');
+                    lines.push('');
+                }
+
+                if (scores.competencies && scores.competencies.length) {
+                    lines.push('## Competency Scores');
+                    lines.push('');
+                    scores.competencies.forEach(function(comp) {
+                        lines.push('### ' + comp.name + ' — ' + comp.score + '/' + comp.max_score);
+                        if (comp.quick_take) lines.push(comp.quick_take);
+                        lines.push('');
+                    });
+                }
+
+                if (scores.top_strength) {
+                    lines.push('**Top Strength:** ' + scores.top_strength);
+                    lines.push('');
+                }
+                if (scores.top_improvement) {
+                    lines.push('**Focus Area:** ' + scores.top_improvement);
+                    lines.push('');
+                }
+            }
+
+            // Narrative feedback (already Markdown from the model)
+            if (feedbackState.feedbackText) {
+                lines.push('## Detailed Feedback');
+                lines.push('');
+                lines.push(feedbackState.feedbackText.trim());
+                lines.push('');
+            }
+
+            return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+        }
+
+        function copyFeedbackAsMarkdown() {
+            var markdown = buildMarkdown();
+
+            function onSuccess() {
+                showCopyConfirm('Copied!');
+            }
+            function onFailure() {
+                showCopyConfirm('Copy failed');
+            }
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(markdown).then(onSuccess).catch(function() {
+                    fallbackCopy(markdown) ? onSuccess() : onFailure();
+                });
+            } else {
+                fallbackCopy(markdown) ? onSuccess() : onFailure();
+            }
+        }
+
+        function fallbackCopy(text) {
+            try {
+                var ta = document.createElement('textarea');
+                ta.value = text;
+                ta.setAttribute('readonly', '');
+                ta.style.position = 'absolute';
+                ta.style.left = '-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                var ok = document.execCommand('copy');
+                document.body.removeChild(ta);
+                return ok;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function showCopyConfirm(message) {
+            elements.copyConfirm.textContent = message;
+            elements.copyConfirm.classList.add('visible');
+            if (showCopyConfirm._timer) clearTimeout(showCopyConfirm._timer);
+            showCopyConfirm._timer = setTimeout(function() {
+                elements.copyConfirm.classList.remove('visible');
+                elements.copyConfirm.textContent = '';
+            }, 2200);
         }
 
         function openTranscriptModal() {

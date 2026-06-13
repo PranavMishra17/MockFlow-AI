@@ -23,11 +23,87 @@
             <h1>Past Interviews</h1>
         </div>
 
-        <div class="error-state" id="errorState" style="display: none;"></div>
+        <!-- Controls bar: search, track filter, sort. Hidden until interviews load. -->
+        <div class="controls-bar" id="controlsBar" hidden>
+            <div class="control control-search">
+                <label class="control-label" for="searchInput">Search interviews</label>
+                <div class="search-field">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <circle cx="11" cy="11" r="7"/>
+                        <path d="M21 21l-4.35-4.35"/>
+                    </svg>
+                    <input type="search" id="searchInput" class="search-input"
+                           placeholder="Search by name or role&hellip;"
+                           autocomplete="off" aria-label="Search interviews by candidate name or job role">
+                </div>
+            </div>
+
+            <div class="control">
+                <label class="control-label" for="trackFilter">Track</label>
+                <select id="trackFilter" class="control-select" aria-label="Filter by interview track">
+                    <option value="all">All tracks</option>
+                    <option value="intro">Intro</option>
+                    <option value="behavioral">Behavioral</option>
+                    <option value="technical_voice">Technical Voice</option>
+                    <option value="coding">Coding</option>
+                </select>
+            </div>
+
+            <div class="control">
+                <span class="control-label" id="sortLabel">Sort</span>
+                <button type="button" id="sortToggle" class="sort-toggle"
+                        aria-describedby="sortLabel" aria-pressed="false" data-order="newest">
+                    <svg class="sort-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M3 6h13M3 12h9M3 18h5M17 8V4m0 0L14 7m3-3l3 3"/>
+                    </svg>
+                    <span class="sort-text" id="sortText">Newest first</span>
+                </button>
+            </div>
+        </div>
+
+        <p class="results-count" id="resultsCount" role="status" aria-live="polite" hidden></p>
+
+        <div class="error-state" id="errorState" hidden></div>
 
         <div class="interviews-grid" id="interviewsGrid">
-            <div class="loading-state" id="loadingState">
-                Loading interviews...
+            <!-- Skeleton loading placeholders (replaced once data resolves) -->
+            <div class="skeleton-list" id="loadingState" aria-hidden="true">
+                <div class="skeleton-card">
+                    <div class="skeleton-line skeleton-title"></div>
+                    <div class="skeleton-line skeleton-date"></div>
+                    <div class="skeleton-tags">
+                        <span class="skeleton-pill"></span>
+                        <span class="skeleton-pill"></span>
+                    </div>
+                    <div class="skeleton-line skeleton-meta"></div>
+                </div>
+                <div class="skeleton-card">
+                    <div class="skeleton-line skeleton-title"></div>
+                    <div class="skeleton-line skeleton-date"></div>
+                    <div class="skeleton-tags">
+                        <span class="skeleton-pill"></span>
+                        <span class="skeleton-pill"></span>
+                    </div>
+                    <div class="skeleton-line skeleton-meta"></div>
+                </div>
+                <div class="skeleton-card">
+                    <div class="skeleton-line skeleton-title"></div>
+                    <div class="skeleton-line skeleton-date"></div>
+                    <div class="skeleton-tags">
+                        <span class="skeleton-pill"></span>
+                        <span class="skeleton-pill"></span>
+                    </div>
+                    <div class="skeleton-line skeleton-meta"></div>
+                </div>
+                <div class="skeleton-card">
+                    <div class="skeleton-line skeleton-title"></div>
+                    <div class="skeleton-line skeleton-date"></div>
+                    <div class="skeleton-tags">
+                        <span class="skeleton-pill"></span>
+                        <span class="skeleton-pill"></span>
+                    </div>
+                    <div class="skeleton-line skeleton-meta"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -50,24 +126,47 @@
     <script>
     (function() {
         'use strict';
-        
+
         var elements = {
             loadingState: document.getElementById('loadingState'),
             errorState: document.getElementById('errorState'),
-            interviewsGrid: document.getElementById('interviewsGrid')
+            interviewsGrid: document.getElementById('interviewsGrid'),
+            controlsBar: document.getElementById('controlsBar'),
+            resultsCount: document.getElementById('resultsCount'),
+            searchInput: document.getElementById('searchInput'),
+            trackFilter: document.getElementById('trackFilter'),
+            sortToggle: document.getElementById('sortToggle'),
+            sortText: document.getElementById('sortText')
         };
-        
+
+        // Full set of interviews loaded from the API; never mutated after load.
+        var allInterviews = [];
+        // Current view state for client-side filtering/sorting.
+        var state = {
+            search: '',
+            track: 'all',
+            order: 'newest' // or 'oldest'
+        };
+
+        var TRACK_LABELS = {
+            intro: 'Intro',
+            behavioral: 'Behavioral',
+            technical_voice: 'Technical Voice',
+            coding: 'Coding'
+        };
+
         document.addEventListener('DOMContentLoaded', loadInterviews);
 
         function loadInterviews() {
+            showLoading();
             checkAuth().then(function(isAuthenticated) {
                 if (isAuthenticated) {
                     loadFromDatabase();
                 } else {
-                    showError('Please log in to view your interviews');
+                    showError('Please log in to view your interviews.', false);
                 }
             }).catch(function() {
-                showError('Authentication check failed. Please log in.');
+                showError('We could not verify your session. Please log in and try again.', false);
             });
         }
 
@@ -87,38 +186,163 @@
                 .then(function(dbInterviews) {
                     console.log('[PAST_CALLS] Loaded ' + dbInterviews.length + ' interviews from database');
 
-                    elements.loadingState.style.display = 'none';
+                    hideLoading();
+                    allInterviews = Array.isArray(dbInterviews) ? dbInterviews : [];
 
-                    if (dbInterviews.length === 0) {
+                    if (allInterviews.length === 0) {
                         showEmptyState();
                         return;
                     }
 
-                    renderInterviews(dbInterviews);
+                    elements.controlsBar.hidden = false;
+                    applyAndRender();
                 })
                 .catch(function(err) {
                     console.error('[PAST_CALLS] Database load error:', err);
-                    elements.loadingState.style.display = 'none';
-                    showError('Failed to load interviews: ' + err.message);
+                    hideLoading();
+                    showError('We could not load your interviews right now. Please try again.', true);
                 });
         }
 
-        function showError(message) {
-            elements.errorState.textContent = message;
-            elements.errorState.style.display = 'block';
+        // ==================== STATE HELPERS ====================
+
+        function showLoading() {
+            elements.errorState.hidden = true;
+            elements.controlsBar.hidden = true;
+            elements.resultsCount.hidden = true;
+            if (elements.loadingState) {
+                elements.loadingState.style.display = '';
+            }
+        }
+
+        function hideLoading() {
+            if (elements.loadingState) {
+                elements.loadingState.style.display = 'none';
+            }
+        }
+
+        function showError(message, allowRetry) {
+            elements.controlsBar.hidden = true;
+            elements.resultsCount.hidden = true;
+            elements.interviewsGrid.innerHTML = '';
+
+            elements.errorState.innerHTML = '';
+            var msg = document.createElement('p');
+            msg.className = 'error-message';
+            msg.textContent = message;
+            elements.errorState.appendChild(msg);
+
+            if (allowRetry) {
+                var retryBtn = document.createElement('button');
+                retryBtn.type = 'button';
+                retryBtn.className = 'retry-btn';
+                retryBtn.textContent = 'Retry';
+                retryBtn.addEventListener('click', function() {
+                    elements.errorState.hidden = true;
+                    loadInterviews();
+                });
+                elements.errorState.appendChild(retryBtn);
+            }
+
+            elements.errorState.hidden = false;
         }
 
         function showEmptyState() {
+            elements.controlsBar.hidden = true;
+            elements.resultsCount.hidden = true;
             elements.interviewsGrid.innerHTML =
                 '<div class="empty-state">' +
-                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">' +
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">' +
                         '<path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>' +
                     '</svg>' +
                     '<h3>No interviews yet</h3>' +
                     '<p>Complete your first mock interview to see it here.</p>' +
+                    '<a href="/start" class="empty-cta">Start an interview</a>' +
                 '</div>';
         }
-        
+
+        function showNoResults() {
+            elements.interviewsGrid.innerHTML =
+                '<div class="empty-state no-results">' +
+                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">' +
+                        '<circle cx="11" cy="11" r="7"/>' +
+                        '<path d="M21 21l-4.35-4.35"/>' +
+                    '</svg>' +
+                    '<h3>No matching interviews</h3>' +
+                    '<p>Try a different search term or clear the filters.</p>' +
+                    '<button type="button" class="empty-cta" id="clearFiltersBtn">Clear filters</button>' +
+                '</div>';
+            var clearBtn = document.getElementById('clearFiltersBtn');
+            if (clearBtn) {
+                clearBtn.addEventListener('click', clearFilters);
+            }
+        }
+
+        function clearFilters() {
+            state.search = '';
+            state.track = 'all';
+            elements.searchInput.value = '';
+            elements.trackFilter.value = 'all';
+            applyAndRender();
+        }
+
+        // ==================== FILTER + SORT + RENDER ====================
+
+        function applyAndRender() {
+            var filtered = allInterviews.filter(matchesFilters);
+            sortInterviews(filtered);
+            updateResultsCount(filtered.length);
+
+            if (filtered.length === 0) {
+                showNoResults();
+                return;
+            }
+
+            renderInterviews(filtered);
+        }
+
+        function matchesFilters(interview) {
+            // Track filter
+            if (state.track !== 'all') {
+                var track = (interview.track || 'intro');
+                if (track !== state.track) return false;
+            }
+
+            // Text search over candidate name and job role
+            var q = state.search.trim().toLowerCase();
+            if (q) {
+                var name = (interview.candidate_name || '').toLowerCase();
+                var role = (interview.job_role || '').toLowerCase();
+                if (name.indexOf(q) === -1 && role.indexOf(q) === -1) return false;
+            }
+            return true;
+        }
+
+        function sortInterviews(list) {
+            list.sort(function(a, b) {
+                var ta = dateValue(a.interview_date);
+                var tb = dateValue(b.interview_date);
+                return state.order === 'newest' ? (tb - ta) : (ta - tb);
+            });
+        }
+
+        function dateValue(isoDate) {
+            if (!isoDate) return 0;
+            var t = new Date(isoDate).getTime();
+            return isNaN(t) ? 0 : t;
+        }
+
+        function updateResultsCount(count) {
+            elements.resultsCount.hidden = false;
+            var total = allInterviews.length;
+            var noun = count === 1 ? 'interview' : 'interviews';
+            if (count === total) {
+                elements.resultsCount.textContent = 'Showing ' + count + ' ' + noun;
+            } else {
+                elements.resultsCount.textContent = 'Showing ' + count + ' of ' + total + ' ' + noun;
+            }
+        }
+
         function renderInterviews(interviews) {
             var html = interviews.map(function(interview) {
                 var date = interview.interview_date ? formatDate(interview.interview_date) : 'Unknown date';
@@ -134,11 +358,14 @@
                 if (interview.experience_level) {
                     tagsHtml += '<span class="interview-tag level">' + formatLevel(interview.experience_level) + '</span>';
                 }
+                if (interview.track) {
+                    tagsHtml += '<span class="interview-tag track">' + escapeHtml(formatTrack(interview.track)) + '</span>';
+                }
 
                 return '<a href="/feedback/' + encodeURIComponent(interviewId) + '" class="interview-card">' +
                     '<div class="card-content">' +
                         '<div class="interview-name">' + escapeHtml(interview.candidate_name || 'Unknown') + '</div>' +
-                        '<div class="interview-date">' + date + '</div>' +
+                        '<div class="interview-date">' + escapeHtml(date) + '</div>' +
                         (tagsHtml ? '<div class="interview-tags">' + tagsHtml + '</div>' : '') +
                         '<div class="interview-meta">' +
                             '<span class="interview-meta-item">' +
@@ -155,25 +382,65 @@
 
             elements.interviewsGrid.innerHTML = html;
         }
-        
+
         function formatLevel(level) {
             var levels = { 'entry': 'Entry', 'junior': 'Junior', 'mid': 'Mid', 'senior': 'Senior', 'lead': 'Lead', 'staff': 'Staff' };
             return levels[level] || level;
         }
-        
+
+        function formatTrack(track) {
+            return TRACK_LABELS[track] || track;
+        }
+
         function formatDate(isoDate) {
+            // Format like "Dec 6, 2024 · 3:42 PM" (date + time to disambiguate same-day interviews).
             try {
                 var date = new Date(isoDate);
-                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                if (isNaN(date.getTime())) return isoDate;
+                var datePart = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                var timePart = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                return datePart + ' · ' + timePart;
             } catch (e) { return isoDate; }
         }
-        
+
         function escapeHtml(text) {
-            if (!text) return '';
+            if (text === null || typeof text === 'undefined') return '';
             var div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
         }
+
+        // ==================== CONTROL EVENT WIRING ====================
+
+        function debounce(fn, wait) {
+            var timer;
+            return function() {
+                var ctx = this, args = arguments;
+                clearTimeout(timer);
+                timer = setTimeout(function() { fn.apply(ctx, args); }, wait);
+            };
+        }
+
+        var onSearch = debounce(function() {
+            state.search = elements.searchInput.value;
+            applyAndRender();
+        }, 200);
+
+        elements.searchInput.addEventListener('input', onSearch);
+
+        elements.trackFilter.addEventListener('change', function() {
+            state.track = elements.trackFilter.value;
+            applyAndRender();
+        });
+
+        elements.sortToggle.addEventListener('click', function() {
+            state.order = (state.order === 'newest') ? 'oldest' : 'newest';
+            var isOldest = state.order === 'oldest';
+            elements.sortToggle.setAttribute('data-order', state.order);
+            elements.sortToggle.setAttribute('aria-pressed', isOldest ? 'true' : 'false');
+            elements.sortText.textContent = isOldest ? 'Oldest first' : 'Newest first';
+            applyAndRender();
+        });
     })();
     </script>
 </body>

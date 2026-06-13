@@ -1,0 +1,318 @@
+/*
+MockFlow-AI — Dashboard / "Interview Personality"
+Builds on tokens defined in styles.css (colors, radius, shadow, spacing).
+Scoped to the dashboard page via .dashboard-page where it matters.
+*/
+
+/* ==================== PAGE LAYOUT ==================== */
+
+/* The dashboard has more content than the viewport — allow it to scroll.
+   styles.css sets html/body overflow:hidden for the landing/interview pages,
+   so we opt this page back into scrolling. */
+.dashboard-page,
+.dashboard-page body {
+    overflow: auto;
+}
+
+.dashboard-page .hero {
+    height: auto;
+    min-height: 100vh;
+    align-items: flex-start;
+    padding-top: var(--spacing-2xl);
+    padding-bottom: var(--spacing-2xl);
+}
+
+/* ==================== SECTION SCAFFOLD ==================== */
+
+.dash-section {
+    margin-bottom: var(--spacing-lg);
+}
+
+.dash-section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+.dash-section-head h3 {
+    font-size: 1.25rem;
+    margin: 0;
+}
+
+.dash-section-sub {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+/* ==================== PERSONALITY SUMMARY ==================== */
+
+.personality-summary {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: linear-gradient(135deg, var(--soul-core) 0%, var(--bg-card) 100%);
+    border: 1px solid var(--accent-green);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-md);
+    box-shadow: var(--shadow-soft);
+}
+
+.personality-summary .summary-emoji {
+    font-size: 1.5rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.personality-summary .summary-text {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* ==================== STAT CARDS ==================== */
+
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: var(--spacing-sm);
+}
+
+.stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--bg-soft);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    box-shadow: var(--shadow-soft);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-medium);
+}
+
+.stat-card .stat-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+}
+
+.stat-card .stat-value {
+    font-size: 1.875rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: var(--text-primary);
+    line-height: 1.1;
+}
+
+.stat-card .stat-value .stat-unit {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-muted);
+}
+
+.stat-card .stat-hint {
+    font-size: 0.8125rem;
+    color: var(--text-muted);
+}
+
+/* Accent stripe for emphasis cards */
+.stat-card.accent-green {
+    border-color: var(--accent-green);
+    background: linear-gradient(180deg, var(--soul-core) 0%, var(--bg-card) 60%);
+}
+
+.stat-card .stat-value.muted {
+    color: var(--text-light);
+}
+
+/* ==================== TRACK BREAKDOWN ==================== */
+
+.track-breakdown {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+    margin-top: 0.25rem;
+}
+
+.track-row {
+    display: grid;
+    grid-template-columns: 7.5rem 1fr 2rem;
+    align-items: center;
+    gap: 0.625rem;
+}
+
+.track-name {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.track-bar {
+    height: 8px;
+    background: var(--bg-soft);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.track-bar-fill {
+    height: 100%;
+    border-radius: var(--radius-full);
+    background: var(--accent-green-deep);
+    width: 0;
+    transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.track-row:nth-child(1) .track-bar-fill { background: var(--accent-green-deep); }
+.track-row:nth-child(2) .track-bar-fill { background: var(--accent-purple-deep); }
+.track-row:nth-child(3) .track-bar-fill { background: var(--accent-pink-deep); }
+.track-row:nth-child(4) .track-bar-fill { background: var(--info); }
+
+.track-count {
+    font-size: 0.8125rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ==================== FREE CALLS BADGE ==================== */
+
+.free-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, var(--accent-pink) 0%, var(--accent-purple) 100%);
+    color: var(--text-primary);
+    border-radius: var(--radius-full);
+    font-size: 0.9375rem;
+    font-weight: 700;
+    box-shadow: var(--shadow-soft);
+}
+
+.free-badge .free-badge-emoji {
+    font-size: 1.125rem;
+    line-height: 1;
+}
+
+.free-badge.byok {
+    background: var(--bg-soft);
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+/* ==================== EMPTY STATE ==================== */
+
+.dash-empty {
+    text-align: center;
+    padding: var(--spacing-xl) var(--spacing-md);
+    background: var(--bg-card);
+    border: 1px solid var(--bg-soft);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.dash-empty .empty-emoji {
+    font-size: 2.5rem;
+    line-height: 1;
+}
+
+.dash-empty h4 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.dash-empty p {
+    color: var(--text-muted);
+    font-size: 0.9375rem;
+    max-width: 32rem;
+    margin: 0;
+}
+
+.dash-empty .empty-cta {
+    margin-top: var(--spacing-xs);
+    text-decoration: none;
+}
+
+/* ==================== LOADING SKELETON ==================== */
+
+.skeleton-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: var(--spacing-sm);
+}
+
+.skeleton-card {
+    background: var(--bg-card);
+    border: 1px solid var(--bg-soft);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    box-shadow: var(--shadow-soft);
+}
+
+.skeleton-line {
+    height: 0.75rem;
+    border-radius: var(--radius-full);
+    background: linear-gradient(90deg, var(--bg-soft) 25%, var(--bg-warm) 50%, var(--bg-soft) 75%);
+    background-size: 200% 100%;
+    animation: dash-shimmer 1.4s ease-in-out infinite;
+    margin-bottom: 0.625rem;
+}
+
+.skeleton-line.w-40 { width: 40%; }
+.skeleton-line.w-60 { width: 60%; }
+.skeleton-line.w-80 { width: 80%; }
+.skeleton-line.tall { height: 1.75rem; margin-top: 0.25rem; }
+.skeleton-line:last-child { margin-bottom: 0; }
+
+@keyframes dash-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* ==================== ERROR / UTILITY ==================== */
+
+.dash-error {
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: rgba(229, 57, 53, 0.06);
+    border: 1px solid rgba(229, 57, 53, 0.25);
+    border-radius: var(--radius-md);
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.is-hidden {
+    display: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .skeleton-line { animation: none; }
+    .track-bar-fill { transition: none; }
+    .stat-card { transition: none; }
+}
+
+/* ==================== RESPONSIVE ==================== */
+
+@media (max-width: 600px) {
+    .track-row {
+        grid-template-columns: 6rem 1fr 1.75rem;
+    }
+}

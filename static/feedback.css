@@ -598,6 +598,11 @@
 }
 
 .feedback-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
     padding: 1rem 1.5rem;
     background: transparent;
     border-bottom: 1px solid var(--bg-soft);
@@ -610,6 +615,67 @@
     color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.1em;
+}
+
+/* ==================== REPORT ACTIONS (Export / Copy) ==================== */
+.report-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.btn-report-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.4375rem 0.75rem;
+    font-family: inherit;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--bg-card);
+    border: 1px solid var(--bg-soft);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: var(--shadow-soft);
+}
+
+.btn-report-action svg {
+    width: 0.875rem;
+    height: 0.875rem;
+    flex-shrink: 0;
+}
+
+.btn-report-action:hover {
+    color: var(--text-primary);
+    border-color: var(--accent-green-deep);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-medium);
+}
+
+.btn-report-action:focus-visible {
+    outline: 2px solid var(--accent-green-deep);
+    outline-offset: 2px;
+}
+
+.btn-report-action:active {
+    transform: translateY(0);
+}
+
+.copy-confirm {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--accent-green-deep);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.copy-confirm.visible {
+    opacity: 1;
 }
 
 .feedback-content {
@@ -1141,5 +1207,164 @@
 
     .transcript-modal-body {
         padding: 1rem;
+    }
+}
+
+/* ==================== PRINT / PDF EXPORT ==================== */
+@media print {
+    /* Force a clean, ink-light, dark-on-white report. */
+    :root {
+        --bg-cream: #ffffff;
+        --bg-warm: #ffffff;
+        --bg-soft: #e2e2e2;
+        --bg-card: #ffffff;
+        --text-primary: #1a1a1a;
+        --text-secondary: #333333;
+        --text-muted: #555555;
+        --text-light: #666666;
+    }
+
+    html,
+    body {
+        height: auto !important;
+        overflow: visible !important;
+        background: #ffffff !important;
+    }
+
+    /* Print backgrounds where they carry meaning (bars, badges, score circle). */
+    body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* Hide app chrome that doesn't belong in a printed report. */
+    .action-buttons,
+    .auth-header,
+    .report-actions,
+    .transcript-section,
+    .generate-section,
+    .cached-indicator,
+    .loading-state,
+    .error-state,
+    .scores-loading,
+    .feedback-loading,
+    .feedback-placeholder,
+    .transcript-modal {
+        display: none !important;
+    }
+
+    /* Let the report flow naturally onto pages instead of being trapped
+       in a fixed-height, scrollable viewport. */
+    .feedback-page {
+        height: auto !important;
+        overflow: visible !important;
+        background: #ffffff !important;
+        display: block !important;
+    }
+
+    .page-header {
+        padding: 0 0 0.75rem 0 !important;
+        border-bottom: 2px solid var(--text-primary) !important;
+        justify-content: flex-start !important;
+        background: #ffffff !important;
+    }
+
+    .page-header h1 {
+        font-size: 1.5rem !important;
+    }
+
+    .interview-info {
+        padding: 0.75rem 0 !important;
+        background: #ffffff !important;
+        gap: 1.5rem !important;
+        border-bottom: 1px solid var(--bg-soft) !important;
+    }
+
+    /* Stack the two panels into one full-width column. */
+    .panels-container {
+        display: block !important;
+        height: auto !important;
+        overflow: visible !important;
+    }
+
+    .panel-left,
+    .panel-right {
+        display: block !important;
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        border: none !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+    }
+
+    .panel-left {
+        margin-bottom: 1rem;
+    }
+
+    .scores-tablet {
+        box-shadow: none !important;
+        border: 1px solid var(--bg-soft) !important;
+        padding: 1rem !important;
+    }
+
+    .feedback-header {
+        padding: 0.75rem 0 !important;
+        border-bottom: 1px solid var(--bg-soft) !important;
+    }
+
+    .feedback-content {
+        height: auto !important;
+        overflow: visible !important;
+        padding: 0.75rem 0 0 0 !important;
+    }
+
+    /* Keep logical blocks from splitting awkwardly across pages. */
+    .scores-tablet,
+    .score-summary,
+    .score-overall,
+    .score-mini,
+    .competency-item,
+    .highlight-item,
+    .feedback-h2,
+    .feedback-h3,
+    .feedback-quote,
+    .code-block {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .feedback-h2,
+    .feedback-h3 {
+        break-after: avoid;
+        page-break-after: avoid;
+    }
+
+    /* Trim heavy effects that waste ink or render poorly on paper. */
+    .competency-item,
+    .score-mini,
+    .highlight-item,
+    .scores-tablet {
+        box-shadow: none !important;
+    }
+
+    .competency-item:hover,
+    .highlight-item:hover {
+        transform: none !important;
+        box-shadow: none !important;
+    }
+
+    /* Links readable in black; the feedback narrative stays dark. */
+    .feedback-text strong {
+        color: var(--text-primary) !important;
+    }
+
+    a {
+        color: var(--text-primary) !important;
+        text-decoration: underline;
+    }
+
+    @page {
+        margin: 1.5cm;
     }
 }
