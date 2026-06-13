@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MockFlow-AI — Motion Kit</title>
+    <meta name="description" content="The MockFlow-AI animation kit: a living-orb motion system. Every component, with copy-paste HTML.">
+    <link rel="icon" href="/favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/animations.css">
+    <style>
+        /* Gallery chrome only — the kit itself lives in animations.css */
+        html, body { height: auto; overflow: auto; }
+        body {
+            background: var(--bg-cream);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding-bottom: 4rem;
+        }
+
+        .gx-shell { position: relative; max-width: 1180px; margin: 0 auto; padding: 0 clamp(1rem, 4vw, 2.5rem); }
+
+        /* Header */
+        .gx-top {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            padding: clamp(2.5rem, 7vw, 4.5rem) 0 clamp(1.5rem, 4vw, 2.5rem);
+        }
+        .gx-brand { display: flex; align-items: center; gap: 0.9rem; }
+        .gx-brand-orb { width: 56px; height: 56px; }
+        .gx-title-wrap h1 {
+            font-size: clamp(1.7rem, 4vw, 2.4rem);
+            line-height: 1.05;
+            margin: 0;
+        }
+        .gx-title-wrap p {
+            margin: 0.25rem 0 0;
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            max-width: 46ch;
+        }
+        .gx-dot-pill {
+            display: inline-flex; align-items: center; gap: 0.5rem;
+            font-size: 0.7rem; font-weight: 700; letter-spacing: 0.08em;
+            text-transform: uppercase; color: var(--text-secondary);
+            background: var(--bg-card); border: 1px solid var(--hairline);
+            border-radius: var(--radius-full); padding: 0.3rem 0.7rem;
+            box-shadow: var(--shadow-soft); margin-bottom: 0.75rem;
+        }
+
+        .gx-theme-toggle {
+            display: inline-flex; align-items: center; gap: 0.55rem;
+            height: 2.6rem; padding: 0 1.1rem;
+            background: var(--bg-card); color: var(--text-primary);
+            border: 1px solid var(--control-border); border-radius: var(--radius-full);
+            font: inherit; font-weight: 600; font-size: 0.9rem; cursor: pointer;
+            box-shadow: var(--shadow-soft);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        .gx-theme-toggle:hover { transform: translateY(-2px); box-shadow: var(--shadow-medium); border-color: var(--accent-green-deep); }
+        .gx-theme-toggle:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+        .gx-theme-toggle svg { width: 1.15rem; height: 1.15rem; }
+        html[data-theme="dark"] .gx-icon-sun { display: none; }
+        html:not([data-theme="dark"]) .gx-icon-moon { display: none; }
+
+        /* Grid of component cards */
+        .gx-grid {
+            position: relative; z-index: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+            gap: clamp(1rem, 2.5vw, 1.5rem);
+        }
+        .gx-card {
+            display: flex; flex-direction: column;
+            background: var(--bg-card);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-soft);
+            overflow: hidden;
+            transition: transform 0.25s cubic-bezier(0.34, 1.2, 0.5, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+        }
+        .gx-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-medium); border-color: var(--hairline-strong); }
+        .gx-card.gx-card--wide { grid-column: 1 / -1; }
+
+        .gx-card-head {
+            display: flex; align-items: baseline; justify-content: space-between;
+            gap: 0.75rem; padding: 1rem 1.25rem 0.5rem;
+        }
+        .gx-card-head h2 {
+            font-size: 1.02rem; margin: 0;
+            font-family: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;
+            color: var(--accent-green-deep); letter-spacing: -0.02em;
+        }
+        .gx-card-head span { font-size: 0.78rem; color: var(--text-muted); text-align: right; }
+
+        .gx-stage {
+            position: relative;
+            display: grid; place-items: center;
+            min-height: 230px;
+            margin: 0.5rem 1rem;
+            border-radius: var(--radius-md);
+            background:
+                radial-gradient(120% 120% at 50% 0%, var(--bg-warm) 0%, var(--bg-soft) 100%);
+            border: 1px solid var(--hairline);
+            overflow: hidden;
+        }
+        .gx-card--wide .gx-stage { min-height: 360px; }
+
+        /* Snippet block */
+        .gx-snip {
+            margin: 0.75rem 1rem 1rem;
+            position: relative;
+        }
+        .gx-snip pre {
+            margin: 0;
+            padding: 0.85rem 0.95rem;
+            background: var(--bg-soft);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius-md);
+            overflow-x: auto;
+            font-family: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;
+            font-size: 0.74rem;
+            line-height: 1.55;
+            color: var(--text-secondary);
+            white-space: pre;
+        }
+        .gx-copy {
+            position: absolute; top: 0.5rem; right: 0.5rem;
+            border: 1px solid var(--control-border); background: var(--bg-card);
+            color: var(--text-secondary); border-radius: var(--radius-sm);
+            font: inherit; font-size: 0.7rem; font-weight: 600;
+            padding: 0.25rem 0.55rem; cursor: pointer;
+            transition: all 0.18s ease; opacity: 0;
+        }
+        .gx-snip:hover .gx-copy, .gx-copy:focus-visible { opacity: 1; }
+        .gx-copy:hover { border-color: var(--accent-green-deep); color: var(--text-primary); }
+        .gx-copy:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; opacity: 1; }
+        .gx-copy.is-copied { color: var(--success); border-color: var(--success); }
+
+        .gx-foot {
+            position: relative; z-index: 1;
+            text-align: center; color: var(--text-muted);
+            font-size: 0.8rem; padding: 2.5rem 0 0;
+        }
+        .gx-foot a { color: var(--text-secondary); }
+    </style>
+</head>
+<body>
+    <!-- Ambient atmosphere behind the whole gallery -->
+    <div class="mf-aura" aria-hidden="true" style="position:fixed; opacity:0.7;"></div>
+
+    <div class="gx-shell">
+        <header class="gx-top">
+            <div>
+                <span class="gx-dot-pill"><span class="mf-pulse-dot"></span> Living-orb motion system</span>
+                <div class="gx-brand">
+                    <!-- the kit, used as its own logo -->
+                    <div class="mf-orb gx-brand-orb" style="--mf-orb-size:56px;" aria-hidden="true">
+                        <div class="mf-orb__core"></div>
+                        <div class="mf-orb__rays" data-rays="28"></div>
+                    </div>
+                    <div class="gx-title-wrap">
+                        <h1 class="mf-shimmer-text">MockFlow Motion Kit</h1>
+                        <p>Every animation, theme-aware and reduced-motion safe. Hover a snippet to copy.</p>
+                    </div>
+                </div>
+            </div>
+            <button class="gx-theme-toggle" id="themeToggle" type="button" aria-label="Toggle light or dark theme">
+                <svg class="gx-icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+                <svg class="gx-icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                <span class="gx-toggle-label">Dark</span>
+            </button>
+        </header>
+
+        <main class="gx-grid" id="gallery"><!-- cards injected by JS so each snippet is the literal source --></main>
+
+        <footer class="gx-foot">
+            <p>Drop-in kit · <code>/static/animations.css</code> · derived from the live interview orb. <a href="/">Back to MockFlow.ai</a></p>
+        </footer>
+    </div>
+
+    <script>
+    /* ------------------------------------------------------------------
+       Theme toggle — sets document.documentElement.dataset.theme.
+    ------------------------------------------------------------------ */
+    (function () {
+        var root = document.documentElement;
+        var btn = document.getElementById('themeToggle');
+        var label = btn.querySelector('.gx-toggle-label');
+        function sync() {
+            var dark = root.dataset.theme === 'dark';
+            label.textContent = dark ? 'Light' : 'Dark';
+            btn.setAttribute('aria-pressed', String(dark));
+        }
+        btn.addEventListener('click', function () {
+            root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+            sync();
+        });
+        sync();
+    })();
+
+    /* ------------------------------------------------------------------
+       Helper: build a ring of <span style="--i:N"> ray children.
+    ------------------------------------------------------------------ */
+    function buildRays(host) {
+        host.querySelectorAll('[data-rays]').forEach(function (ring) {
+            var n = parseInt(ring.getAttribute('data-rays'), 10) || 36;
+            ring.style.setProperty('--mf-ray-count', n);
+            var frag = '';
+            for (var i = 0; i < n; i++) frag += '<span style="--i:' + i + '"></span>';
+            ring.innerHTML = frag;
+        });
+        host.querySelectorAll('[data-orbit]').forEach(function (ring) {
+            var n = parseInt(ring.getAttribute('data-orbit'), 10) || 3;
+            ring.style.setProperty('--mf-orbit-count', n);
+            var frag = '';
+            for (var i = 0; i < n; i++) frag += '<span style="--i:' + i + '"></span>';
+            ring.innerHTML = frag;
+        });
+    }
+
+    /* ------------------------------------------------------------------
+       The gallery. `html` is what shows in the snippet; it is also what
+       renders on the stage — so what you copy is exactly what runs.
+       (Ray/orbit rings use data-* so the snippet stays short; the helper
+       expands them after render.)
+    ------------------------------------------------------------------ */
+    var COMPONENTS = [
+        {
+            name: '.mf-orb',
+            note: 'Hero centerpiece · idle',
+            wide: true,
+            html:
+'<div class="mf-orb" style="--mf-orb-size:240px">\n' +
+'  <div class="mf-orb__core"></div>\n' +
+'  <div class="mf-orb__rays" data-rays="48"></div>\n' +
+'  <div class="mf-orb__eyes"><i></i><i></i></div>\n' +
+'</div>'
+        },
+        {
+            name: '.mf-orb--speaking',
+            note: 'Energetic · brighter glow',
+            html:
+'<div class="mf-orb mf-orb--speaking" style="--mf-orb-size:200px">\n' +
+'  <div class="mf-orb__core"></div>\n' +
+'  <div class="mf-orb__rays" data-rays="44"></div>\n' +
+'</div>'
+        },
+        {
+            name: '.mf-eyes',
+            note: 'Look-around + blink',
+            html:
+'<div class="mf-eyes" style="--mf-eye-size:22px">\n' +
+'  <i></i><i></i>\n' +
+'</div>'
+        },
+        {
+            name: '.mf-bloom',
+            note: 'Logo motif as a pulse',
+            html:
+'<div style="position:relative;width:200px;height:200px">\n' +
+'  <div class="mf-bloom" style="--mf-bloom-size:200px">\n' +
+'    <span></span><span></span><span></span><span></span>\n' +
+'  </div>\n' +
+'</div>'
+        },
+        {
+            name: '.mf-rays',
+            note: 'Ray ring around anything',
+            html:
+'<div style="position:relative;width:150px;height:150px;display:grid;place-items:center">\n' +
+'  <div class="mf-rays" data-rays="40" style="--mf-rays-size:150px"></div>\n' +
+'  <strong style="z-index:1">AI</strong>\n' +
+'</div>'
+        },
+        {
+            name: '.mf-orbit',
+            note: 'Dots orbiting a point',
+            html:
+'<div class="mf-orbit" data-orbit="3" style="--mf-orbit-size:130px"></div>'
+        },
+        {
+            name: '.mf-pulse-dot',
+            note: 'Live-status dot',
+            html:
+'<span style="display:inline-flex;align-items:center;gap:.6rem;font-weight:600">\n' +
+'  <span class="mf-pulse-dot"></span> Live\n' +
+'</span>'
+        },
+        {
+            name: '.mf-shimmer-text',
+            note: 'Gradient wash headline',
+            html:
+'<h2 class="mf-shimmer-text" style="font-size:2rem;font-weight:800">\n' +
+'  MockFlow.ai\n' +
+'</h2>'
+        },
+        {
+            name: '.mf-float',
+            note: 'Gentle hover lift',
+            html:
+'<div class="mf-float" style="padding:1rem 1.4rem;background:var(--bg-card);\n' +
+'     border:1px solid var(--hairline);border-radius:var(--radius-md);\n' +
+'     box-shadow:var(--shadow-medium);font-weight:600">\n' +
+'  Floating card\n' +
+'</div>'
+        },
+        {
+            name: '.mf-aura',
+            note: 'Ambient page atmosphere',
+            html:
+'<div style="position:relative;width:100%;height:200px;border-radius:12px;overflow:hidden">\n' +
+'  <div class="mf-aura"></div>\n' +
+'  <p style="position:relative;display:grid;place-items:center;height:100%;\n' +
+'     margin:0;color:var(--text-secondary)">content sits on top</p>\n' +
+'</div>'
+        }
+    ];
+
+    var gallery = document.getElementById('gallery');
+    COMPONENTS.forEach(function (c) {
+        var card = document.createElement('article');
+        card.className = 'gx-card' + (c.wide ? ' gx-card--wide' : '');
+
+        var head = document.createElement('div');
+        head.className = 'gx-card-head';
+        var h2 = document.createElement('h2'); h2.textContent = c.name;
+        var note = document.createElement('span'); note.textContent = c.note;
+        head.appendChild(h2); head.appendChild(note);
+
+        var stage = document.createElement('div');
+        stage.className = 'gx-stage';
+        stage.innerHTML = c.html;
+
+        var snip = document.createElement('div');
+        snip.className = 'gx-snip';
+        var pre = document.createElement('pre');
+        var code = document.createElement('code');
+        code.textContent = c.html;
+        pre.appendChild(code);
+        var copy = document.createElement('button');
+        copy.className = 'gx-copy'; copy.type = 'button'; copy.textContent = 'Copy';
+        copy.addEventListener('click', function () {
+            navigator.clipboard && navigator.clipboard.writeText(c.html);
+            copy.textContent = 'Copied'; copy.classList.add('is-copied');
+            setTimeout(function () { copy.textContent = 'Copy'; copy.classList.remove('is-copied'); }, 1400);
+        });
+        snip.appendChild(pre); snip.appendChild(copy);
+
+        card.appendChild(head); card.appendChild(stage); card.appendChild(snip);
+        gallery.appendChild(card);
+
+        buildRays(stage);
+    });
+
+    /* expand the brand orb in the header too */
+    buildRays(document.querySelector('.gx-brand'));
+    </script>
+</body>
+</html>

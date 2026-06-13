@@ -662,6 +662,60 @@ a.badge:hover {
     transform: translateY(-1px);
 }
 
+/* ==================== HERO LIVING-ORB STAGE ====================
+ * The right column of the hero: the brand's signature living orb as the
+ * centerpiece, with concentric bloom rings rippling behind it and a small
+ * "ready" caption below. Uses the .mf-* kit from animations.css. */
+.hero-orb-stage {
+    grid-column: 2;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-md);
+    min-width: 0;
+    align-self: center;
+}
+
+/* The orb scales fluidly with the viewport but never gets absurd. */
+.hero-orb {
+    --mf-orb-size: clamp(180px, 24vw, 300px);
+    position: relative;
+    z-index: 1;
+}
+
+/* Bloom rings centered on the orb, sized a touch larger so they ripple past it.
+ * Behind the orb (z-index 0) and non-interactive. */
+.hero-orb-bloom {
+    --mf-bloom-size: clamp(320px, 42vw, 540px);
+    z-index: 0;
+    opacity: 0.85;
+}
+
+.hero-orb-caption {
+    position: relative;
+    z-index: 1;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.9rem;
+    background: var(--bg-card);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-full);
+    box-shadow: var(--shadow-soft);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--text-secondary);
+}
+
+/* The page-level aura: pin it to the hero, keep it whisper-quiet under content. */
+.hero-aura {
+    z-index: 0;
+    opacity: 0.55;
+}
+
 /* ==================== PAGE-LOAD REVEAL SEQUENCE ==================== */
 /* One orchestrated entrance: each element fades + lifts in, staggered by its
  * data-reveal index. Fully disabled under prefers-reduced-motion. */
@@ -679,6 +733,8 @@ a.badge:hover {
 .reveal[data-reveal="6"] { animation-delay: 0.48s; }
 .reveal[data-reveal="7"] { animation-delay: 0.57s; }
 .reveal[data-reveal="8"] { animation-delay: 0.66s; }
+.reveal[data-reveal="9"] { animation-delay: 0.75s; }
+.reveal[data-reveal="10"] { animation-delay: 0.84s; }
 
 @keyframes reveal-in {
     to {
@@ -2216,10 +2272,28 @@ footer a:hover {
         grid-template-columns: 1fr;
         gap: var(--spacing-lg);
         max-width: 560px;
+        justify-items: center;
+        text-align: left;
     }
 
     .hero-lead {
         grid-column: 1;
+        order: 2;
+        width: 100%;
+    }
+
+    /* The orb greets you first, above the copy, when columns collapse. */
+    .hero-orb-stage {
+        grid-column: 1;
+        order: 1;
+    }
+
+    .hero-orb {
+        --mf-orb-size: clamp(170px, 46vw, 240px);
+    }
+
+    .hero-orb-bloom {
+        --mf-bloom-size: clamp(300px, 80vw, 460px);
     }
 
     .tagline {
@@ -2381,6 +2455,15 @@ footer a:hover {
 
     .tech-badges {
         gap: 0.375rem;
+    }
+
+    /* Orb scales down so it never crowds the copy on the smallest phones. */
+    .hero-orb {
+        --mf-orb-size: clamp(140px, 52vw, 180px);
+    }
+
+    .hero-orb-bloom {
+        --mf-bloom-size: clamp(240px, 86vw, 340px);
     }
 }
 

@@ -15,6 +15,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/animations.css">
     <link rel="stylesheet" href="/static/modals.css">
 </head>
 <body>
@@ -25,10 +26,13 @@
     <div class="action-buttons" id="actionButtons"></div>
 
     <main class="hero">
+        <!-- Ambient living-orb atmosphere behind everything -->
+        <div class="mf-aura hero-aura" aria-hidden="true"></div>
+
         <div class="hero-content">
             <div class="hero-lead">
                 <div class="hero-eyebrow reveal" data-reveal="1">
-                    <span class="eyebrow-dot" aria-hidden="true"></span>
+                    <span class="mf-pulse-dot" aria-hidden="true"></span>
                     Voice-native AI interviewer
                 </div>
 
@@ -72,19 +76,8 @@
                     </a>
                 </div>
 
-                <div class="tech-stack reveal" data-reveal="6">
-                    <p class="tech-label">Powered by</p>
-                    <div class="tech-badges">
-                        <a href="https://docs.livekit.io/agents/" target="_blank" rel="noopener" class="badge">LiveKit</a>
-                        <a href="https://platform.openai.com/docs/" target="_blank" rel="noopener" class="badge">GPT-4o</a>
-                        <a href="https://developers.deepgram.com/" target="_blank" rel="noopener" class="badge">Deepgram</a>
-                        <a href="https://platform.openai.com/docs/guides/text-to-speech" target="_blank" rel="noopener" class="badge">OpenAI TTS</a>
-                    </div>
-                </div>
-            </div>
-
-            <ul class="features" aria-label="What MockFlow.ai does">
-                <li class="reveal" data-reveal="5">
+                <ul class="features" aria-label="What MockFlow.ai does">
+                <li class="reveal" data-reveal="6">
                     <span class="feature-icon green" aria-hidden="true">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
@@ -98,7 +91,7 @@
                         <em>Sub-200ms replies that adapt to your answers.</em>
                     </span>
                 </li>
-                <li class="reveal" data-reveal="6">
+                <li class="reveal" data-reveal="7">
                     <span class="feature-icon pink" aria-hidden="true">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
@@ -110,7 +103,7 @@
                         <em>Intro, Behavioral, Technical and Coding.</em>
                     </span>
                 </li>
-                <li class="reveal" data-reveal="7">
+                <li class="reveal" data-reveal="8">
                     <span class="feature-icon purple" aria-hidden="true">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="16 18 22 12 16 6"/>
@@ -122,7 +115,7 @@
                         <em>Monaco editor reviewed by AI as you write.</em>
                     </span>
                 </li>
-                <li class="reveal" data-reveal="8">
+                <li class="reveal" data-reveal="9">
                     <span class="feature-icon cyan" aria-hidden="true">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -133,7 +126,34 @@
                         <em>Speech analytics with a breakdown you can act on.</em>
                     </span>
                 </li>
-            </ul>
+                </ul>
+
+                <div class="tech-stack reveal" data-reveal="10">
+                    <p class="tech-label">Powered by</p>
+                    <div class="tech-badges">
+                        <a href="https://docs.livekit.io/agents/" target="_blank" rel="noopener" class="badge">LiveKit</a>
+                        <a href="https://platform.openai.com/docs/" target="_blank" rel="noopener" class="badge">GPT-4o</a>
+                        <a href="https://developers.deepgram.com/" target="_blank" rel="noopener" class="badge">Deepgram</a>
+                        <a href="https://platform.openai.com/docs/guides/text-to-speech" target="_blank" rel="noopener" class="badge">OpenAI TTS</a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Living-orb hero stage: the AI interviewer, greeting you. -->
+            <div class="hero-orb-stage reveal" data-reveal="5">
+                <div class="mf-bloom hero-orb-bloom" aria-hidden="true">
+                    <span></span><span></span><span></span><span></span>
+                </div>
+                <div class="mf-orb hero-orb" id="heroOrb" role="img"
+                     aria-label="MockFlow.ai's AI interviewer — a living green orb that listens and speaks">
+                    <div class="mf-orb__core"></div>
+                    <div class="mf-orb__rays" id="heroOrbRays"></div>
+                    <div class="mf-orb__eyes" aria-hidden="true"><i></i><i></i></div>
+                </div>
+                <p class="hero-orb-caption" aria-hidden="true">
+                    <span class="mf-pulse-dot"></span> Ready when you are
+                </p>
+            </div>
         </div>
     </main>
 
@@ -224,6 +244,38 @@
                         pulseLogo();
                     }
                 });
+            }
+
+            // --- Living orb: build its ray ring + make it "speak" on greeting ---
+            var orb = document.getElementById('heroOrb');
+            var orbRays = document.getElementById('heroOrbRays');
+            if (orb && orbRays) {
+                var RAY_COUNT = 48;
+                orb.style.setProperty('--mf-ray-count', RAY_COUNT);
+                var rayHTML = '';
+                for (var i = 0; i < RAY_COUNT; i++) rayHTML += '<span style="--i:' + i + '"></span>';
+                orbRays.innerHTML = rayHTML;
+
+                // A brief "greeting" burst on load — the interviewer waking up —
+                // then it settles into a calm idle breathing. Skipped if reduced.
+                if (!reduceMotion) {
+                    var speak = function (ms) {
+                        orb.classList.add('mf-orb--speaking');
+                        window.clearTimeout(orb._speakT);
+                        orb._speakT = window.setTimeout(function () {
+                            orb.classList.remove('mf-orb--speaking');
+                        }, ms);
+                    };
+                    window.setTimeout(function () { speak(2600); }, 900);
+
+                    // It reacts to you: leaning toward the Start CTA makes it speak.
+                    var startCta = document.querySelector('.btn-cta.primary');
+                    if (startCta) {
+                        startCta.addEventListener('mouseenter', function () { speak(1600); });
+                        startCta.addEventListener('focus', function () { speak(1600); });
+                    }
+                    orb.addEventListener('mouseenter', function () { speak(1400); });
+                }
             }
 
             window.MockFlowHeader.init({

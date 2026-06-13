@@ -1,0 +1,597 @@
+/* =============================================================================
+   MockFlow-AI · animations.css
+   A reusable, plug-in animation kit derived from the brand's signature motif:
+   the "living green orb" — concentric breathing circles ringed by sun-ray bars
+   that pulse like a voice, with eyes that look around and blink.
+
+   PRINCIPLES
+   - Pure CSS. Every component self-animates; no JavaScript is required.
+   - Theme-aware. Colors come exclusively from tokens in styles.css (:root +
+     html[data-theme="dark"]). Nothing here is hard-coded.
+   - Reduced-motion safe. Every animation is gated; one global block at the very
+     bottom calms the entire kit under (prefers-reduced-motion: reduce).
+   - Performant. Only transform / opacity / filter animate — never layout.
+
+   GEOMETRY NOTE (must match the real visualizer in interview.html):
+   each ray is  position:absolute; left:50%; top:50%; transform-origin:center top;
+   transform: rotate(<angle>) translateY(-<radius>);  and it GROWS in height
+   outward. Angle is keyed off an --i index you pass per ray. This kit reproduces
+   that exact outward growth, only the audio is replaced by a travelling CSS wave.
+
+   Local knobs (override per instance via inline style or a wrapping class):
+     --mf-orb-size      overall diameter of .mf-orb            (default 220px)
+     --mf-ray-count     number of rays you dropped in          (default 48)
+     --mf-speed         master tempo multiplier                (default 1)
+     --mf-ink           primary motif color  (defaults to --accent-green-deep)
+     --mf-ink-soft      lighter ring color   (defaults to --accent-green)
+     --mf-glow          ray glow color       (defaults to --soul-glow)
+   ============================================================================= */
+
+/* Kit-wide defaults. Scoped to the components so they never leak globally, but
+   declared on :root too so a single override retunes the whole kit. */
+:root {
+    --mf-ink: var(--accent-green-deep);
+    --mf-ink-soft: var(--accent-green);
+    --mf-ink-core: var(--success);
+    --mf-glow: var(--soul-glow);
+    --mf-speed: 1;
+}
+
+
+/* =============================================================================
+   1. .mf-orb — THE HERO CENTERPIECE
+   The living orb: concentric breathing circles + a full ring of sun-ray bars
+   that animate in a travelling wave (each ray staggered by its --i index, so it
+   reads as "speaking"). Optional eyes via .mf-orb__eyes.
+
+   Plug-in (idle, ~48 rays — generate the spans however you like):
+     <div class="mf-orb" style="--mf-orb-size:220px">
+       <div class="mf-orb__core"></div>
+       <div class="mf-orb__rays">
+         <span style="--i:0"></span> ... <span style="--i:47"></span>
+       </div>
+       <div class="mf-orb__eyes"><i></i><i></i></div>   <!-- optional -->
+     </div>
+   Add class "mf-orb--speaking" for the energetic, brighter state.
+   ============================================================================= */
+
+.mf-orb {
+    --mf-orb-size: 220px;
+    --mf-ray-count: 48;
+    /* radius from centre to each ray's origin ≈ 34% of the orb, matching the
+       real visualizer's 75px on a 220px orb */
+    --mf-ray-radius: calc(var(--mf-orb-size) * 0.34);
+    --mf-ray-rest: calc(var(--mf-orb-size) * 0.018);   /* ~4px on 220 */
+    --mf-ray-peak: calc(var(--mf-orb-size) * 0.165);   /* ~36px on 220 */
+    --mf-ray-w: calc(var(--mf-orb-size) * 0.018);
+
+    position: relative;
+    width: var(--mf-orb-size);
+    height: var(--mf-orb-size);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    isolation: isolate;
+}
+
+/* Soft halo that breathes behind everything */
+.mf-orb::before {
+    content: '';
+    position: absolute;
+    inset: -6%;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 50%,
+            color-mix(in srgb, var(--mf-ink) 26%, transparent) 0%,
+            transparent 64%);
+    z-index: -1;
+    animation: mf-halo calc(5.5s / var(--mf-speed)) ease-in-out infinite;
+}
+
+/* The concentric breathing core — three nested rings echo the logo mark */
+.mf-orb__core {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 46%;
+    height: 46%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background:
+        radial-gradient(circle at 50% 42%,
+            color-mix(in srgb, var(--mf-ink-core) 88%, white) 0%,
+            var(--mf-ink) 38%,
+            color-mix(in srgb, var(--mf-ink-soft) 92%, var(--mf-ink)) 100%);
+    box-shadow:
+        0 0 0 6% color-mix(in srgb, var(--mf-ink-soft) 55%, transparent),
+        0 0 0 12% color-mix(in srgb, var(--mf-ink-soft) 24%, transparent),
+        0 6px 24px color-mix(in srgb, var(--mf-ink) 35%, transparent);
+    animation: mf-breathe calc(4.5s / var(--mf-speed)) ease-in-out infinite;
+}
+
+/* A thin specular sheen that glides across the core, giving it depth */
+.mf-orb__core::after {
+    content: '';
+    position: absolute;
+    inset: 8%;
+    border-radius: 50%;
+    background: radial-gradient(circle at 34% 28%,
+            rgba(255, 255, 255, 0.55) 0%,
+            transparent 42%);
+    opacity: 0.7;
+    animation: mf-sheen calc(6s / var(--mf-speed)) ease-in-out infinite;
+}
+
+/* Ray ring container — fills the orb; each child <span> is one ray */
+.mf-orb__rays {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.mf-orb__rays > span {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: var(--mf-ray-w);
+    height: var(--mf-ray-rest);
+    margin-left: calc(var(--mf-ray-w) / -2);
+    background: var(--mf-ink);
+    border-radius: var(--mf-ray-w);
+    transform-origin: center top;
+    /* EXACT motif geometry: point the ray outward, then push it to the rim.
+       angle = i / count * 360 - 90  (so --i:0 points straight up) */
+    transform:
+        rotate(calc((var(--i) / var(--mf-ray-count)) * 360deg - 90deg))
+        translateY(calc(var(--mf-ray-radius) * -1));
+    box-shadow: 0 0 6px var(--mf-glow);
+    /* travelling wave: stagger the SAME pulse by each ray's index so the crest
+       sweeps around the ring like a voice moving through it */
+    animation: mf-ray calc(2.6s / var(--mf-speed)) ease-in-out infinite;
+    animation-delay: calc((var(--i) / var(--mf-ray-count)) * -2.6s / var(--mf-speed));
+    will-change: height;
+}
+
+/* Speaking state — taller crests, faster sweep, hotter glow (mirrors the real
+   .agent-visualizer.speaking .agent-bar treatment) */
+.mf-orb--speaking {
+    --mf-ray-peak: calc(var(--mf-orb-size) * 0.225);
+}
+
+.mf-orb--speaking .mf-orb__rays > span {
+    animation-duration: calc(1.5s / var(--mf-speed));
+    animation-delay: calc((var(--i) / var(--mf-ray-count)) * -1.5s / var(--mf-speed));
+    box-shadow: 0 0 10px var(--mf-ink), 0 0 20px var(--mf-glow);
+}
+
+.mf-orb--speaking .mf-orb__core {
+    animation-duration: calc(2.2s / var(--mf-speed));
+}
+
+/* Eyes nested in the orb (reuse the standalone .mf-eyes mechanics, scaled) */
+.mf-orb__eyes {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    gap: calc(var(--mf-orb-size) * 0.11);
+    z-index: 2;
+}
+
+.mf-orb__eyes > i {
+    position: relative;
+    width: calc(var(--mf-orb-size) * 0.055);
+    height: calc(var(--mf-orb-size) * 0.055);
+    background: var(--text-primary);
+    border-radius: 50%;
+    animation:
+        mf-look calc(7s / var(--mf-speed)) ease-in-out infinite,
+        mf-blink calc(5.4s / var(--mf-speed)) steps(1, end) infinite;
+}
+
+.mf-orb__eyes > i::after {
+    content: '';
+    position: absolute;
+    top: 16%;
+    left: 16%;
+    width: 34%;
+    height: 34%;
+    background: #fff;
+    border-radius: 50%;
+    opacity: 0.65;
+}
+
+
+/* =============================================================================
+   2. .mf-eyes — standalone look-around + blink eyes (no JS)
+
+   Plug-in:
+     <div class="mf-eyes" style="--mf-eye-size:14px"><i></i><i></i></div>
+   ============================================================================= */
+
+.mf-eyes {
+    --mf-eye-size: 14px;
+    --mf-eye-gap: calc(var(--mf-eye-size) * 1.9);
+    display: inline-flex;
+    gap: var(--mf-eye-gap);
+    align-items: center;
+}
+
+.mf-eyes > i {
+    position: relative;
+    width: var(--mf-eye-size);
+    height: var(--mf-eye-size);
+    background: var(--text-primary);
+    border-radius: 50%;
+    animation:
+        mf-look calc(7s / var(--mf-speed)) ease-in-out infinite,
+        mf-blink calc(5s / var(--mf-speed)) steps(1, end) infinite;
+}
+
+.mf-eyes > i::after {
+    content: '';
+    position: absolute;
+    top: 16%;
+    left: 16%;
+    width: 34%;
+    height: 34%;
+    background: #fff;
+    border-radius: 50%;
+    opacity: 0.65;
+}
+
+
+/* =============================================================================
+   3. .mf-rays — a standalone radiating ray ring you can wrap around anything.
+   Same geometry as the orb's rays, but as an overlay: position it over a target
+   (it's absolutely centered) and drop in span children.
+
+   Plug-in (parent should be position:relative):
+     <div class="mf-rays" style="--mf-ray-count:36; --mf-rays-size:160px">
+       <span style="--i:0"></span> ... <span style="--i:35"></span>
+     </div>
+   ============================================================================= */
+
+.mf-rays {
+    --mf-rays-size: 160px;
+    --mf-ray-count: 36;
+    --mf-ray-radius: calc(var(--mf-rays-size) * 0.42);
+    --mf-ray-rest: calc(var(--mf-rays-size) * 0.025);
+    --mf-ray-peak: calc(var(--mf-rays-size) * 0.16);
+    --mf-ray-w: calc(var(--mf-rays-size) * 0.022);
+
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--mf-rays-size);
+    height: var(--mf-rays-size);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+
+.mf-rays > span {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: var(--mf-ray-w);
+    height: var(--mf-ray-rest);
+    margin-left: calc(var(--mf-ray-w) / -2);
+    background: var(--mf-ink);
+    border-radius: var(--mf-ray-w);
+    transform-origin: center top;
+    transform:
+        rotate(calc((var(--i) / var(--mf-ray-count)) * 360deg - 90deg))
+        translateY(calc(var(--mf-ray-radius) * -1));
+    box-shadow: 0 0 5px var(--mf-glow);
+    animation: mf-ray calc(2.8s / var(--mf-speed)) ease-in-out infinite;
+    animation-delay: calc((var(--i) / var(--mf-ray-count)) * -2.8s / var(--mf-speed));
+    will-change: height;
+}
+
+
+/* =============================================================================
+   4. .mf-bloom — concentric rings that ripple outward and fade (the logo motif
+   expressed as a repeating pulse). Drop as many ring children as you want.
+
+   Plug-in (parent position:relative; bloom centers on it):
+     <div class="mf-bloom" style="--mf-bloom-size:480px">
+       <span></span><span></span><span></span>
+     </div>
+   ============================================================================= */
+
+.mf-bloom {
+    --mf-bloom-size: 480px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: var(--mf-bloom-size);
+    height: var(--mf-bloom-size);
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.mf-bloom > span {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 14%;
+    height: 14%;
+    border-radius: 50%;
+    border: 2px solid color-mix(in srgb, var(--mf-ink) 60%, transparent);
+    opacity: 0;
+    animation: mf-bloom-out calc(4.5s / var(--mf-speed)) cubic-bezier(0.16, 0.8, 0.3, 1) infinite;
+}
+
+.mf-bloom > span:nth-child(2) { animation-delay: calc(-1.5s / var(--mf-speed)); }
+.mf-bloom > span:nth-child(3) { animation-delay: calc(-3s / var(--mf-speed)); }
+.mf-bloom > span:nth-child(4) { animation-delay: calc(-0.75s / var(--mf-speed)); }
+
+
+/* =============================================================================
+   5. .mf-aura — ambient full-bleed background atmosphere. Soft concentric
+   green/cream gradient rings + a whisper of grain, drifting very slowly. Sits
+   behind content; never competes. Designed for a fixed or absolute full-bleed.
+
+   Plug-in (place as first child of a position:relative container):
+     <div class="mf-aura" aria-hidden="true"></div>
+   ============================================================================= */
+
+.mf-aura {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.mf-aura::before {
+    content: '';
+    position: absolute;
+    inset: -25%;
+    background:
+        radial-gradient(closest-side circle at 22% 28%,
+            color-mix(in srgb, var(--mf-ink-soft) 40%, transparent) 0%, transparent 70%),
+        radial-gradient(closest-side circle at 80% 18%,
+            color-mix(in srgb, var(--accent-cyan) 16%, transparent) 0%, transparent 65%),
+        radial-gradient(closest-side circle at 72% 86%,
+            color-mix(in srgb, var(--accent-purple) 26%, transparent) 0%, transparent 70%),
+        radial-gradient(closest-side circle at 12% 84%,
+            color-mix(in srgb, var(--mf-ink) 18%, transparent) 0%, transparent 70%);
+    filter: blur(20px);
+    opacity: 0.6;
+    animation: mf-aura-drift calc(26s / var(--mf-speed)) ease-in-out infinite alternate;
+}
+
+/* Faint concentric ripple rings — the logo geometry, dissolved into atmosphere */
+.mf-aura::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+        repeating-radial-gradient(circle at 50% 42%,
+            transparent 0,
+            transparent 58px,
+            color-mix(in srgb, var(--mf-ink) 6%, transparent) 59px,
+            transparent 60px);
+    opacity: 0.5;
+    animation: mf-aura-pulse calc(12s / var(--mf-speed)) ease-in-out infinite;
+}
+
+
+/* =============================================================================
+   6. ACCENT ANIMATIONS
+   ============================================================================= */
+
+/* 6a. .mf-orbit — dots orbiting a point. Wrap N dots; they ride a shared ring.
+   Plug-in (parent position:relative):
+     <div class="mf-orbit" style="--mf-orbit-size:120px">
+       <span style="--i:0"></span><span style="--i:1"></span><span style="--i:2"></span>
+     </div>  (set --mf-orbit-count to the number of dots)                        */
+.mf-orbit {
+    --mf-orbit-size: 120px;
+    --mf-orbit-count: 3;
+    position: relative;
+    width: var(--mf-orbit-size);
+    height: var(--mf-orbit-size);
+}
+
+.mf-orbit > span {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: calc(var(--mf-orbit-size) * 0.1);
+    height: calc(var(--mf-orbit-size) * 0.1);
+    margin: calc(var(--mf-orbit-size) * -0.05);
+    border-radius: 50%;
+    background: var(--mf-ink);
+    box-shadow: 0 0 8px var(--mf-glow);
+    transform-origin: center;
+    animation: mf-orbit-spin calc(6s / var(--mf-speed)) linear infinite;
+    animation-delay: calc((var(--i) / var(--mf-orbit-count)) * -6s / var(--mf-speed));
+}
+
+/* 6b. .mf-pulse-dot — a "live" status dot with an expanding ring halo.
+   Plug-in:  <span class="mf-pulse-dot"></span>                                  */
+.mf-pulse-dot {
+    position: relative;
+    display: inline-block;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--mf-ink-core);
+    flex-shrink: 0;
+}
+
+.mf-pulse-dot::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--mf-ink-core) 60%, transparent);
+    animation: mf-pulse-ring calc(2.4s / var(--mf-speed)) ease-out infinite;
+}
+
+/* 6c. .mf-shimmer-text — a slow gradient wash over a headline.
+   Plug-in:  <h1 class="mf-shimmer-text">Your headline</h1>                      */
+.mf-shimmer-text {
+    background: linear-gradient(100deg,
+            var(--text-primary) 0%,
+            var(--text-primary) 38%,
+            var(--mf-ink) 50%,
+            var(--text-primary) 62%,
+            var(--text-primary) 100%);
+    background-size: 220% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: mf-shimmer calc(7s / var(--mf-speed)) linear infinite;
+}
+
+/* 6d. .mf-float — gentle hovering lift for any element.
+   Plug-in:  <div class="mf-float">...</div>                                     */
+.mf-float {
+    animation: mf-float calc(6s / var(--mf-speed)) ease-in-out infinite;
+}
+
+
+/* =============================================================================
+   KEYFRAMES
+   ============================================================================= */
+
+@keyframes mf-ray {
+    0%, 100% { height: var(--mf-ray-rest); }
+    /* a soft asymmetric crest so the wave feels organic, not metronomic */
+    35%      { height: calc(var(--mf-ray-rest) + (var(--mf-ray-peak) - var(--mf-ray-rest)) * 0.55); }
+    50%      { height: var(--mf-ray-peak); }
+    70%      { height: calc(var(--mf-ray-rest) + (var(--mf-ray-peak) - var(--mf-ray-rest)) * 0.3); }
+}
+
+@keyframes mf-breathe {
+    0%, 100% { transform: translate(-50%, -50%) scale(1); }
+    50%      { transform: translate(-50%, -50%) scale(1.06); }
+}
+
+@keyframes mf-halo {
+    0%, 100% { opacity: 0.55; transform: scale(1); }
+    50%      { opacity: 0.9;  transform: scale(1.08); }
+}
+
+@keyframes mf-sheen {
+    0%, 100% { opacity: 0.4; transform: translate(0, 0); }
+    50%      { opacity: 0.85; transform: translate(6%, 4%); }
+}
+
+/* Eyes glance around — small offsets, holds, returns to centre */
+@keyframes mf-look {
+    0%, 18%   { transform: translate(0, 0); }
+    26%, 40%  { transform: translate(28%, 0); }
+    48%, 60%  { transform: translate(-26%, 8%); }
+    68%, 80%  { transform: translate(10%, -14%); }
+    88%, 100% { transform: translate(0, 0); }
+}
+
+/* Blink: collapse to a slit for a couple of frames, twice per cycle */
+@keyframes mf-blink {
+    0%, 46%, 52%, 92%, 100% { transform: scaleY(1); }
+    48%, 50%                { transform: scaleY(0.12); }
+    94%, 96%                { transform: scaleY(0.12); }
+}
+
+@keyframes mf-bloom-out {
+    0%   { width: 14%; height: 14%; opacity: 0; }
+    12%  { opacity: 0.75; }
+    100% { width: 100%; height: 100%; opacity: 0; border-width: 0.5px; }
+}
+
+@keyframes mf-aura-drift {
+    0%   { transform: translate3d(0, 0, 0) scale(1) rotate(0deg); }
+    100% { transform: translate3d(2.5%, -2%, 0) scale(1.08) rotate(4deg); }
+}
+
+@keyframes mf-aura-pulse {
+    0%, 100% { opacity: 0.35; transform: scale(1); }
+    50%      { opacity: 0.6;  transform: scale(1.04); }
+}
+
+@keyframes mf-orbit-spin {
+    from { transform: rotate(0deg) translateX(calc(var(--mf-orbit-size) * 0.42)) rotate(0deg); }
+    to   { transform: rotate(360deg) translateX(calc(var(--mf-orbit-size) * 0.42)) rotate(-360deg); }
+}
+
+@keyframes mf-pulse-ring {
+    0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--mf-ink-core) 55%, transparent); }
+    70%  { box-shadow: 0 0 0 9px color-mix(in srgb, var(--mf-ink-core) 0%, transparent); }
+    100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--mf-ink-core) 0%, transparent); }
+}
+
+@keyframes mf-shimmer {
+    0%   { background-position: 120% 0; }
+    100% { background-position: -120% 0; }
+}
+
+@keyframes mf-float {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-8px); }
+}
+
+
+/* =============================================================================
+   REDUCED MOTION — one calm resting state for the entire kit.
+   Structure (rings, eyes, glow) stays visible and beautiful; only motion stops.
+   Rays settle to a pleasant mid-height so the orb still reads as a sun.
+   ============================================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .mf-orb::before,
+    .mf-orb__core,
+    .mf-orb__core::after,
+    .mf-orb__eyes > i,
+    .mf-eyes > i,
+    .mf-rays > span,
+    .mf-bloom > span,
+    .mf-aura::before,
+    .mf-aura::after,
+    .mf-orbit > span,
+    .mf-pulse-dot::after,
+    .mf-shimmer-text,
+    .mf-float {
+        animation: none !important;
+    }
+
+    /* Freeze the rays at a gentle, even mid-height so the ring still looks like
+       a radiant sun rather than collapsing to nubs. */
+    .mf-orb__rays > span {
+        animation: none !important;
+        height: calc((var(--mf-ray-rest) + var(--mf-ray-peak)) * 0.5);
+    }
+
+    .mf-rays > span {
+        animation: none !important;
+        height: calc((var(--mf-ray-rest) + var(--mf-ray-peak)) * 0.5);
+    }
+
+    /* Keep eyes open and centered. */
+    .mf-orb__eyes > i,
+    .mf-eyes > i {
+        transform: none !important;
+    }
+
+    /* Shimmer headline falls back to a solid, fully legible fill. */
+    .mf-shimmer-text {
+        -webkit-text-fill-color: var(--text-primary);
+        color: var(--text-primary);
+        background: none;
+    }
+
+    /* Show one resting bloom ring instead of a sequence. */
+    .mf-bloom > span {
+        opacity: 0.25;
+        width: 60%;
+        height: 60%;
+    }
+    .mf-bloom > span:nth-child(n+2) { opacity: 0; }
+}
