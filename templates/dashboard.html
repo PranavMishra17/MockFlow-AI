@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="dashboard-page">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="/static/styles.css">
     <link rel="stylesheet" href="/static/modals.css">
     <link rel="stylesheet" href="/static/header-additions.css">
+    <link rel="stylesheet" href="/static/dashboard.css">
 </head>
 <body>
     <!-- Action Buttons (Right Side) - populated by header.js -->
@@ -31,6 +32,61 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Interview Personality Section -->
+            <section class="card dash-section" style="padding: 2rem; margin-bottom: 2rem;" aria-labelledby="personalityHeading">
+                <div class="dash-section-head">
+                    <div>
+                        <h3 id="personalityHeading">Your Interview Personality</h3>
+                        <p class="dash-section-sub">A snapshot of how you show up in practice</p>
+                    </div>
+                    <span id="freeBadgeSlot"></span>
+                </div>
+
+                <!-- Personable one-line summary (populated when data exists) -->
+                <div id="personalitySummary" class="personality-summary is-hidden" role="status">
+                    <span class="summary-emoji" aria-hidden="true">✨</span>
+                    <p class="summary-text" id="personalitySummaryText"></p>
+                </div>
+
+                <!-- Loading skeleton -->
+                <div id="statsSkeleton" class="skeleton-grid" aria-hidden="true">
+                    <div class="skeleton-card">
+                        <div class="skeleton-line w-60"></div>
+                        <div class="skeleton-line tall w-40"></div>
+                    </div>
+                    <div class="skeleton-card">
+                        <div class="skeleton-line w-60"></div>
+                        <div class="skeleton-line tall w-40"></div>
+                    </div>
+                    <div class="skeleton-card">
+                        <div class="skeleton-line w-80"></div>
+                        <div class="skeleton-line w-60"></div>
+                        <div class="skeleton-line w-80"></div>
+                    </div>
+                    <div class="skeleton-card">
+                        <div class="skeleton-line w-60"></div>
+                        <div class="skeleton-line tall w-40"></div>
+                    </div>
+                </div>
+
+                <!-- Populated stat content (filled by dashboard.js) -->
+                <div id="statsContent" class="is-hidden"></div>
+
+                <!-- Empty state for brand-new users -->
+                <div id="statsEmpty" class="dash-empty is-hidden">
+                    <span class="empty-emoji" aria-hidden="true">🚀</span>
+                    <h4>Your interview story starts here</h4>
+                    <p id="statsEmptyCopy">You haven't taken any interviews yet. Jump in — your first practice run is the hardest and the most rewarding.</p>
+                    <span id="emptyFreeBadgeSlot"></span>
+                    <a href="/start" class="btn-primary empty-cta">Start your first interview</a>
+                </div>
+
+                <!-- Non-blocking error notice (stats only) -->
+                <div id="statsError" class="dash-error is-hidden" role="status">
+                    We couldn't load your interview stats right now. Everything else still works.
+                </div>
+            </section>
 
             <!-- API Keys Section -->
             <div class="card" style="padding: 2rem;">
