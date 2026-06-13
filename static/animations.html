@@ -187,7 +187,6 @@
             transition: transform 0.25s cubic-bezier(0.34, 1.2, 0.5, 1), box-shadow 0.25s ease, border-color 0.25s ease;
         }
         .vx-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-medium); border-color: var(--hairline-strong); }
-        .vx-card--intro { grid-column: span 2; }
 
         .vx-card-head {
             display: flex; align-items: baseline; justify-content: space-between;
@@ -211,30 +210,6 @@
             overflow: hidden;
         }
 
-        /* A relatively-positioned host so the absolutely-centred .mf-rays lands
-           on it. Sized to the ring so cards stay tidy. */
-        .vx-ringhost {
-            position: relative;
-            width: 160px; height: 160px;
-            display: grid; place-items: center;
-        }
-        .vx-ringhost > .mf-rays { --mf-rays-size: 160px; }
-
-        /* Replay button — borrows the kit's pill control styling. */
-        .vx-replay {
-            display: inline-flex; align-items: center; gap: 0.45rem;
-            margin: 0 1rem 0.25rem; align-self: flex-start;
-            height: 2.2rem; padding: 0 0.95rem;
-            background: var(--bg-card); color: var(--text-primary);
-            border: 1px solid var(--control-border); border-radius: var(--radius-full);
-            font: inherit; font-weight: 600; font-size: 0.82rem; cursor: pointer;
-            box-shadow: var(--shadow-soft);
-            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-        }
-        .vx-replay:hover { transform: translateY(-2px); box-shadow: var(--shadow-medium); border-color: var(--accent-green-deep); }
-        .vx-replay:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
-        .vx-replay svg { width: 0.95rem; height: 0.95rem; }
-
         .vx-snip {
             margin: 0.5rem 1rem 1rem;
         }
@@ -251,75 +226,106 @@
         }
 
         /* -------------------------------------------------------------------
-           .mf-orb2 — the "Full intro" composite: concentric rings + ray ring
-           + eyes, stacked centre. The concentric rings are the brand greens.
+           .mf-orb2 — the GREET <-> ORB toggle composite: concentric rings +
+           ray ring + eyes, stacked centre. Click to enter (circles bloom into
+           rays); click again for the symmetric exit. JS (MFRays.mountToggle)
+           wires the click handler and sequences the classes below.
            ------------------------------------------------------------------- */
         .mf-orb2 {
             --mf-orb2-size: 160px;
             position: relative;
             width: var(--mf-orb2-size); height: var(--mf-orb2-size);
             display: grid; place-items: center;
+            cursor: pointer; /* it's a click toggle */
+            -webkit-tap-highlight-color: transparent;
         }
+        .mf-orb2:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 6px; border-radius: 50%; }
         .mf-orb2 .mf-rays { --mf-rays-size: var(--mf-orb2-size); }
         .mf-orb2 .mf-eyes { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 3; }
 
-        /* 3 nested bordered circles in the brand greens, centred. */
+        /* 3 nested bordered circles in the brand greens, centred. The whole
+           group scales as one (so they grow/shrink toward the centre). */
         .mf-orb2__rings {
             position: absolute; top: 50%; left: 50%;
             width: 60%; height: 60%;
-            transform: translate(-50%, -50%);
+            transform: translate(-50%, -50%) scale(1);
+            transform-origin: center center;
             pointer-events: none; z-index: 1;
         }
         .mf-orb2__rings > span {
             position: absolute; inset: 0; margin: auto;
             border-radius: 50%;
             border: 2px solid;
-            transform: scale(1);
         }
         .mf-orb2__rings > span:nth-child(1) { width: 100%; height: 100%; border-color: #C8E6C9; }
         .mf-orb2__rings > span:nth-child(2) { width: 64%;  height: 64%;  border-color: #81C784; }
         .mf-orb2__rings > span:nth-child(3) { width: 30%;  height: 30%;  border-color: #4CAF50; }
 
-        /* Choreography states (JS toggles these in sequence). */
-        .mf-orb2__rings.is-expand  > span { animation: vx-ring-expand  0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
-        .mf-orb2__rings.is-compact > span { animation: vx-ring-compact 0.4s  cubic-bezier(0.5, 0, 0.2, 1)   forwards; }
-        .mf-orb2__rings.is-fade { animation: vx-ring-fade 0.5s ease forwards; }
+        /* --- Rings: entry (expand -> contract & vanish) + exit (grow back). --
+           Resting state is scale(1), fully opaque (the CIRCLES state). */
+        .mf-orb2__rings.is-expand { animation: vx-ring-expand 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+        .mf-orb2__rings.is-vanish { animation: vx-ring-vanish 0.6s cubic-bezier(0.5, 0, 0.75, 0) forwards; }
+        .mf-orb2__rings.is-hidden { transform: translate(-50%, -50%) scale(0); opacity: 0; } /* parked hidden */
+        .mf-orb2__rings.is-return { animation: vx-ring-return 0.76s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
 
-        @keyframes vx-ring-expand  { from { transform: scale(1); }    to { transform: scale(1.5); } }
-        @keyframes vx-ring-compact { from { transform: scale(1.5); }  to { transform: scale(0.15); } }
-        @keyframes vx-ring-fade    { from { opacity: 1; }             to { opacity: 0; } }
+        @keyframes vx-ring-expand {
+            from { transform: translate(-50%, -50%) scale(1);   opacity: 1; }
+            to   { transform: translate(-50%, -50%) scale(1.5); opacity: 1; }
+        }
+        @keyframes vx-ring-vanish {
+            from { transform: translate(-50%, -50%) scale(1.5); opacity: 1; }
+            to   { transform: translate(-50%, -50%) scale(0);   opacity: 0; }
+        }
+        @keyframes vx-ring-return {
+            0%   { transform: translate(-50%, -50%) scale(0);    opacity: 0; }
+            65%  { transform: translate(-50%, -50%) scale(1.5);  opacity: 1; } /* overshoot */
+            100% { transform: translate(-50%, -50%) scale(1);    opacity: 1; } /* settle */
+        }
 
-        /* Eyes start hidden, then pop. */
+        /* --- Eyes: hidden at rest; pop on entry, shut (scaleY -> 0) on exit. */
         .mf-orb2 .mf-eyes { opacity: 0; transform: translate(-50%, -50%) scale(0); }
-        .mf-orb2 .mf-eyes.is-pop { animation: vx-eyes-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        .mf-orb2 .mf-eyes.is-pop { animation: vx-eyes-pop 0.48s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        .mf-orb2 .mf-eyes.is-shut { animation: vx-eyes-shut 0.38s cubic-bezier(0.5, 0, 0.75, 0) forwards; }
         @keyframes vx-eyes-pop {
             0%   { opacity: 0; transform: translate(-50%, -50%) scale(0); }
             60%  { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
             100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
         }
+        @keyframes vx-eyes-shut {
+            from { opacity: 1; transform: translate(-50%, -50%) scaleX(1) scaleY(1); }
+            to   { opacity: 0; transform: translate(-50%, -50%) scaleX(1) scaleY(0); }
+        }
 
-        /* Rays start collapsed, then bloom in (the JS loop drives height after). */
+        /* --- Rays: collapsed at rest; bloom in on entry, fold out on exit.
+           (The JS loop drives bar HEIGHT once bloomed; these move scale/opacity
+           on the .mf-rays box itself.) */
         .mf-orb2 .mf-rays { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
-        .mf-orb2 .mf-rays.is-bloom { animation: vx-rays-bloom 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+        .mf-orb2 .mf-rays.is-bloom { animation: vx-rays-bloom 0.52s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+        .mf-orb2 .mf-rays.is-out   { animation: vx-rays-out   0.46s cubic-bezier(0.5, 0, 0.75, 0) forwards; }
         @keyframes vx-rays-bloom {
             from { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
             to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
         }
-
-        @media (max-width: 520px) {
-            .vx-card--intro { grid-column: 1 / -1; }
+        @keyframes vx-rays-out {
+            from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            to   { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
         }
 
-        /* Reduced motion: present the settled composite, no choreography. */
+        /* Reduced motion: NO choreography — instantly swap between the resting
+           circles and the (static) rays + eyes. JS adds is-hidden/is-pop/is-bloom
+           for the open state and removes them for circles; here we just kill the
+           animations and pin the settled look. */
         @media (prefers-reduced-motion: reduce) {
-            .mf-orb2__rings.is-expand > span,
-            .mf-orb2__rings.is-compact > span,
-            .mf-orb2__rings.is-fade,
+            .mf-orb2__rings.is-expand,
+            .mf-orb2__rings.is-vanish,
+            .mf-orb2__rings.is-return,
             .mf-orb2 .mf-eyes.is-pop,
-            .mf-orb2 .mf-rays.is-bloom { animation: none !important; }
-            .mf-orb2 .mf-eyes { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-            .mf-orb2 .mf-rays { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-            .mf-orb2__rings.is-fade { opacity: 0; }
+            .mf-orb2 .mf-eyes.is-shut,
+            .mf-orb2 .mf-rays.is-bloom,
+            .mf-orb2 .mf-rays.is-out { animation: none !important; }
+            .mf-orb2 .mf-eyes.is-pop { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            .mf-orb2 .mf-rays.is-bloom { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            .mf-orb2__rings.is-hidden { opacity: 0; }
         }
     </style>
 </head>
@@ -357,7 +363,7 @@
         <section class="vx-section" id="voicePicker">
             <div class="vx-head">
                 <h2 class="mf-shimmer-text">Pick your interviewer&rsquo;s voice</h2>
-                <p>The hero orb&rsquo;s rays move like a real voice &mdash; circular but sporadic. Four ways to drive the same ring, plus the full intro the agent does on wake. <strong>Voice</strong> is what the live interview uses.</p>
+                <p>The hero orb&rsquo;s rays move like a real voice &mdash; circular but sporadic. Six ways to drive the same ring, each a live toggle: <strong>click to enter</strong> (circles bloom into rays), click again to exit. <strong>Voice</strong> is what the live interview uses; the <strong>+Pulse</strong> and <strong>+Comet</strong> combos stack two motions so the bars read taller.</p>
             </div>
             <div class="vx-grid" id="voiceGrid"><!-- cards injected by JS --></div>
         </section>
@@ -582,6 +588,9 @@
          ==================================================================== -->
     <script>
     (function () {
+        // SIX interactive variant cards. Each is a .mf-orb2 GREET <-> ORB toggle:
+        // starts as concentric circles; click to enter rays in that mode; click
+        // again for the symmetric exit. The combos stack two motions (taller).
         var MODES = [
             { mode: 'voice', label: "Voice", note: 'The real interviewer',
               desc: 'Travelling 4-lobe wave + per-frame noise. Circular and sporadic, like a voice.' },
@@ -590,15 +599,14 @@
             { mode: 'pulse', label: "Pulse", note: 'Breathe together',
               desc: 'Every ray shares one target, so the whole ring inhales and exhales as one.' },
             { mode: 'comet', label: "Comet", note: 'A crest sweeps round',
-              desc: 'A single sharp peak races around the ring like a comet on a track.' }
+              desc: 'A single sharp peak races around the ring like a comet on a track.' },
+            { mode: 'voice+pulse', label: "Voice + Pulse", note: 'Stacked · taller',
+              desc: 'Voice plus a shared breath added on top — the whole ring swells while it speaks.' },
+            { mode: 'voice+comet', label: "Voice + Comet", note: 'Stacked · taller',
+              desc: 'Voice with a sharp crest summed over it — a comet streaks through the chatter.' }
         ];
 
-        var REPLAY_ICON =
-            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
-            'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-            '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/></svg>';
-
-        function makeModeCard(cfg) {
+        function makeToggleCard(cfg) {
             var card = document.createElement('article');
             card.className = 'vx-card';
 
@@ -610,51 +618,15 @@
 
             var stage = document.createElement('div');
             stage.className = 'vx-stage';
-            var host = document.createElement('div');
-            host.className = 'vx-ringhost';
-            var ring = document.createElement('div');
-            ring.className = 'mf-rays';
-            host.appendChild(ring);
-            stage.appendChild(host);
 
-            var desc = document.createElement('p');
-            desc.className = 'vx-snip';
-            desc.style.color = 'var(--text-muted)';
-            desc.style.fontSize = '0.82rem';
-            desc.style.margin = '0.25rem 1rem 0.5rem';
-            desc.textContent = cfg.desc;
-
-            var snip = document.createElement('div');
-            snip.className = 'vx-snip';
-            var code = document.createElement('code');
-            code.textContent = "MFRays.animate(el, { mode: '" + cfg.mode + "' })";
-            snip.appendChild(code);
-
-            card.appendChild(head);
-            card.appendChild(stage);
-            card.appendChild(desc);
-            card.appendChild(snip);
-
-            // Start this variant's loop.
-            window.MFRays.animate(ring, { mode: cfg.mode, count: 56 });
-            return card;
-        }
-
-        function makeIntroCard() {
-            var card = document.createElement('article');
-            card.className = 'vx-card vx-card--intro';
-
-            var head = document.createElement('div');
-            head.className = 'vx-card-head';
-            var h3 = document.createElement('h3'); h3.textContent = 'Full intro';
-            var note = document.createElement('span'); note.textContent = 'rings → eyes → rays';
-            head.appendChild(h3); head.appendChild(note);
-
-            var stage = document.createElement('div');
-            stage.className = 'vx-stage';
-
+            // The .mf-orb2 composite this card toggles. Starts in the circles
+            // state (rings visible; rays + eyes hidden via CSS).
             var orb = document.createElement('div');
             orb.className = 'mf-orb2';
+            orb.setAttribute('data-mode', cfg.mode);
+            orb.setAttribute('role', 'button');
+            orb.setAttribute('tabindex', '0');
+            orb.setAttribute('aria-label', cfg.label + ' — click to enter, click again to exit');
             orb.style.setProperty('--mf-orb2-size', '160px');
             orb.innerHTML =
                 '<div class="mf-orb2__rings"><span></span><span></span><span></span></div>' +
@@ -662,29 +634,33 @@
                 '<div class="mf-eyes" style="--mf-eye-size:14px"><i></i><i></i></div>';
             stage.appendChild(orb);
 
-            var replay = document.createElement('button');
-            replay.className = 'vx-replay';
-            replay.type = 'button';
-            replay.innerHTML = REPLAY_ICON + '<span>Replay</span>';
+            var desc = document.createElement('p');
+            desc.style.color = 'var(--text-muted)';
+            desc.style.fontSize = '0.82rem';
+            desc.style.margin = '0.25rem 1rem 0.4rem';
+            desc.textContent = cfg.desc;
+
+            var hint = document.createElement('p');
+            hint.style.color = 'var(--text-secondary)';
+            hint.style.fontSize = '0.74rem';
+            hint.style.fontWeight = '600';
+            hint.style.margin = '0 1rem 0.4rem';
+            hint.textContent = 'click to enter · click again to exit';
 
             var snip = document.createElement('div');
             snip.className = 'vx-snip';
             var code = document.createElement('code');
-            code.textContent = "MFRays.intro(orbEl, { mode: 'voice' })";
+            code.textContent = "MFRays.mountToggle(el, { mode: '" + cfg.mode + "' })";
             snip.appendChild(code);
 
             card.appendChild(head);
             card.appendChild(stage);
-            card.appendChild(replay);
+            card.appendChild(desc);
+            card.appendChild(hint);
             card.appendChild(snip);
 
-            var handle = null;
-            function play() {
-                if (handle && handle.stop) handle.stop();
-                handle = window.MFRays.intro(orb, { mode: 'voice' });
-            }
-            replay.addEventListener('click', play);
-            play(); // run once on load
+            // Wire the toggle; it starts in the circles state and waits for a click.
+            window.MFRays.mountToggle(orb, { mode: cfg.mode, count: 56 });
             return card;
         }
 
@@ -692,8 +668,7 @@
             if (!window.MFRays) return;
             var grid = document.getElementById('voiceGrid');
             if (!grid) return;
-            MODES.forEach(function (cfg) { grid.appendChild(makeModeCard(cfg)); });
-            grid.appendChild(makeIntroCard());
+            MODES.forEach(function (cfg) { grid.appendChild(makeToggleCard(cfg)); });
         }
 
         if (document.readyState === 'loading') {
