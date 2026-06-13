@@ -445,3 +445,109 @@
 @keyframes eval-spin {
     to { transform: rotate(360deg); }
 }
+
+/* ============================================================
+   Connection / cold-start status panel
+   ============================================================ */
+.connect-status-panel {
+    display: none;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 460px;
+    margin: 0.75rem auto 0;
+    padding: 0.875rem 1rem;
+    border: 1px solid var(--bg-soft, #EFEBE5);
+    border-radius: var(--radius-md, 12px);
+    background: var(--bg-card, #fff);
+    box-shadow: var(--shadow-soft, 0 2px 20px rgba(0,0,0,0.05));
+    text-align: center;
+}
+
+.connect-status-panel.visible {
+    display: flex;
+}
+
+.connect-status-head {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.connect-status-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--bg-soft, #ddd);
+    border-top-color: var(--accent-green-deep, #16a34a);
+    border-radius: 50%;
+    animation: eval-spin 0.7s linear infinite;
+    flex-shrink: 0;
+}
+
+.connect-status-msg {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary, #1a1a1a);
+}
+
+.connect-status-sub {
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--text-secondary, #4A4A4A);
+}
+
+.connect-status-timer {
+    font-size: 0.75rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted, #7A7A7A);
+}
+
+.connect-status-retry-btn {
+    display: none;
+    align-self: center;
+    margin-top: 0.25rem;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--bg-card, #fff);
+    background: var(--accent-green-deep, #16a34a);
+    border: none;
+    border-radius: var(--radius-sm, 8px);
+    cursor: pointer;
+}
+
+.connect-status-panel.timed-out .connect-status-spinner {
+    display: none;
+}
+
+.connect-status-panel.timed-out .connect-status-retry-btn {
+    display: inline-block;
+}
+
+/* ============================================================
+   Keyboard shortcut hints
+   ============================================================ */
+.kbd-hint {
+    display: inline-block;
+    min-width: 1.1em;
+    padding: 0 0.3em;
+    font-size: 0.65rem;
+    font-weight: 700;
+    line-height: 1.5;
+    text-align: center;
+    color: var(--text-muted, #7A7A7A);
+    background: var(--bg-soft, #EFEBE5);
+    border: 1px solid color-mix(in srgb, var(--text-muted, #7A7A7A) 25%, transparent);
+    border-radius: 4px;
+    margin-left: 0.4rem;
+    vertical-align: middle;
+}
+
+/* Mute button active (muted) state — accessible focus ring */
+.btn-icon[aria-pressed="true"] {
+    outline: none;
+}
+.btn-icon:focus-visible {
+    outline: 2px solid var(--accent-green-deep, #16a34a);
+    outline-offset: 2px;
+}
