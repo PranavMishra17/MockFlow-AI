@@ -271,3 +271,262 @@
     margin: 16px 0 8px;
     grid-column: 1 / -1;
 }
+
+/* ============================================================
+   BYOK onboarding status banner
+   ============================================================ */
+.keys-banner {
+    display: none;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    margin-bottom: 1.25rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--bg-soft);
+    background: var(--bg-card);
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+.keys-banner.visible {
+    display: flex;
+}
+
+.keys-banner-icon {
+    flex-shrink: 0;
+    font-size: 1.05rem;
+    line-height: 1.4;
+}
+
+.keys-banner-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.keys-banner-title {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.keys-banner-link {
+    display: inline-block;
+    margin-top: 0.25rem;
+    color: var(--accent-green-deep);
+    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.keys-banner-link:hover {
+    color: var(--text-primary);
+}
+
+/* Success: subtle */
+.keys-banner.is-success {
+    border-color: color-mix(in srgb, var(--success) 35%, transparent);
+    background: color-mix(in srgb, var(--success) 8%, var(--bg-card));
+}
+.keys-banner.is-success .keys-banner-icon,
+.keys-banner.is-success .keys-banner-title {
+    color: var(--success);
+}
+
+/* Free calls: inviting green — the conversion moment */
+.keys-banner.is-free {
+    border-color: var(--accent-green-deep);
+    background: color-mix(in srgb, var(--accent-green-deep) 12%, var(--bg-card));
+    box-shadow: var(--shadow-soft);
+}
+.keys-banner.is-free .keys-banner-icon,
+.keys-banner.is-free .keys-banner-title {
+    color: var(--accent-green-deep);
+}
+
+/* Needs keys: warning tone */
+.keys-banner.is-warn {
+    border-color: color-mix(in srgb, var(--warning) 40%, transparent);
+    background: color-mix(in srgb, var(--warning) 10%, var(--bg-card));
+}
+.keys-banner.is-warn .keys-banner-icon,
+.keys-banner.is-warn .keys-banner-title {
+    color: var(--warning);
+}
+
+/* ============================================================
+   Cold-start / progress loading panel
+   ============================================================ */
+.loading-progress {
+    margin-top: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--bg-soft);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    box-shadow: var(--shadow-soft);
+}
+
+.loading-progress-head {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+}
+
+.loading-progress-spinner {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--bg-soft);
+    border-top-color: var(--accent-green-deep);
+    border-radius: 50%;
+    animation: lp-spin 0.7s linear infinite;
+}
+
+@keyframes lp-spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading-progress-msg {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    line-height: 1.4;
+}
+
+.loading-progress-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 0.625rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.loading-progress-timer {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.loading-progress-sub {
+    margin-top: 0.5rem;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+.loading-progress-retry {
+    margin-top: 0.875rem;
+    display: none;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.loading-progress.timed-out .loading-progress-spinner {
+    display: none;
+}
+
+.loading-progress.timed-out .loading-progress-retry {
+    display: flex;
+}
+
+.loading-progress-retry-btn {
+    align-self: flex-start;
+    padding: 0.5rem 1.25rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--bg-card);
+    background: var(--accent-green-deep);
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+
+.loading-progress-retry-btn:hover {
+    background: color-mix(in srgb, var(--accent-green-deep) 85%, #000);
+}
+
+/* ============================================================
+   Inline toast (replaces alert())
+   ============================================================ */
+.toast-stack {
+    position: fixed;
+    bottom: 1.25rem;
+    right: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    z-index: 2000;
+    max-width: min(380px, calc(100vw - 2.5rem));
+}
+
+.toast {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    padding: 0.75rem 0.875rem;
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    border: 1px solid var(--bg-soft);
+    box-shadow: var(--shadow-lifted);
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    color: var(--text-secondary);
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.toast.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.toast.is-error {
+    border-color: color-mix(in srgb, var(--error) 40%, transparent);
+}
+
+.toast.is-error .toast-icon {
+    color: var(--error);
+}
+
+.toast.is-success {
+    border-color: color-mix(in srgb, var(--success) 40%, transparent);
+}
+
+.toast.is-success .toast-icon {
+    color: var(--success);
+}
+
+.toast-icon {
+    flex-shrink: 0;
+    font-size: 1rem;
+    line-height: 1.4;
+    color: var(--text-muted);
+}
+
+.toast-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.toast-body a {
+    color: var(--accent-green-deep);
+    font-weight: 600;
+    text-decoration: underline;
+}
+
+.toast-close {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 0.125rem;
+}
+
+.toast-close:hover {
+    color: var(--text-primary);
+}

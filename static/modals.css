@@ -13,7 +13,7 @@
     bottom: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.7);
+    background: var(--overlay-scrim-strong);
     backdrop-filter: blur(4px);
     display: none;
     align-items: center;
@@ -37,7 +37,7 @@
     max-height: 90vh;
     overflow-y: auto;
     animation: slideUp 0.3s ease-out;
-    box-shadow: 8px 8px 0 rgba(0, 0, 0, 0.2);
+    box-shadow: 8px 8px 0 var(--brutal-shadow);
     margin: auto;
     position: relative;
 }
@@ -176,7 +176,7 @@
 /* Error Message */
 .error-message {
     padding: 0.75rem;
-    background: #FFEBEE;
+    background: var(--msg-error-bg);
     border: 2px solid var(--error);
     color: var(--error);
     font-size: 0.875rem;
@@ -192,7 +192,7 @@
 /* Success Message */
 .success-message {
     padding: 0.75rem;
-    background: #E8F5E9;
+    background: var(--msg-success-bg);
     border: 2px solid var(--success);
     color: var(--success);
     font-size: 0.875rem;
@@ -219,7 +219,7 @@
     padding: 0.75rem 1.5rem;
     border: 2px solid var(--text-primary);
     background: var(--text-primary);
-    color: white;
+    color: var(--on-accent);
     font-size: 0.875rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -230,7 +230,7 @@
 
 .modal-btn:hover:not(:disabled) {
     transform: translate(-2px, -2px);
-    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.2);
+    box-shadow: 4px 4px 0 var(--brutal-shadow);
 }
 
 .modal-btn:disabled {
@@ -291,7 +291,7 @@
 .form-group-modal textarea:focus {
     outline: none;
     border-color: var(--accent-green-deep);
-    background: white;
+    background: var(--input-bg-focus);
 }
 
 .form-link {
@@ -309,7 +309,7 @@
 
 .settings-error {
     padding: 0.75rem;
-    background: #FFEBEE;
+    background: var(--msg-error-bg);
     border: 3px solid var(--error);
     color: var(--error);
     font-size: 0.875rem;
@@ -332,7 +332,7 @@
     padding: 0.875rem 1.5rem;
     border: 3px solid var(--text-primary);
     background: var(--text-primary);
-    color: white;
+    color: var(--on-accent);
     font-size: 0.875rem;
     font-weight: 700;
     text-transform: uppercase;
@@ -343,7 +343,7 @@
 
 .modal-btn-primary:hover {
     transform: translate(-2px, -2px);
-    box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.2);
+    box-shadow: 4px 4px 0 var(--brutal-shadow);
     background: var(--accent-green-deep);
     border-color: var(--accent-green-deep);
 }
@@ -497,7 +497,7 @@
 
 .social-link:hover {
     transform: translate(-2px, -2px);
-    box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.2);
+    box-shadow: 3px 3px 0 var(--brutal-shadow);
 }
 
 .social-link svg {
@@ -624,7 +624,7 @@
 .github-link {
     border-color: var(--text-primary);
     background: var(--text-primary);
-    color: white;
+    color: var(--on-accent);
 }
 
 .bug-link {

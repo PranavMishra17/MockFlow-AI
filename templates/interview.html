@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interview - MockFlow-AI</title>
+    <title>Live Interview — MockFlow-AI</title>
+    <meta name="description" content="Your live mock interview session with MockFlow-AI's AI interviewer — answer questions in real time and get structured feedback when you're done.">
+    <meta property="og:title" content="Live Interview — MockFlow-AI">
+    <meta property="og:description" content="Your live mock interview session with MockFlow-AI's AI interviewer — answer questions in real time and get structured feedback when you're done.">
+    <meta property="og:type" content="website">
     <link rel="icon" href="/favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -36,7 +40,18 @@
             <span class="status-indicator connecting" id="statusIndicator"></span>
             <span id="statusText">Connecting...</span>
         </div>
-        
+
+        <!-- Cold-start connection panel (honest, staged messaging) -->
+        <div class="connect-status-panel" id="connectStatusPanel" role="status" aria-live="polite">
+            <div class="connect-status-head">
+                <span class="connect-status-spinner" aria-hidden="true"></span>
+                <span class="connect-status-msg" id="connectStatusMsg">Connecting to your interviewer…</span>
+            </div>
+            <div class="connect-status-sub" id="connectStatusSub"></div>
+            <div class="connect-status-timer" id="connectStatusTimer">0:00</div>
+            <button type="button" class="connect-status-retry-btn" id="connectStatusRetryBtn">Retry connection</button>
+        </div>
+
         <div class="stage-timer-display" id="stageTimer">0:00</div>
 
         <!-- Skip Intro button: visible only during greeting/self_intro stages -->
@@ -103,7 +118,7 @@
             <div class="code-editor-panel" id="codeEditorPanel" style="display:none;">
                 <div id="codingReadyPanel" style="display:none; text-align:center; padding:3rem 2rem; border-bottom:1px solid var(--bg-soft,#eee);">
                     <p style="color:var(--text-muted,#888); margin-bottom:1.5rem; font-size:0.9rem;">Your coding interview is ready. Click below when you want to begin.</p>
-                    <button id="readyForProblemBtn" class="btn-primary" style="padding:0.75rem 2rem; font-size:1rem; font-weight:600; border-radius:8px; cursor:pointer;">I'm Ready</button>
+                    <button id="readyForProblemBtn" class="btn-primary" style="padding:0.75rem 2rem; font-size:1rem; font-weight:600; border-radius:8px; cursor:pointer;">I'm Ready<span class="kbd-hint">Enter</span></button>
                 </div>
                 <div class="problem-display" id="problemDisplay">
                     <div class="problem-header">
@@ -186,7 +201,7 @@
         
         <!-- Controls -->
         <div class="interview-controls">
-            <button class="btn-icon" id="muteBtn" title="Mute/Unmute">
+            <button class="btn-icon" id="muteBtn" title="Mute / Unmute (press M)" aria-label="Mute microphone" aria-pressed="false">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" id="muteIcon">
                     <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
                     <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
@@ -210,7 +225,7 @@
                 <h3 class="modal-title" id="modalTitle">End Interview?</h3>
                 <p class="modal-message" id="modalMessage">Are you sure you want to end the interview?</p>
                 <div class="modal-actions" id="modalActions">
-                    <button class="btn-secondary" id="modalCancel">Cancel</button>
+                    <button class="btn-secondary" id="modalCancel">Cancel<span class="kbd-hint">Esc</span></button>
                     <button class="btn-danger" id="modalConfirm">End Interview</button>
                 </div>
                 <!-- Feedback button (shown after interview ends) -->
@@ -533,7 +548,151 @@
             elements.modalCancel.addEventListener('click', hideModal);
             elements.modalConfirm.addEventListener('click', confirmEndInterview);
             elements.videoToggle.addEventListener('click', toggleVideo);
-            
+            initKeyboardShortcuts();
+            initConnectRetry();
+
+            // ==================== KEYBOARD SHORTCUTS ====================
+            // M = toggle mute, Esc = close end-interview modal, Enter = confirm "ready" modal.
+            // Shortcuts are suppressed while typing in an input/textarea/select/contenteditable
+            // or anywhere inside the Monaco editor.
+            function isTypingTarget(target) {
+                if (!target) return false;
+                var tag = (target.tagName || '').toLowerCase();
+                if (tag === 'input' || tag === 'textarea' || tag === 'select') return true;
+                if (target.isContentEditable) return true;
+                // Monaco editor (and its hidden textarea) live inside #monacoEditorContainer / .monaco-editor
+                if (target.closest && (target.closest('#monacoEditorContainer') || target.closest('.monaco-editor'))) return true;
+                return false;
+            }
+
+            function initKeyboardShortcuts() {
+                document.addEventListener('keydown', function(e) {
+                    // Don't hijack modifier combos (copy/paste/devtools/etc.)
+                    if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+                    var modalOpen = elements.modalOverlay && elements.modalOverlay.classList.contains('visible');
+                    var readyPanel = document.getElementById('codingReadyPanel');
+                    var readyVisible = readyPanel && readyPanel.style.display !== 'none' &&
+                        document.getElementById('codeEditorPanel') &&
+                        document.getElementById('codeEditorPanel').style.display !== 'none';
+
+                    // Esc: close the end-interview confirmation modal (only when it's the
+                    // confirm/cancel variant, not the post-interview feedback modal).
+                    if (e.key === 'Escape') {
+                        if (modalOpen) {
+                            var actions = document.getElementById('modalActions');
+                            var isConfirmModal = actions && actions.style.display !== 'none';
+                            if (isConfirmModal) {
+                                e.preventDefault();
+                                hideModal();
+                            }
+                        }
+                        return;
+                    }
+
+                    // Enter: confirm the coding "I'm Ready" modal.
+                    if (e.key === 'Enter') {
+                        if (readyVisible && !isTypingTarget(e.target)) {
+                            e.preventDefault();
+                            var readyBtn = document.getElementById('readyForProblemBtn');
+                            if (readyBtn) readyBtn.click();
+                        }
+                        return;
+                    }
+
+                    // Ignore typing contexts for plain letter shortcuts.
+                    if (isTypingTarget(e.target)) return;
+
+                    // M: toggle mute (only when no modal/ready dialog is grabbing the flow).
+                    if ((e.key === 'm' || e.key === 'M') && !modalOpen && !readyVisible) {
+                        e.preventDefault();
+                        toggleMute();
+                    }
+                });
+            }
+
+            // ==================== CONNECTION COLD-START PANEL ====================
+            var connectTimerInterval = null;
+            var connectEscalateTimeout = null;
+            var connectHardTimeout = null;
+            var CONNECT_ESCALATE_MS = 30000;   // "still connecting" escalation
+            var CONNECT_TIMEOUT_MS = 180000;   // hard timeout → retry
+            var agentJoined = false;
+
+            function clearConnectTimers() {
+                if (connectTimerInterval) { clearInterval(connectTimerInterval); connectTimerInterval = null; }
+                if (connectEscalateTimeout) { clearTimeout(connectEscalateTimeout); connectEscalateTimeout = null; }
+                if (connectHardTimeout) { clearTimeout(connectHardTimeout); connectHardTimeout = null; }
+            }
+
+            function startConnectPanel() {
+                var panel = document.getElementById('connectStatusPanel');
+                var msg = document.getElementById('connectStatusMsg');
+                var sub = document.getElementById('connectStatusSub');
+                var timerEl = document.getElementById('connectStatusTimer');
+                if (!panel) return;
+
+                clearConnectTimers();
+                panel.classList.remove('timed-out');
+                panel.classList.add('visible');
+                msg.textContent = 'Connecting to your interviewer…';
+                sub.textContent = '';
+
+                var startedAt = Date.now();
+                timerEl.textContent = '0:00';
+                connectTimerInterval = setInterval(function() {
+                    var elapsed = Math.floor((Date.now() - startedAt) / 1000);
+                    var m = Math.floor(elapsed / 60);
+                    var s = elapsed % 60;
+                    timerEl.textContent = m + ':' + String(s).padStart(2, '0');
+                }, 1000);
+
+                connectEscalateTimeout = setTimeout(function() {
+                    if (agentJoined) return;
+                    msg.textContent = 'Still connecting…';
+                    sub.textContent = 'First run is slow on the free tier — the interviewer is spinning up. This can take a minute or two.';
+                }, CONNECT_ESCALATE_MS);
+
+                connectHardTimeout = setTimeout(function() {
+                    onConnectTimeout();
+                }, CONNECT_TIMEOUT_MS);
+            }
+
+            function onConnectTimeout() {
+                if (agentJoined) return;
+                clearConnectTimers();
+                var panel = document.getElementById('connectStatusPanel');
+                var msg = document.getElementById('connectStatusMsg');
+                var sub = document.getElementById('connectStatusSub');
+                if (!panel) return;
+                panel.classList.add('timed-out');
+                msg.textContent = "The interviewer is taking too long to join.";
+                sub.textContent = 'It may still be starting up. You can retry — reloading often connects on the second attempt.';
+            }
+
+            function hideConnectPanel() {
+                clearConnectTimers();
+                var panel = document.getElementById('connectStatusPanel');
+                if (panel) { panel.classList.remove('visible', 'timed-out'); }
+            }
+
+            function markAgentJoined() {
+                agentJoined = true;
+                hideConnectPanel();
+            }
+
+            function initConnectRetry() {
+                var btn = document.getElementById('connectStatusRetryBtn');
+                if (btn) {
+                    btn.addEventListener('click', function() {
+                        // Credentials are single-use (cleared after connect); reloading restarts
+                        // cleanly. The /start guard re-runs but sessionStorage may be gone, so
+                        // send the user back to the form to mint a fresh token.
+                        window.location.replace('/start');
+                    });
+                }
+            }
+
             function formatLevel(level) {
                 var levels = { entry: 'Entry Level', mid: 'Mid Level', senior: 'Senior Level' };
                 return levels[level] || level;
@@ -1157,9 +1316,13 @@
                 if (state.isMuted) {
                     elements.muteIcon.innerHTML = '<line x1="1" y1="1" x2="23" y2="23"/><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"/>';
                     elements.muteBtn.classList.add('active');
+                    elements.muteBtn.setAttribute('aria-pressed', 'true');
+                    elements.muteBtn.setAttribute('aria-label', 'Unmute microphone');
                 } else {
                     elements.muteIcon.innerHTML = '<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/>';
                     elements.muteBtn.classList.remove('active');
+                    elements.muteBtn.setAttribute('aria-pressed', 'false');
+                    elements.muteBtn.setAttribute('aria-label', 'Mute microphone');
                 }
             }
             
@@ -1180,6 +1343,7 @@
             
             async function connectToRoom() {
                 updateStatus('Connecting to room...', 'connecting');
+                startConnectPanel();
 
                 try {
                     // Get token data from sessionStorage (worker already spawned on form page)
@@ -1255,6 +1419,15 @@
                     }
 
                     updateStatus(userMessage, 'error');
+
+                    // Surface a retry path on the cold-start panel instead of a frozen spinner
+                    clearConnectTimers();
+                    var cPanel = document.getElementById('connectStatusPanel');
+                    if (cPanel) {
+                        cPanel.classList.add('visible', 'timed-out');
+                        document.getElementById('connectStatusMsg').textContent = 'Connection failed.';
+                        document.getElementById('connectStatusSub').textContent = userMessage + ' You can retry below.';
+                    }
 
                     // Show diagnostic information in console for debugging
                     console.error('[DIAGNOSTICS] LiveKit URL:', sessionStorage.getItem('mockflow_url') || 'Not found in sessionStorage');
@@ -1443,6 +1616,7 @@
                     document.body.appendChild(audioElement);
 
                     console.log('[AUDIO] Agent audio attached, initializing visualization');
+                    markAgentJoined();
                     initAgentAudioVisualization(track);
                     updateAgentCaption('Agent connected. Interview starting...');
                 }
@@ -1576,6 +1750,9 @@
                 console.log('[PARTICIPANT] Connected:', participant.identity);
                 var isAgent = participant.identity === 'interview-agent' || participant.identity.includes('agent');
                 if (!isAgent) return;
+
+                // Agent is in the room — hide the cold-start connection panel
+                markAgentJoined();
 
                 // Update agent caption
                 if (elements.agentCaption) {
