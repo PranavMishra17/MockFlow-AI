@@ -304,10 +304,20 @@
                 '<div id="developerModal" class="modal-overlay">' +
                     '<div class="modal-container">' +
                         '<div class="modal-header">' +
-                            '<h2 class="modal-title">About the <span class="highlight">Developer</span></h2>' +
+                            '<h2 class="modal-title">About <span class="highlight">MockFlow.ai</span></h2>' +
                             '<button class="modal-close" onclick="window.MockFlowHeader.closeDeveloperModal()" aria-label="Close">&times;</button>' +
                         '</div>' +
                         '<div class="modal-content">' +
+                            '<div class="project-info" style="margin-top:0">' +
+                                '<div class="section-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>About this project</div>' +
+                                '<p>MockFlow.ai is an AI-powered interview-prep platform — rehearse behavioral, technical and live-coding rounds out loud with an AI interviewer, then get scored, actionable feedback. On the roadmap: an application & call tracker and a research agent that curates interviews for your real upcoming calls.</p>' +
+                                '<div class="project-actions">' +
+                                    '<a href="' + HeaderConfig.githubUrl + '" target="_blank" class="github-link"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.840 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.430.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>Star on GitHub</a>' +
+                                    '<a href="' + HeaderConfig.githubUrl + '/issues" target="_blank" class="bug-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Report Bug</a>' +
+                                '</div>' +
+                                '<p class="license-text">Open Source - SAOUL License</p>' +
+                            '</div>' +
+                            '<div class="section-title" style="margin-top:1.25rem"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>The developer</div>' +
                             '<div class="dev-profile">' +
                                 '<div class="dev-avatar"><img src="' + HeaderConfig.devImage + '" alt="Pranav Mishra"></div>' +
                                 '<div class="dev-info"><h3>Pranav Mishra</h3><p>AI/ML Engineer & Full-Stack Dev</p></div>' +
@@ -319,15 +329,6 @@
                                 '<a href="https://www.youtube.com/@parano1dgames/featured" target="_blank" class="social-link social-youtube"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>YouTube</a>' +
                                 '<a href="https://huggingface.co/Paranoiid" target="_blank" class="social-link social-huggingface"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm6 13.5c-1.5 1.5-3.5 2.5-6 2.5s-4.5-1-6-2.5c0-2 4-3.5 6-3.5s6 1.5 6 3.5z"/></svg>HuggingFace</a>' +
                                 '<a href="https://scholar.google.com/citations?user=_Twn_owAAAAJ&hl=en&oi=sra" target="_blank" class="social-link social-scholar"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M5.242 13.769L0 9.5 12 0l12 9.5-5.242 4.269C17.548 11.249 14.978 9.5 12 9.5c-2.977 0-5.548 1.748-6.758 4.269zM12 10a7 7 0 1 0 0 14 7 7 0 0 0 0-14z"/></svg>Scholar</a>' +
-                            '</div>' +
-                            '<div class="project-info">' +
-                                '<div class="section-title"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>About this project</div>' +
-                                '<p>MockFlow-AI helps you practice for interviews with AI-powered mock interviews. Future updates will include interview analysis, detailed feedback, and conversation history to help you track your progress across different roles.</p>' +
-                                '<div class="project-actions">' +
-                                    '<a href="' + HeaderConfig.githubUrl + '" target="_blank" class="github-link"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.840 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.430.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>Star on GitHub</a>' +
-                                    '<a href="' + HeaderConfig.githubUrl + '/issues" target="_blank" class="bug-link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Report Bug</a>' +
-                                '</div>' +
-                                '<p class="license-text">Open Source - SAOUL License</p>' +
                             '</div>' +
                         '</div>' +
                         '<div class="modal-footer">' +

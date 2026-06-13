@@ -1008,11 +1008,11 @@
         .mf-orb2__rings > span {
             position: absolute; inset: 0; margin: auto;
             border-radius: 50%;
-            border: 2px solid;
         }
-        .mf-orb2__rings > span:nth-child(1) { width: 100%; height: 100%; border-color: #C8E6C9; }
-        .mf-orb2__rings > span:nth-child(2) { width: 64%;  height: 64%;  border-color: #81C784; }
-        .mf-orb2__rings > span:nth-child(3) { width: 30%;  height: 30%;  border-color: #4CAF50; }
+        /* Filled concentric discs (like the logo): light green -> green -> deep green. */
+        .mf-orb2__rings > span:nth-child(1) { width: 100%; height: 100%; background: #C8E6C9; }
+        .mf-orb2__rings > span:nth-child(2) { width: 64%;  height: 64%;  background: #81C784; }
+        .mf-orb2__rings > span:nth-child(3) { width: 30%;  height: 30%;  background: #4CAF50; }
 
         /* --- Rings: entry (expand -> contract & vanish) + exit (grow back). --
            Resting state is scale(1), fully opaque (the CIRCLES state). */

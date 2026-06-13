@@ -101,6 +101,97 @@
     background: var(--border);
 }
 
+/* ============================================================
+   Setup page shell: calm hierarchy, generous spacing
+   ============================================================ */
+.setup-intro {
+    margin-bottom: var(--spacing-lg);
+}
+
+.setup-title {
+    font-size: clamp(1.5rem, 3.5vw, 1.875rem);
+    line-height: 1.15;
+    margin-bottom: 0.5rem;
+}
+
+.setup-subtitle {
+    color: var(--text-secondary);
+    font-size: 0.9375rem;
+    line-height: 1.55;
+    max-width: 52ch;
+}
+
+/* Each numbered step is a calm band with breathing room between them. */
+.setup-section {
+    padding: 0 0 var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+    border-bottom: 1px solid var(--hairline);
+}
+
+.setup-section:last-of-type {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: var(--spacing-sm);
+}
+
+.setup-section-head {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.875rem;
+    margin-bottom: var(--spacing-md);
+}
+
+.setup-step-num {
+    flex-shrink: 0;
+    width: 1.75rem;
+    height: 1.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--accent-green);
+    color: var(--text-primary);
+    font-size: 0.8125rem;
+    font-weight: 800;
+    margin-top: 0.1rem;
+}
+
+.setup-section-title {
+    font-size: 1.0625rem;
+    font-weight: 800;
+    line-height: 1.3;
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.setup-section-hint {
+    margin-top: 0.25rem;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--text-muted);
+}
+
+/* "optional" pill — gentle, non-shouty marker for non-required fields */
+.optional-tag {
+    display: inline-block;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--text-muted);
+    background: var(--bg-soft);
+    padding: 0.0625rem 0.5rem;
+    border-radius: var(--radius-full);
+    text-transform: none;
+}
+
+/* Track-specific options sit just under the cards */
+.track-options {
+    margin-top: var(--spacing-sm);
+}
+
 /* === Track Selector Redesign === */
 .track-selector-label {
     font-size: 0.75rem;
@@ -148,23 +239,49 @@
 
 .track-card:hover {
     transform: translateY(-4px) !important;
-    box-shadow: 0 12px 24px rgba(0,0,0,0.06), 0 0 0 2px var(--accent-green-deep) inset !important;
+    box-shadow: 0 12px 24px rgba(0,0,0,0.06),
+        0 0 0 2px var(--track-accent, var(--accent-green-deep)) inset !important;
     border-color: transparent !important;
 }
 
 .track-card:hover .track-card-accent {
-    opacity: 0.04;
+    opacity: 0.06;
 }
 
 .track-card.selected {
     transform: translateY(-2px) !important;
-    box-shadow: 0 8px 16px rgba(129, 199, 132, 0.15), 0 0 0 2px var(--accent-green-deep) inset !important;
+    box-shadow: 0 8px 18px color-mix(in srgb, var(--track-accent, var(--accent-green-deep)) 22%, transparent),
+        0 0 0 2.5px var(--track-accent, var(--accent-green-deep)) inset !important;
     border-color: transparent !important;
     background: #FFFFFF !important;
 }
 
 .track-card.selected .track-card-accent {
-    opacity: 0.08;
+    opacity: 0.1;
+}
+
+/* Track icon chip — tinted with the track's own accent color */
+.track-card-icon {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--track-accent, var(--accent-green-deep)) 16%, #FFFFFF);
+    color: var(--track-accent, var(--accent-green-deep));
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.track-card-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.track-card:hover .track-card-icon,
+.track-card.selected .track-card-icon {
+    transform: scale(1.06);
 }
 
 .track-card-body {
@@ -194,6 +311,11 @@
     line-height: 1.4;
 }
 
+.track-card:focus-visible {
+    outline: 3px solid var(--track-accent, var(--focus-ring));
+    outline-offset: 2px;
+}
+
 .track-card-check {
     position: absolute;
     top: 16px;
@@ -201,7 +323,7 @@
     opacity: 0;
     transform: scale(0.8);
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    background: var(--accent-green-deep);
+    background: var(--track-accent, var(--accent-green-deep));
     color: #FFFFFF;
     border-radius: 50%;
     width: 20px;
@@ -529,4 +651,280 @@
 
 .toast-close:hover {
     color: var(--text-primary);
+}
+
+/* ============================================================
+   Track-specific option sections (progressive disclosure)
+   Moved out of the old inline <style> block in form.html.
+   ============================================================ */
+.track-section {
+    display: none;
+}
+
+.track-section.active {
+    display: contents;
+}
+
+/* Follow-up depth / problem-count / difficulty segmented choices */
+.depth-options {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.depth-option {
+    flex: 1;
+}
+
+.depth-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+}
+
+.depth-option label {
+    display: block;
+    text-align: center;
+    padding: 0.5rem;
+    border: 2px solid var(--bg-soft);
+    border-radius: var(--radius-sm);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+    background: var(--bg-card);
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.depth-option label:hover {
+    border-color: var(--text-light);
+}
+
+.depth-option input[type="radio"]:checked + label {
+    border-color: var(--accent-green-deep);
+    background: color-mix(in srgb, var(--accent-green-deep) 10%, var(--bg-card));
+    font-weight: 600;
+}
+
+.depth-option input[type="radio"]:focus-visible + label {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 2px;
+}
+
+/* Topic chips (technical voice) */
+.topic-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.topic-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.topic-chip input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+}
+
+.topic-chip label {
+    padding: 0.375rem 0.75rem;
+    border: 2px solid var(--bg-soft);
+    border-radius: var(--radius-full);
+    font-size: 0.8125rem;
+    cursor: pointer;
+    background: var(--bg-card);
+    transition: border-color 0.15s, background 0.15s;
+}
+
+.topic-chip label:hover {
+    border-color: var(--text-light);
+}
+
+.topic-chip input[type="checkbox"]:checked + label {
+    border-color: var(--accent-green-deep);
+    background: color-mix(in srgb, var(--accent-green-deep) 10%, var(--bg-card));
+    font-weight: 600;
+}
+
+.topic-chip input[type="checkbox"]:focus-visible + label {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 2px;
+}
+
+/* ============================================================
+   Explore Agent — "coming soon" roadmap card
+   ============================================================ */
+.explore-card {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-top: var(--spacing-md);
+    padding: 1.125rem 1.25rem;
+    border: 1.5px dashed var(--hairline-strong);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--accent-purple) 10%, var(--bg-card));
+    cursor: not-allowed;
+}
+
+.explore-badge {
+    position: absolute;
+    top: 0.875rem;
+    right: 0.875rem;
+    font-size: 0.625rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--accent-purple-deep);
+    background: color-mix(in srgb, var(--accent-purple-deep) 16%, #FFFFFF);
+    padding: 0.1875rem 0.5rem;
+    border-radius: var(--radius-full);
+}
+
+.explore-card-icon {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    background: color-mix(in srgb, var(--accent-purple-deep) 16%, #FFFFFF);
+    color: var(--accent-purple-deep);
+}
+
+.explore-card-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.explore-card-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.explore-card-title {
+    font-size: 0.9375rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+    padding-right: 5rem;
+}
+
+.explore-card-desc {
+    font-size: 0.8125rem;
+    line-height: 1.55;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* ============================================================
+   Sidebar demo notice (kept below the Begin button)
+   ============================================================ */
+.demo-notice {
+    margin-top: var(--spacing-md);
+    padding: 1rem;
+    background: color-mix(in srgb, var(--warning) 10%, transparent);
+    border-left: 3px solid var(--warning);
+    border-radius: var(--radius-sm);
+}
+
+.demo-notice p {
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.demo-notice strong {
+    color: var(--warning);
+}
+
+.demo-notice a {
+    color: var(--text-primary);
+    text-decoration: underline;
+}
+
+/* ============================================================
+   STAR Method modal (moved out of inline <style>)
+   ============================================================ */
+.star-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: var(--overlay-scrim);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: var(--spacing-md);
+}
+
+.star-modal-overlay.visible {
+    display: flex;
+}
+
+.star-modal {
+    background: var(--bg-card);
+    border-radius: var(--radius-lg);
+    padding: 2rem;
+    max-width: 540px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: var(--shadow-lifted);
+}
+
+.star-modal h3 {
+    margin-bottom: 1rem;
+    font-size: 1.125rem;
+}
+
+.star-example {
+    background: var(--bg-soft);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    margin: 1rem 0;
+    font-size: 0.875rem;
+    line-height: 1.6;
+}
+
+.star-example strong {
+    color: var(--text-primary);
+}
+
+/* ============================================================
+   Mobile: stack track cards, keep optional controls usable.
+   No horizontal scroll at 360px.
+   ============================================================ */
+@media (max-width: 560px) {
+    .track-cards {
+        grid-template-columns: 1fr !important;
+    }
+
+    .track-card {
+        min-height: 0 !important;
+        padding: 18px !important;
+    }
+
+    .explore-card-title {
+        padding-right: 0;
+    }
+
+    .explore-badge {
+        position: static;
+        display: inline-block;
+        margin-bottom: 0.5rem;
+    }
+
+    .explore-card {
+        flex-wrap: wrap;
+    }
 }
