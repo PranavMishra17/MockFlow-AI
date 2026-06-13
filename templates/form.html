@@ -205,6 +205,16 @@
     <div class="form-page">
         <div class="form-container">
             <div class="form-main">
+                <!-- BYOK onboarding status banner (populated by JS on load) -->
+                <div class="keys-banner" id="keysBanner" role="status" aria-live="polite">
+                    <span class="keys-banner-icon" id="keysBannerIcon" aria-hidden="true"></span>
+                    <div class="keys-banner-body">
+                        <span class="keys-banner-title" id="keysBannerTitle"></span>
+                        <span id="keysBannerText"></span>
+                        <a class="keys-banner-link" id="keysBannerLink" href="/api-keys"
+                            style="display:none;">Add your API keys &rarr;</a>
+                    </div>
+                </div>
                 <form id="candidateForm">
                     <div class="form-grid">
                         <!-- Candidate Info -->
@@ -474,6 +484,23 @@
                     <span class="loading-text">Starting agent worker...</span>
                 </div>
 
+                <!-- Honest cold-start progress panel -->
+                <div class="loading-progress" id="loadingProgress" role="status" aria-live="polite"
+                    style="display:none;">
+                    <div class="loading-progress-head">
+                        <span class="loading-progress-spinner" aria-hidden="true"></span>
+                        <span class="loading-progress-msg" id="loadingProgressMsg">Setting up your session…</span>
+                    </div>
+                    <div class="loading-progress-sub" id="loadingProgressSub"></div>
+                    <div class="loading-progress-meta">
+                        <span>Please keep this tab open</span>
+                        <span class="loading-progress-timer" id="loadingProgressTimer">0:00</span>
+                    </div>
+                    <div class="loading-progress-retry" id="loadingProgressRetry">
+                        <button type="button" class="loading-progress-retry-btn" id="loadingProgressRetryBtn">Retry</button>
+                    </div>
+                </div>
+
                 <button type="submit" form="candidateForm" class="btn-form-game" id="submitBtn">
                     <div class="btn-form-game-icon">
                         <svg class="icon-inactive" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -535,6 +562,9 @@
         </div>
     </div>
 
+    <!-- Inline toast stack (replaces alert()) -->
+    <div class="toast-stack" id="toastStack" aria-live="polite" aria-atomic="false"></div>
+
     <script src="/static/header.js"></script>
     <script src="/static/modal.js"></script>
     <script>
@@ -559,6 +589,12 @@
 
             document.addEventListener('DOMContentLoaded', init);
 
+            // Progress / cold-start state shared between submit + retry
+            var progressTimerInterval = null;
+            var progressStageTimeouts = [];
+            var progressTimeoutId = null;
+            var lastSubmitData = null;
+
             function init() {
                 initFormHandler();
                 initInputValidation();
@@ -568,6 +604,102 @@
                 initStarModal();
                 initSuggestTopics();
                 updateButtonState();
+                initKeysBanner();
+            }
+
+            // ============ Inline toast (replaces alert) ============
+            function showToast(message, opts) {
+                opts = opts || {};
+                var stack = document.getElementById('toastStack');
+                if (!stack) return;
+                var toast = document.createElement('div');
+                toast.className = 'toast' + (opts.type ? ' is-' + opts.type : '');
+                toast.setAttribute('role', opts.type === 'error' ? 'alert' : 'status');
+
+                var icon = document.createElement('span');
+                icon.className = 'toast-icon';
+                icon.setAttribute('aria-hidden', 'true');
+                icon.textContent = opts.type === 'error' ? '⚠' : (opts.type === 'success' ? '✓' : 'ℹ');
+
+                var body = document.createElement('div');
+                body.className = 'toast-body';
+                // opts.html allows a trusted, self-built message (e.g. with an /api-keys link)
+                if (opts.html) { body.innerHTML = opts.html; }
+                else { body.textContent = message; }
+
+                var close = document.createElement('button');
+                close.className = 'toast-close';
+                close.setAttribute('aria-label', 'Dismiss');
+                close.innerHTML = '&times;';
+
+                toast.appendChild(icon);
+                toast.appendChild(body);
+                toast.appendChild(close);
+                stack.appendChild(toast);
+
+                // Animate in
+                requestAnimationFrame(function () { toast.classList.add('show'); });
+
+                var timer = null;
+                function dismiss() {
+                    if (timer) clearTimeout(timer);
+                    toast.classList.remove('show');
+                    setTimeout(function () { if (toast.parentNode) toast.parentNode.removeChild(toast); }, 220);
+                }
+                close.addEventListener('click', dismiss);
+                if (opts.duration !== 0) {
+                    timer = setTimeout(dismiss, opts.duration || 7000);
+                }
+                return dismiss;
+            }
+
+            // ============ BYOK onboarding gate ============
+            function initKeysBanner() {
+                var banner = document.getElementById('keysBanner');
+                if (!banner) return;
+                fetch('/api/user/keys/status', { headers: { 'Accept': 'application/json' } })
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (data) {
+                        if (!data) return;
+                        renderKeysBanner(data);
+                    })
+                    .catch(function (err) {
+                        console.debug('[KEYS] status fetch failed:', err);
+                    });
+            }
+
+            function renderKeysBanner(data) {
+                var banner = document.getElementById('keysBanner');
+                var iconEl = document.getElementById('keysBannerIcon');
+                var titleEl = document.getElementById('keysBannerTitle');
+                var textEl = document.getElementById('keysBannerText');
+                var linkEl = document.getElementById('keysBannerLink');
+                if (!banner) return;
+
+                banner.classList.remove('is-success', 'is-free', 'is-warn');
+                linkEl.style.display = 'none';
+
+                var free = parseInt(data.free_calls_remaining, 10) || 0;
+
+                if (data.has_keys) {
+                    banner.classList.add('is-success');
+                    iconEl.textContent = '✓';
+                    titleEl.textContent = 'Your API keys are configured. ';
+                    textEl.textContent = "You're all set — just start.";
+                } else if (free > 0) {
+                    banner.classList.add('is-free');
+                    iconEl.textContent = '✨';
+                    titleEl.textContent = 'You have ' + free + ' free interview' + (free === 1 ? '' : 's') + ' — no API keys needed. ';
+                    textEl.textContent = 'Just fill out the form and start.';
+                } else {
+                    banner.classList.add('is-warn');
+                    iconEl.textContent = '🔑';
+                    titleEl.textContent = "You'll need to add your API keys to start. ";
+                    textEl.textContent = 'Out of free interviews — add keys to keep practicing. ';
+                    linkEl.style.display = 'inline-block';
+                }
+
+                banner.classList.add('visible');
             }
 
             function initFileUpload() {
@@ -702,6 +834,79 @@
                         handleSubmit();
                     }
                 });
+
+                var retryBtn = document.getElementById('loadingProgressRetryBtn');
+                if (retryBtn) {
+                    retryBtn.addEventListener('click', function () {
+                        handleSubmit();
+                    });
+                }
+            }
+
+            // ============ Cold-start progress helpers ============
+            var PROGRESS_TIMEOUT_MS = 180000; // 180s hard timeout
+
+            function clearProgressTimers() {
+                if (progressTimerInterval) { clearInterval(progressTimerInterval); progressTimerInterval = null; }
+                if (progressTimeoutId) { clearTimeout(progressTimeoutId); progressTimeoutId = null; }
+                progressStageTimeouts.forEach(function (t) { clearTimeout(t); });
+                progressStageTimeouts = [];
+            }
+
+            function startProgress() {
+                var panel = document.getElementById('loadingProgress');
+                var msg = document.getElementById('loadingProgressMsg');
+                var sub = document.getElementById('loadingProgressSub');
+                var timerEl = document.getElementById('loadingProgressTimer');
+                var retry = document.getElementById('loadingProgressRetry');
+
+                clearProgressTimers();
+                panel.classList.remove('timed-out');
+                if (retry) retry.style.display = 'none';
+                panel.style.display = 'block';
+                msg.textContent = 'Setting up your session…';
+                sub.textContent = '';
+
+                var startedAt = Date.now();
+                timerEl.textContent = '0:00';
+                progressTimerInterval = setInterval(function () {
+                    var elapsed = Math.floor((Date.now() - startedAt) / 1000);
+                    var m = Math.floor(elapsed / 60);
+                    var s = elapsed % 60;
+                    timerEl.textContent = m + ':' + String(s).padStart(2, '0');
+                }, 1000);
+
+                // Staged messages
+                progressStageTimeouts.push(setTimeout(function () {
+                    msg.textContent = 'Spinning up your interviewer…';
+                    sub.textContent = 'First run can take up to ~2 minutes on the free tier. Hang tight.';
+                }, 10000));
+                progressStageTimeouts.push(setTimeout(function () {
+                    sub.textContent = 'Still warming up the agent — almost there…';
+                }, 45000));
+
+                // Hard timeout → stop spinner, offer retry
+                progressTimeoutId = setTimeout(function () {
+                    onProgressTimeout();
+                }, PROGRESS_TIMEOUT_MS);
+            }
+
+            function onProgressTimeout() {
+                clearProgressTimers();
+                var panel = document.getElementById('loadingProgress');
+                var msg = document.getElementById('loadingProgressMsg');
+                var sub = document.getElementById('loadingProgressSub');
+                var submitBtn = document.getElementById('submitBtn');
+                panel.classList.add('timed-out');
+                msg.textContent = 'This is taking longer than expected.';
+                sub.textContent = 'The server may be cold-starting. You can retry — it usually connects on the second attempt.';
+                if (submitBtn) submitBtn.disabled = false;
+            }
+
+            function stopProgress() {
+                clearProgressTimers();
+                var panel = document.getElementById('loadingProgress');
+                if (panel) { panel.style.display = 'none'; panel.classList.remove('timed-out'); }
             }
 
             async function handleSubmit() {
@@ -739,9 +944,11 @@
                     problemDifficulty: formData.get('problem_difficulty') || 'medium'
                 };
 
-                var loadingText = loadingEl.querySelector('.loading-text');
-                loadingText.textContent = 'Starting agent worker...';
-                loadingEl.classList.add('visible');
+                lastSubmitData = data;
+
+                // Keep legacy sidebar loader hidden; the new progress panel takes over.
+                loadingEl.classList.remove('visible');
+                startProgress();
                 submitBtn.disabled = true;
 
                 try {
@@ -754,10 +961,29 @@
                     var result = await response.json();
 
                     if (result.error) {
-                        throw new Error(result.message || result.error);
+                        // Surface the "API keys not configured" case with a helpful link, not a raw alert
+                        var keysError = response.status === 400 &&
+                            (/api key/i.test(result.error) || /api key/i.test(result.message || ''));
+                        stopProgress();
+                        submitBtn.disabled = false;
+                        if (keysError) {
+                            var safeMsg = (result.message || result.error).replace(/</g, '&lt;');
+                            showToast('', {
+                                type: 'error',
+                                duration: 0,
+                                html: '<strong>API keys needed.</strong> ' + safeMsg +
+                                    ' <a href="/api-keys">Add your API keys &rarr;</a>'
+                            });
+                        } else {
+                            showToast('Failed to start interview: ' + (result.message || result.error), { type: 'error' });
+                        }
+                        return;
                     }
 
-                    loadingText.textContent = 'Agent ready. Redirecting...';
+                    // Success — stop timers, show brief ready message, redirect
+                    clearProgressTimers();
+                    document.getElementById('loadingProgressMsg').textContent = 'Agent ready. Redirecting…';
+                    document.getElementById('loadingProgressSub').textContent = '';
 
                     sessionStorage.setItem('mockflow_token', result.token);
                     sessionStorage.setItem('mockflow_url', result.url);
@@ -782,9 +1008,9 @@
 
                 } catch (err) {
                     console.error('[FORM] Submit error:', err);
-                    loadingEl.classList.remove('visible');
+                    stopProgress();
                     submitBtn.disabled = false;
-                    alert('Failed to start interview: ' + err.message);
+                    showToast('Failed to start interview: ' + err.message, { type: 'error' });
                 }
             }
 
