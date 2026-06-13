@@ -3,7 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Account - MockFlow.ai</title>
+    <title>Account Settings — MockFlow-AI</title>
+    <meta name="description" content="Manage your MockFlow-AI account: review your interview personality, track your practice stats, and configure your API keys.">
+    <meta property="og:title" content="Account Settings — MockFlow-AI">
+    <meta property="og:description" content="Manage your MockFlow-AI account: review your interview personality, track your practice stats, and configure your API keys.">
+    <meta property="og:type" content="website">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,24 +20,27 @@
     <!-- Action Buttons (Right Side) - populated by header.js -->
     <div class="action-buttons" id="actionButtons"></div>
 
-    <div class="hero">
-        <div class="hero-content" style="max-width: 900px;">
-            <h1 style="text-align: center; margin-bottom: 2rem;">Account Settings</h1>
+    <div class="dashboard-shell">
+        <div class="dashboard-container">
+            <header class="dash-page-head">
+                <h1>Account Settings</h1>
+                <p class="dash-page-sub">Manage your profile, interview stats, and API keys.</p>
+            </header>
 
             <!-- User Info Card -->
-            <div class="card" style="margin-bottom: 2rem; padding: 2rem;">
-                <div style="display: flex; align-items: center; gap: 1.5rem;">
-                    <div id="userAvatarPlaceholder" style="width: 64px; height: 64px; border-radius: 50%; background: linear-gradient(135deg, #81C784, #4CAF50); display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; font-weight: 600;"></div>
-                    <div style="flex: 1;">
-                        <h2 id="userName" style="margin-bottom: 0.25rem;"></h2>
-                        <p id="userEmail" style="color: var(--text-muted); margin-bottom: 0.5rem;"></p>
-                        <button onclick="logout()" class="btn-secondary" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Log Out</button>
+            <div class="card dash-account-card">
+                <div class="dash-account-row">
+                    <div id="userAvatarPlaceholder" class="dash-avatar"></div>
+                    <div class="dash-account-meta">
+                        <h2 id="userName"></h2>
+                        <p id="userEmail"></p>
+                        <button onclick="logout()" class="btn-secondary dash-logout-btn">Log Out</button>
                     </div>
                 </div>
             </div>
 
             <!-- Interview Personality Section -->
-            <section class="card dash-section" style="padding: 2rem; margin-bottom: 2rem;" aria-labelledby="personalityHeading">
+            <section class="card dash-section" aria-labelledby="personalityHeading">
                 <div class="dash-section-head">
                     <div>
                         <h3 id="personalityHeading">Your Interview Personality</h3>
@@ -88,27 +95,27 @@
             </section>
 
             <!-- API Keys Section -->
-            <div class="card" style="padding: 2rem;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <div class="card dash-section">
+                <div class="dash-section-head">
                     <div>
-                        <h3 style="margin-bottom: 0.5rem;">API Keys</h3>
-                        <p style="color: var(--text-muted); font-size: 0.875rem;">Manage your API keys for interviews (BYOK)</p>
+                        <h3>API Keys</h3>
+                        <p class="dash-section-sub">Manage your API keys for interviews (BYOK)</p>
                     </div>
-                    <a href="/api-keys" class="btn-primary" style="text-decoration: none;">
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 0.5rem;">
+                    <a href="/api-keys" class="btn-primary dash-manage-keys">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
                         </svg>
                         Manage Keys
                     </a>
                 </div>
 
-                <div id="apiKeysStatus" style="padding: 1rem; background: var(--bg-warm); border-radius: 8px;">
-                    <p style="color: var(--text-muted); font-size: 0.875rem;">Loading API keys status...</p>
+                <div id="apiKeysStatus" class="dash-apikeys-status">
+                    <p class="dash-apikeys-loading">Loading API keys status...</p>
                 </div>
             </div>
 
             <!-- Quick Actions -->
-            <div style="display: flex; justify-content: center; gap: 2rem; margin-top: 2rem; flex-wrap: wrap;">
+            <div class="dash-quick-actions">
                 <a href="/start" class="btn-game primary" style="width: 110px; height: 110px;">
                     <div class="btn-game-icon">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="width: 40px; height: 40px;">
