@@ -52,6 +52,17 @@ class DB:
             raise ValueError("Encryption key not configured")
         return self.cipher.decrypt(encrypted_text.encode()).decode()
 
+    def ping(self) -> bool:
+        """Return True if the database answers a trivial query, else False."""
+        try:
+            with self.pool.connection() as conn, conn.cursor() as cur:
+                cur.execute("SELECT 1")
+                cur.fetchone()
+            return True
+        except Exception as e:
+            logger.error(f"Database ping failed: {e}")
+            return False
+
     def _fetchone(self, sql: str, params: tuple) -> Optional[Dict[str, Any]]:
         with self.pool.connection() as conn, conn.cursor() as cur:
             cur.execute(sql, params)

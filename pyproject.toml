@@ -1,0 +1,21 @@
+[project]
+name = "mockflow-ai"
+version = "1.0.0"
+description = "Voice-based AI mock interview platform (LiveKit + Flask + Neon)."
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+target-version = "py312"
+# Vendored LiveKit SDK and local-only data are not ours to lint.
+extend-exclude = ["agents", "interviews", "feedback", "supabase-backend", "__pycache__"]
+
+[tool.ruff.lint]
+# Correctness-focused gate: undefined names, broken f-strings, syntax errors,
+# real import problems. Kept deliberately narrow so it runs green over the
+# existing large modules while still catching bugs that would crash at runtime.
+select = ["E9", "F63", "F7", "F82", "F821", "F811"]

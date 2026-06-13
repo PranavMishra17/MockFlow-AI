@@ -7,9 +7,13 @@ interview history, and feedback endpoints.
 """
 
 import os
+import re
 import time
+import uuid
 import logging
 import atexit
+import secrets
+from datetime import timedelta
 from pathlib import Path
 from flask import Flask, render_template, request, jsonify, send_from_directory, redirect, url_for, session
 from flask_cors import CORS
@@ -48,11 +52,37 @@ logger = logging.getLogger(__name__)
 
 # Create Flask app
 app = Flask(__name__)
-app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key-change-in-prod')
+# No hardcoded fallback: production fails loudly below if SECRET_KEY is unset;
+# dev gets an ephemeral random key (assigned after env validation).
+app.secret_key = os.getenv('SECRET_KEY')
+
+_is_prod = os.getenv('FLASK_ENV') == 'production'
+app.config.update(
+    # Session + remember-me cookie hardening. Secure flag only in production so
+    # local http development keeps working.
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    SESSION_COOKIE_SECURE=_is_prod,
+    REMEMBER_COOKIE_HTTPONLY=True,
+    REMEMBER_COOKIE_SAMESITE='Lax',
+    REMEMBER_COOKIE_SECURE=_is_prod,
+    REMEMBER_COOKIE_DURATION=timedelta(days=7),
+    PERMANENT_SESSION_LIFETIME=timedelta(days=7),
+    # Cap request bodies/uploads to keep a single Render instance from OOMing.
+    MAX_CONTENT_LENGTH=10 * 1024 * 1024,  # 10 MB
+)
+
 # Honor X-Forwarded-Proto / X-Forwarded-Host from Render's reverse proxy so
 # url_for(..., _external=True) produces https URLs (OAuth redirect_uri must match exactly).
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
-CORS(app)  # Enable CORS for API endpoints
+
+# Scope CORS to known origins (was a wildcard). Set CORS_ORIGINS (comma-separated)
+# to the deployed domain, e.g. https://mockflow-ai.onrender.com.
+_default_origins = "http://localhost:5000,http://127.0.0.1:5000"
+_allowed_origins = [
+    o.strip() for o in os.getenv('CORS_ORIGINS', _default_origins).split(',') if o.strip()
+]
+CORS(app, resources={r"/api/*": {"origins": _allowed_origins}}, supports_credentials=True)
 
 # Authlib + Flask-Login (replaces Supabase Auth)
 init_auth(app)
@@ -84,6 +114,33 @@ if missing_vars:
 
 logger.info("[CONFIG] All required environment variables validated")
 logger.info("[CONFIG] BYOK model: LiveKit, OpenAI, and Deepgram keys loaded from user database")
+
+# Dev-only ephemeral secret. Production already raised above if SECRET_KEY was
+# missing; here we ensure local dev never runs with a known constant key.
+if not app.secret_key:
+    app.secret_key = secrets.token_hex(32)
+    logger.warning("[CONFIG] SECRET_KEY not set; using an ephemeral random dev key (sessions reset on restart).")
+
+
+@app.after_request
+def set_security_headers(response):
+    """Defensive headers applied to every response."""
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    # Anti-clickjacking via CSP too (defense in depth). A full content CSP is
+    # deferred to the UI overhaul so it can be screenshot-verified against the
+    # inline scripts and CDN assets the templates rely on.
+    response.headers.setdefault('Content-Security-Policy', "frame-ancestors 'none'")
+    if _is_prod:
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    return response
+
+
+def _safe_room_component(name: str) -> str:
+    """Lowercase slug containing only [a-z0-9-]; never empty. Used in room names."""
+    slug = re.sub(r'[^a-z0-9-]', '', (name or '').lower().replace(' ', '-')).strip('-')
+    return slug or 'candidate'
 
 
 # ==================== AUTH ENDPOINTS ====================
@@ -336,7 +393,7 @@ def generate_token():
 
         # Create unique room name
         timestamp = int(time.time())
-        room_name = f"interview-{name.lower().replace(' ', '-')}-{timestamp}"
+        room_name = f"interview-{_safe_room_component(name)}-{timestamp}"
 
         logger.info(f"[TOKEN] Spawning worker for room: {room_name}")
 
@@ -510,6 +567,11 @@ def submit_code():
         if not interview_id:
             return jsonify({'error': 'Missing interview_id'}), 400
 
+        try:
+            uuid.UUID(str(interview_id))
+        except (ValueError, AttributeError, TypeError):
+            return jsonify({'error': 'Invalid interview ID'}), 400
+
         if not code_submitted:
             return jsonify({'error': 'No code submitted'}), 400
 
@@ -557,6 +619,7 @@ def worker_status(room_name):
 # ==================== DOCUMENT UPLOAD API ====================
 
 @app.route('/api/upload-resume', methods=['POST'])
+@require_auth
 def upload_resume():
     """
     Upload and extract text from resume/portfolio/job description.
@@ -652,6 +715,7 @@ def upload_resume():
 # ==================== CONVERSATION CACHE API ====================
 
 @app.route('/api/conversation/cache', methods=['POST'])
+@require_auth
 def cache_conversation():
     """
     Cache a conversation from the agent.
@@ -722,6 +786,7 @@ def cache_conversation():
 
 
 @app.route('/api/conversation/<cache_key>')
+@require_auth
 def get_cached_conversation(cache_key):
     """Get a cached conversation by key."""
     try:
@@ -777,7 +842,7 @@ def get_user_interviews():
     """Get authenticated user's interview history from database"""
     try:
         user_id = get_user_id()
-        limit = request.args.get('limit', 50, type=int)
+        limit = max(1, min(request.args.get('limit', 50, type=int), 100))
 
         # First, claim any unclaimed interviews in localStorage
         claim_local_interviews(user_id)
@@ -1549,36 +1614,24 @@ def skip_stage():
 
 @app.route('/health')
 def health_check():
-    """Health check endpoint for monitoring and deployment verification."""
-    try:
-        # Verify Supabase environment credentials are set
-        supabase_url = os.getenv('SUPABASE_URL')
-        supabase_key = os.getenv('SUPABASE_SERVICE_KEY')
+    """Health check: verify the Neon database is reachable, report worker load."""
+    db_ok = supabase_client.ping()
+    active_worker_count = len(worker_manager.active_workers)
+    max_workers = worker_manager.max_workers
 
-        if not supabase_url or not supabase_key:
-            raise ValueError("Supabase credentials not configured")
-
-        # Count active workers
-        active_worker_count = len(worker_manager.active_workers)
-        max_workers = worker_manager.max_workers
-
-        # logger.info(f"[HEALTH] Health check passed - {active_worker_count}/{max_workers} workers active")
-
-        return jsonify({
-            'status': 'healthy',
-            'database': 'configured',
-            'workers': {
-                'active': active_worker_count,
-                'max': max_workers
-            }
-        }), 200
-
-    except Exception as e:
-        logger.error(f"[HEALTH] Health check failed: {e}", exc_info=True)
+    if not db_ok:
+        logger.error("[HEALTH] Database ping failed")
         return jsonify({
             'status': 'unhealthy',
-            'error': str(e)
-        }), 500
+            'database': 'unreachable',
+            'workers': {'active': active_worker_count, 'max': max_workers},
+        }), 503
+
+    return jsonify({
+        'status': 'healthy',
+        'database': 'reachable',
+        'workers': {'active': active_worker_count, 'max': max_workers},
+    }), 200
 
 
 
