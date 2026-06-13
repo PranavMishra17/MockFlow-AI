@@ -185,8 +185,10 @@
             scoresGenerated: false,
             reportGenerated: false,
             scoresData: null,
+            verdict: null,
             conversationData: null,
             feedbackText: null,
+            codingSubmissions: null,
             meta: null
         };
 
@@ -322,23 +324,16 @@
                     return response.json();
                 })
                 .then(function(data) {
-                    if (data && data.feedback_data) {
-                        console.log('[FEEDBACK] Found cached feedback in database');
-
-                        if (data.feedback_data.scores) {
-                            feedbackState.scoresData = data.feedback_data.scores;
-                            renderScores(data.feedback_data.scores, true);
-                            feedbackState.scoresGenerated = true;
-                        }
-
-                        if (data.feedback_data.feedback) {
-                            renderFeedback(data.feedback_data.feedback, true);
-                            feedbackState.reportGenerated = true;
-                        }
-
+                    if (data && data.feedback_data && data.feedback_data.verdict) {
+                        console.log('[FEEDBACK] Found cached verdict in database');
+                        feedbackState.verdict = data.feedback_data.verdict;
+                        feedbackState.scoresGenerated = true;
+                        feedbackState.reportGenerated = true;
+                        renderVerdict(data.feedback_data.verdict, true);
+                        renderSignals(data.feedback_data.verdict);
                         elements.generateSection.style.display = 'none';
                     } else {
-                        console.log('[FEEDBACK] No cached feedback found');
+                        console.log('[FEEDBACK] No cached verdict found');
                     }
                 })
                 .catch(function(err) {
@@ -352,92 +347,57 @@
             elements.generateBtn.disabled = true;
             elements.generateSection.style.display = 'none';
 
-            generateScores();
+            generateVerdict();
         }
 
-        function generateScores() {
-            console.log('[FEEDBACK] Stage 1: Generating scores...');
+        // Wing D: a single call to the hiring-lens evaluator. The verdict IS the
+        // feedback — no more 1-5 gauge + separate narrative essay.
+        function generateVerdict() {
+            console.log('[FEEDBACK] Generating hiring verdict...');
             elements.scoresLoading.style.display = 'flex';
+            elements.feedbackPlaceholder.style.display = 'none';
+            elements.feedbackLoading.style.display = 'flex';
 
-            fetch('/api/feedback/scores', {
+            var phases = ['Reading your transcript...', 'Weighing the signals...',
+                          'Finding the evidence...', 'Reaching a verdict...'];
+            var pi = 0;
+            var phaseInterval = setInterval(function() {
+                pi = (pi + 1) % phases.length;
+                elements.loadingPhase.textContent = phases[pi];
+                document.querySelectorAll('.phase-dot').forEach(function(dot, i) {
+                    dot.classList.toggle('active', i <= pi);
+                });
+            }, 2500);
+
+            fetch('/api/feedback/verdict', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ interview_id: filename })
             })
             .then(function(response) { return response.json(); })
             .then(function(data) {
+                clearInterval(phaseInterval);
                 if (data.error) {
                     showScoresError(data.message || data.error);
-                    return;
-                }
-                console.log('[FEEDBACK] Scores generated successfully');
-                feedbackState.scoresData = data.scores;
-                feedbackState.scoresGenerated = true;
-
-                renderScores(data.scores, false);
-
-                setTimeout(function() { generateReport(); }, 500);
-            })
-            .catch(function(err) {
-                console.error('[FEEDBACK] Scores generation error:', err);
-                showScoresError('Failed to analyze interview: ' + err.message);
-            });
-        }
-
-        function generateReport() {
-            console.log('[FEEDBACK] Stage 2: Generating detailed report...');
-            elements.feedbackPlaceholder.style.display = 'none';
-            elements.feedbackLoading.style.display = 'flex';
-
-            var phases = [
-                'Reading transcript...',
-                'Matching candidate info...',
-                'Looking through job requirements...',
-                'Contemplating insights...'
-            ];
-            var phaseIndex = 0;
-
-            var phaseInterval = setInterval(function() {
-                phaseIndex = (phaseIndex + 1) % phases.length;
-                elements.loadingPhase.textContent = phases[phaseIndex];
-
-                var dots = document.querySelectorAll('.phase-dot');
-                dots.forEach(function(dot, i) {
-                    dot.classList.toggle('active', i <= phaseIndex);
-                });
-            }, 3000);
-
-            fetch('/api/feedback', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    interview_id: filename,
-                    scores: feedbackState.scoresData
-                })
-            })
-            .then(function(response) { return response.json(); })
-            .then(function(data) {
-                clearInterval(phaseInterval);
-
-                if (data.error) {
                     showFeedbackError(data.message || data.error);
                     return;
                 }
-
-                console.log('[FEEDBACK] Report generated successfully');
+                console.log('[FEEDBACK] Verdict generated');
+                feedbackState.verdict = data.verdict;
+                feedbackState.codingSubmissions = data.coding_submissions || null;
+                feedbackState.scoresGenerated = true;
                 feedbackState.reportGenerated = true;
 
-                saveFeedbackToDatabase(filename, {
-                    feedback: data.feedback,
-                    scores: feedbackState.scoresData
-                });
+                renderVerdict(data.verdict, false);
+                renderSignals(data.verdict);
 
-                renderFeedback(data.feedback, false);
+                saveFeedbackToDatabase(filename, { verdict: data.verdict });
             })
             .catch(function(err) {
                 clearInterval(phaseInterval);
-                console.error('[FEEDBACK] Report generation error:', err);
-                showFeedbackError('Failed to generate report: ' + err.message);
+                console.error('[FEEDBACK] Verdict error:', err);
+                showScoresError('Failed to evaluate interview: ' + err.message);
+                showFeedbackError('Failed to evaluate interview: ' + err.message);
             });
         }
 
@@ -464,95 +424,164 @@
             });
         }
 
-        function renderScores(scoresData, fromCache) {
+        var DELIVERY_TIPS = {
+            wpm: {
+                slow: 'A touch slow — add energy and momentum so you sound engaged.',
+                ideal: 'Great pace — clear and easy to follow.',
+                brisk: 'A little fast — brief pauses will help the listener keep up.',
+                fast: 'Too fast — slow down and breathe; comprehension drops above ~190 wpm.',
+                unknown: ''
+            },
+            filler: {
+                good: 'Clean delivery — filler words are well controlled.',
+                moderate: 'Some filler words — a deliberate pause beats an "um".',
+                high: 'Frequent fillers hurt perceived clarity — pause instead of filling silence.'
+            }
+        };
+
+        function renderDeliveryPanel(d) {
+            if (!d) return '';
+            var html = '<div class="delivery-panel">';
+            html += '<div class="delivery-title">Delivery <span class="delivery-sub">measured from your speech</span></div>';
+            html += '<div class="delivery-grid">';
+
+            // Pace
+            html += '<div class="delivery-metric delivery-' + (d.wpm_band || 'unknown') + '">';
+            html += '<div class="delivery-metric-head"><span class="delivery-metric-name">Speaking pace</span>';
+            html += '<span class="delivery-metric-val">' + (d.wpm || 0) + ' <small>wpm</small></span></div>';
+            html += '<div class="delivery-metric-target">target ' + (d.wpm_target || '130-160') + '</div>';
+            if (DELIVERY_TIPS.wpm[d.wpm_band]) html += '<p class="delivery-tip">' + DELIVERY_TIPS.wpm[d.wpm_band] + '</p>';
+            html += '</div>';
+
+            // Filler rate
+            html += '<div class="delivery-metric delivery-' + (d.filler_band || 'good') + '">';
+            html += '<div class="delivery-metric-head"><span class="delivery-metric-name">Filler words</span>';
+            html += '<span class="delivery-metric-val">' + (d.filler_per_min || 0) + '<small>/min</small></span></div>';
+            html += '<div class="delivery-metric-target">' + (d.filler_total || 0) + ' total · target ' + (d.filler_target || '&le;5/min') + '</div>';
+            if (DELIVERY_TIPS.filler[d.filler_band]) html += '<p class="delivery-tip">' + DELIVERY_TIPS.filler[d.filler_band] + '</p>';
+            html += '</div>';
+
+            html += '</div></div>';
+            return html;
+        }
+
+        function renderCodingBlock(submissions) {
+            if (!submissions || !submissions.length) return '';
+            var html = '<div class="coding-block">';
+            html += '<div class="delivery-title">Coding <span class="delivery-sub">' + submissions.length + ' submission' + (submissions.length > 1 ? 's' : '') + '</span></div>';
+            submissions.forEach(function(sub) {
+                var ev = sub.evaluation_result || {};
+                var passed = ev.passed === true || ev.all_passed === true;
+                var grade = ev.approach_grade || ev.grade || null;
+                html += '<div class="coding-card">';
+                html += '<div class="coding-card-head">';
+                html += '<span class="coding-prob">' + escapeHtml(sub.problem_title || 'Problem') + '</span>';
+                if (ev.passed !== undefined || ev.all_passed !== undefined) {
+                    html += '<span class="coding-verdict ' + (passed ? 'pass' : 'fail') + '">' + (passed ? 'Tests passed' : 'Tests failed') + '</span>';
+                }
+                html += '</div>';
+                html += '<div class="coding-meta">';
+                if (sub.language) html += '<span class="coding-pill">' + escapeHtml(sub.language) + '</span>';
+                if (grade) html += '<span class="coding-pill">Approach ' + escapeHtml(String(grade)) + '</span>';
+                if (ev.time_complexity) html += '<span class="coding-pill">' + escapeHtml(ev.time_complexity) + '</span>';
+                if (sub.time_spent_seconds) html += '<span class="coding-pill">' + Math.round(sub.time_spent_seconds / 60) + ' min</span>';
+                html += '</div>';
+                if (ev.feedback || ev.summary) {
+                    html += '<p class="coding-note">' + escapeHtml(ev.feedback || ev.summary) + '</p>';
+                }
+                if (ev.edge_cases_missed && ev.edge_cases_missed.length) {
+                    html += '<p class="coding-note coding-miss"><strong>Edge cases missed:</strong> ' + escapeHtml(ev.edge_cases_missed.join(', ')) + '</p>';
+                }
+                html += '</div>';
+            });
+            html += '</div>';
+            return html;
+        }
+
+        // ── Wing D: the hiring verdict reveal ──
+        var RECO_LABEL = {strong_no_hire:'Strong No-Hire', no_hire:'No-Hire', lean_no_hire:'Leaning No-Hire',
+                          on_fence:'On the Fence', lean_hire:'Leaning Hire', hire:'Hire', strong_hire:'Strong Hire'};
+        var RECO_TONE = {strong_no_hire:'neg', no_hire:'neg', lean_no_hire:'neg',
+                         on_fence:'mid', lean_hire:'pos', hire:'pos', strong_hire:'pos'};
+        var LEVEL_LABEL = {below_intern:'developing', intern:'intern', new_grad:'new-grad',
+                           mid:'mid-level', above_mid:'above mid-level'};
+        var BAND_LABEL = {outstanding:'Outstanding', solid:'Solid', borderline:'Borderline',
+                          poor:'Poor', cannot_determine:'Not shown'};
+        var ARCH_LABEL = {big_tech:'Big Tech', high_bar_startup:'high-bar startup'};
+        var ROLE_LABEL = {swe:'software engineer', pm:'product manager', ds_mle:'data / ML'};
+
+        function renderVerdict(v, fromCache) {
             elements.scoresLoading.style.display = 'none';
             elements.scoresTablet.style.display = 'block';
+            if (fromCache) elements.cachedIndicator.style.display = 'inline-flex';
 
-            if (fromCache) {
-                elements.cachedIndicator.style.display = 'inline-flex';
+            var o = v.overall || {};
+            var ctx = v.context || {};
+            var tone = RECO_TONE[o.recommendation] || 'mid';
+
+            var html = '<div class="verdict-card verdict-' + tone + '">';
+            html += '<div class="verdict-eyebrow">Where you’d land today';
+            if (ctx.archetype && ctx.role) {
+                html += ' · ' + escapeHtml((ARCH_LABEL[ctx.archetype] || ctx.archetype) + ' ' + (ROLE_LABEL[ctx.role] || ctx.role));
             }
-
-            var html = '<div class="scores-grid">';
-
-            html += '<div class="score-summary">';
-
-            html += '<div class="score-overall">';
-            html += '<div class="score-circle">';
-            html += '<svg viewBox="0 0 70 70">';
-            html += '<circle cx="35" cy="35" r="30" class="score-bg"/>';
-            var percent = (scoresData.overall_score / 5) * 100;
-            var circumference = 2 * Math.PI * 30;
-            var offset = circumference - (percent / 100) * circumference;
-            html += '<circle cx="35" cy="35" r="30" class="score-progress" style="stroke-dasharray: ' + circumference + '; stroke-dashoffset: ' + offset + ';"/>';
-            html += '<text x="35" y="40" class="score-number">' + scoresData.overall_score.toFixed(1) + '</text>';
-            html += '</svg>';
             html += '</div>';
-            html += '<p class="score-label">Overall</p>';
+            html += '<div class="verdict-reco">' + escapeHtml(RECO_LABEL[o.recommendation] || 'On the Fence') + '</div>';
+            var lvl = LEVEL_LABEL[o.level_read];
+            if (lvl) {
+                html += '<div class="verdict-level">performing at <strong>' + lvl + '</strong> level' +
+                        (o.confidence ? ' · ' + escapeHtml(o.confidence) + ' confidence' : '') + '</div>';
+            }
+            if (o.headline) html += '<p class="verdict-headline">' + escapeHtml(o.headline) + '</p>';
             html += '</div>';
 
-            if (scoresData.competencies && scoresData.competencies.length >= 2) {
-                var sorted = scoresData.competencies.slice().sort(function(a, b) {
-                    return (b.score / b.max_score) - (a.score / a.max_score);
-                });
-                var topComp = sorted[0];
-                var lowComp = sorted[sorted.length - 1];
-
-                html += '<div class="score-mini">';
-                html += '<div class="score-mini-label">Top Score</div>';
-                html += '<div class="score-mini-value">' + topComp.score + '/' + topComp.max_score + '</div>';
-                html += '<div class="score-mini-bar">';
-                var topPercent = (topComp.score / topComp.max_score) * 100;
-                html += '<div class="score-mini-fill" style="width: ' + topPercent + '%"></div>';
-                html += '</div>';
-                html += '<div class="score-mini-note">' + escapeHtml(topComp.name) + '</div>';
-                html += '</div>';
-
-                html += '<div class="score-mini">';
-                html += '<div class="score-mini-label">Focus Area</div>';
-                html += '<div class="score-mini-value">' + lowComp.score + '/' + lowComp.max_score + '</div>';
-                html += '<div class="score-mini-bar">';
-                var lowPercent = (lowComp.score / lowComp.max_score) * 100;
-                html += '<div class="score-mini-fill" style="width: ' + lowPercent + '%"></div>';
-                html += '</div>';
-                html += '<div class="score-mini-note">' + escapeHtml(lowComp.name) + '</div>';
+            if (v.gap_to_next) {
+                html += '<div class="next-rep">';
+                html += '<div class="next-rep-label">Your next rep</div>';
+                html += '<p class="next-rep-body"><strong>' + escapeHtml(v.gap_to_next.signal || '') + '</strong> — ' +
+                        escapeHtml(v.gap_to_next.move || '') + '</p>';
                 html += '</div>';
             }
 
-            html += '</div>';
-
-            if (scoresData.competencies && scoresData.competencies.length) {
-                scoresData.competencies.forEach(function(comp) {
-                    html += '<div class="competency-item">';
-                    html += '<div class="competency-header">';
-                    html += '<span class="competency-name">' + escapeHtml(comp.name) + '</span>';
-                    html += '<span class="competency-score">' + comp.score + '/' + comp.max_score + '</span>';
-                    html += '</div>';
-                    html += '<div class="competency-bar">';
-                    var scorePercent = (comp.score / comp.max_score) * 100;
-                    html += '<div class="competency-fill" style="width: ' + scorePercent + '%"></div>';
-                    html += '</div>';
-                    html += '<p class="competency-note">' + escapeHtml(comp.quick_take) + '</p>';
-                    html += '</div>';
-                });
-            }
-
-            html += '<div class="score-highlights">';
-            if (scoresData.top_strength) {
-                html += '<div class="highlight-item highlight-strength">';
-                html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>';
-                html += '<div><strong>Top Strength:</strong> ' + escapeHtml(scoresData.top_strength) + '</div>';
-                html += '</div>';
-            }
-            if (scoresData.top_improvement) {
-                html += '<div class="highlight-item highlight-improvement">';
-                html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>';
-                html += '<div><strong>Focus Area:</strong> ' + escapeHtml(scoresData.top_improvement) + '</div>';
-                html += '</div>';
-            }
-            html += '</div>';
-
-            html += '</div>';
+            html += renderDeliveryPanel(v.delivery);
+            html += renderCodingBlock(feedbackState.codingSubmissions);
             elements.scoresContent.innerHTML = html;
+        }
+
+        function renderSignals(v) {
+            elements.feedbackLoading.style.display = 'none';
+            elements.feedbackPlaceholder.style.display = 'none';
+            var ra = document.getElementById('reportActions');
+            if (ra) ra.style.display = 'flex';
+
+            var sigs = v.signals || [];
+            var html = '<div class="signals-intro">The call, signal by signal — each backed by your own words.</div>';
+            html += '<div class="signals-list">';
+            sigs.forEach(function(s) {
+                var band = s.band || 'cannot_determine';
+                html += '<div class="signal-card signal-' + band + '">';
+                html += '<div class="signal-head"><span class="signal-name">' + escapeHtml(s.name || '') + '</span>';
+                html += '<span class="signal-band band-' + band + '">' + (BAND_LABEL[band] || band) + '</span></div>';
+                if (s.reasoning) html += '<p class="signal-reason">' + escapeHtml(s.reasoning) + '</p>';
+                if (band === 'cannot_determine') {
+                    html += '<p class="signal-na">Not enough in the transcript to judge this fairly.</p>';
+                } else if (s.evidence && s.evidence.length) {
+                    s.evidence.forEach(function(q) {
+                        html += '<blockquote class="signal-evidence">“' + escapeHtml(q) + '”</blockquote>';
+                    });
+                }
+                if (s.to_raise && band !== 'outstanding' && band !== 'cannot_determine') {
+                    html += '<p class="signal-raise"><span>To raise this</span> ' + escapeHtml(s.to_raise) + '</p>';
+                }
+                html += '</div>';
+            });
+            html += '</div>';
+
+            if (v.differentiators && v.differentiators.length) {
+                html += '<div class="differentiators"><div class="diff-title">What would make you a strong hire</div><ul>';
+                v.differentiators.forEach(function(d) { html += '<li>' + escapeHtml(d) + '</li>'; });
+                html += '</ul></div>';
+            }
+            elements.feedbackContent.innerHTML = html;
         }
 
         function showScoresError(message) {
@@ -576,26 +605,13 @@
                 '</div>';
         }
 
-        function renderFeedback(feedbackText, fromCache) {
-            elements.feedbackLoading.style.display = 'none';
-            elements.feedbackPlaceholder.style.display = 'none';
-
-            feedbackState.feedbackText = feedbackText;
-
-            var html = parseMarkdown(feedbackText);
-            elements.feedbackContent.innerHTML = '<div class="feedback-text">' + html + '</div>';
-
-            // Report is now a shareable artifact: reveal export/copy actions.
-            elements.reportActions.style.display = 'flex';
-        }
-
         function buildMarkdown() {
             var meta = feedbackState.meta || {};
-            var scores = feedbackState.scoresData;
+            var v = feedbackState.verdict || {};
+            var o = v.overall || {};
             var lines = [];
 
-            // Header
-            lines.push('# Interview Feedback');
+            lines.push('# Interview Verdict');
             lines.push('');
             lines.push('- **Candidate:** ' + (meta.candidate || 'Unknown'));
             if (meta.job_role) lines.push('- **Role:** ' + meta.job_role);
@@ -603,40 +619,43 @@
             lines.push('- **Date:** ' + formatDate(meta.interview_date));
             lines.push('');
 
-            // Scores
-            if (scores) {
-                if (typeof scores.overall_score === 'number') {
-                    lines.push('## Overall Score');
-                    lines.push('');
-                    lines.push('**' + scores.overall_score.toFixed(1) + ' / 5**');
-                    lines.push('');
-                }
-
-                if (scores.competencies && scores.competencies.length) {
-                    lines.push('## Competency Scores');
-                    lines.push('');
-                    scores.competencies.forEach(function(comp) {
-                        lines.push('### ' + comp.name + ' — ' + comp.score + '/' + comp.max_score);
-                        if (comp.quick_take) lines.push(comp.quick_take);
-                        lines.push('');
-                    });
-                }
-
-                if (scores.top_strength) {
-                    lines.push('**Top Strength:** ' + scores.top_strength);
-                    lines.push('');
-                }
-                if (scores.top_improvement) {
-                    lines.push('**Focus Area:** ' + scores.top_improvement);
-                    lines.push('');
-                }
+            if (o.recommendation) {
+                lines.push('## Verdict: ' + (RECO_LABEL[o.recommendation] || o.recommendation));
+                if (o.level_read) lines.push('Performing at **' + (LEVEL_LABEL[o.level_read] || o.level_read) + '** level' +
+                                             (o.confidence ? ' (' + o.confidence + ' confidence)' : '') + '.');
+                if (o.headline) lines.push('');
+                if (o.headline) lines.push('> ' + o.headline);
+                lines.push('');
             }
 
-            // Narrative feedback (already Markdown from the model)
-            if (feedbackState.feedbackText) {
-                lines.push('## Detailed Feedback');
+            if (v.gap_to_next) {
+                lines.push('**Your next rep — ' + (v.gap_to_next.signal || '') + ':** ' + (v.gap_to_next.move || ''));
                 lines.push('');
-                lines.push(feedbackState.feedbackText.trim());
+            }
+
+            if (v.signals && v.signals.length) {
+                lines.push('## Signals');
+                lines.push('');
+                v.signals.forEach(function(s) {
+                    lines.push('### ' + s.name + ' — ' + (BAND_LABEL[s.band] || s.band));
+                    if (s.reasoning) lines.push(s.reasoning);
+                    (s.evidence || []).forEach(function(q) { lines.push('> "' + q + '"'); });
+                    if (s.to_raise) lines.push('*To raise this:* ' + s.to_raise);
+                    lines.push('');
+                });
+            }
+
+            if (v.differentiators && v.differentiators.length) {
+                lines.push('## What would make you a strong hire');
+                lines.push('');
+                v.differentiators.forEach(function(d) { lines.push('- ' + d); });
+                lines.push('');
+            }
+
+            if (v.delivery) {
+                lines.push('## Delivery');
+                lines.push('- Pace: ' + v.delivery.wpm + ' wpm (target ' + v.delivery.wpm_target + ')');
+                lines.push('- Filler words: ' + v.delivery.filler_per_min + '/min (target ' + v.delivery.filler_target + ')');
                 lines.push('');
             }
 

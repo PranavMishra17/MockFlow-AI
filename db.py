@@ -518,5 +518,64 @@ class DB:
             logger.error(f"[DB] Error fetching coding submissions: {e}")
             return []
 
+    # ---- Wing D: per-session structured scores (queryable for trends) ----
+
+    def save_interview_scores(
+        self,
+        user_id: str,
+        interview_id: str,
+        track: str,
+        scores: Dict[str, Any],
+    ) -> bool:
+        """Upsert the finalized per-session scores for an interview."""
+        try:
+            overall = scores.get("overall_score") if isinstance(scores, dict) else None
+            overall = overall if isinstance(overall, (int, float)) else None
+            self._execute(
+                """
+                INSERT INTO interview_scores (interview_id, user_id, track, overall_score, scores)
+                VALUES (%s, %s, %s, %s, %s)
+                ON CONFLICT (interview_id) DO UPDATE SET
+                    track         = EXCLUDED.track,
+                    overall_score = EXCLUDED.overall_score,
+                    scores        = EXCLUDED.scores,
+                    updated_at    = NOW()
+                """,
+                (interview_id, user_id, track or "intro", overall, Jsonb(scores or {})),
+            )
+            return True
+        except Exception as e:
+            logger.error(f"[DB] Error saving interview scores: {e}")
+            return False
+
+    def get_interview_scores(self, interview_id: str) -> Optional[Dict[str, Any]]:
+        try:
+            return self._fetchone(
+                "SELECT * FROM interview_scores WHERE interview_id = %s",
+                (interview_id,),
+            )
+        except Exception as e:
+            logger.error(f"[DB] Error fetching interview scores: {e}")
+            return None
+
+    def get_user_score_history(
+        self, user_id: str, limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        """Chronological per-session scores for a user — the basis for trends."""
+        try:
+            return self._fetchall(
+                """
+                SELECT interview_id, track, overall_score, scores, created_at
+                FROM interview_scores
+                WHERE user_id = %s
+                ORDER BY created_at ASC
+                LIMIT %s
+                """,
+                (user_id, limit),
+            )
+        except Exception as e:
+            logger.error(f"[DB] Error fetching score history: {e}")
+            return []
+
 
 db_client = DB()

@@ -1267,7 +1267,10 @@ async def run_interview():
                 conversation_history["user"].append({
                     "index": len(conversation_history["user"]),
                     "text": transcript,
-                    "timestamp": time.time()
+                    "timestamp": time.time(),
+                    # Tag with the stage the candidate was answering in, so the
+                    # evaluator can attribute evidence per stage (Wing D).
+                    "stage": interview_state.stage.value,
                 })
                 asyncio.create_task(emit_user_caption(room, transcript))
         

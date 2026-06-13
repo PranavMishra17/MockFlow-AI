@@ -1368,3 +1368,294 @@
         margin: 1.5cm;
     }
 }
+
+/* ── Wing D Phase 1: delivery panel + coding block ── */
+.delivery-panel,
+.coding-block {
+    margin-top: 1.25rem;
+    padding: 1.1rem 1.25rem;
+    background: var(--bg-card);
+    border: 1px solid var(--bg-soft);
+    border-radius: var(--radius-lg);
+}
+.delivery-title {
+    font-weight: 800;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
+    margin-bottom: 0.85rem;
+}
+.delivery-sub {
+    font-weight: 500;
+    font-size: 0.75rem;
+    color: var(--text-light);
+    margin-left: 0.4rem;
+}
+.delivery-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.85rem;
+}
+@media (max-width: 560px) {
+    .delivery-grid { grid-template-columns: 1fr; }
+}
+.delivery-metric {
+    padding: 0.85rem 0.95rem;
+    border-radius: 10px;
+    background: var(--bg-warm);
+    border-left: 4px solid var(--text-light);
+}
+.delivery-metric-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+}
+.delivery-metric-name {
+    font-weight: 700;
+    font-size: 0.82rem;
+    color: var(--text-primary);
+}
+.delivery-metric-val {
+    font-weight: 800;
+    font-size: 1.15rem;
+    color: var(--text-primary);
+}
+.delivery-metric-val small {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-light);
+}
+.delivery-metric-target {
+    font-size: 0.72rem;
+    color: var(--text-light);
+    margin-top: 0.15rem;
+}
+.delivery-tip {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    margin: 0.5rem 0 0;
+    line-height: 1.4;
+}
+.delivery-ideal,
+.delivery-good {
+    border-left-color: var(--accent-green-deep);
+    background: color-mix(in srgb, var(--accent-green) 22%, var(--bg-card));
+}
+.delivery-brisk,
+.delivery-moderate {
+    border-left-color: #E0A100;
+    background: color-mix(in srgb, #F6C453 18%, var(--bg-card));
+}
+.delivery-fast,
+.delivery-high {
+    border-left-color: var(--error);
+    background: color-mix(in srgb, var(--error) 12%, var(--bg-card));
+}
+.delivery-slow {
+    border-left-color: #5B8DEF;
+    background: color-mix(in srgb, #5B8DEF 12%, var(--bg-card));
+}
+
+.coding-card {
+    padding: 0.85rem 0.95rem;
+    border-radius: 10px;
+    background: var(--bg-warm);
+    border: 1px solid var(--bg-soft);
+    margin-bottom: 0.6rem;
+}
+.coding-card:last-child { margin-bottom: 0; }
+.coding-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+}
+.coding-prob {
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: var(--text-primary);
+}
+.coding-verdict {
+    font-size: 0.7rem;
+    font-weight: 800;
+    padding: 0.2rem 0.55rem;
+    border-radius: var(--radius-full);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+.coding-verdict.pass {
+    background: color-mix(in srgb, var(--accent-green) 40%, #fff);
+    color: #1b5e20;
+}
+.coding-verdict.fail {
+    background: color-mix(in srgb, var(--error) 16%, #fff);
+    color: var(--error);
+}
+.coding-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-top: 0.55rem;
+}
+.coding-pill {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--bg-card);
+    border: 1px solid var(--bg-soft);
+    padding: 0.2rem 0.55rem;
+    border-radius: var(--radius-full);
+}
+.coding-note {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    line-height: 1.45;
+    margin: 0.55rem 0 0;
+}
+.coding-miss { color: var(--text-primary); }
+
+/* ── Wing D Phase 5: the hiring verdict reveal ── */
+.verdict-card {
+    padding: 1.4rem 1.5rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--bg-soft);
+    border-left: 6px solid var(--text-light);
+    background: var(--bg-card);
+}
+.verdict-eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-light);
+    margin-bottom: 0.5rem;
+}
+.verdict-reco {
+    font-size: 1.9rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.05;
+    color: var(--text-primary);
+}
+.verdict-level {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-top: 0.35rem;
+}
+.verdict-headline {
+    font-size: 0.95rem;
+    color: var(--text-primary);
+    line-height: 1.5;
+    margin: 0.75rem 0 0;
+    font-style: italic;
+}
+.verdict-pos { border-left-color: var(--accent-green-deep); background: color-mix(in srgb, var(--accent-green) 16%, var(--bg-card)); }
+.verdict-mid { border-left-color: #E0A100; background: color-mix(in srgb, #F6C453 12%, var(--bg-card)); }
+.verdict-neg { border-left-color: #E07A3F; background: color-mix(in srgb, #E07A3F 10%, var(--bg-card)); }
+
+.next-rep {
+    margin-top: 1rem;
+    padding: 0.9rem 1.1rem;
+    border-radius: var(--radius-lg);
+    background: var(--text-primary);
+    color: var(--bg-card);
+}
+.next-rep-label {
+    font-size: 0.7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    opacity: 0.7;
+}
+.next-rep-body {
+    margin: 0.3rem 0 0;
+    font-size: 0.92rem;
+    line-height: 1.45;
+}
+
+.signals-intro {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 1rem;
+}
+.signal-card {
+    padding: 1rem 1.1rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--bg-soft);
+    background: var(--bg-card);
+    margin-bottom: 0.9rem;
+}
+.signal-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.6rem;
+}
+.signal-name { font-weight: 700; font-size: 0.98rem; color: var(--text-primary); }
+.signal-band {
+    font-size: 0.68rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 0.22rem 0.6rem;
+    border-radius: var(--radius-full);
+    white-space: nowrap;
+}
+.band-outstanding { background: color-mix(in srgb, var(--accent-green) 45%, #fff); color: #14532d; }
+.band-solid       { background: color-mix(in srgb, var(--accent-green) 28%, #fff); color: #166534; }
+.band-borderline  { background: color-mix(in srgb, #F6C453 40%, #fff); color: #7c5e00; }
+.band-poor        { background: color-mix(in srgb, #E07A3F 22%, #fff); color: #9a3412; }
+.band-cannot_determine { background: var(--bg-soft); color: var(--text-light); }
+.signal-reason {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin: 0.55rem 0 0;
+}
+.signal-evidence {
+    margin: 0.6rem 0 0;
+    padding: 0.5rem 0.85rem;
+    border-left: 3px solid var(--accent-green);
+    background: var(--bg-warm);
+    border-radius: 0 8px 8px 0;
+    font-size: 0.86rem;
+    color: var(--text-primary);
+    font-style: italic;
+}
+.signal-na {
+    font-size: 0.84rem;
+    color: var(--text-light);
+    font-style: italic;
+    margin: 0.5rem 0 0;
+}
+.signal-raise {
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    margin: 0.65rem 0 0;
+    line-height: 1.45;
+}
+.signal-raise span {
+    font-weight: 800;
+    color: var(--accent-green-deep);
+    margin-right: 0.3rem;
+}
+.differentiators {
+    margin-top: 1.2rem;
+    padding: 1rem 1.1rem;
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--accent-green) 12%, var(--bg-card));
+    border: 1px solid var(--bg-soft);
+}
+.diff-title {
+    font-weight: 800;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+.differentiators ul { margin: 0; padding-left: 1.1rem; }
+.differentiators li {
+    font-size: 0.88rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin-bottom: 0.3rem;
+}
