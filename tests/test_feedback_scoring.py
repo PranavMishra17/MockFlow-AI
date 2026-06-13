@@ -12,7 +12,6 @@ from feedback_scoring import (
     build_speech_summary,
     delivery_metrics,
     filler_band,
-    finalize_scores,
     wpm_band,
 )
 
@@ -69,40 +68,6 @@ def test_delivery_metrics_handles_empty_speech():
 def test_delivery_metrics_zero_duration_no_crash():
     d = delivery_metrics({"filler_total": 3, "total_speaking_duration_seconds": 0})
     assert d["filler_per_min"] == 0.0  # avoid divide-by-zero
-
-
-# ---- finalize_scores: the anti-hallucination override ----
-
-def test_finalize_overrides_llm_filler_count_with_deterministic_value():
-    llm_scores = {"overall_score": 3.5, "filler_word_count": 99, "competencies": []}
-    speech = {"filler_total": 7, "avg_words_per_minute": 140.0,
-              "total_speaking_duration_seconds": 60.0}
-    out = finalize_scores(llm_scores, speech)
-    # the model's invented 99 must be replaced by the real 7
-    assert out["filler_word_count"] == 7
-
-def test_finalize_attaches_delivery_block():
-    out = finalize_scores({"overall_score": 3}, {"filler_total": 2,
-                          "avg_words_per_minute": 145.0,
-                          "total_speaking_duration_seconds": 60.0})
-    assert "delivery" in out
-    assert out["delivery"]["filler_band"] == "good"
-    assert out["delivery"]["wpm_band"] == "ideal"
-
-def test_finalize_preserves_other_scores():
-    llm_scores = {"overall_score": 4.2, "summary_headline": "Strong",
-                  "competencies": [{"name": "X", "score": 4}], "filler_word_count": 50}
-    out = finalize_scores(llm_scores, {"filler_total": 1,
-                          "avg_words_per_minute": 150.0,
-                          "total_speaking_duration_seconds": 30.0})
-    assert out["overall_score"] == 4.2
-    assert out["summary_headline"] == "Strong"
-    assert out["competencies"] == [{"name": "X", "score": 4}]
-
-def test_finalize_does_not_mutate_input():
-    llm_scores = {"filler_word_count": 99}
-    finalize_scores(llm_scores, {"filler_total": 3})
-    assert llm_scores["filler_word_count"] == 99  # original untouched
 
 
 # ---- build_speech_summary: the text injected into the LLM prompt ----

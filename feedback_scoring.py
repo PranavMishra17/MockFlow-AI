@@ -67,19 +67,6 @@ def delivery_metrics(speech: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-def finalize_scores(llm_scores: Dict[str, Any], speech: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Take the LLM's parsed scores and ground them in deterministic speech data:
-      - replace any model-guessed filler_word_count with the measured value,
-      - attach the deterministic `delivery` block.
-    Does not mutate the input dict.
-    """
-    out = dict(llm_scores)
-    out["filler_word_count"] = int(speech.get("filler_total", 0) or 0)
-    out["delivery"] = delivery_metrics(speech)
-    return out
-
-
 def build_speech_summary(speech: Dict[str, Any]) -> str:
     """
     The measured-delivery block injected into the scoring prompt so the model

@@ -424,103 +424,6 @@
             });
         }
 
-        function renderScores(scoresData, fromCache) {
-            elements.scoresLoading.style.display = 'none';
-            elements.scoresTablet.style.display = 'block';
-
-            if (fromCache) {
-                elements.cachedIndicator.style.display = 'inline-flex';
-            }
-
-            var html = '<div class="scores-grid">';
-
-            html += '<div class="score-summary">';
-
-            html += '<div class="score-overall">';
-            html += '<div class="score-circle">';
-            html += '<svg viewBox="0 0 70 70">';
-            html += '<circle cx="35" cy="35" r="30" class="score-bg"/>';
-            var percent = (scoresData.overall_score / 5) * 100;
-            var circumference = 2 * Math.PI * 30;
-            var offset = circumference - (percent / 100) * circumference;
-            html += '<circle cx="35" cy="35" r="30" class="score-progress" style="stroke-dasharray: ' + circumference + '; stroke-dashoffset: ' + offset + ';"/>';
-            html += '<text x="35" y="40" class="score-number">' + scoresData.overall_score.toFixed(1) + '</text>';
-            html += '</svg>';
-            html += '</div>';
-            html += '<p class="score-label">Overall</p>';
-            html += '</div>';
-
-            if (scoresData.competencies && scoresData.competencies.length >= 2) {
-                var sorted = scoresData.competencies.slice().sort(function(a, b) {
-                    return (b.score / b.max_score) - (a.score / a.max_score);
-                });
-                var topComp = sorted[0];
-                var lowComp = sorted[sorted.length - 1];
-
-                html += '<div class="score-mini">';
-                html += '<div class="score-mini-label">Top Score</div>';
-                html += '<div class="score-mini-value">' + topComp.score + '/' + topComp.max_score + '</div>';
-                html += '<div class="score-mini-bar">';
-                var topPercent = (topComp.score / topComp.max_score) * 100;
-                html += '<div class="score-mini-fill" style="width: ' + topPercent + '%"></div>';
-                html += '</div>';
-                html += '<div class="score-mini-note">' + escapeHtml(topComp.name) + '</div>';
-                html += '</div>';
-
-                html += '<div class="score-mini">';
-                html += '<div class="score-mini-label">Focus Area</div>';
-                html += '<div class="score-mini-value">' + lowComp.score + '/' + lowComp.max_score + '</div>';
-                html += '<div class="score-mini-bar">';
-                var lowPercent = (lowComp.score / lowComp.max_score) * 100;
-                html += '<div class="score-mini-fill" style="width: ' + lowPercent + '%"></div>';
-                html += '</div>';
-                html += '<div class="score-mini-note">' + escapeHtml(lowComp.name) + '</div>';
-                html += '</div>';
-            }
-
-            html += '</div>';
-
-            if (scoresData.competencies && scoresData.competencies.length) {
-                scoresData.competencies.forEach(function(comp) {
-                    html += '<div class="competency-item">';
-                    html += '<div class="competency-header">';
-                    html += '<span class="competency-name">' + escapeHtml(comp.name) + '</span>';
-                    html += '<span class="competency-score">' + comp.score + '/' + comp.max_score + '</span>';
-                    html += '</div>';
-                    html += '<div class="competency-bar">';
-                    var scorePercent = (comp.score / comp.max_score) * 100;
-                    html += '<div class="competency-fill" style="width: ' + scorePercent + '%"></div>';
-                    html += '</div>';
-                    html += '<p class="competency-note">' + escapeHtml(comp.quick_take) + '</p>';
-                    html += '</div>';
-                });
-            }
-
-            html += '<div class="score-highlights">';
-            if (scoresData.top_strength) {
-                html += '<div class="highlight-item highlight-strength">';
-                html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg>';
-                html += '<div><strong>Top Strength:</strong> ' + escapeHtml(scoresData.top_strength) + '</div>';
-                html += '</div>';
-            }
-            if (scoresData.top_improvement) {
-                html += '<div class="highlight-item highlight-improvement">';
-                html += '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12l7 7 7-7"/></svg>';
-                html += '<div><strong>Focus Area:</strong> ' + escapeHtml(scoresData.top_improvement) + '</div>';
-                html += '</div>';
-            }
-            html += '</div>';
-
-            html += '</div>';
-
-            // Wing D Phase 1: surface the delivery metrics we already compute,
-            // and the coding evaluation we already store.
-            html += renderDeliveryPanel(scoresData.delivery);
-            html += renderCodingBlock(feedbackState.codingSubmissions);
-
-            elements.scoresContent.innerHTML = html;
-        }
-
         var DELIVERY_TIPS = {
             wpm: {
                 slow: 'A touch slow — add energy and momentum so you sound engaged.',
@@ -700,19 +603,6 @@
                     '<p>' + escapeHtml(message) + '</p>' +
                     '<button class="btn-retry" onclick="location.reload()">Retry</button>' +
                 '</div>';
-        }
-
-        function renderFeedback(feedbackText, fromCache) {
-            elements.feedbackLoading.style.display = 'none';
-            elements.feedbackPlaceholder.style.display = 'none';
-
-            feedbackState.feedbackText = feedbackText;
-
-            var html = parseMarkdown(feedbackText);
-            elements.feedbackContent.innerHTML = '<div class="feedback-text">' + html + '</div>';
-
-            // Report is now a shareable artifact: reveal export/copy actions.
-            elements.reportActions.style.display = 'flex';
         }
 
         function buildMarkdown() {
