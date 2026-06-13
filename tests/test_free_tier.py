@@ -112,7 +112,8 @@ def test_openai_key_none_when_no_byok_and_free_tier_off(app_module, db_client, m
 
 # ---------- endpoints ----------
 
-def test_user_stats_endpoint(auth_client, db_client, monkeypatch):
+def test_user_stats_endpoint(auth_client, app_module, db_client, monkeypatch):
+    monkeypatch.setattr(app_module, "FREE_TIER_ENABLED", True)
     monkeypatch.setattr(
         db_client, "get_user_stats",
         lambda uid: {"total_interviews": 3, "tracks": {"intro": 3}, "avg_overall_score": 4.1},
@@ -125,7 +126,8 @@ def test_user_stats_endpoint(auth_client, db_client, monkeypatch):
     assert body["free_calls_remaining"] == 1
 
 
-def test_keys_status_reports_free_calls(auth_client, db_client, monkeypatch):
+def test_keys_status_reports_free_calls_when_enabled(auth_client, app_module, db_client, monkeypatch):
+    monkeypatch.setattr(app_module, "FREE_TIER_ENABLED", True)
     monkeypatch.setattr(db_client, "get_api_keys", lambda uid: None)
     monkeypatch.setattr(db_client, "get_free_calls", lambda uid: (1, 2))
     resp = auth_client.get("/api/user/keys/status")
@@ -133,3 +135,12 @@ def test_keys_status_reports_free_calls(auth_client, db_client, monkeypatch):
     body = resp.get_json()
     assert body["has_keys"] is False
     assert body["free_calls_remaining"] == 1
+
+
+def test_free_calls_hidden_when_feature_disabled(auth_client, app_module, db_client, monkeypatch):
+    # Feature off (default): never surface free calls, even if the row grants some.
+    monkeypatch.setattr(app_module, "FREE_TIER_ENABLED", False)
+    monkeypatch.setattr(db_client, "get_api_keys", lambda uid: None)
+    monkeypatch.setattr(db_client, "get_free_calls", lambda uid: (0, 2))
+    resp = auth_client.get("/api/user/keys/status")
+    assert resp.get_json()["free_calls_remaining"] == 0

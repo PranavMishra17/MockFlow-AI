@@ -11,20 +11,21 @@
     /**
      * Apply the stored theme preference as early as possible to minimize
      * flash-of-wrong-theme. Runs synchronously at script load (before render).
-     * No stored preference => leave data-theme unset so the
-     * prefers-color-scheme media query follows the system setting.
+     * LIGHT IS THE DEFAULT: when there is no saved preference we explicitly set
+     * data-theme="light" rather than following the OS into dark mode. Dark mode
+     * only happens on an explicit toggle (persisted to localStorage).
      */
     function applyStoredTheme() {
+        var theme = 'light';
         try {
             var stored = localStorage.getItem(THEME_KEY);
             if (stored === 'dark' || stored === 'light') {
-                document.documentElement.dataset.theme = stored;
-            } else {
-                delete document.documentElement.dataset.theme;
+                theme = stored;
             }
         } catch (e) {
-            /* localStorage may be unavailable (private mode) — fall back to system */
+            /* localStorage may be unavailable (private mode) — default to light */
         }
+        document.documentElement.dataset.theme = theme;
     }
 
     applyStoredTheme();
@@ -41,6 +42,10 @@
         back: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>',
 
         info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+
+        // "About" — info glyph in a circle; opens the developer modal which holds
+        // GitHub / Sponsor / portfolio / socials / report-bug.
+        about: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><line x1="12" y1="11" x2="12" y2="16"/><circle cx="12" cy="7.75" r="0.6" fill="currentColor" stroke="none"/></svg>',
         
         github: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.840 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.430.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>',
         
@@ -108,26 +113,17 @@
         },
 
         /**
-         * When the user has NOT made an explicit choice, keep the toggle icon in
-         * sync with live OS theme changes (the CSS already follows the system via
-         * the prefers-color-scheme media query).
+         * Light is the default and the app does NOT auto-follow the OS theme, so
+         * there is nothing to watch on the prefers-color-scheme media query.
+         * This guarantees data-theme is always one of 'light' | 'dark' (in case
+         * the early applyStoredTheme call was bypassed) and syncs the toggle icon.
          */
         initThemeWatcher: function() {
-            if (!window.matchMedia) return;
-            var self = this;
-            var mq = window.matchMedia('(prefers-color-scheme: dark)');
-            var handler = function() {
-                var hasExplicit = document.documentElement.dataset.theme === 'dark' ||
-                    document.documentElement.dataset.theme === 'light';
-                if (!hasExplicit) {
-                    self.updateThemeToggle();
-                }
-            };
-            if (mq.addEventListener) {
-                mq.addEventListener('change', handler);
-            } else if (mq.addListener) {
-                mq.addListener(handler);
+            var root = document.documentElement;
+            if (root.dataset.theme !== 'dark' && root.dataset.theme !== 'light') {
+                root.dataset.theme = 'light';
             }
+            this.updateThemeToggle();
         },
 
         renderBackButton: function() {
@@ -155,20 +151,22 @@
 
             var html = '';
 
+            // ---- Constant, decluttered control set on every page:
+            //      Home (hidden on index) · About · Theme · Settings ----
+
             if (this.config.showHome) {
-                html += '<a href="/" class="action-btn action-btn-home" title="Home">' + Icons.home + '</a>';
+                html += '<a href="/" class="action-btn action-btn-home" title="Home" aria-label="Home">' + Icons.home + '</a>';
             }
 
-            if (this.config.showInfo) {
-                html += '<button onclick="window.MockFlowHeader.openDeveloperModal()" class="action-btn" title="About Developer">' + Icons.info + '</button>';
-            }
-
-            if (this.config.showGithub) {
-                html += '<a href="' + HeaderConfig.githubUrl + '" target="_blank" rel="noopener" class="action-btn action-btn-primary" title="View on GitHub">' + Icons.github + '</a>';
-            }
-
-            if (this.config.showSponsor) {
-                html += '<a href="' + HeaderConfig.sponsorUrl + '" target="_blank" rel="noopener" class="action-btn action-btn-sponsor" title="Sponsor">' + Icons.sponsor + '</a>';
+            // The legacy info / GitHub / sponsor flags are collapsed into ONE
+            // labeled "About" control. It opens the developer modal, which still
+            // contains GitHub, Sponsor, portfolio, socials, "About this project",
+            // Star and Report-bug — so none of those links are lost.
+            if (this.config.showInfo || this.config.showGithub || this.config.showSponsor) {
+                html += '<button type="button" class="action-btn action-btn-about" ' +
+                    'onclick="window.MockFlowHeader.openDeveloperModal()" ' +
+                    'title="About MockFlow.ai" aria-label="About MockFlow.ai — developer, GitHub, sponsor and project info">' +
+                    Icons.about + '<span class="action-btn-label">About</span></button>';
             }
 
             // Theme toggle (sun/moon) — always shown in the controls area
@@ -178,10 +176,10 @@
 
             if (this.config.showSettings) {
                 html += '<div class="settings-dropdown" id="settingsDropdown">';
-                html += '<button class="action-btn" title="Settings" onclick="window.MockFlowHeader.toggleSettingsDropdown()">' + Icons.settings + '</button>';
-                html += '<div class="settings-dropdown-menu" id="settingsDropdownMenu">';
-                html += '<a href="/dashboard" class="settings-dropdown-item">' + Icons.user + '<span>Account</span></a>';
-                html += '<a href="/api-keys" class="settings-dropdown-item">' + Icons.key + '<span>API Keys</span></a>';
+                html += '<button type="button" class="action-btn" title="Settings" aria-label="Settings" aria-haspopup="true" aria-expanded="false" onclick="window.MockFlowHeader.toggleSettingsDropdown()">' + Icons.settings + '</button>';
+                html += '<div class="settings-dropdown-menu" id="settingsDropdownMenu" role="menu">';
+                html += '<a href="/dashboard" class="settings-dropdown-item" role="menuitem">' + Icons.user + '<span>Account</span></a>';
+                html += '<a href="/api-keys" class="settings-dropdown-item" role="menuitem">' + Icons.key + '<span>API Keys</span></a>';
                 html += '</div>';
                 html += '</div>';
             }
@@ -237,6 +235,10 @@
                 var menu = document.getElementById('settingsDropdownMenu');
                 if (dropdown && menu && !dropdown.contains(e.target)) {
                     menu.classList.remove('visible');
+                    var btn = dropdown.querySelector('.action-btn');
+                    if (btn) {
+                        btn.setAttribute('aria-expanded', 'false');
+                    }
                 }
             });
         },
@@ -244,24 +246,25 @@
         toggleSettingsDropdown: function() {
             var menu = document.getElementById('settingsDropdownMenu');
             if (menu) {
-                menu.classList.toggle('visible');
+                var open = menu.classList.toggle('visible');
+                var dropdown = document.getElementById('settingsDropdown');
+                var btn = dropdown && dropdown.querySelector('.action-btn');
+                if (btn) {
+                    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+                }
             }
         },
 
         /**
-         * Resolve the currently-rendered theme ('dark' | 'light'), accounting for
-         * an explicit data-theme override OR the system preference when unset.
+         * Resolve the currently-rendered theme ('dark' | 'light'). Light is the
+         * default: an unset / unrecognized data-theme means light. The system
+         * preference is deliberately NOT consulted — dark requires an explicit
+         * toggle that is persisted to localStorage.
          */
         getEffectiveTheme: function() {
-            var explicit = document.documentElement.dataset.theme;
-            if (explicit === 'dark' || explicit === 'light') {
-                return explicit;
-            }
-            if (window.matchMedia &&
-                window.matchMedia('(prefers-color-scheme: dark)').matches) {
-                return 'dark';
-            }
-            return 'light';
+            return document.documentElement.dataset.theme === 'dark'
+                ? 'dark'
+                : 'light';
         },
 
         /**

@@ -85,6 +85,20 @@ Mature, minimal, breathable design
     --msg-error-bg: #FFEBEE;
     --msg-success-bg: #E8F5E9;
     --on-accent: #FFFFFF;
+
+    /* Button / control surfaces — text colors guaranteed AA in both themes.
+     * --solid-* = a high-contrast "filled" control (dark slab in light mode,
+     * light slab in dark mode). --on-solid = the text/icon color that sits on it.
+     * Other pages keep using --text-* and --bg-*; these are additive. */
+    --solid-surface: #1A1A1A;        /* the dark CTA slab in light mode */
+    --solid-surface-hover: #000000;
+    --on-solid: #FFFFFF;             /* text on the solid slab (AA on #1A1A1A) */
+    --on-solid-muted: rgba(255, 255, 255, 0.72);
+    --control-surface: var(--bg-card);
+    --control-border: var(--hairline-strong);
+    --on-control: var(--text-primary);
+    --focus-ring: var(--accent-green-deep);
+    --feature-cyan: #B2EBF2;
 }
 
 /*
@@ -157,6 +171,18 @@ Mature, minimal, breathable design
         --msg-error-bg: rgba(239, 83, 80, 0.12);
         --msg-success-bg: rgba(102, 187, 106, 0.12);
         --on-accent: #1A1715;
+
+        /* In dark mode the filled CTA slab flips to a bright surface so its text
+         * stays dark-on-light (AA). This fixes the dark-on-dark invisible text. */
+        --solid-surface: #F2EDE7;
+        --solid-surface-hover: #FFFFFF;
+        --on-solid: #16130F;             /* dark text on the light slab */
+        --on-solid-muted: rgba(22, 19, 15, 0.66);
+        --control-surface: #2C2723;
+        --control-border: rgba(242, 237, 231, 0.28);
+        --on-control: #F2EDE7;
+        --focus-ring: #8FD694;
+        --feature-cyan: #1E4A50;
     }
 }
 
@@ -211,6 +237,17 @@ html[data-theme="dark"] {
     --msg-error-bg: rgba(239, 83, 80, 0.12);
     --msg-success-bg: rgba(102, 187, 106, 0.12);
     --on-accent: #1A1715;
+
+    /* Filled CTA slab flips bright in dark mode → dark-on-light text stays AA. */
+    --solid-surface: #F2EDE7;
+    --solid-surface-hover: #FFFFFF;
+    --on-solid: #16130F;
+    --on-solid-muted: rgba(22, 19, 15, 0.66);
+    --control-surface: #2C2723;
+    --control-border: rgba(242, 237, 231, 0.28);
+    --on-control: #F2EDE7;
+    --focus-ring: #8FD694;
+    --feature-cyan: #1E4A50;
 }
 
 /* Explicit light override — forces the default cream palette (tokens above in
@@ -269,188 +306,427 @@ h4 {
 /* ==================== LANDING PAGE ==================== */
 
 .hero {
+    min-height: 100vh;
     height: 100vh;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    padding: var(--spacing-md);
-    background: linear-gradient(180deg, var(--bg-cream) 0%, var(--bg-warm) 100%);
+    padding: clamp(1.25rem, 4vw, var(--spacing-2xl));
+    background:
+        radial-gradient(1100px 720px at 88% -8%, color-mix(in srgb, var(--accent-green) 55%, transparent) 0%, transparent 60%),
+        radial-gradient(900px 620px at -6% 112%, color-mix(in srgb, var(--accent-purple) 48%, transparent) 0%, transparent 60%),
+        linear-gradient(180deg, var(--bg-cream) 0%, var(--bg-warm) 100%);
     position: relative;
     overflow: hidden;
 }
 
-/* Decorative shapes */
+/* Soft animated aura behind the content */
 .hero::before {
     content: '';
     position: absolute;
-    top: -200px;
-    right: -200px;
-    width: 500px;
-    height: 500px;
-    background: radial-gradient(circle, var(--accent-green) 0%, transparent 70%);
-    opacity: 0.3;
+    top: -22%;
+    right: -14%;
+    width: 46vw;
+    height: 46vw;
+    max-width: 620px;
+    max-height: 620px;
+    background: radial-gradient(circle, var(--accent-cyan) 0%, transparent 68%);
+    opacity: 0.14;
     border-radius: 50%;
+    pointer-events: none;
+    animation: hero-float 16s ease-in-out infinite alternate;
 }
 
 .hero::after {
     content: '';
     position: absolute;
-    bottom: -150px;
-    left: -150px;
-    width: 400px;
-    height: 400px;
-    background: radial-gradient(circle, var(--accent-purple) 0%, transparent 70%);
-    opacity: 0.25;
+    bottom: -18%;
+    left: -12%;
+    width: 40vw;
+    height: 40vw;
+    max-width: 520px;
+    max-height: 520px;
+    background: radial-gradient(circle, var(--accent-pink) 0%, transparent 70%);
+    opacity: 0.16;
     border-radius: 50%;
+    pointer-events: none;
+    animation: hero-float 19s ease-in-out infinite alternate-reverse;
+}
+
+@keyframes hero-float {
+    0%   { transform: translate3d(0, 0, 0) scale(1); }
+    100% { transform: translate3d(2.5%, -3%, 0) scale(1.08); }
 }
 
 .hero-content {
-    max-width: 1100px;
+    max-width: 1080px;
     width: 100%;
     position: relative;
     z-index: 1;
     display: grid;
-    grid-template-columns: 1fr auto;
-    grid-template-rows: auto auto auto auto;
-    gap: var(--spacing-md);
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    gap: clamp(1.5rem, 4vw, 3.5rem);
     align-items: center;
 }
 
-.hero-left {
+.hero-lead {
     grid-column: 1;
-    grid-row: 1 / 5;
+    min-width: 0;
 }
 
-.hero-buttons {
-    grid-column: 2;
-    grid-row: 1 / 5;
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-md);
-    justify-content: center;
-    align-items: flex-end;
-    padding-left: var(--spacing-xl);
+/* Eyebrow pill */
+.hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.875rem;
+    margin-bottom: var(--spacing-md);
+    background: var(--bg-card);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-full);
+    box-shadow: var(--shadow-soft);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+}
+
+.eyebrow-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--success);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 60%, transparent);
+    animation: eyebrow-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes eyebrow-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--success) 55%, transparent); }
+    50%      { box-shadow: 0 0 0 6px color-mix(in srgb, var(--success) 0%, transparent); }
 }
 
 .logo-mark {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 90px;
-    height: 90px;
+    width: 76px;
+    height: 76px;
     background: var(--bg-card);
+    border: 1px solid var(--hairline);
     border-radius: var(--radius-xl);
-    margin-bottom: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
     box-shadow: var(--shadow-medium);
+    cursor: pointer;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease;
+}
+
+.logo-mark:hover {
+    transform: translateY(-2px) rotate(-3deg);
+    box-shadow: var(--shadow-lifted);
 }
 
 .logo-mark svg {
-    width: 65px;
-    height: 65px;
+    width: 54px;
+    height: 54px;
 }
 
 h1 {
-    font-size: clamp(2.5rem, 5vw, 3.5rem);
-    margin-bottom: var(--spacing-xs);
+    font-size: clamp(2.6rem, 6vw, 4rem);
+    line-height: 1.02;
+    margin-bottom: var(--spacing-sm);
     background: linear-gradient(135deg, var(--text-primary) 0%, var(--text-secondary) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
 }
 
+.wordmark-dot {
+    -webkit-text-fill-color: var(--accent-green-deep);
+    color: var(--accent-green-deep);
+}
+
 .tagline {
-    font-size: clamp(1rem, 2vw, 1.25rem);
+    font-size: clamp(1.02rem, 1.6vw, 1.22rem);
     color: var(--text-secondary);
     margin-bottom: var(--spacing-lg);
     font-weight: 400;
-    max-width: 550px;
+    max-width: 33ch;
 }
 
-.features {
-    list-style: none;
-    font-size: 0.9375rem;
-    color: var(--text-secondary);
-    margin-bottom: var(--spacing-lg);
-    text-align: left;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
+/* ---- Hero CTA cluster (lives in the hero, not a separate rail) ---- */
+.hero-cta {
+    display: flex;
+    flex-wrap: wrap;
     gap: var(--spacing-sm);
-    max-width: 600px;
+    margin-bottom: var(--spacing-lg);
+}
+
+.btn-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.95rem 1.5rem;
+    border-radius: var(--radius-full);
+    font-size: 1rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    text-decoration: none;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: transform 0.25s cubic-bezier(0.34, 1.4, 0.5, 1),
+        box-shadow 0.25s ease, background-color 0.25s ease, color 0.25s ease,
+        border-color 0.25s ease;
+    will-change: transform;
+}
+
+.btn-cta-icon {
+    display: inline-flex;
+}
+
+.btn-cta-icon svg {
+    width: 1.2rem;
+    height: 1.2rem;
+}
+
+.btn-cta-arrow {
+    display: inline-flex;
+    transition: transform 0.25s cubic-bezier(0.34, 1.4, 0.5, 1);
+}
+
+.btn-cta-arrow svg {
+    width: 1.05rem;
+    height: 1.05rem;
+}
+
+/* Primary CTA — the unmistakable "Start Interview" */
+.btn-cta.primary {
+    background: var(--solid-surface);
+    color: var(--on-solid);
+    box-shadow: var(--shadow-medium), 0 0 0 0 color-mix(in srgb, var(--accent-green-deep) 60%, transparent);
+}
+
+.btn-cta.primary .btn-cta-icon svg,
+.btn-cta.primary .btn-cta-arrow svg {
+    color: var(--on-solid);
+    stroke: currentColor;
+}
+
+.btn-cta.primary:hover {
+    background: var(--solid-surface-hover);
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-lifted),
+        0 0 0 6px color-mix(in srgb, var(--accent-green-deep) 22%, transparent);
+}
+
+.btn-cta.primary:hover .btn-cta-arrow {
+    transform: translateX(4px);
+}
+
+.btn-cta.primary:active {
+    transform: translateY(-1px);
+}
+
+/* Ghost / secondary CTA — clearly subordinate but legible in both themes */
+.btn-cta.ghost {
+    background: var(--bg-card);
+    color: var(--text-primary);
+    border-color: var(--control-border);
+    box-shadow: var(--shadow-soft);
+}
+
+.btn-cta.ghost .btn-cta-icon svg {
+    color: var(--accent-green-deep);
+    stroke: currentColor;
+}
+
+.btn-cta.ghost:hover {
+    transform: translateY(-3px);
+    border-color: var(--accent-green-deep);
+    box-shadow: var(--shadow-medium);
+}
+
+/* ---- Feature cards (the 4 capabilities) ---- */
+.features {
+    grid-column: 2;
+    list-style: none;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--spacing-sm);
+    margin: 0;
+    align-content: center;
+    min-width: 0;
 }
 
 .features li {
     display: flex;
     align-items: flex-start;
-    gap: var(--spacing-xs);
-    padding: var(--spacing-xs) var(--spacing-sm);
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
     background: var(--bg-card);
-    border-radius: var(--radius-sm);
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-md);
     box-shadow: var(--shadow-soft);
-    font-size: 0.875rem;
+    transition: transform 0.25s cubic-bezier(0.34, 1.2, 0.5, 1),
+        box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.features li:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-medium);
+    border-color: var(--hairline-strong);
 }
 
 .feature-icon {
     flex-shrink: 0;
-    width: 28px;
-    height: 28px;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
     border-radius: var(--radius-sm);
-    font-size: 0.875rem;
+    color: var(--text-primary);
 }
 
-.feature-icon.green {
-    background: var(--accent-green);
+.feature-icon svg {
+    width: 18px;
+    height: 18px;
 }
 
-.feature-icon.pink {
-    background: var(--accent-pink);
+.feature-icon.green  { background: var(--accent-green); }
+.feature-icon.pink   { background: var(--accent-pink); }
+.feature-icon.purple { background: var(--accent-purple); }
+.feature-icon.cyan   { background: var(--feature-cyan); }
+
+.feature-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    min-width: 0;
 }
 
-.feature-icon.purple {
-    background: var(--accent-purple);
+.feature-body strong {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.01em;
 }
 
+.feature-body em {
+    font-style: normal;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+/* ---- Powered-by row ---- */
 .tech-stack {
-    margin-top: var(--spacing-md);
-    padding-top: var(--spacing-sm);
-    border-top: 1px solid var(--bg-soft);
+    margin-top: 0;
+    padding-top: var(--spacing-md);
+    border-top: 1px solid var(--hairline);
 }
 
 .tech-label {
     font-size: 0.6875rem;
     color: var(--text-light);
-    margin-bottom: var(--spacing-xs);
+    margin-bottom: 0.625rem;
     text-transform: uppercase;
     letter-spacing: 2px;
-    font-weight: 600;
+    font-weight: 700;
 }
 
 .tech-badges {
     display: flex;
-    gap: var(--spacing-xs);
+    gap: 0.5rem;
     flex-wrap: wrap;
 }
 
 .badge {
     background: var(--bg-soft);
     color: var(--text-secondary);
-    padding: 0.25rem 0.625rem;
+    padding: 0.3rem 0.75rem;
     border-radius: var(--radius-full);
     font-size: 0.75rem;
-    font-weight: 500;
+    font-weight: 600;
     text-decoration: none;
-    transition: all 0.2s ease;
+    border: 1px solid transparent;
+    transition: background-color 0.2s ease, color 0.2s ease,
+        border-color 0.2s ease, transform 0.2s ease;
 }
 
 a.badge:hover {
-    background: var(--bg-warm);
+    background: var(--bg-card);
     color: var(--text-primary);
+    border-color: var(--hairline-strong);
+    transform: translateY(-1px);
 }
 
-/* ==================== GAME-LIKE BUTTONS ==================== */
+/* ==================== PAGE-LOAD REVEAL SEQUENCE ==================== */
+/* One orchestrated entrance: each element fades + lifts in, staggered by its
+ * data-reveal index. Fully disabled under prefers-reduced-motion. */
+.reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    animation: reveal-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.reveal[data-reveal="1"] { animation-delay: 0.05s; }
+.reveal[data-reveal="2"] { animation-delay: 0.13s; }
+.reveal[data-reveal="3"] { animation-delay: 0.21s; }
+.reveal[data-reveal="4"] { animation-delay: 0.30s; }
+.reveal[data-reveal="5"] { animation-delay: 0.39s; }
+.reveal[data-reveal="6"] { animation-delay: 0.48s; }
+.reveal[data-reveal="7"] { animation-delay: 0.57s; }
+.reveal[data-reveal="8"] { animation-delay: 0.66s; }
+
+@keyframes reveal-in {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Respect reduced-motion: show everything immediately, no looping ambience,
+ * no transform-based hover lift. Color/opacity hovers still work. */
+@media (prefers-reduced-motion: reduce) {
+    .reveal {
+        opacity: 1 !important;
+        transform: none !important;
+        animation: none !important;
+    }
+
+    .hero::before,
+    .hero::after,
+    .eyebrow-dot {
+        animation: none !important;
+    }
+
+    .btn-cta,
+    .features li,
+    .logo-mark,
+    .action-btn,
+    .auth-btn,
+    .badge {
+        transition: background-color 0.2s ease, color 0.2s ease,
+            border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .btn-cta:hover,
+    .features li:hover,
+    .logo-mark:hover,
+    .auth-btn:hover,
+    .badge:hover,
+    .action-btn:hover {
+        transform: none !important;
+    }
+
+    .btn-cta.primary:hover .btn-cta-arrow {
+        transform: none !important;
+    }
+}
+
+/* ==================== GAME-LIKE BUTTONS (legacy, kept for other surfaces) ==================== */
 
 .btn-game {
     position: relative;
@@ -504,7 +780,7 @@ a.badge:hover {
 .btn-game-icon svg {
     width: 48px;
     height: 48px;
-    stroke: var(--text-light);
+    stroke: var(--text-muted);
     fill: none;
     transition: all 0.3s ease;
 }
@@ -532,8 +808,8 @@ a.badge:hover {
 }
 
 .btn-game.primary {
-    background: var(--text-primary);
-    border-color: var(--text-primary);
+    background: var(--solid-surface);
+    border-color: var(--solid-surface);
 }
 
 .btn-game.primary::before {
@@ -541,11 +817,11 @@ a.badge:hover {
 }
 
 .btn-game.primary .btn-game-icon svg {
-    stroke: var(--text-light);
+    stroke: var(--on-solid-muted);
 }
 
 .btn-game.primary .btn-game-label {
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--on-solid-muted);
 }
 
 .btn-game.primary:hover {
@@ -553,11 +829,11 @@ a.badge:hover {
 }
 
 .btn-game.primary:hover .btn-game-icon svg {
-    stroke: var(--bg-cream);
+    stroke: var(--on-solid);
 }
 
 .btn-game.primary:hover .btn-game-label {
-    color: var(--bg-cream);
+    color: var(--on-solid);
 }
 
 /* Secondary/disabled game button */
@@ -571,14 +847,14 @@ a.badge:hover {
 }
 
 .btn-game.secondary .btn-game-label {
-    color: var(--text-muted);
+    color: var(--text-secondary);
 }
 
 /* ==================== LEGACY BUTTONS ==================== */
 
 .btn-primary {
-    background: var(--text-primary);
-    color: var(--bg-cream);
+    background: var(--solid-surface);
+    color: var(--on-solid);
     padding: 1rem 2.5rem;
     text-decoration: none;
     border-radius: var(--radius-full);
@@ -637,9 +913,9 @@ a.badge:hover {
 }
 
 .btn-icon.active {
-    background: var(--text-primary);
-    color: var(--bg-cream);
-    border-color: var(--text-primary);
+    background: var(--solid-surface);
+    color: var(--on-solid);
+    border-color: var(--solid-surface);
 }
 
 .btn-danger {
@@ -1938,25 +2214,21 @@ footer a:hover {
 
     .hero-content {
         grid-template-columns: 1fr;
-        text-align: center;
+        gap: var(--spacing-lg);
+        max-width: 560px;
     }
 
-    .hero-left {
-        grid-row: auto;
-    }
-
-    .hero-buttons {
+    .hero-lead {
         grid-column: 1;
-        grid-row: auto;
-        flex-direction: row;
-        justify-content: center;
-        padding-left: 0;
-        padding-top: var(--spacing-md);
+    }
+
+    .tagline {
+        max-width: 48ch;
     }
 
     .features {
-        margin-left: auto;
-        margin-right: auto;
+        grid-column: 1;
+        grid-template-columns: 1fr 1fr;
     }
 }
 
@@ -1983,16 +2255,22 @@ footer a:hover {
 
     .hero {
         height: auto;
-        min-height: 100vh;
-        padding: var(--spacing-lg) var(--spacing-md);
+        min-height: 100svh;
+        padding: clamp(4.5rem, 14vw, 6rem) var(--spacing-md) var(--spacing-2xl);
+        justify-content: flex-start;
+    }
+
+    .hero-content {
+        gap: var(--spacing-md);
     }
 
     h1 {
-        font-size: 2rem;
+        font-size: clamp(2.1rem, 11vw, 2.75rem);
     }
 
     .tagline {
-        font-size: 0.9375rem;
+        font-size: 0.95rem;
+        max-width: none;
     }
 
     .features {
@@ -2070,6 +2348,40 @@ footer a:hover {
         bottom: -50px;
         transform: translateX(-50%);
     }
+
+    /* CTAs go full-width and stack so they never overflow on small phones */
+    .hero-cta {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .btn-cta {
+        justify-content: center;
+        width: 100%;
+    }
+
+    /* Hide the "About" word; the icon + aria-label remain */
+    .action-btn-about .action-btn-label {
+        display: none;
+    }
+
+    .action-btn-about {
+        width: 2.25rem;
+        padding: 0;
+    }
+}
+
+/* Extra-narrow guard (~360px and below): keep features single-column,
+ * trim badge wrapping pressure, no horizontal scroll. */
+@media (max-width: 360px) {
+    .hero {
+        padding-left: var(--spacing-sm);
+        padding-right: var(--spacing-sm);
+    }
+
+    .tech-badges {
+        gap: 0.375rem;
+    }
 }
 
 /* ==================== ACTION BUTTONS (Settings, GitHub, About) ==================== */
@@ -2084,17 +2396,20 @@ footer a:hover {
 }
 
 .action-btn {
-    width: 2.5rem;
     height: 2.5rem;
-    display: flex;
+    min-width: 2.5rem;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    border: 3px solid var(--text-primary);
+    border: 2.5px solid var(--text-primary);
+    border-radius: var(--radius-sm);
     background: var(--bg-card);
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: transform 0.2s ease, box-shadow 0.2s ease,
+        border-color 0.2s ease, background-color 0.2s ease, color 0.2s ease;
     text-decoration: none;
     color: var(--text-primary);
+    font-family: inherit;
 }
 
 .action-btn:hover {
@@ -2103,14 +2418,39 @@ footer a:hover {
     border-color: var(--accent-green-deep);
 }
 
+/* Keyboard focus ring on every header control (AA-visible in both themes) */
+.action-btn:focus-visible,
+.auth-btn:focus-visible,
+.btn-cta:focus-visible,
+.logo-mark:focus-visible,
+.badge:focus-visible,
+.settings-dropdown-item:focus-visible {
+    outline: 3px solid var(--focus-ring);
+    outline-offset: 2px;
+}
+
 .action-btn svg {
     width: 1.25rem;
     height: 1.25rem;
 }
 
+/* "About" control — icon + label, the single consolidated entry point */
+.action-btn-about {
+    gap: 0.45rem;
+    padding: 0 0.75rem;
+}
+
+.action-btn-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1;
+}
+
 .action-btn-primary {
-    background: var(--text-primary);
-    color: var(--on-accent);
+    background: var(--solid-surface);
+    color: var(--on-solid);
+    border-color: var(--solid-surface);
 }
 
 .action-btn-primary:hover {
@@ -2120,7 +2460,6 @@ footer a:hover {
 }
 
 .action-btn-home {
-    width: auto;
     padding: 0 0.625rem;
     gap: 0.375rem;
 }
@@ -2154,8 +2493,8 @@ footer a:hover {
     }
 
     .action-btn {
-        width: 2.25rem;
         height: 2.25rem;
+        min-width: 2.25rem;
     }
 
     .action-btn svg {
@@ -2207,14 +2546,21 @@ footer a:hover {
     height: 18px;
 }
 
+/* Primary auth action (Sign Up) — header.js emits class="auth-btn primary".
+ * Uses the solid-surface tokens so text stays AA in light AND dark. */
+.auth-btn.primary,
 .signup-btn {
-    background: var(--text-primary);
-    color: var(--bg-cream);
-    border-color: var(--text-primary);
+    background: var(--solid-surface);
+    color: var(--on-solid);
+    border-color: var(--solid-surface);
+    font-weight: 600;
 }
 
+.auth-btn.primary:hover,
 .signup-btn:hover {
-    filter: brightness(1.15);
+    background: var(--solid-surface-hover);
+    border-color: var(--solid-surface-hover);
+    color: var(--on-solid);
 }
 
 .account-btn {

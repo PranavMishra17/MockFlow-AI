@@ -24,61 +24,55 @@
     <!-- Action Buttons (Right Side) - populated by header.js -->
     <div class="action-buttons" id="actionButtons"></div>
 
-    <div class="hero">
+    <main class="hero">
         <div class="hero-content">
-            <div class="hero-left">
-<div class="logo-mark" id="logoMark" style="cursor:pointer;">
-    <svg viewBox="0 0 48 48" width="72" height="100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="24" cy="24" r="20" fill="#C8E6C9"/>
-        <circle cx="24" cy="24" r="12" fill="#81C784"/>
-        <circle cx="24" cy="24" r="6" fill="#4CAF50"/>
-    </svg>
-</div>
+            <div class="hero-lead">
+                <div class="hero-eyebrow reveal" data-reveal="1">
+                    <span class="eyebrow-dot" aria-hidden="true"></span>
+                    Voice-native AI interviewer
+                </div>
 
-                <h1>MockFlow.ai</h1>
-                <p class="tagline">Voice-native AI that interviews you, evaluates your live code, and scores your delivery.</p>
+                <div class="logo-mark reveal" data-reveal="2" id="logoMark" role="button" tabindex="0" aria-label="MockFlow.ai logo">
+                    <svg viewBox="0 0 48 48" width="72" height="100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="24" cy="24" r="20" fill="#C8E6C9"/>
+                        <circle cx="24" cy="24" r="12" fill="#81C784"/>
+                        <circle cx="24" cy="24" r="6" fill="#4CAF50"/>
+                    </svg>
+                </div>
 
-                <ul class="features">
-                    <li>
-                        <span class="feature-icon green">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                                <line x1="12" y1="19" x2="12" y2="23"/>
-                                <line x1="8" y1="23" x2="16" y2="23"/>
-                            </svg>
-                        </span>
-                        <span>Live voice AI — sub-200ms, fully adaptive</span>
-                    </li>
-                    <li>
-                        <span class="feature-icon pink">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                                <polyline points="22 4 12 14.01 9 11.01"/>
-                            </svg>
-                        </span>
-                        <span>4 tracks — Intro, Behavioral, Technical, Coding</span>
-                    </li>
-                    <li>
-                        <span class="feature-icon purple">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <polyline points="16 18 22 12 16 6"/>
-                                <polyline points="8 6 2 12 8 18"/>
-                            </svg>
-                        </span>
-                        <span>Monaco code editor with live AI evaluation</span>
-                    </li>
-                    <li>
-                        <span class="feature-icon green">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                            </svg>
-                        </span>
-                        <span>Scored feedback with speech analytics</span>
-                    </li>
-                </ul>
+                <h1 class="reveal" data-reveal="3">MockFlow<span class="wordmark-dot">.ai</span></h1>
+                <p class="tagline reveal" data-reveal="4">It interviews you out loud, reads your live code as you type, and scores how you actually deliver — like a real panel, on demand.</p>
 
-                <div class="tech-stack">
+                <div class="hero-cta reveal" data-reveal="5">
+                    <a href="/start" class="btn-cta primary">
+                        <span class="btn-cta-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+                                <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
+                                <line x1="12" y1="18" x2="12" y2="22"/>
+                            </svg>
+                        </span>
+                        <span class="btn-cta-label">Start Interview</span>
+                        <span class="btn-cta-arrow" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="5" y1="12" x2="19" y2="12"/>
+                                <polyline points="12 5 19 12 12 19"/>
+                            </svg>
+                        </span>
+                    </a>
+
+                    <a href="/past-calls" class="btn-cta ghost">
+                        <span class="btn-cta-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="9"/>
+                                <polyline points="12 7 12 12 16 14"/>
+                            </svg>
+                        </span>
+                        <span class="btn-cta-label">Past Sessions</span>
+                    </a>
+                </div>
+
+                <div class="tech-stack reveal" data-reveal="6">
                     <p class="tech-label">Powered by</p>
                     <div class="tech-badges">
                         <a href="https://docs.livekit.io/agents/" target="_blank" rel="noopener" class="badge">LiveKit</a>
@@ -89,35 +83,59 @@
                 </div>
             </div>
 
-            <div class="hero-buttons">
-                <a href="/start" class="btn-game primary">
-                    <div class="btn-game-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="5" r="3"/>
-                            <path d="M12 8v2"/>
-                            <path d="M7 21v-6a5 5 0 0 1 10 0v6"/>
-                            <path d="M12 10l-1 3h2l-1 3"/>
-                            <path d="M9 12l3 1 3-1"/>
-                            <path d="M9 12v9"/>
-                            <path d="M15 12v9"/>
+            <ul class="features" aria-label="What MockFlow.ai does">
+                <li class="reveal" data-reveal="5">
+                    <span class="feature-icon green" aria-hidden="true">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+                            <line x1="12" y1="19" x2="12" y2="23"/>
+                            <line x1="8" y1="23" x2="16" y2="23"/>
                         </svg>
-                    </div>
-                    <span class="btn-game-label">Start Interview</span>
-                </a>
-
-                <a href="/past-calls" class="btn-game secondary">
-                    <div class="btn-game-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"/>
-                            <polyline points="12 6 12 12 16 14"/>
-                            <path d="M4.93 4.93l2.12 2.12"/>
+                    </span>
+                    <span class="feature-body">
+                        <strong>Live voice interviewer</strong>
+                        <em>Sub-200ms replies that adapt to your answers.</em>
+                    </span>
+                </li>
+                <li class="reveal" data-reveal="6">
+                    <span class="feature-icon pink" aria-hidden="true">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                            <polyline points="22 4 12 14.01 9 11.01"/>
                         </svg>
-                    </div>
-                    <span class="btn-game-label">Past Sessions</span>
-                </a>
-            </div>
+                    </span>
+                    <span class="feature-body">
+                        <strong>Four interview tracks</strong>
+                        <em>Intro, Behavioral, Technical and Coding.</em>
+                    </span>
+                </li>
+                <li class="reveal" data-reveal="7">
+                    <span class="feature-icon purple" aria-hidden="true">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="16 18 22 12 16 6"/>
+                            <polyline points="8 6 2 12 8 18"/>
+                        </svg>
+                    </span>
+                    <span class="feature-body">
+                        <strong>Live code evaluation</strong>
+                        <em>Monaco editor reviewed by AI as you write.</em>
+                    </span>
+                </li>
+                <li class="reveal" data-reveal="8">
+                    <span class="feature-icon cyan" aria-hidden="true">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                        </svg>
+                    </span>
+                    <span class="feature-body">
+                        <strong>Scored delivery feedback</strong>
+                        <em>Speech analytics with a breakdown you can act on.</em>
+                    </span>
+                </li>
+            </ul>
         </div>
-    </div>
+    </main>
 
     <footer>
         <p>MockFlow.ai — Practice makes confidence</p>
@@ -142,9 +160,6 @@
         }
 
         /* Logo pulse on click */
-        .logo-mark {
-            transition: transform 0.15s ease-out;
-        }
         .logo-mark.logo-pulse {
             animation: logo-pop 0.35s ease-out forwards;
         }
@@ -153,11 +168,6 @@
             40%  { transform: scale(1.13); }
             100% { transform: scale(1); }
         }
-
-        /* Tagline */
-        .tagline {
-            max-width: 500px !important;
-        }
     </style>
     <script src="/static/header.js"></script>
     <script src="/static/auth.js"></script>
@@ -165,49 +175,60 @@
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             var logo = document.getElementById('logoMark');
-            if (logo) {
-                logo.addEventListener('click', function() {
-                    var rect = logo.getBoundingClientRect();
-                    var cx = rect.left + rect.width / 2;
-                    var cy = rect.top + rect.height / 2;
+            var reduceMotion = window.matchMedia &&
+                window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-                    // Logo pulse
+            function pulseLogo() {
+                var rect = logo.getBoundingClientRect();
+                var cx = rect.left + rect.width / 2;
+                var cy = rect.top + rect.height / 2;
+
+                // Logo pulse
+                logo.classList.remove('logo-pulse');
+                void logo.offsetWidth; // reflow to restart animation
+                logo.classList.add('logo-pulse');
+                logo.addEventListener('animationend', function() {
                     logo.classList.remove('logo-pulse');
-                    void logo.offsetWidth; // reflow to restart animation
-                    logo.classList.add('logo-pulse');
-                    logo.addEventListener('animationend', function() {
-                        logo.classList.remove('logo-pulse');
-                    }, { once: true });
+                }, { once: true });
 
-                    // 5 rings — progressively larger and slower, staggered
-                    var rings = [
-                        { delay: 0,   maxSize: 100, dur: 0.9  },
-                        { delay: 90,  maxSize: 240, dur: 1.2  },
-                        { delay: 185, maxSize: 390, dur: 1.55 },
-                        { delay: 280, maxSize: 530, dur: 1.85 },
-                        { delay: 370, maxSize: 660, dur: 2.1  }
-                    ];
+                if (reduceMotion) return; // skip the ripple sequence
 
-                    rings.forEach(function(r) {
-                        setTimeout(function() {
-                            var ring = document.createElement('div');
-                            ring.className = 'ripple-ring';
-                            ring.style.left = cx + 'px';
-                            ring.style.top = cy + 'px';
-                            ring.style.setProperty('--ring-max', r.maxSize + 'px');
-                            ring.style.animationDuration = r.dur + 's';
-                            document.body.appendChild(ring);
-                            ring.addEventListener('animationend', function() { ring.remove(); });
-                        }, r.delay);
-                    });
+                // 5 rings — progressively larger and slower, staggered
+                var rings = [
+                    { delay: 0,   maxSize: 100, dur: 0.9  },
+                    { delay: 90,  maxSize: 240, dur: 1.2  },
+                    { delay: 185, maxSize: 390, dur: 1.55 },
+                    { delay: 280, maxSize: 530, dur: 1.85 },
+                    { delay: 370, maxSize: 660, dur: 2.1  }
+                ];
+
+                rings.forEach(function(r) {
+                    setTimeout(function() {
+                        var ring = document.createElement('div');
+                        ring.className = 'ripple-ring';
+                        ring.style.left = cx + 'px';
+                        ring.style.top = cy + 'px';
+                        ring.style.setProperty('--ring-max', r.maxSize + 'px');
+                        ring.style.animationDuration = r.dur + 's';
+                        document.body.appendChild(ring);
+                        ring.addEventListener('animationend', function() { ring.remove(); });
+                    }, r.delay);
+                });
+            }
+
+            if (logo) {
+                logo.addEventListener('click', pulseLogo);
+                logo.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+                        e.preventDefault();
+                        pulseLogo();
+                    }
                 });
             }
 
             window.MockFlowHeader.init({
                 showHome: false,
                 showInfo: true,
-                showGithub: true,
-                showSponsor: true,
                 showSettings: true,
                 showAuth: true
             });

@@ -202,6 +202,15 @@ def resolve_interview_keys(user_id: str):
     return None, False, ({'error': 'API keys not configured', 'message': msg}, 400)
 
 
+def _free_calls_remaining(user_id: str) -> int:
+    """Free interviews left to surface in the UI — always 0 when the feature is off,
+    so the dashboard never promises free interviews that can't be used."""
+    if not FREE_TIER_ENABLED:
+        return 0
+    used, granted = supabase_client.get_free_calls(user_id)
+    return max(0, granted - used)
+
+
 def resolve_openai_key(user_id: str):
     """OpenAI key for server-side LLM calls: user's BYOK, else owner key (free tier)."""
     byok = supabase_client.get_api_keys(user_id)
@@ -228,8 +237,7 @@ def get_keys_status():
     try:
         user_id = get_user_id()
         keys = supabase_client.get_api_keys(user_id)
-        used, granted = supabase_client.get_free_calls(user_id)
-        free_remaining = max(0, granted - used)
+        free_remaining = _free_calls_remaining(user_id)
 
         if keys:
             return jsonify({
@@ -254,10 +262,7 @@ def user_stats():
     try:
         user_id = get_user_id()
         stats = supabase_client.get_user_stats(user_id) or {}
-        used, granted = supabase_client.get_free_calls(user_id)
-        stats['free_calls_used'] = used
-        stats['free_calls_granted'] = granted
-        stats['free_calls_remaining'] = max(0, granted - used)
+        stats['free_calls_remaining'] = _free_calls_remaining(user_id)
         return jsonify(stats)
     except Exception as e:
         logger.error(f"[API] Failed to build user stats: {e}", exc_info=True)
