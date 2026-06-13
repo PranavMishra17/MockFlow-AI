@@ -1536,9 +1536,11 @@ def generate_verdict():
 
         # Ground the coding track in the objective execution results we store.
         coding_results = None
+        coding_submissions = []
         if track == 'coding':
             try:
-                subs = supabase_client.get_coding_submissions(interview_id)
+                coding_submissions = supabase_client.get_coding_submissions(interview_id)
+                subs = coding_submissions
                 lines = []
                 for s in subs:
                     ev = s.get('evaluation_result') or {}
@@ -1608,6 +1610,7 @@ def generate_verdict():
             'success': True,
             'interview_id': interview_id,
             'verdict': verdict,
+            'coding_submissions': coding_submissions,
             'meta': {'candidate': meta.get('candidate'), 'track': track,
                      'role': role, 'seniority': seniority, 'model': model},
         })
