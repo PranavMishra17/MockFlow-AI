@@ -187,6 +187,7 @@
             scoresData: null,
             conversationData: null,
             feedbackText: null,
+            codingSubmissions: null,
             meta: null
         };
 
@@ -372,6 +373,7 @@
                 }
                 console.log('[FEEDBACK] Scores generated successfully');
                 feedbackState.scoresData = data.scores;
+                feedbackState.codingSubmissions = data.coding_submissions || null;
                 feedbackState.scoresGenerated = true;
 
                 renderScores(data.scores, false);
@@ -552,7 +554,87 @@
             html += '</div>';
 
             html += '</div>';
+
+            // Wing D Phase 1: surface the delivery metrics we already compute,
+            // and the coding evaluation we already store.
+            html += renderDeliveryPanel(scoresData.delivery);
+            html += renderCodingBlock(feedbackState.codingSubmissions);
+
             elements.scoresContent.innerHTML = html;
+        }
+
+        var DELIVERY_TIPS = {
+            wpm: {
+                slow: 'A touch slow — add energy and momentum so you sound engaged.',
+                ideal: 'Great pace — clear and easy to follow.',
+                brisk: 'A little fast — brief pauses will help the listener keep up.',
+                fast: 'Too fast — slow down and breathe; comprehension drops above ~190 wpm.',
+                unknown: ''
+            },
+            filler: {
+                good: 'Clean delivery — filler words are well controlled.',
+                moderate: 'Some filler words — a deliberate pause beats an "um".',
+                high: 'Frequent fillers hurt perceived clarity — pause instead of filling silence.'
+            }
+        };
+
+        function renderDeliveryPanel(d) {
+            if (!d) return '';
+            var html = '<div class="delivery-panel">';
+            html += '<div class="delivery-title">Delivery <span class="delivery-sub">measured from your speech</span></div>';
+            html += '<div class="delivery-grid">';
+
+            // Pace
+            html += '<div class="delivery-metric delivery-' + (d.wpm_band || 'unknown') + '">';
+            html += '<div class="delivery-metric-head"><span class="delivery-metric-name">Speaking pace</span>';
+            html += '<span class="delivery-metric-val">' + (d.wpm || 0) + ' <small>wpm</small></span></div>';
+            html += '<div class="delivery-metric-target">target ' + (d.wpm_target || '130-160') + '</div>';
+            if (DELIVERY_TIPS.wpm[d.wpm_band]) html += '<p class="delivery-tip">' + DELIVERY_TIPS.wpm[d.wpm_band] + '</p>';
+            html += '</div>';
+
+            // Filler rate
+            html += '<div class="delivery-metric delivery-' + (d.filler_band || 'good') + '">';
+            html += '<div class="delivery-metric-head"><span class="delivery-metric-name">Filler words</span>';
+            html += '<span class="delivery-metric-val">' + (d.filler_per_min || 0) + '<small>/min</small></span></div>';
+            html += '<div class="delivery-metric-target">' + (d.filler_total || 0) + ' total · target ' + (d.filler_target || '&le;5/min') + '</div>';
+            if (DELIVERY_TIPS.filler[d.filler_band]) html += '<p class="delivery-tip">' + DELIVERY_TIPS.filler[d.filler_band] + '</p>';
+            html += '</div>';
+
+            html += '</div></div>';
+            return html;
+        }
+
+        function renderCodingBlock(submissions) {
+            if (!submissions || !submissions.length) return '';
+            var html = '<div class="coding-block">';
+            html += '<div class="delivery-title">Coding <span class="delivery-sub">' + submissions.length + ' submission' + (submissions.length > 1 ? 's' : '') + '</span></div>';
+            submissions.forEach(function(sub) {
+                var ev = sub.evaluation_result || {};
+                var passed = ev.passed === true || ev.all_passed === true;
+                var grade = ev.approach_grade || ev.grade || null;
+                html += '<div class="coding-card">';
+                html += '<div class="coding-card-head">';
+                html += '<span class="coding-prob">' + escapeHtml(sub.problem_title || 'Problem') + '</span>';
+                if (ev.passed !== undefined || ev.all_passed !== undefined) {
+                    html += '<span class="coding-verdict ' + (passed ? 'pass' : 'fail') + '">' + (passed ? 'Tests passed' : 'Tests failed') + '</span>';
+                }
+                html += '</div>';
+                html += '<div class="coding-meta">';
+                if (sub.language) html += '<span class="coding-pill">' + escapeHtml(sub.language) + '</span>';
+                if (grade) html += '<span class="coding-pill">Approach ' + escapeHtml(String(grade)) + '</span>';
+                if (ev.time_complexity) html += '<span class="coding-pill">' + escapeHtml(ev.time_complexity) + '</span>';
+                if (sub.time_spent_seconds) html += '<span class="coding-pill">' + Math.round(sub.time_spent_seconds / 60) + ' min</span>';
+                html += '</div>';
+                if (ev.feedback || ev.summary) {
+                    html += '<p class="coding-note">' + escapeHtml(ev.feedback || ev.summary) + '</p>';
+                }
+                if (ev.edge_cases_missed && ev.edge_cases_missed.length) {
+                    html += '<p class="coding-note coding-miss"><strong>Edge cases missed:</strong> ' + escapeHtml(ev.edge_cases_missed.join(', ')) + '</p>';
+                }
+                html += '</div>';
+            });
+            html += '</div>';
+            return html;
         }
 
         function showScoresError(message) {
