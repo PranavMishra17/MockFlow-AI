@@ -38,11 +38,6 @@
     --mf-eye: var(--text-primary);
 }
 
-/* Eyes read as a soft warm grey in dark mode — not a stark, flat white. */
-html[data-theme="dark"] {
-    --mf-eye: #a79e93;
-}
-
 
 /* =============================================================================
    1. .mf-orb — THE HERO CENTERPIECE

@@ -16,16 +16,8 @@
      * only happens on an explicit toggle (persisted to localStorage).
      */
     function applyStoredTheme() {
-        var theme = 'light';
-        try {
-            var stored = localStorage.getItem(THEME_KEY);
-            if (stored === 'dark' || stored === 'light') {
-                theme = stored;
-            }
-        } catch (e) {
-            /* localStorage may be unavailable (private mode) — default to light */
-        }
-        document.documentElement.dataset.theme = theme;
+        // Light-only app — dark mode was removed by design.
+        document.documentElement.dataset.theme = 'light';
     }
 
     applyStoredTheme();
@@ -107,7 +99,6 @@
             }
 
             this.initSettingsDropdown();
-            this.initThemeWatcher();
             this.injectDeveloperModal();
             this.injectSettingsModal();
         },
@@ -169,11 +160,6 @@
                     Icons.about + '<span class="action-btn-label">About</span></button>';
             }
 
-            // Theme toggle (sun/moon) — always shown in the controls area
-            html += '<button id="themeToggleBtn" class="action-btn action-btn-theme" type="button" ' +
-                'onclick="window.MockFlowHeader.toggleTheme()" aria-label="Switch to dark theme" aria-pressed="false">' +
-                Icons.moon + '</button>';
-
             if (this.config.showSettings) {
                 html += '<div class="settings-dropdown" id="settingsDropdown">';
                 html += '<button type="button" class="action-btn" title="Settings" aria-label="Settings" aria-haspopup="true" aria-expanded="false" onclick="window.MockFlowHeader.toggleSettingsDropdown()">' + Icons.settings + '</button>';
@@ -185,7 +171,6 @@
             }
 
             container.innerHTML = html;
-            this.updateThemeToggle();
         },
 
         renderAuthHeader: function() {

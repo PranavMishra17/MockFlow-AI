@@ -151,6 +151,176 @@
             font-size: 0.8rem; padding: 2.5rem 0 0;
         }
         .gx-foot a { color: var(--text-secondary); }
+
+        /* ===================================================================
+           "Pick your interviewer's voice" — the JS-driven ray variants.
+           Cards reuse the gallery's card styling; rings are smaller (~160px).
+           =================================================================== */
+        .vx-section {
+            position: relative; z-index: 1;
+            margin: clamp(0.5rem, 2vw, 1.25rem) 0 clamp(2rem, 5vw, 3rem);
+        }
+        .vx-head { margin: 0 0 0.35rem; }
+        .vx-head h2 {
+            font-size: clamp(1.35rem, 3.2vw, 1.9rem);
+            line-height: 1.1; margin: 0;
+            letter-spacing: -0.02em;
+        }
+        .vx-head p {
+            margin: 0.4rem 0 1.5rem; color: var(--text-muted);
+            font-size: 0.95rem; max-width: 58ch;
+        }
+
+        .vx-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: clamp(1rem, 2.5vw, 1.5rem);
+        }
+
+        .vx-card {
+            display: flex; flex-direction: column;
+            background: var(--bg-card);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-soft);
+            overflow: hidden;
+            transition: transform 0.25s cubic-bezier(0.34, 1.2, 0.5, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+        }
+        .vx-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-medium); border-color: var(--hairline-strong); }
+        .vx-card--intro { grid-column: span 2; }
+
+        .vx-card-head {
+            display: flex; align-items: baseline; justify-content: space-between;
+            gap: 0.75rem; padding: 1rem 1.25rem 0.35rem;
+        }
+        .vx-card-head h3 {
+            font-size: 1.02rem; margin: 0;
+            font-family: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;
+            color: var(--accent-green-deep); letter-spacing: -0.02em;
+        }
+        .vx-card-head span { font-size: 0.78rem; color: var(--text-muted); text-align: right; }
+
+        .vx-stage {
+            position: relative;
+            display: grid; place-items: center;
+            min-height: 200px;
+            margin: 0.5rem 1rem;
+            border-radius: var(--radius-md);
+            background: radial-gradient(120% 120% at 50% 0%, var(--bg-warm) 0%, var(--bg-soft) 100%);
+            border: 1px solid var(--hairline);
+            overflow: hidden;
+        }
+
+        /* A relatively-positioned host so the absolutely-centred .mf-rays lands
+           on it. Sized to the ring so cards stay tidy. */
+        .vx-ringhost {
+            position: relative;
+            width: 160px; height: 160px;
+            display: grid; place-items: center;
+        }
+        .vx-ringhost > .mf-rays { --mf-rays-size: 160px; }
+
+        /* Replay button — borrows the kit's pill control styling. */
+        .vx-replay {
+            display: inline-flex; align-items: center; gap: 0.45rem;
+            margin: 0 1rem 0.25rem; align-self: flex-start;
+            height: 2.2rem; padding: 0 0.95rem;
+            background: var(--bg-card); color: var(--text-primary);
+            border: 1px solid var(--control-border); border-radius: var(--radius-full);
+            font: inherit; font-weight: 600; font-size: 0.82rem; cursor: pointer;
+            box-shadow: var(--shadow-soft);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        }
+        .vx-replay:hover { transform: translateY(-2px); box-shadow: var(--shadow-medium); border-color: var(--accent-green-deep); }
+        .vx-replay:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+        .vx-replay svg { width: 0.95rem; height: 0.95rem; }
+
+        .vx-snip {
+            margin: 0.5rem 1rem 1rem;
+        }
+        .vx-snip code {
+            display: block;
+            padding: 0.6rem 0.8rem;
+            background: var(--bg-soft);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius-md);
+            font-family: 'SFMono-Regular', ui-monospace, Menlo, Consolas, monospace;
+            font-size: 0.74rem; line-height: 1.5;
+            color: var(--text-secondary);
+            overflow-x: auto; white-space: pre;
+        }
+
+        /* -------------------------------------------------------------------
+           .mf-orb2 — the "Full intro" composite: concentric rings + ray ring
+           + eyes, stacked centre. The concentric rings are the brand greens.
+           ------------------------------------------------------------------- */
+        .mf-orb2 {
+            --mf-orb2-size: 160px;
+            position: relative;
+            width: var(--mf-orb2-size); height: var(--mf-orb2-size);
+            display: grid; place-items: center;
+        }
+        .mf-orb2 .mf-rays { --mf-rays-size: var(--mf-orb2-size); }
+        .mf-orb2 .mf-eyes { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 3; }
+
+        /* 3 nested bordered circles in the brand greens, centred. */
+        .mf-orb2__rings {
+            position: absolute; top: 50%; left: 50%;
+            width: 60%; height: 60%;
+            transform: translate(-50%, -50%);
+            pointer-events: none; z-index: 1;
+        }
+        .mf-orb2__rings > span {
+            position: absolute; inset: 0; margin: auto;
+            border-radius: 50%;
+            border: 2px solid;
+            transform: scale(1);
+        }
+        .mf-orb2__rings > span:nth-child(1) { width: 100%; height: 100%; border-color: #C8E6C9; }
+        .mf-orb2__rings > span:nth-child(2) { width: 64%;  height: 64%;  border-color: #81C784; }
+        .mf-orb2__rings > span:nth-child(3) { width: 30%;  height: 30%;  border-color: #4CAF50; }
+
+        /* Choreography states (JS toggles these in sequence). */
+        .mf-orb2__rings.is-expand  > span { animation: vx-ring-expand  0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+        .mf-orb2__rings.is-compact > span { animation: vx-ring-compact 0.4s  cubic-bezier(0.5, 0, 0.2, 1)   forwards; }
+        .mf-orb2__rings.is-fade { animation: vx-ring-fade 0.5s ease forwards; }
+
+        @keyframes vx-ring-expand  { from { transform: scale(1); }    to { transform: scale(1.5); } }
+        @keyframes vx-ring-compact { from { transform: scale(1.5); }  to { transform: scale(0.15); } }
+        @keyframes vx-ring-fade    { from { opacity: 1; }             to { opacity: 0; } }
+
+        /* Eyes start hidden, then pop. */
+        .mf-orb2 .mf-eyes { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+        .mf-orb2 .mf-eyes.is-pop { animation: vx-eyes-pop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        @keyframes vx-eyes-pop {
+            0%   { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+            60%  { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+            100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        /* Rays start collapsed, then bloom in (the JS loop drives height after). */
+        .mf-orb2 .mf-rays { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+        .mf-orb2 .mf-rays.is-bloom { animation: vx-rays-bloom 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+        @keyframes vx-rays-bloom {
+            from { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+            to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+
+        @media (max-width: 520px) {
+            .vx-card--intro { grid-column: 1 / -1; }
+        }
+
+        /* Reduced motion: present the settled composite, no choreography. */
+        @media (prefers-reduced-motion: reduce) {
+            .mf-orb2__rings.is-expand > span,
+            .mf-orb2__rings.is-compact > span,
+            .mf-orb2__rings.is-fade,
+            .mf-orb2 .mf-eyes.is-pop,
+            .mf-orb2 .mf-rays.is-bloom { animation: none !important; }
+            .mf-orb2 .mf-eyes { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            .mf-orb2 .mf-rays { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            .mf-orb2__rings.is-fade { opacity: 0; }
+        }
     </style>
 </head>
 <body>
@@ -179,6 +349,18 @@
                 <span class="gx-toggle-label">Dark</span>
             </button>
         </header>
+
+        <!-- ============================================================
+             PICK YOUR INTERVIEWER'S VOICE — JS-driven ray variants.
+             Cards + intro are wired up in the script at the bottom.
+             ============================================================ -->
+        <section class="vx-section" id="voicePicker">
+            <div class="vx-head">
+                <h2 class="mf-shimmer-text">Pick your interviewer&rsquo;s voice</h2>
+                <p>The hero orb&rsquo;s rays move like a real voice &mdash; circular but sporadic. Four ways to drive the same ring, plus the full intro the agent does on wake. <strong>Voice</strong> is what the live interview uses.</p>
+            </div>
+            <div class="vx-grid" id="voiceGrid"><!-- cards injected by JS --></div>
+        </section>
 
         <main class="gx-grid" id="gallery"><!-- cards injected by JS so each snippet is the literal source --></main>
 
@@ -389,6 +571,137 @@
 
     /* expand the brand orb in the header too */
     buildRays(document.querySelector('.gx-brand'));
+    </script>
+
+    <!-- The reusable ray-animation driver. -->
+    <script src="/static/mf-rays.js"></script>
+
+    <!-- ====================================================================
+         "Pick your interviewer's voice" — build the variant cards + intro,
+         then start every demo on DOMContentLoaded.
+         ==================================================================== -->
+    <script>
+    (function () {
+        var MODES = [
+            { mode: 'voice', label: "Voice", note: 'The real interviewer',
+              desc: 'Travelling 4-lobe wave + per-frame noise. Circular and sporadic, like a voice.' },
+            { mode: 'wave', label: "Wave", note: 'Clean & smooth',
+              desc: 'The same travelling wave with the noise removed — a steady, calm sweep.' },
+            { mode: 'pulse', label: "Pulse", note: 'Breathe together',
+              desc: 'Every ray shares one target, so the whole ring inhales and exhales as one.' },
+            { mode: 'comet', label: "Comet", note: 'A crest sweeps round',
+              desc: 'A single sharp peak races around the ring like a comet on a track.' }
+        ];
+
+        var REPLAY_ICON =
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+            'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+            '<path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v4h4"/></svg>';
+
+        function makeModeCard(cfg) {
+            var card = document.createElement('article');
+            card.className = 'vx-card';
+
+            var head = document.createElement('div');
+            head.className = 'vx-card-head';
+            var h3 = document.createElement('h3'); h3.textContent = cfg.label;
+            var note = document.createElement('span'); note.textContent = cfg.note;
+            head.appendChild(h3); head.appendChild(note);
+
+            var stage = document.createElement('div');
+            stage.className = 'vx-stage';
+            var host = document.createElement('div');
+            host.className = 'vx-ringhost';
+            var ring = document.createElement('div');
+            ring.className = 'mf-rays';
+            host.appendChild(ring);
+            stage.appendChild(host);
+
+            var desc = document.createElement('p');
+            desc.className = 'vx-snip';
+            desc.style.color = 'var(--text-muted)';
+            desc.style.fontSize = '0.82rem';
+            desc.style.margin = '0.25rem 1rem 0.5rem';
+            desc.textContent = cfg.desc;
+
+            var snip = document.createElement('div');
+            snip.className = 'vx-snip';
+            var code = document.createElement('code');
+            code.textContent = "MFRays.animate(el, { mode: '" + cfg.mode + "' })";
+            snip.appendChild(code);
+
+            card.appendChild(head);
+            card.appendChild(stage);
+            card.appendChild(desc);
+            card.appendChild(snip);
+
+            // Start this variant's loop.
+            window.MFRays.animate(ring, { mode: cfg.mode, count: 56 });
+            return card;
+        }
+
+        function makeIntroCard() {
+            var card = document.createElement('article');
+            card.className = 'vx-card vx-card--intro';
+
+            var head = document.createElement('div');
+            head.className = 'vx-card-head';
+            var h3 = document.createElement('h3'); h3.textContent = 'Full intro';
+            var note = document.createElement('span'); note.textContent = 'rings → eyes → rays';
+            head.appendChild(h3); head.appendChild(note);
+
+            var stage = document.createElement('div');
+            stage.className = 'vx-stage';
+
+            var orb = document.createElement('div');
+            orb.className = 'mf-orb2';
+            orb.style.setProperty('--mf-orb2-size', '160px');
+            orb.innerHTML =
+                '<div class="mf-orb2__rings"><span></span><span></span><span></span></div>' +
+                '<div class="mf-rays"></div>' +
+                '<div class="mf-eyes" style="--mf-eye-size:14px"><i></i><i></i></div>';
+            stage.appendChild(orb);
+
+            var replay = document.createElement('button');
+            replay.className = 'vx-replay';
+            replay.type = 'button';
+            replay.innerHTML = REPLAY_ICON + '<span>Replay</span>';
+
+            var snip = document.createElement('div');
+            snip.className = 'vx-snip';
+            var code = document.createElement('code');
+            code.textContent = "MFRays.intro(orbEl, { mode: 'voice' })";
+            snip.appendChild(code);
+
+            card.appendChild(head);
+            card.appendChild(stage);
+            card.appendChild(replay);
+            card.appendChild(snip);
+
+            var handle = null;
+            function play() {
+                if (handle && handle.stop) handle.stop();
+                handle = window.MFRays.intro(orb, { mode: 'voice' });
+            }
+            replay.addEventListener('click', play);
+            play(); // run once on load
+            return card;
+        }
+
+        function init() {
+            if (!window.MFRays) return;
+            var grid = document.getElementById('voiceGrid');
+            if (!grid) return;
+            MODES.forEach(function (cfg) { grid.appendChild(makeModeCard(cfg)); });
+            grid.appendChild(makeIntroCard());
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    })();
     </script>
 </body>
 </html>
