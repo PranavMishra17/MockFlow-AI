@@ -98,96 +98,69 @@
 
                         <div class="track-selector">
                             <div class="track-cards" id="trackCards" role="radiogroup" aria-label="Interview track">
-                                <div class="track-card selected" data-track="intro" role="radio" tabindex="0"
-                                    aria-checked="true">
-                                    <div class="track-card-accent"></div>
-                                    <div class="track-card-icon" aria-hidden="true">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                                            stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M8 10h8M8 14h5" />
-                                            <path d="M21 12a8 8 0 0 1-8 8H7l-4 3v-4.5A8 8 0 1 1 21 12z" />
-                                        </svg>
-                                    </div>
-                                    <div class="track-card-body">
-                                        <span class="track-card-title">Intro Call</span>
-                                        <span class="track-card-desc">A friendly chat about your background, experience
-                                            and culture fit.</span>
-                                    </div>
-                                    <div class="track-card-check" aria-hidden="true">
+                                <div class="track-card track-card--green selected" data-track="intro" role="radio"
+                                    tabindex="0" aria-checked="true">
+                                    <span class="track-card-glow" aria-hidden="true"></span>
+                                    <span class="track-card-tag"><span class="track-card-dot"
+                                            aria-hidden="true"></span>Intro</span>
+                                    <h3 class="track-card-title">Break the ice</h3>
+                                    <p class="track-card-desc">Nail your "tell me about yourself" until it sounds
+                                        effortless, not rehearsed.</p>
+                                    <span class="track-card-no" aria-hidden="true">01</span>
+                                    <span class="track-card-check" aria-hidden="true">
                                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                                             <polyline points="3,8 7,12 13,4" stroke="currentColor" stroke-width="2"
                                                 stroke-linecap="round" stroke-linejoin="round" />
                                         </svg>
-                                    </div>
+                                    </span>
                                 </div>
-                                <div class="track-card" data-track="behavioral" role="radio" tabindex="0"
-                                    aria-checked="false">
-                                    <div class="track-card-accent"></div>
-                                    <div class="track-card-icon" aria-hidden="true">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                                            stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                                            <circle cx="9" cy="7" r="4" />
-                                            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-                                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                                        </svg>
-                                    </div>
-                                    <div class="track-card-body">
-                                        <span class="track-card-title">Behavioral</span>
-                                        <span class="track-card-desc">Stories about past work, leadership and teamwork
-                                            (STAR style).</span>
-                                    </div>
-                                    <div class="track-card-check" aria-hidden="true">
+                                <div class="track-card track-card--pink" data-track="behavioral" role="radio"
+                                    tabindex="0" aria-checked="false">
+                                    <span class="track-card-glow" aria-hidden="true"></span>
+                                    <span class="track-card-tag"><span class="track-card-dot"
+                                            aria-hidden="true"></span>Behavioral</span>
+                                    <h3 class="track-card-title">Tell the story</h3>
+                                    <p class="track-card-desc">Conflict, failure, leadership — STAR answers that actually
+                                        land the point.</p>
+                                    <span class="track-card-no" aria-hidden="true">02</span>
+                                    <span class="track-card-check" aria-hidden="true">
                                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                                             <polyline points="3,8 7,12 13,4" stroke="currentColor" stroke-width="2"
                                                 stroke-linecap="round" stroke-linejoin="round" />
                                         </svg>
-                                    </div>
+                                    </span>
                                 </div>
-                                <div class="track-card" data-track="technical_voice" role="radio" tabindex="0"
-                                    aria-checked="false">
-                                    <div class="track-card-accent"></div>
-                                    <div class="track-card-icon" aria-hidden="true">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                                            stroke-linecap="round" stroke-linejoin="round">
-                                            <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
-                                            <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                                            <line x1="12" y1="19" x2="12" y2="22" />
-                                        </svg>
-                                    </div>
-                                    <div class="track-card-body">
-                                        <span class="track-card-title">Technical (Spoken)</span>
-                                        <span class="track-card-desc">Talk through concepts out loud on topics you
-                                            choose.</span>
-                                    </div>
-                                    <div class="track-card-check" aria-hidden="true">
+                                <div class="track-card track-card--purple" data-track="technical_voice" role="radio"
+                                    tabindex="0" aria-checked="false">
+                                    <span class="track-card-glow" aria-hidden="true"></span>
+                                    <span class="track-card-tag"><span class="track-card-dot"
+                                            aria-hidden="true"></span>Technical voice</span>
+                                    <h3 class="track-card-title">Think out loud</h3>
+                                    <p class="track-card-desc">Explain systems, trade-offs and decisions on the spot —
+                                        the way real interviewers probe.</p>
+                                    <span class="track-card-no" aria-hidden="true">03</span>
+                                    <span class="track-card-check" aria-hidden="true">
                                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                                             <polyline points="3,8 7,12 13,4" stroke="currentColor" stroke-width="2"
                                                 stroke-linecap="round" stroke-linejoin="round" />
                                         </svg>
-                                    </div>
+                                    </span>
                                 </div>
-                                <div class="track-card" data-track="coding" role="radio" tabindex="0"
+                                <div class="track-card track-card--cyan" data-track="coding" role="radio" tabindex="0"
                                     aria-checked="false">
-                                    <div class="track-card-accent"></div>
-                                    <div class="track-card-icon" aria-hidden="true">
-                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
-                                            stroke-linecap="round" stroke-linejoin="round">
-                                            <polyline points="16 18 22 12 16 6" />
-                                            <polyline points="8 6 2 12 8 18" />
-                                        </svg>
-                                    </div>
-                                    <div class="track-card-body">
-                                        <span class="track-card-title">Coding</span>
-                                        <span class="track-card-desc">Solve live problems in a real code editor with a
-                                            timer.</span>
-                                    </div>
-                                    <div class="track-card-check" aria-hidden="true">
+                                    <span class="track-card-glow" aria-hidden="true"></span>
+                                    <span class="track-card-tag"><span class="track-card-dot"
+                                            aria-hidden="true"></span>Coding</span>
+                                    <h3 class="track-card-title">Ship under pressure</h3>
+                                    <p class="track-card-desc">Real problems in a real editor, reviewed as you type. No
+                                        "looks good" — actual feedback.</p>
+                                    <span class="track-card-no" aria-hidden="true">04</span>
+                                    <span class="track-card-check" aria-hidden="true">
                                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                                             <polyline points="3,8 7,12 13,4" stroke="currentColor" stroke-width="2"
                                                 stroke-linecap="round" stroke-linejoin="round" />
                                         </svg>
-                                    </div>
+                                    </span>
                                 </div>
                             </div>
 
@@ -374,13 +347,16 @@
                                 <input type="url" id="portfolioUrl" name="portfolioUrl" class="form-input"
                                     placeholder="https://linkedin.com/in/you  ·  yourportfolio.com"
                                     autocomplete="url">
+                                <p class="field-hint">We keep this as a reference — we don't open private links
+                                    automatically. Paste the highlights below (or attach a resume above) so we can
+                                    actually use them.</p>
                             </div>
 
                             <div class="form-group full-width">
-                                <label for="workExperience">Briefly, your work experience <span
+                                <label for="workExperience">Your work, in your own words <span
                                         class="optional-tag">optional</span></label>
-                                <textarea id="workExperience" name="workExperience" class="form-input" rows="3"
-                                    placeholder="No resume handy? In a sentence or two: where you've worked, what you built, and what you're proud of."></textarea>
+                                <textarea id="workExperience" name="workExperience" class="form-input" rows="4"
+                                    placeholder="No resume or portfolio file handy? Paste portfolio highlights here — or just tell us in a few lines: where you've worked, what you built, and what you're most proud of."></textarea>
                             </div>
 
                             <div class="form-group full-width">
@@ -526,7 +502,6 @@
                 initInputValidation();
                 initFileUpload();
                 initTrackSelector();
-                applyTrackColors();
                 initStarModal();
                 initSuggestTopics();
                 updateButtonState();
@@ -709,15 +684,25 @@
                             if (data.success) {
                                 resumeCacheKey = data.cache_key;
                                 document.getElementById('resumeCacheKey').value = data.cache_key;
-                                showStatus('success', 'Extracted ' + data.char_count + ' characters');
+                                var chars = (data.char_count || 0).toLocaleString();
+                                showStatus('success', 'Resume added — we read ' + chars + ' characters and will tailor your questions to it.');
+                                if (typeof showToast === 'function') {
+                                    showToast('Resume uploaded — ' + file.name, { type: 'success' });
+                                }
                             } else {
                                 showStatus('error', data.message || 'Upload failed');
+                                if (typeof showToast === 'function') {
+                                    showToast(data.message || 'Resume upload failed', { type: 'error' });
+                                }
                                 clearFile();
                             }
                         })
                         .catch(function (err) {
                             console.error('[UPLOAD] Error:', err);
                             showStatus('error', 'Upload failed: ' + err.message);
+                            if (typeof showToast === 'function') {
+                                showToast('Resume upload failed. Please try again.', { type: 'error' });
+                            }
                             clearFile();
                         });
                 }
@@ -1014,13 +999,6 @@
                 }
             }
 
-            var TRACK_COLORS = {
-                intro: '#22c55e',
-                behavioral: '#f59e0b',
-                technical_voice: '#3b82f6',
-                coding: '#8b5cf6'
-            };
-
             var TRACK_DETAILS = {
                 intro: '5 stages · ~20 min · Self-intro → Experience → Company fit · Speak naturally, real-time AI responses · You can skip stages',
                 behavioral: '4 stages · ~25 min · STAR-format questions · Framework-aligned (Amazon / Google / Meta / Generic) · Follow-up depth configurable',
@@ -1034,14 +1012,6 @@
                 if (!box || !content) return;
                 content.textContent = TRACK_DETAILS[track] || '';
                 box.classList.add('visible');
-            }
-
-            function applyTrackColors() {
-                document.querySelectorAll('.track-card[data-track]').forEach(function (card) {
-                    var track = card.getAttribute('data-track');
-                    var color = TRACK_COLORS[track];
-                    if (color) card.style.setProperty('--track-accent', color);
-                });
             }
 
             function selectTrack(card) {
