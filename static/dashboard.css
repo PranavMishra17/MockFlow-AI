@@ -14,19 +14,131 @@ Scoped to the dashboard page via .dashboard-page where it matters.
     overflow: auto;
 }
 
-.dashboard-page .hero {
-    height: auto;
+/* Full-width shell: a soft gradient backdrop that fills the viewport, with a
+   centered, comfortably-sized content column. Replaces the landing page's
+   two-column .hero grid that previously squished the dashboard into a sliver. */
+.dashboard-shell {
     min-height: 100vh;
-    align-items: flex-start;
-    padding-top: var(--spacing-2xl);
-    padding-bottom: var(--spacing-2xl);
+    width: 100%;
+    padding: var(--spacing-2xl) var(--spacing-md);
+    background: linear-gradient(180deg, var(--bg-cream) 0%, var(--bg-warm) 100%);
+}
+
+.dashboard-container {
+    width: 100%;
+    max-width: 1040px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+/* ==================== PAGE HEADER ==================== */
+
+.dash-page-head {
+    text-align: center;
+    margin-bottom: var(--spacing-xs);
+}
+
+.dash-page-head h1 {
+    margin: 0 0 var(--spacing-xs);
+}
+
+.dash-page-sub {
+    color: var(--text-muted);
+    font-size: 1rem;
+    margin: 0;
+}
+
+/* ==================== CARD SURFACE ==================== */
+
+/* .card is used unstyled in markup elsewhere; scope a real surface to the
+   dashboard so the sections read as deliberate panels in both themes. */
+.dashboard-page .card {
+    background: var(--bg-card);
+    border: 1px solid var(--bg-soft);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    box-shadow: var(--shadow-soft);
+}
+
+/* ==================== ACCOUNT HEADER ==================== */
+
+.dash-account-row {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.dash-avatar {
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-green-deep), var(--accent-purple-deep));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.dash-account-meta {
+    flex: 1;
+    min-width: 0;
+}
+
+.dash-account-meta h2 {
+    margin: 0 0 0.25rem;
+    overflow-wrap: anywhere;
+}
+
+.dash-account-meta #userEmail {
+    color: var(--text-muted);
+    margin: 0 0 var(--spacing-xs);
+    overflow-wrap: anywhere;
+}
+
+.dash-logout-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+/* ==================== API KEYS SECTION ==================== */
+
+.dash-manage-keys {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.dash-apikeys-status {
+    padding: var(--spacing-sm);
+    background: var(--bg-warm);
+    border: 1px solid var(--bg-soft);
+    border-radius: var(--radius-sm);
+}
+
+.dash-apikeys-loading {
+    color: var(--text-muted);
+    font-size: 0.875rem;
+    margin: 0;
+}
+
+/* ==================== QUICK ACTIONS ==================== */
+
+.dash-quick-actions {
+    display: flex;
+    justify-content: center;
+    gap: var(--spacing-lg);
+    flex-wrap: wrap;
+    margin-top: var(--spacing-xs);
 }
 
 /* ==================== SECTION SCAFFOLD ==================== */
-
-.dash-section {
-    margin-bottom: var(--spacing-lg);
-}
 
 .dash-section-head {
     display: flex;
@@ -79,8 +191,8 @@ Scoped to the dashboard page via .dashboard-page where it matters.
 
 .stat-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: var(--spacing-sm);
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--spacing-md);
 }
 
 .stat-card {
@@ -256,8 +368,8 @@ Scoped to the dashboard page via .dashboard-page where it matters.
 
 .skeleton-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: var(--spacing-sm);
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: var(--spacing-md);
 }
 
 .skeleton-card {
@@ -311,8 +423,35 @@ Scoped to the dashboard page via .dashboard-page where it matters.
 
 /* ==================== RESPONSIVE ==================== */
 
+@media (max-width: 768px) {
+    .dashboard-shell {
+        padding: var(--spacing-lg) var(--spacing-sm);
+    }
+
+    .stat-grid,
+    .skeleton-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* The "By Track" card spans 2 cols on wide layouts; collapse on mobile. */
+    .stat-grid .stat-card[style*="span 2"] {
+        grid-column: auto !important;
+    }
+}
+
 @media (max-width: 600px) {
     .track-row {
         grid-template-columns: 6rem 1fr 1.75rem;
+    }
+
+    .dash-account-row {
+        flex-direction: column;
+        text-align: center;
+        gap: var(--spacing-sm);
+    }
+
+    .dash-section-head {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }
