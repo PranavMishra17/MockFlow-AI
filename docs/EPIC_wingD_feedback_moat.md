@@ -92,6 +92,15 @@ Only a narrow set of delivery metrics has research support. Compute these **dete
 
 ## 3. The evaluator redesign — per track × role × seniority
 
+### 3.0 Retire the legacy model (first-principles reset)
+
+This **replaces**, not augments, the old feedback system. We delete from the user-facing model:
+- the `FEEDBACKSCORES` **1–5 "overall_score"** and its **LLM-invented ad-hoc competencies** ("Technical Skills", etc.) — a number that maps to nothing in hiring;
+- the separate free-text **narrative essay** (`build_post_interview_feedback_prompt`) that didn't reinforce the scores;
+- any score **without an evidence quote**.
+
+What we keep: the Phase 0/1 **measurement substrate** (deterministic delivery metrics, persistence, the delivery + coding panels). The verdict *is* the feedback now; the old gauge-plus-essay is gone.
+
 ### 3.1 Architecture
 
 One **evaluator service**, parameterized and assembled from composable rubric blocks:
@@ -198,15 +207,22 @@ The user explicitly wants to compare interviews (different tracks, same user, im
 
 ---
 
-## 5. Dashboard & insights spec
+## 5. Surfacing it to users — the moment the interview ends (Phase 5)
 
-Coaching-dashboard patterns (Coursera/Skillsoft + learning-analytics research) + the Wispr lesson (*calm surface, one earned headline number; hide the machinery*). The dominant adoption finding: **dashboards fail when they show analytics without actionable, goal-aligned insight** — so every chart maps to a next action.
+First principle: when the interview ends the user is anxious and wants **one** thing first — *"would I have gotten it?"* So feedback is a **progressive reveal**, not a dashboard dump (Wispr lesson: *calm surface, one earned read; hide the machinery*; learning-analytics lesson: *insight without a next action fails*).
 
-1. **Per-session report (`feedback.html`) rebuilt around the verdict:** top = **hire/no-hire band + confidence + level-read + one-sentence headline**; per-signal cards with the **evidence quote** and the **"to raise this"** line; a **delivery panel** (finally rendered — WPM/filler vs research bands + one technique each, insights E1); a **coding block** (finally rendered — objective pass/fail, approach grade, complexity, edge cases, insights E3); a distinct **"strong-hire differentiators"** section.
-2. **Profile / "Interview Personality" → behavioral profile:** a **competency radar** with overlays for *current vs previous* and *vs a target-level reference polygon* (e.g. "L4 SWE bar"); **per-competency trend lines** across sessions; cross-track comparison; recurring filler/pacing patterns; a **mastery checklist** (achieved/developing) driving **one prioritized next action.** Surfaced on the landing page so new users see where they're headed.
-3. **Compare view:** pick 2+ sessions (any tracks) → side-by-side competency bands + deltas + "what improved / what still lags."
+**The four moments (the rebuilt `feedback.html` flow):**
 
-**Anti-patterns:** a single opaque 1–100 score; any score without an evidence quote; emotion/face scoring; "you'll get hired" claims; data-only dashboards with no next step.
+1. **Moment 1 — the Verdict card (instant, the emotional core).** *"Where you'd land in a real {archetype} {role} loop **today**: **Lean Hire** · performing at **new-grad** level — *'Strong problem-solving, but ownership stayed vague.'*"* The 7-point band + confidence + **level-read** + one hiring-manager sentence. Always paired with **the gap to the next band** so it's constructive, never a dead-end grade. It is a *today's-practice read*, never a "you will/won't be hired" claim (HireVue line).
+2. **Moment 2 — the signals, with your own words (the trust-builder).** Scrollable cards: each named signal → band → **a verbatim quote from your transcript** → the one **"to raise this"** move. Citing the candidate's own words is what makes it feel like a coach who *listened*, not a generic scorer. Reveal progressively, not all at once.
+3. **Moment 3 — your next rep (drives return).** The single highest-leverage fix (lowest signal / recurring gap) + a **"practice this again"** CTA that pre-fills the same track/role/level.
+4. **Moment 4 — your trajectory (personal + longitudinal).** "vs your last session" delta + the saved report they can revisit. Plus the **delivery panel** (Phase 1) and **coding block** (Phase 1) fold in as supporting evidence under the verdict.
+
+**Profile / "Interview Personality" → behavioral profile:** a **competency radar** with overlays for *current vs previous* and *vs a target-level reference polygon* ("the L4 SWE bar"); **per-competency trend lines**; cross-track comparison; recurring filler/pacing patterns; a **mastery checklist** driving one prioritized next action. Surfaced on the landing page so new users see where they're headed.
+
+**Compare view:** pick 2+ sessions (any tracks) → side-by-side signal bands + deltas + "what improved / what still lags."
+
+**Anti-patterns we delete:** the 1–5 overall_score and ad-hoc competencies; the disconnected narrative essay; any score without an evidence quote; emotion/face scoring; "you'll get hired" claims; a dump of charts with no next action.
 
 ---
 
@@ -216,7 +232,7 @@ File-level wiring in [`EPIC_wingD_insights.md`](EPIC_wingD_insights.md).
 
 - **Phase 0 — Stop lying, start persisting.** Inject `speech_analytics` values into the feedback prompt (`prompts.py`) to kill the hallucinated filler count; persist per-session per-competency bands + level-read + deterministic metrics to a queryable table (`db.py` + migration). Add user-turn stage tags (today only agent turns are tagged in `agent_worker.py`, so per-stage evidence needs interleaving otherwise).
 - **Phase 1 — Surface what we already compute.** Render the delivery panel (E1) + coding block (E3) in `feedback.html`. Pure frontend + payload we already send.
-- **Phase 2 — The evaluator redesign.** Activate & extend `TRACK_FEEDBACK` into the §3.2 contract; rewrite the prompt to the hiring-decision lens with criterion-level anchored scoring, **evidence-quote-before-band**, negative/anti-pattern criteria, few-shot exemplars, temp 0, role+seniority+archetype params, and the **down-level read**; route to the strongest **non-interviewer** model. Wire Piston `evaluation_result` into the coding verdict.
+- **Phase 2 — The evaluator redesign (replaces the legacy scorer, §3.0).** New `evaluator.py` producing the §3.2 verdict contract; **retire `FEEDBACKSCORES` (1–5 + ad-hoc competencies) and the standalone narrative essay.** Hiring-decision-lens prompt with criterion-level anchored scoring, **evidence-quote-before-band**, negative/anti-pattern criteria, few-shot exemplars, temp 0, role+seniority+archetype params, and the **down-level read**; route to the strongest **non-interviewer** model. Wire Piston `evaluation_result` into the coding verdict. Persist the verdict (extend `interview_scores`).
 - **Phase 3 — Longitudinal & dashboard.** Canonical competency mapping, trends (≥3 sessions), cross-track compare, radar + target-polygon, "work on this next." Rebuild the Personality view; surface on landing.
 - **Phase 4 — Calibration.** Human gold set; measure κ; tune to 75–90%; re-check periodically (and re-verify mid-2026 interview shifts, §7) before leaning on scores publicly.
 
