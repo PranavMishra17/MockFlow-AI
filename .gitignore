@@ -200,4 +200,6 @@ supabase/.env
 
 # Git worktrees
 .worktrees/
+
+# E2E screenshot artifacts
 /tests/e2e/_shots/
