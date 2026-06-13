@@ -213,7 +213,6 @@ class InterviewAgent(Agent):
 
     def _get_stage_instructions(self, state: InterviewState, stage) -> str:
         """Build personalized stage instructions with track-aware document context."""
-        from prompts import build_stage_instructions
         track_type = getattr(state, 'track_type', 'intro')
         stage_val = stage.value if hasattr(stage, 'value') else str(stage)
 

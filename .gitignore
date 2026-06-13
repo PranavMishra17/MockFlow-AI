@@ -193,6 +193,10 @@ PITCH_SCRIPTS.md
 *.env.local
 supabase/.env
 /interviews
+/feedback
+
+# Local scheduler lock
+.claude/scheduled_tasks.lock
 
 # Git worktrees
 .worktrees/
