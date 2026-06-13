@@ -455,12 +455,13 @@ h1 {
     max-width: 33ch;
 }
 
-/* ---- Hero CTA cluster (lives in the hero, not a separate rail) ---- */
+/* ---- Hero CTA cluster (sits under the orb, on the right) ---- */
 .hero-cta {
     display: flex;
     flex-wrap: wrap;
+    justify-content: center;
     gap: var(--spacing-sm);
-    margin-bottom: var(--spacing-lg);
+    margin: var(--spacing-xs) 0 0;
 }
 
 .btn-cta {
@@ -549,13 +550,11 @@ h1 {
 
 /* ---- Feature cards (the 4 capabilities) ---- */
 .features {
-    grid-column: 2;
     list-style: none;
     display: grid;
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
     gap: var(--spacing-sm);
-    margin: 0;
-    align-content: center;
+    margin: 0 0 var(--spacing-lg);
     min-width: 0;
 }
 

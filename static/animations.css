@@ -35,6 +35,12 @@
     --mf-ink-core: var(--success);
     --mf-glow: var(--soul-glow);
     --mf-speed: 1;
+    --mf-eye: var(--text-primary);
+}
+
+/* Eyes read as a soft warm grey in dark mode — not a stark, flat white. */
+html[data-theme="dark"] {
+    --mf-eye: #a79e93;
 }
 
 
@@ -88,38 +94,22 @@
     animation: mf-halo calc(5.5s / var(--mf-speed)) ease-in-out infinite;
 }
 
-/* The concentric breathing core — three nested rings echo the logo mark */
+/* The core is just a soft outline ring (matching the real interview visualizer's
+   voice-circle) — NO filled green blob. The eyes float inside it; the rays do the
+   talking. A whisper of fill keeps it from looking hollow. */
 .mf-orb__core {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: 46%;
-    height: 46%;
+    width: 58%;
+    height: 58%;
     transform: translate(-50%, -50%);
     border-radius: 50%;
-    background:
-        radial-gradient(circle at 50% 42%,
-            color-mix(in srgb, var(--mf-ink-core) 88%, white) 0%,
-            var(--mf-ink) 38%,
-            color-mix(in srgb, var(--mf-ink-soft) 92%, var(--mf-ink)) 100%);
-    box-shadow:
-        0 0 0 6% color-mix(in srgb, var(--mf-ink-soft) 55%, transparent),
-        0 0 0 12% color-mix(in srgb, var(--mf-ink-soft) 24%, transparent),
-        0 6px 24px color-mix(in srgb, var(--mf-ink) 35%, transparent);
+    border: 1.5px solid color-mix(in srgb, var(--mf-ink) 24%, transparent);
+    background: radial-gradient(circle at 50% 50%,
+            color-mix(in srgb, var(--mf-ink) 7%, transparent) 0%,
+            transparent 72%);
     animation: mf-breathe calc(4.5s / var(--mf-speed)) ease-in-out infinite;
-}
-
-/* A thin specular sheen that glides across the core, giving it depth */
-.mf-orb__core::after {
-    content: '';
-    position: absolute;
-    inset: 8%;
-    border-radius: 50%;
-    background: radial-gradient(circle at 34% 28%,
-            rgba(255, 255, 255, 0.55) 0%,
-            transparent 42%);
-    opacity: 0.7;
-    animation: mf-sheen calc(6s / var(--mf-speed)) ease-in-out infinite;
 }
 
 /* Ray ring container — fills the orb; each child <span> is one ray */
@@ -183,7 +173,7 @@
     position: relative;
     width: calc(var(--mf-orb-size) * 0.055);
     height: calc(var(--mf-orb-size) * 0.055);
-    background: var(--text-primary);
+    background: var(--mf-eye);
     border-radius: 50%;
     animation:
         mf-look calc(7s / var(--mf-speed)) ease-in-out infinite,
@@ -222,7 +212,7 @@
     position: relative;
     width: var(--mf-eye-size);
     height: var(--mf-eye-size);
-    background: var(--text-primary);
+    background: var(--mf-eye);
     border-radius: 50%;
     animation:
         mf-look calc(7s / var(--mf-speed)) ease-in-out infinite,
@@ -391,26 +381,49 @@
      </div>  (set --mf-orbit-count to the number of dots)                        */
 .mf-orbit {
     --mf-orbit-size: 120px;
-    --mf-orbit-count: 3;
+    --mf-orbit-ring: color-mix(in srgb, var(--mf-ink) 20%, transparent);
     position: relative;
     width: var(--mf-orbit-size);
     height: var(--mf-orbit-size);
+    border-radius: 50%;
+    /* three faint orbit tracks at 30% / 41% / 50% radius */
+    background:
+        radial-gradient(circle at 50% 50%, transparent calc(30% - 1px), var(--mf-orbit-ring) 30%, transparent calc(30% + 1px)),
+        radial-gradient(circle at 50% 50%, transparent calc(41% - 1px), var(--mf-orbit-ring) 41%, transparent calc(41% + 1px)),
+        radial-gradient(circle at 50% 50%, transparent calc(50% - 1px), var(--mf-orbit-ring) 50%, transparent calc(50% + 1px));
 }
 
+/* central "sun" */
+.mf-orbit::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 15%;
+    height: 15%;
+    margin: -7.5% 0 0 -7.5%;
+    border-radius: 50%;
+    background: var(--mf-ink-core);
+    box-shadow: 0 0 10px var(--mf-glow);
+}
+
+/* three bodies, each on its own track + period — a neat little system */
 .mf-orbit > span {
     position: absolute;
     top: 50%;
     left: 50%;
-    width: calc(var(--mf-orbit-size) * 0.1);
-    height: calc(var(--mf-orbit-size) * 0.1);
-    margin: calc(var(--mf-orbit-size) * -0.05);
+    width: calc(var(--mf-orbit-size) * 0.085);
+    height: calc(var(--mf-orbit-size) * 0.085);
+    margin: calc(var(--mf-orbit-size) * -0.0425) 0 0 calc(var(--mf-orbit-size) * -0.0425);
     border-radius: 50%;
     background: var(--mf-ink);
     box-shadow: 0 0 8px var(--mf-glow);
-    transform-origin: center;
-    animation: mf-orbit-spin calc(6s / var(--mf-speed)) linear infinite;
-    animation-delay: calc((var(--i) / var(--mf-orbit-count)) * -6s / var(--mf-speed));
+    animation: mf-orbit-spin calc(var(--mf-orbit-dur, 6s) / var(--mf-speed)) linear infinite;
 }
+
+.mf-orbit > span:nth-child(1) { --mf-orbit-r: 0.30; --mf-orbit-dur: 3.6s; }
+.mf-orbit > span:nth-child(2) { --mf-orbit-r: 0.41; --mf-orbit-dur: 5.4s; }
+.mf-orbit > span:nth-child(3) { --mf-orbit-r: 0.50; --mf-orbit-dur: 8s; }
 
 /* 6b. .mf-pulse-dot — a "live" status dot with an expanding ring halo.
    Plug-in:  <span class="mf-pulse-dot"></span>                                  */
@@ -433,21 +446,31 @@
     animation: mf-pulse-ring calc(2.4s / var(--mf-speed)) ease-out infinite;
 }
 
-/* 6c. .mf-shimmer-text — a slow gradient wash over a headline.
-   Plug-in:  <h1 class="mf-shimmer-text">Your headline</h1>                      */
+/* 6c. .mf-shimmer-text — a green wave sweeps the headline right-to-left, then
+   "sticks" inside the trailing letters you wrap in .mf-shimmer-text__lock (e.g.
+   the ".ai"), holding them green until the next wave arrives and carries it off.
+   Plug-in:
+     <h2 class="mf-shimmer-text">MockFlow<span class="mf-shimmer-text__lock">.ai</span></h2> */
 .mf-shimmer-text {
-    background: linear-gradient(100deg,
-            var(--text-primary) 0%,
-            var(--text-primary) 38%,
+    --mf-shimmer-dur: 5s;
+    background: linear-gradient(90deg,
+            var(--text-primary) 0%, var(--text-primary) 42%,
+            color-mix(in srgb, var(--mf-ink) 65%, white) 48%,
             var(--mf-ink) 50%,
-            var(--text-primary) 62%,
-            var(--text-primary) 100%);
-    background-size: 220% 100%;
+            color-mix(in srgb, var(--mf-ink) 65%, white) 52%,
+            var(--text-primary) 58%, var(--text-primary) 100%);
+    background-size: 260% 100%;
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
     color: transparent;
-    animation: mf-shimmer calc(7s / var(--mf-speed)) linear infinite;
+    animation: mf-shimmer calc(var(--mf-shimmer-dur) / var(--mf-speed)) ease-in-out infinite;
+}
+
+/* The letters the wave locks onto. While transparent they show the passing wave;
+   once the wave clears they hold solid green, then release at the next pass. */
+.mf-shimmer-text__lock {
+    animation: mf-lock-green calc(var(--mf-shimmer-dur) / var(--mf-speed)) ease infinite;
 }
 
 /* 6d. .mf-float — gentle hovering lift for any element.
@@ -517,8 +540,8 @@
 }
 
 @keyframes mf-orbit-spin {
-    from { transform: rotate(0deg) translateX(calc(var(--mf-orbit-size) * 0.42)) rotate(0deg); }
-    to   { transform: rotate(360deg) translateX(calc(var(--mf-orbit-size) * 0.42)) rotate(-360deg); }
+    from { transform: rotate(0deg)   translateX(calc(var(--mf-orbit-size) * var(--mf-orbit-r, 0.42))) rotate(0deg); }
+    to   { transform: rotate(360deg) translateX(calc(var(--mf-orbit-size) * var(--mf-orbit-r, 0.42))) rotate(-360deg); }
 }
 
 @keyframes mf-pulse-ring {
@@ -528,8 +551,16 @@
 }
 
 @keyframes mf-shimmer {
-    0%   { background-position: 120% 0; }
-    100% { background-position: -120% 0; }
+    0%   { background-position: 165% 0; }   /* green band waiting off to the right */
+    34%  { background-position: -65% 0; }   /* band has swept right -> left, off-screen */
+    100% { background-position: -65% 0; }   /* hold base colour until the next pass */
+}
+
+@keyframes mf-lock-green {
+    0%, 30%  { -webkit-text-fill-color: transparent; color: transparent; text-shadow: none; }
+    35%, 90% { -webkit-text-fill-color: var(--mf-ink); color: var(--mf-ink);
+               text-shadow: 0 0 12px var(--mf-glow); }
+    100%     { -webkit-text-fill-color: transparent; color: transparent; text-shadow: none; }
 }
 
 @keyframes mf-float {
@@ -580,11 +611,17 @@
         transform: none !important;
     }
 
-    /* Shimmer headline falls back to a solid, fully legible fill. */
+    /* Shimmer headline falls back to a solid, fully legible fill — with the
+       locked letters resting in their stuck-green state. */
     .mf-shimmer-text {
         -webkit-text-fill-color: var(--text-primary);
         color: var(--text-primary);
         background: none;
+    }
+    .mf-shimmer-text__lock {
+        animation: none !important;
+        -webkit-text-fill-color: var(--mf-ink);
+        color: var(--mf-ink);
     }
 
     /* Show one resting bloom ring instead of a sequence. */

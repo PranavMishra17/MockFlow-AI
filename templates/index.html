@@ -42,39 +42,11 @@
                         <circle cx="24" cy="24" r="12" fill="#81C784"/>
                         <circle cx="24" cy="24" r="6" fill="#4CAF50"/>
                     </svg>
+                    <span class="logo-eyes" aria-hidden="true"><i></i><i></i></span>
                 </div>
 
-                <h1 class="reveal" data-reveal="3">MockFlow<span class="wordmark-dot">.ai</span></h1>
+                <h1 class="reveal" data-reveal="3"><span class="mf-shimmer-text">MockFlow<span class="mf-shimmer-text__lock">.ai</span></span></h1>
                 <p class="tagline reveal" data-reveal="4">It interviews you out loud, reads your live code as you type, and scores how you actually deliver — like a real panel, on demand.</p>
-
-                <div class="hero-cta reveal" data-reveal="5">
-                    <a href="/start" class="btn-cta primary">
-                        <span class="btn-cta-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
-                                <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
-                                <line x1="12" y1="18" x2="12" y2="22"/>
-                            </svg>
-                        </span>
-                        <span class="btn-cta-label">Start Interview</span>
-                        <span class="btn-cta-arrow" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                                <line x1="5" y1="12" x2="19" y2="12"/>
-                                <polyline points="12 5 19 12 12 19"/>
-                            </svg>
-                        </span>
-                    </a>
-
-                    <a href="/past-calls" class="btn-cta ghost">
-                        <span class="btn-cta-icon" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                <circle cx="12" cy="12" r="9"/>
-                                <polyline points="12 7 12 12 16 14"/>
-                            </svg>
-                        </span>
-                        <span class="btn-cta-label">Past Sessions</span>
-                    </a>
-                </div>
 
                 <ul class="features" aria-label="What MockFlow.ai does">
                 <li class="reveal" data-reveal="6">
@@ -153,6 +125,35 @@
                 <p class="hero-orb-caption" aria-hidden="true">
                     <span class="mf-pulse-dot"></span> Ready when you are
                 </p>
+
+                <div class="hero-cta reveal" data-reveal="6">
+                    <a href="/start" class="btn-cta primary">
+                        <span class="btn-cta-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/>
+                                <path d="M19 10v1a7 7 0 0 1-14 0v-1"/>
+                                <line x1="12" y1="18" x2="12" y2="22"/>
+                            </svg>
+                        </span>
+                        <span class="btn-cta-label">Start Interview</span>
+                        <span class="btn-cta-arrow" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="5" y1="12" x2="19" y2="12"/>
+                                <polyline points="12 5 19 12 12 19"/>
+                            </svg>
+                        </span>
+                    </a>
+
+                    <a href="/past-calls" class="btn-cta ghost">
+                        <span class="btn-cta-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="12" cy="12" r="9"/>
+                                <polyline points="12 7 12 12 16 14"/>
+                            </svg>
+                        </span>
+                        <span class="btn-cta-label">Past Sessions</span>
+                    </a>
+                </div>
             </div>
         </div>
     </main>
@@ -162,31 +163,60 @@
     </footer>
 
     <style>
-        /* Ripple rings */
-        .ripple-ring {
-            position: fixed;
-            border-radius: 50%;
-            border: 2px solid rgba(76, 175, 80, 0.65);
-            width: 12px; height: 12px;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            z-index: 0;
-            animation: ripple-out 1.5s cubic-bezier(0.08, 0.55, 0.25, 1) forwards;
+        /* The logo can hold the agent's eyes; hidden until the greeting plays. */
+        .logo-mark { position: relative; overflow: visible; }
+        .logo-mark svg { transform-origin: center center; }
+        .logo-eyes {
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            gap: 13px; pointer-events: none; opacity: 0; z-index: 2;
         }
-        @keyframes ripple-out {
-            0%   { width: 12px;              height: 12px;              opacity: 1;   border-width: 2.5px; }
-            20%  { opacity: 0.85; }
-            100% { width: var(--ring-max, 580px); height: var(--ring-max, 580px); opacity: 0; border-width: 0.5px; }
+        .logo-eyes i {
+            width: 9px; height: 9px; border-radius: 50%;
+            background: var(--text-primary); transform: scale(0);
+        }
+        html[data-theme="dark"] .logo-eyes i { background: #a79e93; }
+
+        /* CLICK GREETING — the concentric circles expand, snap-collapse, the
+           agent's eyes pop out and blink, then everything returns home. ~3.4s. */
+        .logo-mark.is-greeting {
+            background: transparent; border-color: transparent; box-shadow: none;
+        }
+        .logo-mark { transition: background-color .4s ease, border-color .4s ease, box-shadow .4s ease; }
+        .logo-mark.is-greeting svg      { animation: logo-greet-circles 3.4s cubic-bezier(0.4,0,0.2,1) both; }
+        .logo-mark.is-greeting .logo-eyes   { animation: logo-greet-eyewrap 3.4s ease both; }
+        .logo-mark.is-greeting .logo-eyes i { animation: logo-greet-eye 3.4s ease both; }
+        .logo-mark.is-greeting .logo-eyes i:nth-child(2) { animation-delay: .05s; }
+
+        @keyframes logo-greet-circles {
+            0%   { transform: scale(1); }
+            16%  { transform: scale(1.55); }   /* expand */
+            30%  { transform: scale(0.5); }    /* quick collapse */
+            42%  { transform: scale(0.72); }
+            80%  { transform: scale(0.72); }   /* hold small while the eyes are out */
+            100% { transform: scale(1); }      /* return home */
+        }
+        @keyframes logo-greet-eyewrap {
+            0%, 32% { opacity: 0; }
+            40%, 76% { opacity: 1; }
+            90%, 100% { opacity: 0; }
+        }
+        @keyframes logo-greet-eye {
+            0%, 32% { transform: scale(0); }
+            42%     { transform: scale(1.4); }            /* pop */
+            50%     { transform: scale(1); }
+            62%     { transform: scale(1) scaleY(1); }
+            66%     { transform: scale(1) scaleY(0.14); } /* blink */
+            70%     { transform: scale(1) scaleY(1); }
+            80%     { transform: scale(1); }
+            90%, 100% { transform: scale(0); }
         }
 
-        /* Logo pulse on click */
-        .logo-mark.logo-pulse {
-            animation: logo-pop 0.35s ease-out forwards;
-        }
-        @keyframes logo-pop {
-            0%   { transform: scale(1); }
-            40%  { transform: scale(1.13); }
-            100% { transform: scale(1); }
+        @media (prefers-reduced-motion: reduce) {
+            .logo-mark.is-greeting svg,
+            .logo-mark.is-greeting .logo-eyes,
+            .logo-mark.is-greeting .logo-eyes i { animation: none !important; }
+            .logo-mark.is-greeting { background: var(--bg-card); border-color: var(--hairline); }
         }
     </style>
     <script src="/static/header.js"></script>
@@ -198,50 +228,24 @@
             var reduceMotion = window.matchMedia &&
                 window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-            function pulseLogo() {
-                var rect = logo.getBoundingClientRect();
-                var cx = rect.left + rect.width / 2;
-                var cy = rect.top + rect.height / 2;
-
-                // Logo pulse
-                logo.classList.remove('logo-pulse');
-                void logo.offsetWidth; // reflow to restart animation
-                logo.classList.add('logo-pulse');
-                logo.addEventListener('animationend', function() {
-                    logo.classList.remove('logo-pulse');
-                }, { once: true });
-
-                if (reduceMotion) return; // skip the ripple sequence
-
-                // 5 rings — progressively larger and slower, staggered
-                var rings = [
-                    { delay: 0,   maxSize: 100, dur: 0.9  },
-                    { delay: 90,  maxSize: 240, dur: 1.2  },
-                    { delay: 185, maxSize: 390, dur: 1.55 },
-                    { delay: 280, maxSize: 530, dur: 1.85 },
-                    { delay: 370, maxSize: 660, dur: 2.1  }
-                ];
-
-                rings.forEach(function(r) {
-                    setTimeout(function() {
-                        var ring = document.createElement('div');
-                        ring.className = 'ripple-ring';
-                        ring.style.left = cx + 'px';
-                        ring.style.top = cy + 'px';
-                        ring.style.setProperty('--ring-max', r.maxSize + 'px');
-                        ring.style.animationDuration = r.dur + 's';
-                        document.body.appendChild(ring);
-                        ring.addEventListener('animationend', function() { ring.remove(); });
-                    }, r.delay);
-                });
+            // Click the concentric-circle logo: it expands, snap-collapses, the
+            // agent's eyes pop out and blink, then it settles back. The whole
+            // 3.4s choreography lives in CSS (.logo-mark.is-greeting); we just
+            // toggle the class and guard against re-triggering mid-play.
+            function greetLogo() {
+                if (!logo || logo.classList.contains('is-greeting')) return;
+                logo.classList.add('is-greeting');
+                window.setTimeout(function() {
+                    logo.classList.remove('is-greeting');
+                }, 3450);
             }
 
             if (logo) {
-                logo.addEventListener('click', pulseLogo);
+                logo.addEventListener('click', greetLogo);
                 logo.addEventListener('keydown', function(e) {
                     if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
                         e.preventDefault();
-                        pulseLogo();
+                        greetLogo();
                     }
                 });
             }
