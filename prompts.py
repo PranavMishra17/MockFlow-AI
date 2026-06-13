@@ -557,7 +557,7 @@ SCORING GUIDELINES:
 - Each competency score: 1=Poor, 2=Below Average, 3=Average, 4=Good, 5=Excellent
 - top_strength: One sentence describing their best quality
 - top_improvement: One sentence describing the most impactful area to work on
-- filler_word_count: Approximate count of filler words (um, uh, like, basically, kind of)
+- filler_word_count: Echo the MEASURED filler total given in the delivery block below. Do NOT estimate or invent this number — it is computed deterministically and will be overwritten with the measured value regardless.
 - answer_structure_score: 1-5 rating on how well they structured answers (STAR method usage)
 
 Return ONLY the JSON object, nothing else."""
@@ -571,6 +571,10 @@ Return ONLY the JSON object, nothing else."""
 <JOB_SUMMARY>
 {job_summary}
 </JOB_SUMMARY>
+
+<MEASURED_DELIVERY>
+{speech_summary}
+</MEASURED_DELIVERY>
 
 <INTERVIEW_CHAT>
 {interview_chat}

@@ -1389,10 +1389,13 @@ def generate_feedback_scores():
             except Exception as e:
                 logger.warning(f"[API] Failed to fetch coding submissions: {e}")
 
-        # Build scores extraction prompt
+        # Build scores extraction prompt. Inject MEASURED delivery so the model
+        # references real numbers instead of inventing a filler count.
+        from feedback_scoring import build_speech_summary, finalize_scores
         user_prompt = FEEDBACKSCORES.user_template.format(
             candidate_profile=candidate_profile,
             job_summary=job_summary,
+            speech_summary=build_speech_summary(speech_data),
             interview_chat=interview_chat
         )
 
@@ -1449,7 +1452,23 @@ def generate_feedback_scores():
                 'filler_word_count': 0,
                 'answer_structure_score': 3
             }
-        
+
+        # Ground the scores in deterministic analytics: overwrite any LLM-guessed
+        # filler count with the measured value and attach the delivery block.
+        scores_data = finalize_scores(scores_data, speech_data)
+
+        # Persist a queryable, per-session score row (foundation for trends).
+        try:
+            if user_id:
+                supabase_client.save_interview_scores(
+                    user_id=user_id,
+                    interview_id=interview_id,
+                    track=interview_track,
+                    scores=scores_data,
+                )
+        except Exception as e:
+            logger.warning(f"[API] Could not persist interview scores: {e}")
+
         logger.info(f"[API] Scores extracted successfully for {interview_id}")
 
         return jsonify({
