@@ -1,217 +1,1597 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light" class="lp-c">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MockFlow-AI — AI-Powered Mock Interviews</title>
-    <meta name="description" content="Practice job interviews with a realistic AI interviewer. Get instant, structured feedback across behavioral, technical, and coding tracks — bring your own API key, no signup friction.">
-    <meta property="og:title" content="MockFlow-AI — AI-Powered Mock Interviews">
-    <meta property="og:description" content="Practice job interviews with a realistic AI interviewer and get instant, structured feedback across behavioral, technical, and coding tracks.">
+    <title>MockFlow.ai — Rehearse the real interview</title>
+    <meta name="description" content="Rehearse the real interview — voice, live code, and a score on how you land. Two interviews on us, no API keys, no setup.">
+
+    <!-- Open Graph / social -->
+    <meta property="og:title" content="MockFlow.ai — Rehearse the real interview">
+    <meta property="og:description" content="Rehearse the real interview — voice, live code, and a score on how you land. Two interviews on us, no API keys, no setup.">
     <meta property="og:type" content="website">
+    <meta property="og:site_name" content="MockFlow.ai">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="MockFlow.ai — Rehearse the real interview">
+    <meta name="twitter:description" content="Rehearse the real interview — voice, live code, and a score on how you land.">
+
+    <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
     <link rel="apple-touch-icon" href="/favicon.ico">
+
+    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="/static/styles.css">
-    <link rel="stylesheet" href="/static/modals.css">
-</head>
-<body>
-    <!-- Auth Header (Left Side) - populated by header.js -->
-    <div class="auth-header" id="authHeader"></div>
 
-    <!-- Action Buttons (Right Side) - populated by header.js -->
+    <!-- App styles, then the page-scoped Option C styles -->
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/animations.css">
+    <link rel="stylesheet" href="/static/modals.css">
+    <style>
+        /* ============================================================
+           THE LANDING PAGE · "BOLD & PLAYFUL" (promoted Option C)
+           Page-scoped styles only. Reuses tokens + the .mf-* kit.
+           styles.css locks html/body to overflow:hidden for the app —
+           this marketing page must scroll, so we unlock it here.
+           Light-only. No dark mode.
+           ============================================================ */
+        html.lp-c, html.lp-c body {
+            height: auto;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        body.lp-c-body {
+            background: var(--bg-cream);
+            scroll-behavior: smooth;
+        }
+        @media (prefers-reduced-motion: reduce) {
+            body.lp-c-body { scroll-behavior: auto; }
+        }
+
+        .lp-c {
+            --maxw: 1140px;
+            --pad-x: clamp(1.15rem, 5vw, 3rem);
+        }
+        .lp-wrap {
+            max-width: var(--maxw);
+            margin: 0 auto;
+            padding-left: var(--pad-x);
+            padding-right: var(--pad-x);
+            width: 100%;
+        }
+        .lp-c section { position: relative; }
+
+        a.lp-skip {
+            position: absolute;
+            left: -9999px;
+            top: 0;
+            z-index: 200;
+            background: var(--solid-surface);
+            color: var(--on-solid);
+            padding: 0.6rem 1rem;
+            border-radius: var(--radius-md);
+            font-weight: 700;
+            text-decoration: none;
+        }
+        a.lp-skip:focus { left: 1rem; top: 1rem; }
+
+        /* Shared focus ring for real interactive elements (NOT the orb) */
+        .lp-c a:focus-visible,
+        .lp-c button:focus-visible,
+        .lp-c [tabindex]:focus-visible {
+            outline: 3px solid var(--focus-ring);
+            outline-offset: 3px;
+            border-radius: var(--radius-sm);
+        }
+
+        /* ---------- Signed-in / signed-out visibility (JS toggles body[data-auth]) ----------
+           Default to the signed-OUT marketing view; reveal the right pieces once
+           /api/auth/status resolves. Hidden the hard way so nothing flashes. */
+        .signed-in-only { display: none !important; }
+        .signed-out-only { display: inline-flex; }
+        body[data-auth="in"] .signed-in-only { display: inline-flex !important; }
+        body[data-auth="in"] .signed-out-only { display: none !important; }
+        /* Block-level variants for wrappers that aren't inline */
+        .signed-in-only.is-block { display: none !important; }
+        body[data-auth="in"] .signed-in-only.is-block { display: block !important; }
+
+        /* ---------- Buttons (bold, springy) ---------- */
+        .lp-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 1rem 1.7rem;
+            border-radius: var(--radius-full);
+            font-size: 1.02rem;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+            text-decoration: none;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: transform .25s cubic-bezier(.34,1.45,.5,1),
+                box-shadow .25s ease, background-color .25s ease,
+                color .25s ease, border-color .25s ease;
+            will-change: transform;
+        }
+        .lp-btn svg { width: 1.15rem; height: 1.15rem; }
+        .lp-btn .lp-btn-arrow { transition: transform .25s cubic-bezier(.34,1.45,.5,1); }
+        .lp-btn--primary {
+            background: var(--solid-surface);
+            color: var(--on-solid);
+            box-shadow: var(--shadow-medium);
+        }
+        .lp-btn--primary svg { stroke: currentColor; }
+        .lp-btn--primary:hover {
+            background: var(--solid-surface-hover);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: var(--shadow-lifted),
+                0 0 0 7px color-mix(in srgb, var(--accent-green-deep) 22%, transparent);
+        }
+        .lp-btn--primary:hover .lp-btn-arrow { transform: translateX(4px); }
+        .lp-btn--primary:active { transform: translateY(-1px) scale(1); }
+        .lp-btn--ghost {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border-color: var(--control-border);
+            box-shadow: var(--shadow-soft);
+        }
+        .lp-btn--ghost svg { stroke: currentColor; color: var(--accent-green-deep); }
+        .lp-btn--ghost:hover {
+            transform: translateY(-3px) scale(1.02);
+            border-color: var(--accent-green-deep);
+            box-shadow: var(--shadow-medium);
+        }
+
+        /* ---------- Reveal-on-scroll ---------- */
+        .lp-reveal {
+            opacity: 0;
+            transform: translateY(26px);
+            transition: opacity .7s cubic-bezier(.22,1,.36,1),
+                transform .7s cubic-bezier(.22,1,.36,1);
+            transition-delay: var(--lp-delay, 0s);
+        }
+        .lp-reveal.is-in { opacity: 1; transform: none; }
+
+        /* ============================================================
+           1 · HERO
+           ============================================================ */
+        .lp-hero {
+            min-height: 100svh;
+            display: flex;
+            align-items: center;
+            padding: clamp(5.5rem, 12vh, 8rem) 0 clamp(3rem, 8vh, 5rem);
+            overflow: hidden;
+            background:
+                radial-gradient(1100px 720px at 92% -10%, color-mix(in srgb, var(--accent-green) 55%, transparent) 0%, transparent 58%),
+                radial-gradient(900px 640px at -8% 115%, color-mix(in srgb, var(--accent-purple) 50%, transparent) 0%, transparent 60%),
+                linear-gradient(180deg, var(--bg-cream) 0%, var(--bg-warm) 100%);
+        }
+        .lp-hero .mf-aura { opacity: .5; }
+
+        .lp-hero__grid {
+            position: relative;
+            z-index: 2;
+            display: grid;
+            grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+            gap: clamp(1.5rem, 5vw, 4rem);
+            align-items: center;
+            width: 100%;
+        }
+        .lp-hero__lead { min-width: 0; }
+
+        .lp-hero h1 {
+            font-size: clamp(2.9rem, 7.5vw, 5.2rem);
+            line-height: 0.98;
+            letter-spacing: -0.035em;
+            margin-bottom: 1.25rem;
+        }
+        .lp-hero h1 .lp-line { display: block; }
+        .lp-hero h1 .lp-pop {
+            display: inline-block;
+            color: var(--accent-green-deep);
+            /* h1 sets -webkit-text-fill-color:transparent for its gradient; an
+               inline-block child shows no fill unless we set its own. */
+            -webkit-text-fill-color: var(--accent-green-deep);
+            position: relative;
+        }
+        /* The shimmer wordmark scaled up to headline size */
+        .lp-hero h1 .mf-shimmer-text { font-weight: 800; }
+
+        /* Personalised greeting line shown to signed-in users */
+        .lp-hero__welcome {
+            display: none;
+            font-size: 0.9rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--accent-green-deep);
+            margin-bottom: 0.9rem;
+        }
+        body[data-auth="in"] .lp-hero__welcome { display: block; }
+
+        .lp-hero__tagline {
+            font-size: clamp(1.1rem, 2vw, 1.4rem);
+            color: var(--text-secondary);
+            line-height: 1.5;
+            max-width: 34ch;
+            margin-bottom: 2rem;
+            font-weight: 500;
+        }
+        .lp-hero__cta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.9rem;
+            margin-bottom: 1.4rem;
+        }
+        .lp-hero__ready {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.55rem;
+            font-size: 0.88rem;
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        /* Hero orb stage — the star */
+        .lp-hero__stage {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1.4rem;
+            min-width: 0;
+        }
+        .lp-hero__orbwrap {
+            position: relative;
+            display: grid;
+            place-items: center;
+            z-index: 1;
+        }
+        /* The .mf-orb2 composite, sized as a hero centerpiece (not oversized). */
+        .lp-hero__stage .mf-orb2 {
+            --mf-orb2-size: clamp(220px, 30vw, 330px);
+            z-index: 1;
+        }
+        /* CRITICAL: the orb is a toggle, but it must show NO visible boundary or
+           focus ring — clicking/focusing it should never draw an outline. This
+           overrides the kit's default .mf-orb2:focus-visible ring. */
+        .lp-hero__stage .mf-orb2,
+        .lp-hero__stage .mf-orb2:focus,
+        .lp-hero__stage .mf-orb2:focus-visible,
+        .lp-hero__stage .mf-orb2:active {
+            outline: none !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+        .lp-hero__stage .mf-orb2 .mf-eyes { --mf-eye-size: clamp(12px, 1.6vw, 18px); }
+        .lp-orb__bloom {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            --mf-bloom-size: clamp(340px, 46vw, 580px);
+            z-index: 0;
+            opacity: 0.8;
+            pointer-events: none;
+        }
+        .lp-hero__chip {
+            position: relative;
+            z-index: 2;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.45rem 1rem;
+            background: var(--bg-card);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius-full);
+            box-shadow: var(--shadow-soft);
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        /* Floating "free interviews left" balloon — only revealed via JS for
+           signed-in users who still have free calls. */
+        .lp-balloon {
+            position: absolute;
+            top: 4%;
+            right: 2%;
+            z-index: 4;
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.55rem 1rem;
+            background: var(--solid-surface);
+            color: var(--on-solid);
+            border-radius: var(--radius-full);
+            font-size: 0.82rem;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+            box-shadow: var(--shadow-lifted);
+            white-space: nowrap;
+        }
+        .lp-balloon.is-on { display: inline-flex; }
+        .lp-balloon::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            left: 26px;
+            width: 12px; height: 12px;
+            background: var(--solid-surface);
+            transform: rotate(45deg);
+            border-radius: 2px;
+        }
+        .lp-balloon .lp-balloon__dot {
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--accent-green);
+            box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-green) 35%, transparent);
+        }
+        @media (max-width: 920px) {
+            .lp-balloon { position: static; margin-bottom: 0.4rem; }
+        }
+
+        /* ============================================================
+           2 · POSITIONING LINE + supporting subhead
+           ============================================================ */
+        .lp-positioning {
+            padding: clamp(4rem, 11vh, 7.5rem) 0;
+            text-align: center;
+        }
+        .lp-positioning p.lp-positioning__head {
+            font-size: clamp(1.7rem, 4.2vw, 3rem);
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            line-height: 1.12;
+            max-width: 20ch;
+            margin: 0 auto;
+            color: var(--text-primary);
+        }
+        .lp-positioning p.lp-positioning__sub {
+            margin: 1.3rem auto 0;
+            max-width: 52ch;
+            font-size: clamp(1.05rem, 1.9vw, 1.3rem);
+            font-weight: 500;
+            line-height: 1.55;
+            color: var(--text-secondary);
+        }
+        .lp-positioning .lp-hl {
+            position: relative;
+            white-space: nowrap;
+            color: var(--accent-green-deep);
+        }
+        .lp-positioning .lp-hl::after {
+            content: '';
+            position: absolute;
+            left: -2%; right: -2%;
+            bottom: 0.04em;
+            height: 0.34em;
+            background: color-mix(in srgb, var(--accent-green-deep) 26%, transparent);
+            border-radius: var(--radius-full);
+            z-index: -1;
+            transform: scaleX(0);
+            transform-origin: left center;
+            transition: transform .8s cubic-bezier(.22,1,.36,1) .25s;
+        }
+        .lp-positioning.is-in .lp-hl::after { transform: scaleX(1); }
+
+        /* ============================================================
+           3 · HOW IT WORKS
+           ============================================================ */
+        .lp-section-head { text-align: center; margin-bottom: clamp(2.5rem, 6vh, 4rem); }
+        .lp-kicker {
+            display: inline-block;
+            font-size: 0.74rem;
+            font-weight: 800;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            color: var(--accent-green-deep);
+            margin-bottom: 0.9rem;
+        }
+        .lp-section-head h2 {
+            font-size: clamp(2rem, 4.6vw, 3.1rem);
+            letter-spacing: -0.03em;
+            line-height: 1.05;
+        }
+        .lp-section-head p {
+            margin-top: 0.9rem;
+            color: var(--text-secondary);
+            font-size: clamp(1rem, 1.5vw, 1.15rem);
+            max-width: 46ch;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .lp-how { padding: clamp(2rem, 5vh, 4rem) 0 clamp(4rem, 10vh, 7rem); }
+        .lp-steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: clamp(1rem, 2.5vw, 1.6rem);
+        }
+        .lp-step {
+            position: relative;
+            background: var(--bg-card);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius-lg);
+            padding: clamp(1.5rem, 3vw, 2.2rem);
+            box-shadow: var(--shadow-soft);
+            overflow: hidden;
+            transition: transform .3s cubic-bezier(.34,1.3,.5,1), box-shadow .3s ease, border-color .3s ease;
+        }
+        .lp-step:hover {
+            transform: translateY(-6px);
+            box-shadow: var(--shadow-lifted);
+            border-color: var(--hairline-strong);
+        }
+        .lp-step__num {
+            font-size: 0.78rem;
+            font-weight: 800;
+            letter-spacing: 0.1em;
+            color: var(--text-light);
+            margin-bottom: 1.3rem;
+        }
+        .lp-step__viz {
+            position: relative;
+            height: 96px;
+            display: grid;
+            place-items: center;
+            margin-bottom: 1.3rem;
+        }
+        .lp-step__viz .mf-orbit { --mf-orbit-size: 92px; }
+        .lp-step__miniorb {
+            position: relative;
+            width: 92px; height: 92px;
+            display: grid; place-items: center;
+        }
+        .lp-step__miniorb .mf-rays { --mf-rays-size: 92px; --mf-ray-count: 32; }
+        .lp-step__miniorb .mf-eyes { --mf-eye-size: 7px; position: absolute; }
+        .lp-gauge {
+            position: relative;
+            width: 92px; height: 92px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background:
+                conic-gradient(var(--accent-cyan) 0turn 0.82turn, color-mix(in srgb, var(--accent-cyan) 18%, transparent) 0.82turn 1turn);
+        }
+        .lp-gauge::before {
+            content: '';
+            position: absolute;
+            inset: 11px;
+            border-radius: 50%;
+            background: var(--bg-card);
+        }
+        .lp-gauge span {
+            position: relative;
+            font-weight: 800;
+            font-size: 1.15rem;
+            letter-spacing: -0.02em;
+        }
+        .lp-step h3 {
+            font-size: 1.28rem;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.5rem;
+        }
+        .lp-step p { color: var(--text-secondary); font-size: 0.96rem; line-height: 1.55; }
+
+        /* ============================================================
+           4 · TRACKS (color-blocked) + trial balloon
+           ============================================================ */
+        .lp-tracks { padding: clamp(3rem, 8vh, 6rem) 0; }
+        .lp-tracks__grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: clamp(1rem, 2.5vw, 1.5rem);
+        }
+        .lp-track {
+            position: relative;
+            border-radius: var(--radius-lg);
+            padding: clamp(1.6rem, 3.2vw, 2.3rem);
+            overflow: hidden;
+            border: 1.5px solid var(--tk-border);
+            background: var(--tk-bg);
+            min-height: 220px;
+            display: flex;
+            flex-direction: column;
+            transition: transform .3s cubic-bezier(.34,1.3,.5,1), box-shadow .3s ease;
+            box-shadow: var(--shadow-soft);
+        }
+        .lp-track:hover {
+            transform: translateY(-6px) rotate(-0.5deg);
+            box-shadow: var(--shadow-lifted);
+        }
+        .lp-track__glow {
+            position: absolute;
+            width: 220px; height: 220px;
+            top: -90px; right: -70px;
+            border-radius: 50%;
+            background: radial-gradient(circle, var(--tk-deep) 0%, transparent 70%);
+            opacity: 0.5;
+            pointer-events: none;
+            transition: transform .5s ease, opacity .3s ease;
+        }
+        .lp-track:hover .lp-track__glow { transform: scale(1.25); opacity: 0.7; }
+        .lp-track__tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.45rem;
+            align-self: flex-start;
+            padding: 0.35rem 0.85rem;
+            border-radius: var(--radius-full);
+            background: var(--bg-card);
+            border: 1px solid var(--tk-border);
+            font-size: 0.7rem;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--tk-ink);
+            margin-bottom: 1.1rem;
+        }
+        .lp-track__dot {
+            width: 9px; height: 9px; border-radius: 50%;
+            background: var(--tk-deep);
+        }
+        .lp-track h3 {
+            font-size: clamp(1.4rem, 2.4vw, 1.8rem);
+            letter-spacing: -0.025em;
+            margin-bottom: 0.55rem;
+        }
+        .lp-track p {
+            color: var(--text-secondary);
+            font-size: 0.98rem;
+            line-height: 1.55;
+            margin-top: auto;
+        }
+        .lp-track__no { font-size: 2.4rem; font-weight: 800; opacity: 0.16; position: absolute; bottom: 0.6rem; right: 1.1rem; color: var(--tk-deep); }
+
+        .lp-track--green  { --tk-bg: color-mix(in srgb, var(--accent-green) 30%, var(--bg-card)); --tk-border: color-mix(in srgb, var(--accent-green-deep) 40%, transparent); --tk-deep: var(--accent-green-deep); --tk-ink: var(--accent-green-deep); }
+        .lp-track--pink   { --tk-bg: color-mix(in srgb, var(--accent-pink) 30%, var(--bg-card)); --tk-border: color-mix(in srgb, var(--accent-pink-deep) 40%, transparent); --tk-deep: var(--accent-pink-deep); --tk-ink: var(--accent-pink-deep); }
+        .lp-track--purple { --tk-bg: color-mix(in srgb, var(--accent-purple) 32%, var(--bg-card)); --tk-border: color-mix(in srgb, var(--accent-purple-deep) 40%, transparent); --tk-deep: var(--accent-purple-deep); --tk-ink: var(--accent-purple-deep); }
+        .lp-track--cyan   { --tk-bg: color-mix(in srgb, var(--feature-cyan) 55%, var(--bg-card)); --tk-border: color-mix(in srgb, var(--accent-cyan) 55%, transparent); --tk-deep: var(--accent-cyan); --tk-ink: var(--text-primary); }
+
+        /* Trial balloon / badge moment */
+        .lp-trial {
+            position: relative;
+            margin-top: clamp(1.5rem, 3vw, 2rem);
+            border-radius: var(--radius-xl);
+            padding: clamp(1.8rem, 4vw, 2.6rem) clamp(1.5rem, 4vw, 3rem);
+            background: var(--solid-surface);
+            color: var(--on-solid);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            overflow: hidden;
+            box-shadow: var(--shadow-lifted);
+        }
+        .lp-trial__badge {
+            position: relative;
+            flex-shrink: 0;
+            width: 86px; height: 86px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: radial-gradient(circle at 50% 38%, var(--accent-green-deep) 0%, color-mix(in srgb, var(--accent-green-deep) 55%, #000) 100%);
+            color: #fff;
+            font-weight: 900;
+            line-height: 0.95;
+            text-align: center;
+            box-shadow: 0 10px 30px color-mix(in srgb, var(--accent-green-deep) 45%, transparent);
+        }
+        .lp-trial__badge b { font-size: 1.9rem; display: block; }
+        .lp-trial__badge em { font-style: normal; font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; opacity: 0.9; }
+        .lp-trial__copy { flex: 1 1 280px; min-width: 0; }
+        .lp-trial__copy h3 {
+            color: var(--on-solid);
+            font-size: clamp(1.4rem, 2.8vw, 2rem);
+            letter-spacing: -0.025em;
+            margin-bottom: 0.4rem;
+        }
+        .lp-trial__copy p { color: var(--on-solid-muted); font-size: 1rem; }
+        .lp-trial .lp-btn--inverse {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            flex-shrink: 0;
+        }
+        .lp-trial .lp-btn--inverse svg { stroke: currentColor; color: var(--accent-green-deep); }
+        .lp-trial .lp-btn--inverse:hover { transform: translateY(-3px) scale(1.02); box-shadow: var(--shadow-medium); }
+
+        /* ============================================================
+           5 · LIVE CODE EVALUATION (demo video placeholder)
+           ============================================================ */
+        .lp-code { padding: clamp(3.5rem, 9vh, 6.5rem) 0; }
+        .lp-code__grid {
+            display: grid;
+            grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+            gap: clamp(1.8rem, 4vw, 3.5rem);
+            align-items: center;
+        }
+        .lp-code__copy h2 {
+            font-size: clamp(2rem, 4.4vw, 3rem);
+            letter-spacing: -0.03em;
+            line-height: 1.05;
+            margin-bottom: 1.1rem;
+        }
+        .lp-code__copy p { color: var(--text-secondary); font-size: 1.08rem; line-height: 1.6; margin-bottom: 1.5rem; }
+        .lp-checks { list-style: none; display: flex; flex-direction: column; gap: 0.8rem; }
+        .lp-checks li { display: flex; align-items: flex-start; gap: 0.7rem; font-size: 0.98rem; color: var(--text-secondary); }
+        .lp-check-ic {
+            flex-shrink: 0;
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            background: var(--accent-green);
+            color: var(--accent-green-deep);
+            display: grid; place-items: center;
+            margin-top: 1px;
+        }
+        .lp-check-ic svg { width: 14px; height: 14px; stroke: currentColor; }
+
+        /* 16:9 framed demo player */
+        .lp-demo {
+            position: relative;
+            aspect-ratio: 16 / 9;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            background: var(--candidate-bg);
+            box-shadow: var(--shadow-lifted);
+            border: 1px solid var(--hairline-strong);
+        }
+        .lp-demo__bar {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 38px;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0 0.9rem;
+            background: rgba(0,0,0,0.35);
+            z-index: 3;
+        }
+        .lp-demo__dot { width: 11px; height: 11px; border-radius: 50%; }
+        .lp-demo__file {
+            margin-left: 0.6rem;
+            font-size: 0.74rem;
+            font-weight: 600;
+            color: rgba(255,255,255,0.6);
+            font-family: 'SF Mono', ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+        }
+        .lp-demo__code {
+            position: absolute;
+            inset: 38px 0 0 0;
+            padding: 1.1rem 1.3rem;
+            font-family: 'SF Mono', ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace;
+            font-size: clamp(0.6rem, 1.2vw, 0.8rem);
+            line-height: 1.7;
+            color: rgba(255,255,255,0.82);
+            opacity: 0.5;
+            white-space: pre;
+            overflow: hidden;
+        }
+        .lp-demo__tok-key { color: #C792EA; }
+        .lp-demo__tok-fn { color: #82AAFF; }
+        .lp-demo__tok-str { color: #C3E88D; }
+        .lp-demo__tok-com { color: rgba(255,255,255,0.35); }
+        .lp-demo__play {
+            position: absolute;
+            inset: 0;
+            margin: auto;
+            z-index: 4;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 0.9rem;
+            background: var(--overlay-scrim);
+            border: none;
+            cursor: pointer;
+            color: #fff;
+            width: 100%; height: 100%;
+            transition: background-color .3s ease;
+        }
+        .lp-demo__play:hover { background: var(--overlay-scrim-strong); }
+        .lp-demo__play-btn {
+            width: 72px; height: 72px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.92);
+            display: grid;
+            place-items: center;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+            transition: transform .25s cubic-bezier(.34,1.45,.5,1);
+        }
+        .lp-demo__play:hover .lp-demo__play-btn { transform: scale(1.12); }
+        .lp-demo__play-btn svg { width: 28px; height: 28px; margin-left: 4px; fill: var(--candidate-bg); stroke: none; }
+        .lp-demo__label {
+            font-size: 0.82rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            background: rgba(0,0,0,0.45);
+            padding: 0.35rem 0.9rem;
+            border-radius: var(--radius-full);
+        }
+
+        /* ============================================================
+           6 · INTERVIEW PERSONALITY
+           ============================================================ */
+        .lp-persona {
+            padding: clamp(3.5rem, 9vh, 6.5rem) 0;
+            background:
+                radial-gradient(800px 480px at 12% 0%, color-mix(in srgb, var(--accent-purple) 30%, transparent) 0%, transparent 60%),
+                radial-gradient(720px 460px at 95% 100%, color-mix(in srgb, var(--accent-pink) 26%, transparent) 0%, transparent 60%),
+                var(--bg-warm);
+        }
+        .lp-persona__grid {
+            display: grid;
+            grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+            gap: clamp(1.8rem, 4vw, 3.5rem);
+            align-items: center;
+        }
+        .lp-persona__copy h2 {
+            font-size: clamp(2rem, 4.4vw, 3rem);
+            letter-spacing: -0.03em;
+            line-height: 1.05;
+            margin-bottom: 1.1rem;
+        }
+        .lp-persona__copy p { color: var(--text-secondary); font-size: 1.08rem; line-height: 1.6; }
+
+        .lp-stats {
+            background: var(--bg-card);
+            border: 1px solid var(--hairline);
+            border-radius: var(--radius-xl);
+            padding: clamp(1.6rem, 3.5vw, 2.4rem);
+            box-shadow: var(--glass-shadow);
+        }
+        .lp-stats__top {
+            display: flex;
+            align-items: center;
+            gap: 1.1rem;
+            padding-bottom: 1.3rem;
+            border-bottom: 1px solid var(--hairline);
+            margin-bottom: 1.4rem;
+        }
+        .lp-stats__avatar {
+            position: relative;
+            width: 64px; height: 64px;
+            display: grid; place-items: center;
+            flex-shrink: 0;
+        }
+        .lp-stats__avatar .mf-rays { --mf-rays-size: 64px; --mf-ray-count: 28; }
+        .lp-stats__avatar .mf-eyes { --mf-eye-size: 5.5px; position: absolute; }
+        .lp-stats__id { flex: 1; min-width: 0; }
+        .lp-stats__id h3 { font-size: 1.2rem; letter-spacing: -0.02em; }
+        .lp-stats__id span { font-size: 0.85rem; color: var(--text-muted); }
+        .lp-stats__hero {
+            text-align: right;
+            flex-shrink: 0;
+        }
+        .lp-stats__hero b { display: block; font-size: 1.9rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1; }
+        .lp-stats__hero em { font-style: normal; font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.06em; }
+
+        .lp-stats__row { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.75rem; }
+        .lp-stats__row .lp-bar-label { width: 64px; flex-shrink: 0; font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); }
+        .lp-bar-track {
+            flex: 1;
+            height: 9px;
+            border-radius: var(--radius-full);
+            background: var(--bg-soft);
+            overflow: hidden;
+        }
+        .lp-bar-fill {
+            height: 100%;
+            border-radius: var(--radius-full);
+            width: 0;
+            transition: width 1s cubic-bezier(.22,1,.36,1) .2s;
+        }
+        .lp-stats.is-in .lp-bar-fill { width: var(--w); }
+        .lp-bar-fill.green  { background: var(--accent-green-deep); }
+        .lp-bar-fill.pink   { background: var(--accent-pink-deep); }
+        .lp-bar-fill.purple { background: var(--accent-purple-deep); }
+        .lp-bar-fill.cyan   { background: var(--accent-cyan); }
+        .lp-stats__row .lp-bar-val { width: 30px; flex-shrink: 0; text-align: right; font-size: 0.78rem; font-weight: 700; color: var(--text-muted); }
+
+        .lp-stats__chips { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.4rem; }
+        .lp-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.4rem;
+            padding: 0.45rem 0.85rem;
+            border-radius: var(--radius-full);
+            font-size: 0.78rem;
+            font-weight: 600;
+        }
+        .lp-chip svg { width: 14px; height: 14px; }
+        .lp-chip--filler { background: var(--bg-soft); color: var(--text-secondary); }
+        .lp-chip--filler code { font-family: inherit; font-weight: 800; color: var(--text-primary); }
+        .lp-chip--strength { background: var(--msg-success-bg); color: var(--success); }
+        .lp-chip--focus { background: color-mix(in srgb, var(--warning) 16%, transparent); color: var(--warning); }
+
+        /* ============================================================
+           7 · SOCIAL PROOF (placeholder)
+           ============================================================ */
+        .lp-proof { padding: clamp(3.5rem, 9vh, 6rem) 0; text-align: center; }
+        .lp-proof__tag {
+            display: inline-block;
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-light);
+            border: 1px dashed var(--hairline-strong);
+            padding: 0.3rem 0.8rem;
+            border-radius: var(--radius-full);
+            margin-bottom: 2rem;
+        }
+        .lp-logos {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: clamp(1.5rem, 5vw, 3.5rem);
+            margin-bottom: 2.8rem;
+            opacity: 0.4;
+        }
+        .lp-logos span {
+            font-size: clamp(1.05rem, 2.2vw, 1.4rem);
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            color: var(--text-muted);
+        }
+        .lp-quote {
+            max-width: 40ch;
+            margin: 0 auto;
+            font-size: clamp(1.25rem, 2.6vw, 1.7rem);
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            line-height: 1.4;
+            color: var(--text-primary);
+        }
+        .lp-quote__by { display: block; margin-top: 1.1rem; font-size: 0.85rem; font-weight: 600; color: var(--text-muted); letter-spacing: 0; }
+
+        /* ============================================================
+           8 · FINAL CTA + FOOTER
+           ============================================================ */
+        .lp-final {
+            padding: clamp(4rem, 11vh, 7.5rem) 0;
+            position: relative;
+            overflow: hidden;
+            text-align: center;
+            background:
+                radial-gradient(900px 560px at 50% 120%, color-mix(in srgb, var(--accent-green) 50%, transparent) 0%, transparent 60%),
+                var(--bg-cream);
+        }
+        .lp-final__orb {
+            position: relative;
+            width: clamp(120px, 18vw, 170px);
+            height: clamp(120px, 18vw, 170px);
+            display: grid; place-items: center;
+            margin: 0 auto 1.6rem;
+        }
+        .lp-final__orb .mf-rays { --mf-rays-size: clamp(120px, 18vw, 170px); --mf-ray-count: 40; }
+        .lp-final__orb .mf-eyes { --mf-eye-size: 8px; position: absolute; }
+        .lp-final h2 {
+            font-size: clamp(2.2rem, 5.5vw, 3.8rem);
+            letter-spacing: -0.035em;
+            line-height: 1.02;
+            margin-bottom: 1rem;
+        }
+        .lp-final p {
+            color: var(--text-secondary);
+            font-size: clamp(1.05rem, 1.8vw, 1.25rem);
+            max-width: 34ch;
+            margin: 0 auto 2rem;
+        }
+        .lp-final__cta { display: flex; flex-wrap: wrap; gap: 0.9rem; justify-content: center; }
+
+        /* ---------- Footer (rebuilt, centered & intentional) ---------- */
+        .lp-footer {
+            /* Override the app-wide `footer { position:absolute; bottom:0 }`
+               (used to pin footers on single-screen pages) so this scrolling
+               landing's footer sits in normal flow at the very bottom. */
+            position: static;
+            bottom: auto; left: auto; right: auto;
+            border-top: 1px solid var(--hairline);
+            background: var(--bg-warm);
+            padding: clamp(3rem, 7vh, 4.5rem) 0 clamp(2.5rem, 5vh, 3.5rem);
+        }
+        .lp-footer__inner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: 0.9rem;
+        }
+        .lp-footer__brand {
+            font-size: 1.4rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            line-height: 1;
+        }
+        .lp-footer__tag {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+        .lp-footer__links {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 0.4rem 1.5rem;
+            margin-top: 0.4rem;
+        }
+        .lp-footer__links a,
+        .lp-footer__links button {
+            color: var(--text-secondary);
+            background: none;
+            border: none;
+            font: inherit;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 0.92rem;
+            font-weight: 600;
+            padding: 0.25rem 0;
+            transition: color .2s ease;
+        }
+        .lp-footer__links a:hover,
+        .lp-footer__links button:hover { color: var(--text-primary); }
+        .lp-footer__copy {
+            margin-top: 0.6rem;
+            color: var(--text-light);
+            font-size: 0.82rem;
+        }
+
+        /* ============================================================
+           RESPONSIVE
+           ============================================================ */
+        @media (max-width: 920px) {
+            .lp-hero__grid { grid-template-columns: 1fr; text-align: center; }
+            .lp-hero__lead { order: 2; }
+            .lp-hero__stage { order: 1; margin-bottom: 1rem; }
+            .lp-hero__tagline { margin-left: auto; margin-right: auto; }
+            .lp-hero__cta, .lp-hero__ready { justify-content: center; }
+            .lp-code__grid { grid-template-columns: 1fr; }
+            .lp-code__visual { order: -1; }
+            .lp-persona__grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 680px) {
+            .lp-steps { grid-template-columns: 1fr; }
+            .lp-tracks__grid { grid-template-columns: 1fr; }
+            .lp-trial { flex-direction: column; text-align: center; }
+            .lp-trial__copy { flex-basis: auto; }
+            .lp-stats__top { flex-wrap: wrap; }
+            .lp-stats__hero { text-align: left; }
+        }
+        @media (max-width: 380px) {
+            .lp-hero h1 { font-size: 2.6rem; }
+            .lp-btn { padding: 0.85rem 1.3rem; font-size: 0.95rem; }
+            .lp-positioning p.lp-positioning__head { font-size: 1.55rem; }
+        }
+
+        /* Reduced motion: kill page-scoped transitions & decorative spin */
+        @media (prefers-reduced-motion: reduce) {
+            .lp-reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+            .lp-positioning .lp-hl::after { transform: scaleX(1); transition: none; }
+            .lp-stats .lp-bar-fill { transition: none; }
+            .lp-btn, .lp-step, .lp-track, .lp-demo__play-btn { transition: background-color .2s ease, color .2s ease, border-color .2s ease, box-shadow .2s ease; }
+            .lp-btn:hover, .lp-step:hover, .lp-track:hover { transform: none !important; }
+        }
+
+        /* ============================================================
+           .mf-orb2 — GREET <-> ORB toggle composite (carried from the kit
+           gallery). Concentric rings + ray ring + eyes, stacked centre.
+           MFRays.mountToggle wires the click; the page auto-plays .open()
+           on load so it blooms into the voice motion as a hero centerpiece.
+           ============================================================ */
+        .mf-orb2 {
+            --mf-orb2-size: 160px;
+            position: relative;
+            width: var(--mf-orb2-size); height: var(--mf-orb2-size);
+            display: grid; place-items: center;
+            cursor: pointer; /* it's a click toggle */
+            -webkit-tap-highlight-color: transparent;
+        }
+        /* NOTE: the kit normally draws a :focus-visible ring here; on the live
+           landing the hero orb suppresses it (see .lp-hero__stage .mf-orb2). */
+        .mf-orb2 .mf-rays { --mf-rays-size: var(--mf-orb2-size); }
+        .mf-orb2 .mf-eyes { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 3; }
+
+        /* 3 nested bordered circles in the brand greens, centred. The whole
+           group scales as one (so they grow/shrink toward the centre). */
+        .mf-orb2__rings {
+            position: absolute; top: 50%; left: 50%;
+            width: 60%; height: 60%;
+            transform: translate(-50%, -50%) scale(1);
+            transform-origin: center center;
+            pointer-events: none; z-index: 1;
+        }
+        .mf-orb2__rings > span {
+            position: absolute; inset: 0; margin: auto;
+            border-radius: 50%;
+        }
+        /* Filled concentric discs (like the logo): light green -> green -> deep green. */
+        .mf-orb2__rings > span:nth-child(1) { width: 100%; height: 100%; background: #C8E6C9; }
+        .mf-orb2__rings > span:nth-child(2) { width: 64%;  height: 64%;  background: #81C784; }
+        .mf-orb2__rings > span:nth-child(3) { width: 30%;  height: 30%;  background: #4CAF50; }
+
+        /* --- Rings: entry (expand -> contract & vanish) + exit (grow back). --
+           Resting state is scale(1), fully opaque (the CIRCLES state). */
+        .mf-orb2__rings.is-expand { animation: vx-ring-expand 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+        .mf-orb2__rings.is-vanish { animation: vx-ring-vanish 0.6s cubic-bezier(0.5, 0, 0.75, 0) forwards; }
+        .mf-orb2__rings.is-hidden { transform: translate(-50%, -50%) scale(0); opacity: 0; } /* parked hidden */
+        .mf-orb2__rings.is-return { animation: vx-ring-return 0.76s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+
+        @keyframes vx-ring-expand {
+            from { transform: translate(-50%, -50%) scale(1);   opacity: 1; }
+            to   { transform: translate(-50%, -50%) scale(1.5); opacity: 1; }
+        }
+        @keyframes vx-ring-vanish {
+            from { transform: translate(-50%, -50%) scale(1.5); opacity: 1; }
+            to   { transform: translate(-50%, -50%) scale(0);   opacity: 0; }
+        }
+        @keyframes vx-ring-return {
+            0%   { transform: translate(-50%, -50%) scale(0);    opacity: 0; }
+            65%  { transform: translate(-50%, -50%) scale(1.5);  opacity: 1; } /* overshoot */
+            100% { transform: translate(-50%, -50%) scale(1);    opacity: 1; } /* settle */
+        }
+
+        /* --- Eyes: hidden at rest; pop on entry, shut (scaleY -> 0) on exit. */
+        .mf-orb2 .mf-eyes { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+        .mf-orb2 .mf-eyes.is-pop { animation: vx-eyes-pop 0.48s cubic-bezier(0.34, 1.56, 0.64, 1) forwards; }
+        .mf-orb2 .mf-eyes.is-shut { animation: vx-eyes-shut 0.38s cubic-bezier(0.5, 0, 0.75, 0) forwards; }
+        @keyframes vx-eyes-pop {
+            0%   { opacity: 0; transform: translate(-50%, -50%) scale(0); }
+            60%  { opacity: 1; transform: translate(-50%, -50%) scale(1.2); }
+            100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+        @keyframes vx-eyes-shut {
+            from { opacity: 1; transform: translate(-50%, -50%) scaleX(1) scaleY(1); }
+            to   { opacity: 0; transform: translate(-50%, -50%) scaleX(1) scaleY(0); }
+        }
+
+        /* --- Rays: collapsed at rest; bloom in on entry, fold out on exit.
+           (The JS loop drives bar HEIGHT once bloomed; these move scale/opacity
+           on the .mf-rays box itself.) */
+        .mf-orb2 .mf-rays { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+        .mf-orb2 .mf-rays.is-bloom { animation: vx-rays-bloom 0.52s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+        .mf-orb2 .mf-rays.is-out   { animation: vx-rays-out   0.46s cubic-bezier(0.5, 0, 0.75, 0) forwards; }
+        @keyframes vx-rays-bloom {
+            from { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+            to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        }
+        @keyframes vx-rays-out {
+            from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            to   { opacity: 0; transform: translate(-50%, -50%) scale(0.4); }
+        }
+
+        /* Reduced motion: NO choreography — instantly swap between the resting
+           circles and the (static) rays + eyes. */
+        @media (prefers-reduced-motion: reduce) {
+            .mf-orb2__rings.is-expand,
+            .mf-orb2__rings.is-vanish,
+            .mf-orb2__rings.is-return,
+            .mf-orb2 .mf-eyes.is-pop,
+            .mf-orb2 .mf-eyes.is-shut,
+            .mf-orb2 .mf-rays.is-bloom,
+            .mf-orb2 .mf-rays.is-out { animation: none !important; }
+            .mf-orb2 .mf-eyes.is-pop { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            .mf-orb2 .mf-rays.is-bloom { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            .mf-orb2__rings.is-hidden { opacity: 0; }
+        }
+    </style>
+</head>
+<body class="lp-c-body" data-auth="out">
+    <!-- Auth header (left) + action buttons (right) — populated by header.js.
+         init() renders About · Settings + the auth chip (no theme toggle). -->
+    <div class="auth-header" id="authHeader"></div>
     <div class="action-buttons" id="actionButtons"></div>
 
-    <div class="hero">
-        <div class="hero-content">
-            <div class="hero-left">
-<div class="logo-mark" id="logoMark" style="cursor:pointer;">
-    <svg viewBox="0 0 48 48" width="72" height="100" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <circle cx="24" cy="24" r="20" fill="#C8E6C9"/>
-        <circle cx="24" cy="24" r="12" fill="#81C784"/>
-        <circle cx="24" cy="24" r="6" fill="#4CAF50"/>
-    </svg>
-</div>
+    <div class="lp-c">
+        <a class="lp-skip" href="#main">Skip to content</a>
 
-                <h1>MockFlow.ai</h1>
-                <p class="tagline">Voice-native AI that interviews you, evaluates your live code, and scores your delivery.</p>
+        <!-- ============ 1 · HERO ============ -->
+        <header class="lp-hero">
+            <div class="mf-aura" aria-hidden="true"></div>
 
-                <ul class="features">
-                    <li>
-                        <span class="feature-icon green">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                                <line x1="12" y1="19" x2="12" y2="23"/>
-                                <line x1="8" y1="23" x2="16" y2="23"/>
-                            </svg>
+            <div class="lp-wrap" id="main">
+                <div class="lp-hero__grid">
+                    <div class="lp-hero__lead">
+                        <p class="lp-hero__welcome" id="heroWelcome" aria-live="polite"></p>
+                        <h1 class="lp-reveal">
+                            <span class="lp-line">Practice the</span>
+                            <span class="lp-line"><span class="lp-pop">interview</span>, for real.</span>
+                        </h1>
+                        <p class="lp-hero__tagline lp-reveal" style="--lp-delay:.12s">
+                            Rehearse the real interview — voice, live code, and a score on how you land.
+                        </p>
+                        <div class="lp-hero__cta lp-reveal" style="--lp-delay:.18s">
+                            <!-- Signed-OUT primary CTA -->
+                            <a class="lp-btn lp-btn--primary signed-out-only" href="/start" id="ctaStartFree">
+                                <span class="lp-btn-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                                </span>
+                                Start free — 2 interviews on us
+                                <span class="lp-btn-arrow" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                                </span>
+                            </a>
+                            <!-- Signed-IN primary CTA -->
+                            <a class="lp-btn lp-btn--primary signed-in-only" href="/start">
+                                <span class="lp-btn-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                                </span>
+                                Start interview
+                                <span class="lp-btn-arrow" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                                </span>
+                            </a>
+                            <!-- Past sessions — ONLY for authenticated users -->
+                            <a class="lp-btn lp-btn--ghost signed-in-only" href="/past-calls">
+                                <span aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 15 14"></polyline></svg>
+                                </span>
+                                Past sessions
+                            </a>
+                        </div>
+                        <span class="lp-hero__ready lp-reveal" style="--lp-delay:.24s">
+                            <span class="mf-pulse-dot" aria-hidden="true"></span>
+                            Ready when you are — no setup, no API keys.
                         </span>
-                        <span>Live voice AI — sub-200ms, fully adaptive</span>
-                    </li>
-                    <li>
-                        <span class="feature-icon pink">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                                <polyline points="22 4 12 14.01 9 11.01"/>
-                            </svg>
-                        </span>
-                        <span>4 tracks — Intro, Behavioral, Technical, Coding</span>
-                    </li>
-                    <li>
-                        <span class="feature-icon purple">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <polyline points="16 18 22 12 16 6"/>
-                                <polyline points="8 6 2 12 8 18"/>
-                            </svg>
-                        </span>
-                        <span>Monaco code editor with live AI evaluation</span>
-                    </li>
-                    <li>
-                        <span class="feature-icon green">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-                            </svg>
-                        </span>
-                        <span>Scored feedback with speech analytics</span>
-                    </li>
-                </ul>
+                    </div>
 
-                <div class="tech-stack">
-                    <p class="tech-label">Powered by</p>
-                    <div class="tech-badges">
-                        <a href="https://docs.livekit.io/agents/" target="_blank" rel="noopener" class="badge">LiveKit</a>
-                        <a href="https://platform.openai.com/docs/" target="_blank" rel="noopener" class="badge">GPT-4o</a>
-                        <a href="https://developers.deepgram.com/" target="_blank" rel="noopener" class="badge">Deepgram</a>
-                        <a href="https://platform.openai.com/docs/guides/text-to-speech" target="_blank" rel="noopener" class="badge">OpenAI TTS</a>
+                    <div class="lp-hero__stage lp-reveal" style="--lp-delay:.1s">
+                        <span class="lp-balloon" id="heroBalloon" role="status" aria-live="polite">
+                            <span class="lp-balloon__dot" aria-hidden="true"></span>
+                            <span id="heroBalloonText"></span>
+                        </span>
+                        <div class="lp-hero__orbwrap">
+                            <div class="mf-bloom lp-orb__bloom" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+                            <!-- The .mf-orb2 GREET <-> ORB composite — the centerpiece.
+                                 MFRays.mountToggle wires the click; the page auto-opens it on load. -->
+                            <div class="mf-orb2" id="heroOrb" role="img" data-mode="voice"
+                                 aria-label="MockFlow.ai's AI interviewer — a living ring of sound with eyes that listens and speaks">
+                                <div class="mf-orb2__rings" aria-hidden="true"><span></span><span></span><span></span></div>
+                                <div class="mf-rays" aria-hidden="true"></div>
+                                <div class="mf-eyes" aria-hidden="true"><i></i><i></i></div>
+                            </div>
+                        </div>
+                        <span class="lp-hero__chip">
+                            <span class="mf-pulse-dot" aria-hidden="true"></span>
+                            Your interviewer is warming up
+                        </span>
                     </div>
                 </div>
             </div>
+        </header>
 
-            <div class="hero-buttons">
-                <a href="/start" class="btn-game primary">
-                    <div class="btn-game-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="5" r="3"/>
-                            <path d="M12 8v2"/>
-                            <path d="M7 21v-6a5 5 0 0 1 10 0v6"/>
-                            <path d="M12 10l-1 3h2l-1 3"/>
-                            <path d="M9 12l3 1 3-1"/>
-                            <path d="M9 12v9"/>
-                            <path d="M15 12v9"/>
-                        </svg>
-                    </div>
-                    <span class="btn-game-label">Start Interview</span>
-                </a>
+        <main>
+            <!-- ============ 2 · POSITIONING ============ -->
+            <section class="lp-positioning lp-reveal" aria-label="What MockFlow does">
+                <div class="lp-wrap">
+                    <p class="lp-positioning__head">Stop <span class="lp-hl">winging it</span>. Walk in already warmed up.</p>
+                    <p class="lp-positioning__sub">Every answer rehearsed out loud, every line of code reviewed live, and a clear read on how you actually land — before it counts. Here's how it works.</p>
+                </div>
+            </section>
 
-                <a href="/past-calls" class="btn-game secondary">
-                    <div class="btn-game-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="12" r="10"/>
-                            <polyline points="12 6 12 12 16 14"/>
-                            <path d="M4.93 4.93l2.12 2.12"/>
-                        </svg>
+            <!-- ============ 3 · HOW IT WORKS ============ -->
+            <section class="lp-how" id="how" aria-labelledby="how-h">
+                <div class="lp-wrap">
+                    <div class="lp-section-head lp-reveal">
+                        <span class="lp-kicker">Three steps, zero friction</span>
+                        <h2 id="how-h">From cold to confident</h2>
+                        <p>Pick what you want to practice, jump into a real conversation, and walk away knowing exactly where you stand.</p>
                     </div>
-                    <span class="btn-game-label">Past Sessions</span>
-                </a>
+                    <div class="lp-steps">
+                        <article class="lp-step lp-reveal" style="--lp-delay:.05s">
+                            <div class="lp-step__num">STEP 01</div>
+                            <div class="lp-step__viz" aria-hidden="true">
+                                <div class="mf-orbit"><span style="--i:0"></span><span style="--i:1"></span><span style="--i:2"></span></div>
+                            </div>
+                            <h3>Pick a track</h3>
+                            <p>Intro, behavioral, technical voice, or live coding. Choose your battle — or run them all.</p>
+                        </article>
+                        <article class="lp-step lp-reveal" style="--lp-delay:.13s">
+                            <div class="lp-step__num">STEP 02</div>
+                            <div class="lp-step__viz" aria-hidden="true">
+                                <div class="lp-step__miniorb">
+                                    <div class="mf-rays" data-rays="30"></div>
+                                    <span class="mf-eyes"><i></i><i></i></span>
+                                </div>
+                            </div>
+                            <h3>Talk &amp; code live</h3>
+                            <p>A voice interviewer asks real questions and reacts as you speak — and watches your code as you type.</p>
+                        </article>
+                        <article class="lp-step lp-reveal" style="--lp-delay:.21s">
+                            <div class="lp-step__num">STEP 03</div>
+                            <div class="lp-step__viz" aria-hidden="true">
+                                <div class="lp-gauge"><span>4.2</span></div>
+                            </div>
+                            <h3>Get scored</h3>
+                            <p>A clear breakdown of how you landed — strengths, gaps, and the one thing to fix next.</p>
+                        </article>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============ 4 · TRACKS ============ -->
+            <section class="lp-tracks" id="tracks" aria-labelledby="tracks-h">
+                <div class="lp-wrap">
+                    <div class="lp-section-head lp-reveal">
+                        <span class="lp-kicker">Four ways to sweat the reps</span>
+                        <h2 id="tracks-h">Four tracks. One you.</h2>
+                        <p>Each track is its own kind of pressure — and its own color. Master one or stack them up.</p>
+                    </div>
+                    <div class="lp-tracks__grid">
+                        <article class="lp-track lp-track--green lp-reveal" style="--lp-delay:.04s">
+                            <span class="lp-track__glow" aria-hidden="true"></span>
+                            <span class="lp-track__tag"><span class="lp-track__dot" aria-hidden="true"></span>Intro</span>
+                            <h3>Break the ice</h3>
+                            <p>The warm-up. Nail your "tell me about yourself" until it sounds effortless, not rehearsed.</p>
+                            <span class="lp-track__no" aria-hidden="true">01</span>
+                        </article>
+                        <article class="lp-track lp-track--pink lp-reveal" style="--lp-delay:.1s">
+                            <span class="lp-track__glow" aria-hidden="true"></span>
+                            <span class="lp-track__tag"><span class="lp-track__dot" aria-hidden="true"></span>Behavioral</span>
+                            <h3>Tell the story</h3>
+                            <p>Conflict, failure, leadership. Practice STAR answers that actually land the point.</p>
+                            <span class="lp-track__no" aria-hidden="true">02</span>
+                        </article>
+                        <article class="lp-track lp-track--purple lp-reveal" style="--lp-delay:.16s">
+                            <span class="lp-track__glow" aria-hidden="true"></span>
+                            <span class="lp-track__tag"><span class="lp-track__dot" aria-hidden="true"></span>Technical voice</span>
+                            <h3>Think out loud</h3>
+                            <p>Explain systems, trade-offs, and decisions on the spot — the way real interviewers probe.</p>
+                            <span class="lp-track__no" aria-hidden="true">03</span>
+                        </article>
+                        <article class="lp-track lp-track--cyan lp-reveal" style="--lp-delay:.22s">
+                            <span class="lp-track__glow" aria-hidden="true"></span>
+                            <span class="lp-track__tag"><span class="lp-track__dot" aria-hidden="true"></span>Coding</span>
+                            <h3>Ship under pressure</h3>
+                            <p>Real problems in a real editor, reviewed as you type. No "looks good" — actual feedback.</p>
+                            <span class="lp-track__no" aria-hidden="true">04</span>
+                        </article>
+                    </div>
+
+                    <!-- Trial moment — signed-OUT only (signed-in users already have an account). -->
+                    <div class="lp-trial lp-reveal mf-float signed-out-only is-block" style="--lp-delay:.1s" role="group" aria-label="Free trial">
+                        <span class="lp-trial__badge" aria-hidden="true">
+                            <b>2</b><em>free</em>
+                        </span>
+                        <div class="lp-trial__copy">
+                            <h3>2 free interviews, on the house.</h3>
+                            <p>No credit card. No API keys. Just hit start and talk.</p>
+                        </div>
+                        <a class="lp-btn lp-btn--inverse" href="/start">
+                            Claim your two
+                            <span class="lp-btn-arrow" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                            </span>
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============ 5 · LIVE CODE EVALUATION ============ -->
+            <section class="lp-code" aria-labelledby="code-h">
+                <div class="lp-wrap">
+                    <div class="lp-code__grid">
+                        <div class="lp-code__copy lp-reveal">
+                            <span class="lp-kicker">Live code evaluation</span>
+                            <h2 id="code-h">It reads your code as you write it.</h2>
+                            <p>A real Monaco editor, vetted problems, and an AI reviewer watching every keystroke — catching the bug before you even hit run.</p>
+                            <ul class="lp-checks">
+                                <li>
+                                    <span class="lp-check-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                                    The same Monaco editor you already know
+                                </li>
+                                <li>
+                                    <span class="lp-check-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                                    Hand-vetted problems, not random noise
+                                </li>
+                                <li>
+                                    <span class="lp-check-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+                                    Reviewed by AI in real time, as you type
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="lp-code__visual lp-reveal" style="--lp-delay:.12s">
+                            <div class="lp-demo">
+                                <div class="lp-demo__bar" aria-hidden="true">
+                                    <span class="lp-demo__dot" style="background:#FF5F56"></span>
+                                    <span class="lp-demo__dot" style="background:#FFBD2E"></span>
+                                    <span class="lp-demo__dot" style="background:#27C93F"></span>
+                                    <span class="lp-demo__file">two_sum.py — live review</span>
+                                </div>
+                                <pre class="lp-demo__code" aria-hidden="true"><span class="lp-demo__tok-com"># reviewed as you type ✦</span>
+<span class="lp-demo__tok-key">def</span> <span class="lp-demo__tok-fn">two_sum</span>(nums, target):
+    seen = {}
+    <span class="lp-demo__tok-key">for</span> i, n <span class="lp-demo__tok-key">in</span> enumerate(nums):
+        need = target - n
+        <span class="lp-demo__tok-key">if</span> need <span class="lp-demo__tok-key">in</span> seen:
+            <span class="lp-demo__tok-key">return</span> [seen[need], i]
+        seen[n] = i
+    <span class="lp-demo__tok-key">return</span> []
+<span class="lp-demo__tok-com"># ✓ O(n) — nice. edge case?</span></pre>
+                                <button class="lp-demo__play" type="button" aria-label="Play demo video — coming soon" id="demoPlay">
+                                    <span class="lp-demo__play-btn" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"></polygon></svg>
+                                    </span>
+                                    <span class="lp-demo__label">Demo — coming soon</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============ 6 · INTERVIEW PERSONALITY ============ -->
+            <section class="lp-persona" aria-labelledby="persona-h">
+                <div class="lp-wrap">
+                    <div class="lp-persona__grid">
+                        <div class="lp-persona__copy lp-reveal">
+                            <span class="lp-kicker">Your interview personality</span>
+                            <h2 id="persona-h">Meet the version of you that interviews.</h2>
+                            <p>After a few interviews, meet your interview personality — your patterns, your tells, and what to lean into. The more you practice, the sharper it gets.</p>
+                        </div>
+                        <div class="lp-stats lp-reveal" style="--lp-delay:.12s" role="group" aria-label="Sample interview personality (illustrative)">
+                            <div class="lp-stats__top">
+                                <div class="lp-stats__avatar" aria-hidden="true">
+                                    <div class="mf-rays" data-rays="28"></div>
+                                    <span class="mf-eyes"><i></i><i></i></span>
+                                </div>
+                                <div class="lp-stats__id">
+                                    <h3>Your personality</h3>
+                                    <span>12 interviews · sample preview</span>
+                                </div>
+                                <div class="lp-stats__hero">
+                                    <b>4.1<span style="font-size:1rem;color:var(--text-light)">/5</span></b>
+                                    <em>avg score</em>
+                                </div>
+                            </div>
+
+                            <div class="lp-stats__row">
+                                <span class="lp-bar-label">Intro</span>
+                                <span class="lp-bar-track"><span class="lp-bar-fill green" style="--w:88%"></span></span>
+                                <span class="lp-bar-val">4.4</span>
+                            </div>
+                            <div class="lp-stats__row">
+                                <span class="lp-bar-label">Behavioral</span>
+                                <span class="lp-bar-track"><span class="lp-bar-fill pink" style="--w:74%"></span></span>
+                                <span class="lp-bar-val">3.7</span>
+                            </div>
+                            <div class="lp-stats__row">
+                                <span class="lp-bar-label">Tech voice</span>
+                                <span class="lp-bar-track"><span class="lp-bar-fill purple" style="--w:82%"></span></span>
+                                <span class="lp-bar-val">4.1</span>
+                            </div>
+                            <div class="lp-stats__row">
+                                <span class="lp-bar-label">Coding</span>
+                                <span class="lp-bar-track"><span class="lp-bar-fill cyan" style="--w:84%"></span></span>
+                                <span class="lp-bar-val">4.2</span>
+                            </div>
+
+                            <div class="lp-stats__chips">
+                                <span class="lp-chip lp-chip--filler">Signature filler: <code>"um"</code></span>
+                                <span class="lp-chip lp-chip--strength">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    Strength: clear structure
+                                </span>
+                                <span class="lp-chip lp-chip--focus">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
+                                    Focus: tighten endings
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============ 7 · SOCIAL PROOF (placeholder) ============ -->
+            <section class="lp-proof lp-reveal" aria-labelledby="proof-h">
+                <div class="lp-wrap">
+                    <h2 id="proof-h" class="lp-proof__tag">Social proof — placeholder</h2>
+                    <div class="lp-logos" aria-hidden="true">
+                        <span>northwind</span>
+                        <span>Hooli</span>
+                        <span>ACME</span>
+                        <span>Globex</span>
+                        <span>Initech</span>
+                    </div>
+                    <blockquote class="lp-quote">
+                        &ldquo;I stopped dreading interviews. By the third rep I actually felt ready.&rdquo;
+                        <span class="lp-quote__by">— Sample quote, placeholder</span>
+                    </blockquote>
+                </div>
+            </section>
+
+            <!-- ============ 8 · FINAL CTA ============ -->
+            <section class="lp-final" aria-labelledby="final-h">
+                <div class="mf-aura" aria-hidden="true" style="opacity:.35"></div>
+                <div class="lp-wrap" style="position:relative;z-index:1">
+                    <div class="lp-final__orb lp-reveal" id="finalOrb" aria-hidden="true">
+                        <div class="mf-rays" data-rays="40"></div>
+                        <span class="mf-eyes"><i></i><i></i></span>
+                    </div>
+                    <h2 id="final-h" class="lp-reveal" style="--lp-delay:.06s">Your next interview starts now.</h2>
+                    <p class="lp-reveal" style="--lp-delay:.12s">Two interviews on us. No setup, no API keys — just press start.</p>
+                    <div class="lp-final__cta lp-reveal" style="--lp-delay:.18s">
+                        <!-- Signed-OUT -->
+                        <a class="lp-btn lp-btn--primary signed-out-only" href="/start">
+                            Start free — 2 interviews on us
+                            <span class="lp-btn-arrow" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                            </span>
+                        </a>
+                        <!-- Signed-IN -->
+                        <a class="lp-btn lp-btn--primary signed-in-only" href="/start">
+                            Start interview
+                            <span class="lp-btn-arrow" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                            </span>
+                        </a>
+                        <a class="lp-btn lp-btn--ghost signed-in-only" href="/past-calls">Past sessions</a>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- ============ FOOTER (rebuilt) ============ -->
+        <footer class="lp-footer">
+            <div class="lp-wrap lp-footer__inner">
+                <span class="lp-footer__brand">
+                    <span class="mf-shimmer-text">MockFlow.<span class="mf-shimmer-text__lock">ai</span></span>
+                </span>
+                <div class="lp-footer__tag">Practice makes confidence</div>
+                <nav class="lp-footer__links" aria-label="Footer">
+                    <button type="button" id="footerAbout">About</button>
+                    <a href="https://github.com/" target="_blank" rel="noopener">GitHub</a>
+                    <a href="#main">Back to top</a>
+                </nav>
+                <div class="lp-footer__copy">© <span id="footerYear">2026</span> MockFlow.ai. All rights reserved.</div>
             </div>
-        </div>
+        </footer>
     </div>
 
-    <footer>
-        <p>MockFlow.ai — Practice makes confidence</p>
-    </footer>
-
-    <style>
-        /* Ripple rings */
-        .ripple-ring {
-            position: fixed;
-            border-radius: 50%;
-            border: 2px solid rgba(76, 175, 80, 0.65);
-            width: 12px; height: 12px;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-            z-index: 0;
-            animation: ripple-out 1.5s cubic-bezier(0.08, 0.55, 0.25, 1) forwards;
-        }
-        @keyframes ripple-out {
-            0%   { width: 12px;              height: 12px;              opacity: 1;   border-width: 2.5px; }
-            20%  { opacity: 0.85; }
-            100% { width: var(--ring-max, 580px); height: var(--ring-max, 580px); opacity: 0; border-width: 0.5px; }
-        }
-
-        /* Logo pulse on click */
-        .logo-mark {
-            transition: transform 0.15s ease-out;
-        }
-        .logo-mark.logo-pulse {
-            animation: logo-pop 0.35s ease-out forwards;
-        }
-        @keyframes logo-pop {
-            0%   { transform: scale(1); }
-            40%  { transform: scale(1.13); }
-            100% { transform: scale(1); }
-        }
-
-        /* Tagline */
-        .tagline {
-            max-width: 500px !important;
-        }
-    </style>
+    <!-- Shared header / auth / modal / ray-kit, then the page init. -->
     <script src="/static/header.js"></script>
     <script src="/static/auth.js"></script>
     <script src="/static/modal.js"></script>
+    <script src="/static/mf-rays.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var logo = document.getElementById('logoMark');
-            if (logo) {
-                logo.addEventListener('click', function() {
-                    var rect = logo.getBoundingClientRect();
-                    var cx = rect.left + rect.width / 2;
-                    var cy = rect.top + rect.height / 2;
+        (function () {
+            "use strict";
 
-                    // Logo pulse
-                    logo.classList.remove('logo-pulse');
-                    void logo.offsetWidth; // reflow to restart animation
-                    logo.classList.add('logo-pulse');
-                    logo.addEventListener('animationend', function() {
-                        logo.classList.remove('logo-pulse');
-                    }, { once: true });
+            var reduceMotion = window.matchMedia &&
+                window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-                    // 5 rings — progressively larger and slower, staggered
-                    var rings = [
-                        { delay: 0,   maxSize: 100, dur: 0.9  },
-                        { delay: 90,  maxSize: 240, dur: 1.2  },
-                        { delay: 185, maxSize: 390, dur: 1.55 },
-                        { delay: 280, maxSize: 530, dur: 1.85 },
-                        { delay: 370, maxSize: 660, dur: 2.1  }
-                    ];
+            // ---- Shared header (About · Settings + auth chip; no theme toggle) ----
+            if (window.MockFlowHeader && typeof window.MockFlowHeader.init === 'function') {
+                window.MockFlowHeader.init({ showHome: false, showAuth: true, showSettings: true });
+            }
 
-                    rings.forEach(function(r) {
-                        setTimeout(function() {
-                            var ring = document.createElement('div');
-                            ring.className = 'ripple-ring';
-                            ring.style.left = cx + 'px';
-                            ring.style.top = cy + 'px';
-                            ring.style.setProperty('--ring-max', r.maxSize + 'px');
-                            ring.style.animationDuration = r.dur + 's';
-                            document.body.appendChild(ring);
-                            ring.addEventListener('animationend', function() { ring.remove(); });
-                        }, r.delay);
-                    });
+            // ---- Footer year + About modal hookup ----
+            var yearEl = document.getElementById('footerYear');
+            if (yearEl) yearEl.textContent = String(new Date().getFullYear());
+            var footerAbout = document.getElementById('footerAbout');
+            if (footerAbout) {
+                footerAbout.addEventListener('click', function () {
+                    if (window.MockFlowHeader && typeof window.MockFlowHeader.openDeveloperModal === 'function') {
+                        window.MockFlowHeader.openDeveloperModal();
+                    }
                 });
             }
 
-            window.MockFlowHeader.init({
-                showHome: false,
-                showInfo: true,
-                showGithub: true,
-                showSponsor: true,
-                showSettings: true,
-                showAuth: true
-            });
-        });
+            // ---- Fill every decorative ray ring (the hero orb is filled by MFRays) ----
+            function fillRays(el, count) {
+                el.style.setProperty('--mf-ray-count', count);
+                var html = '';
+                for (var i = 0; i < count; i++) html += '<span style="--i:' + i + '"></span>';
+                el.innerHTML = html;
+            }
+            var rings = document.querySelectorAll('.mf-rays[data-rays]');
+            for (var r = 0; r < rings.length; r++) {
+                fillRays(rings[r], parseInt(rings[r].getAttribute('data-rays'), 10) || 32);
+            }
+
+            // ---- Hero orb: the .mf-orb2 GREET <-> ORB composite ----
+            // mountToggle wires the click toggle (greet circles <-> voice orb).
+            // We auto-play the entrance ~400ms after load so it animates
+            // concentric -> eyes -> rays and settles into the voice motion.
+            var orb = document.getElementById('heroOrb');
+            if (orb && window.MFRays && typeof window.MFRays.mountToggle === 'function') {
+                var handle = window.MFRays.mountToggle(orb, { mode: 'voice', count: 60 });
+                // open() reports state; if still closed, a programmatic toggle()
+                // plays the full entrance choreography into the voice motion.
+                window.setTimeout(function () {
+                    if (handle && typeof handle.open === 'function' &&
+                        !handle.open() && typeof handle.toggle === 'function') {
+                        handle.toggle();
+                    }
+                }, 400);
+            }
+
+            // ---- Demo placeholder: it's a teaser, so just acknowledge politely ----
+            var demo = document.getElementById('demoPlay');
+            if (demo) {
+                demo.addEventListener('click', function () {
+                    var label = demo.querySelector('.lp-demo__label');
+                    if (!label) return;
+                    var prev = label.textContent;
+                    label.textContent = 'Filming in progress…';
+                    window.setTimeout(function () { label.textContent = prev; }, 1800);
+                });
+            }
+
+            // ---- Purposeful scroll reveals (IntersectionObserver) ----
+            var reveals = document.querySelectorAll('.lp-reveal');
+            if (reduceMotion || !('IntersectionObserver' in window)) {
+                for (var k = 0; k < reveals.length; k++) reveals[k].classList.add('is-in');
+            } else {
+                var io = new IntersectionObserver(function (entries) {
+                    entries.forEach(function (entry) {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('is-in');
+                            io.unobserve(entry.target);
+                        }
+                    });
+                }, { threshold: 0.16, rootMargin: '0px 0px -8% 0px' });
+                for (var j = 0; j < reveals.length; j++) io.observe(reveals[j]);
+            }
+
+            // ================================================================
+            // SIGNED-IN vs SIGNED-OUT — JS-driven, on load.
+            // Default body[data-auth="out"] (full marketing landing). On a
+            // successful /api/auth/status we flip to "in", personalise the hero,
+            // and (if free calls remain) float the balloon badge. Any failure
+            // leaves the signed-out view intact (graceful default).
+            // ================================================================
+            function escapeText(s) {
+                return String(s == null ? '' : s)
+                    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            }
+
+            function applySignedIn(user) {
+                document.body.dataset.auth = 'in';
+                // Greet by name (fall back gracefully if name is missing).
+                var welcome = document.getElementById('heroWelcome');
+                if (welcome) {
+                    var first = (user && user.name ? String(user.name).trim().split(/\s+/)[0] : '');
+                    welcome.textContent = first ? ('Welcome back, ' + first) : 'Welcome back';
+                }
+            }
+
+            function showBalloon(n) {
+                var balloon = document.getElementById('heroBalloon');
+                var txt = document.getElementById('heroBalloonText');
+                if (!balloon || !txt) return;
+                if (n > 0) {
+                    txt.textContent = n + (n === 1 ? ' free interview left — start now'
+                                                   : ' free interviews left — start now');
+                } else {
+                    txt.textContent = 'Jump back in';
+                }
+                balloon.classList.add('is-on');
+            }
+
+            // Step 1: auth status. Step 2 (only if authed): free-call balloon.
+            if (window.fetch) {
+                fetch('/api/auth/status', { credentials: 'same-origin' })
+                    .then(function (res) { return res.ok ? res.json() : null; })
+                    .then(function (data) {
+                        if (!data || !data.authenticated) return; // stay signed-out
+                        applySignedIn(data.user || {});
+                        return fetch('/api/user/keys/status', { credentials: 'same-origin' })
+                            .then(function (r) { return r.ok ? r.json() : null; })
+                            .then(function (keys) {
+                                var n = keys && typeof keys.free_calls_remaining === 'number'
+                                    ? keys.free_calls_remaining : 0;
+                                showBalloon(n);
+                            })
+                            .catch(function () { showBalloon(0); });
+                    })
+                    .catch(function () { /* network/parse error — keep signed-out view */ });
+            }
+        })();
     </script>
 </body>
 </html>

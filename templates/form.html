@@ -16,189 +16,6 @@
     <link rel="stylesheet" href="/static/styles.css">
     <link rel="stylesheet" href="/static/form.css">
     <link rel="stylesheet" href="/static/modals.css">
-    <style>
-        /* Track selector */
-        .track-selector {
-            margin-bottom: 1.5rem;
-        }
-
-        .track-selector label {
-            display: block;
-            margin-bottom: 0.75rem;
-            font-weight: 600;
-            font-size: 0.875rem;
-            color: var(--text-primary);
-        }
-
-        .track-cards {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 0.75rem;
-        }
-
-        .track-card {
-            border: 2px solid var(--bg-soft);
-            border-radius: var(--radius-md);
-            padding: 0.875rem 1rem;
-            cursor: pointer;
-            transition: border-color 0.15s, background 0.15s;
-            background: var(--bg-card);
-        }
-
-        .track-card:hover:not(.disabled) {
-            border-color: var(--text-secondary);
-        }
-
-        .track-card.selected {
-            border-color: var(--text-primary);
-            background: var(--bg-soft);
-        }
-
-        .track-card.disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        .track-card-title {
-            font-weight: 600;
-            font-size: 0.875rem;
-            color: var(--text-primary);
-        }
-
-        .track-card-desc {
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            margin-top: 0.25rem;
-        }
-
-        .track-card-badge {
-            display: inline-block;
-            font-size: 0.6875rem;
-            font-weight: 600;
-            padding: 0.125rem 0.5rem;
-            border-radius: var(--radius-full);
-            background: var(--bg-soft);
-            color: var(--text-muted);
-            margin-left: 0.5rem;
-        }
-
-        /* Track-specific sections */
-        .track-section {
-            display: none;
-        }
-
-        .track-section.active {
-            display: contents;
-        }
-
-        /* Depth selector */
-        .depth-options {
-            display: flex;
-            gap: 0.5rem;
-            margin-top: 0.5rem;
-        }
-
-        .depth-option {
-            flex: 1;
-        }
-
-        .depth-option input[type="radio"] {
-            display: none;
-        }
-
-        .depth-option label {
-            display: block;
-            text-align: center;
-            padding: 0.5rem;
-            border: 2px solid var(--bg-soft);
-            border-radius: var(--radius-sm);
-            font-size: 0.8125rem;
-            font-weight: 500;
-            cursor: pointer;
-            transition: border-color 0.15s, background 0.15s;
-        }
-
-        .depth-option input[type="radio"]:checked+label {
-            border-color: var(--text-primary);
-            background: var(--bg-soft);
-        }
-
-        /* Topic checkboxes */
-        .topic-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-top: 0.5rem;
-        }
-
-        .topic-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.375rem;
-        }
-
-        .topic-chip input[type="checkbox"] {
-            display: none;
-        }
-
-        .topic-chip label {
-            padding: 0.375rem 0.75rem;
-            border: 2px solid var(--bg-soft);
-            border-radius: var(--radius-full);
-            font-size: 0.8125rem;
-            cursor: pointer;
-            transition: border-color 0.15s, background 0.15s;
-        }
-
-        .topic-chip input[type="checkbox"]:checked+label {
-            border-color: var(--text-primary);
-            background: var(--bg-soft);
-            font-weight: 600;
-        }
-
-        /* STAR modal */
-        .star-modal-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
-
-        .star-modal-overlay.visible {
-            display: flex;
-        }
-
-        .star-modal {
-            background: var(--bg-card);
-            border-radius: var(--radius-lg);
-            padding: 2rem;
-            max-width: 540px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-        }
-
-        .star-modal h3 {
-            margin-bottom: 1rem;
-            font-size: 1.125rem;
-        }
-
-        .star-example {
-            background: var(--bg-soft);
-            border-radius: var(--radius-md);
-            padding: 1rem;
-            margin: 1rem 0;
-            font-size: 0.875rem;
-            line-height: 1.6;
-        }
-
-        .star-example strong {
-            color: var(--text-primary);
-        }
-    </style>
 </head>
 
 <body>
@@ -208,6 +25,13 @@
     <div class="form-page">
         <div class="form-container">
             <div class="form-main">
+                <!-- Page intro -->
+                <header class="setup-intro">
+                    <h1 class="setup-title">Set up your practice interview</h1>
+                    <p class="setup-subtitle">Tell us a little about you, pick the kind of interview you want to
+                        practice, and we'll tailor it to you. Takes about a minute.</p>
+                </header>
+
                 <!-- BYOK onboarding status banner (populated by JS on load) -->
                 <div class="keys-banner" id="keysBanner" role="status" aria-live="polite">
                     <span class="keys-banner-icon" id="keysBannerIcon" aria-hidden="true"></span>
@@ -218,264 +42,340 @@
                             style="display:none;">Add your API keys &rarr;</a>
                     </div>
                 </div>
+
                 <form id="candidateForm">
-                    <div class="form-grid">
-                        <!-- Candidate Info -->
-                        <div class="form-group">
-                            <label for="name">Full Name <span class="required-mark">*</span></label>
-                            <input type="text" id="name" name="name" placeholder="Jane Smith" required
-                                class="form-input" autocomplete="name">
+                    <!-- ============ Step 1 · About you ============ -->
+                    <section class="setup-section" aria-labelledby="step-you-label">
+                        <div class="setup-section-head">
+                            <span class="setup-step-num" aria-hidden="true">1</span>
+                            <div>
+                                <h2 class="setup-section-title" id="step-you-label">About you</h2>
+                                <p class="setup-section-hint">Who's interviewing and for what kind of role.</p>
+                            </div>
                         </div>
 
-                        <div class="form-group">
-                            <label for="email">Email Address <span class="required-mark">*</span></label>
-                            <input type="email" id="email" name="email" placeholder="jane@example.com" required
-                                class="form-input" autocomplete="email">
+                        <div class="form-grid">
+                            <div class="form-group">
+                                <label for="name">Full Name <span class="required-mark">*</span></label>
+                                <input type="text" id="name" name="name" placeholder="Jane Smith" required
+                                    class="form-input" autocomplete="name">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="email">Email Address <span class="required-mark">*</span></label>
+                                <input type="email" id="email" name="email" placeholder="jane@example.com" required
+                                    class="form-input" autocomplete="email">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="role">Target Role <span class="required-mark">*</span></label>
+                                <input type="text" id="role" name="role" placeholder="Software Engineer, PM..." required
+                                    class="form-input">
+                            </div>
+
+                            <div class="form-group">
+                                <label for="level">Experience Level <span class="required-mark">*</span></label>
+                                <select id="level" name="level" required class="form-input">
+                                    <option value="">Select level</option>
+                                    <option value="entry">Entry (0-2 yrs)</option>
+                                    <option value="mid">Mid (3-5 yrs)</option>
+                                    <option value="senior">Senior (6+ yrs)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- ============ Step 2 · Interview type ============ -->
+                    <section class="setup-section" aria-labelledby="step-track-label">
+                        <div class="setup-section-head">
+                            <span class="setup-step-num" aria-hidden="true">2</span>
+                            <div>
+                                <h2 class="setup-section-title" id="step-track-label">What do you want to practice?</h2>
+                                <p class="setup-section-hint">Pick one. You can set the details right below your choice.
+                                </p>
+                            </div>
                         </div>
 
-                        <div class="form-group">
-                            <label for="role">Target Role <span class="required-mark">*</span></label>
-                            <input type="text" id="role" name="role" placeholder="Software Engineer, PM..." required
-                                class="form-input">
-                        </div>
-
-                        <div class="form-group">
-                            <label for="level">Experience Level <span class="required-mark">*</span></label>
-                            <select id="level" name="level" required class="form-input">
-                                <option value="">Select level</option>
-                                <option value="entry">Entry (0-2 yrs)</option>
-                                <option value="mid">Mid (3-5 yrs)</option>
-                                <option value="senior">Senior (6+ yrs)</option>
-                            </select>
-                        </div>
-
-                        <div class="form-section-label" style="grid-column: 1 / -1; margin-top: 10px;"></div>
-
-                        <!-- Track Selector -->
-                        <div class="form-group full-width track-selector">
-                            <div class="track-selector-label">Interview Track</div>
-                            <div class="track-cards" id="trackCards">
-                                <div class="track-card selected" data-track="intro">
-                                    <div class="track-card-accent"></div>
-                                    <div class="track-card-body">
-                                        <span class="track-card-title">Intro Call</span>
-                                        <span class="track-card-sep">—</span>
-                                        <span class="track-card-desc">General background, experience &amp; culture
-                                            fit</span>
-                                    </div>
-                                    <div class="track-card-check">
+                        <div class="track-selector">
+                            <div class="track-cards" id="trackCards" role="radiogroup" aria-label="Interview track">
+                                <div class="track-card track-card--green selected" data-track="intro" role="radio"
+                                    tabindex="0" aria-checked="true">
+                                    <span class="track-card-glow" aria-hidden="true"></span>
+                                    <span class="track-card-tag"><span class="track-card-dot"
+                                            aria-hidden="true"></span>Intro</span>
+                                    <h3 class="track-card-title">Break the ice</h3>
+                                    <p class="track-card-desc">Nail your "tell me about yourself" until it sounds
+                                        effortless, not rehearsed.</p>
+                                    <span class="track-card-no" aria-hidden="true">01</span>
+                                    <span class="track-card-check" aria-hidden="true">
                                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                                             <polyline points="3,8 7,12 13,4" stroke="currentColor" stroke-width="2"
                                                 stroke-linecap="round" stroke-linejoin="round" />
                                         </svg>
-                                    </div>
+                                    </span>
                                 </div>
-                                <div class="track-card" data-track="behavioral">
-                                    <div class="track-card-accent"></div>
-                                    <div class="track-card-body">
-                                        <span class="track-card-title">Behavioral</span>
-                                        <span class="track-card-sep">—</span>
-                                        <span class="track-card-desc">Past experiences, leadership &amp; STAR-format
-                                            questions</span>
-                                    </div>
-                                    <div class="track-card-check">
+                                <div class="track-card track-card--pink" data-track="behavioral" role="radio"
+                                    tabindex="0" aria-checked="false">
+                                    <span class="track-card-glow" aria-hidden="true"></span>
+                                    <span class="track-card-tag"><span class="track-card-dot"
+                                            aria-hidden="true"></span>Behavioral</span>
+                                    <h3 class="track-card-title">Tell the story</h3>
+                                    <p class="track-card-desc">Conflict, failure, leadership — STAR answers that actually
+                                        land the point.</p>
+                                    <span class="track-card-no" aria-hidden="true">02</span>
+                                    <span class="track-card-check" aria-hidden="true">
                                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                                             <polyline points="3,8 7,12 13,4" stroke="currentColor" stroke-width="2"
                                                 stroke-linecap="round" stroke-linejoin="round" />
                                         </svg>
-                                    </div>
+                                    </span>
                                 </div>
-                                <div class="track-card" data-track="technical_voice">
-                                    <div class="track-card-accent"></div>
-                                    <div class="track-card-body">
-                                        <span class="track-card-title">Technical Voice</span>
-                                        <span class="track-card-sep">—</span>
-                                        <span class="track-card-desc">Concept-deep questions on topics you choose</span>
-                                    </div>
-                                    <div class="track-card-check">
+                                <div class="track-card track-card--purple" data-track="technical_voice" role="radio"
+                                    tabindex="0" aria-checked="false">
+                                    <span class="track-card-glow" aria-hidden="true"></span>
+                                    <span class="track-card-tag"><span class="track-card-dot"
+                                            aria-hidden="true"></span>Technical voice</span>
+                                    <h3 class="track-card-title">Think out loud</h3>
+                                    <p class="track-card-desc">Explain systems, trade-offs and decisions on the spot —
+                                        the way real interviewers probe.</p>
+                                    <span class="track-card-no" aria-hidden="true">03</span>
+                                    <span class="track-card-check" aria-hidden="true">
                                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                                             <polyline points="3,8 7,12 13,4" stroke="currentColor" stroke-width="2"
                                                 stroke-linecap="round" stroke-linejoin="round" />
                                         </svg>
-                                    </div>
+                                    </span>
                                 </div>
-                                <div class="track-card" data-track="coding">
-                                    <div class="track-card-accent"></div>
-                                    <div class="track-card-body">
-                                        <span class="track-card-title">Technical Coding</span>
-                                        <span class="track-card-sep">—</span>
-                                        <span class="track-card-desc">Live Monaco editor with LLM-generated coding
-                                            problems</span>
-                                    </div>
-                                    <div class="track-card-check">
+                                <div class="track-card track-card--cyan" data-track="coding" role="radio" tabindex="0"
+                                    aria-checked="false">
+                                    <span class="track-card-glow" aria-hidden="true"></span>
+                                    <span class="track-card-tag"><span class="track-card-dot"
+                                            aria-hidden="true"></span>Coding</span>
+                                    <h3 class="track-card-title">Ship under pressure</h3>
+                                    <p class="track-card-desc">Real problems in a real editor, reviewed as you type. No
+                                        "looks good" — actual feedback.</p>
+                                    <span class="track-card-no" aria-hidden="true">04</span>
+                                    <span class="track-card-check" aria-hidden="true">
                                         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                                             <polyline points="3,8 7,12 13,4" stroke="currentColor" stroke-width="2"
                                                 stroke-linecap="round" stroke-linejoin="round" />
                                         </svg>
-                                    </div>
+                                    </span>
                                 </div>
                             </div>
+
                             <div class="track-detail-box" id="trackDetailBox">
                                 <div class="track-detail-content" id="trackDetailContent"></div>
                             </div>
                             <input type="hidden" id="selectedTrack" name="selectedTrack" value="intro">
                         </div>
 
-                        <!-- Behavioral Track Section -->
-                        <div class="track-section" id="behavioralSection">
-                            <div class="form-group full-width">
-                                <label for="framework">Leadership Framework</label>
-                                <select id="framework" name="framework" class="form-input">
-                                    <option value="amazon">Amazon (16 Leadership Principles)</option>
-                                    <option value="google">Google (Googleyness, Leadership, Role Knowledge, GCA)
-                                    </option>
-                                    <option value="meta">Meta (Move Fast, Be Bold, Focus on Impact)</option>
-                                    <option value="generic">Generic (Leadership, Teamwork, Problem Solving...)</option>
-                                </select>
-                            </div>
-                            <div class="form-group full-width">
-                                <label>Follow-up Depth</label>
-                                <div class="depth-options">
-                                    <div class="depth-option">
-                                        <input type="radio" id="depthLight" name="depth" value="light">
-                                        <label for="depthLight">Light<br><small
-                                                style="font-weight:400;font-size:0.7rem">1 follow-up</small></label>
-                                    </div>
-                                    <div class="depth-option">
-                                        <input type="radio" id="depthMedium" name="depth" value="medium" checked>
-                                        <label for="depthMedium">Medium<br><small
-                                                style="font-weight:400;font-size:0.7rem">1-2 follow-ups</small></label>
-                                    </div>
-                                    <div class="depth-option">
-                                        <input type="radio" id="depthDeep" name="depth" value="deep">
-                                        <label for="depthDeep">Deep<br><small
-                                                style="font-weight:400;font-size:0.7rem">2-3 follow-ups</small></label>
+                        <!-- Track-specific options (progressive disclosure) -->
+                        <div class="track-options form-grid">
+                            <!-- Behavioral Track Section -->
+                            <div class="track-section" id="behavioralSection">
+                                <div class="form-group full-width">
+                                    <label for="framework">Leadership Framework</label>
+                                    <select id="framework" name="framework" class="form-input">
+                                        <option value="amazon">Amazon (16 Leadership Principles)</option>
+                                        <option value="google">Google (Googleyness, Leadership, Role Knowledge, GCA)
+                                        </option>
+                                        <option value="meta">Meta (Move Fast, Be Bold, Focus on Impact)</option>
+                                        <option value="generic">Generic (Leadership, Teamwork, Problem Solving...)
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="form-group full-width">
+                                    <label>Follow-up Depth</label>
+                                    <div class="depth-options">
+                                        <div class="depth-option">
+                                            <input type="radio" id="depthLight" name="depth" value="light">
+                                            <label for="depthLight">Light<br><small
+                                                    style="font-weight:400;font-size:0.7rem">1 follow-up</small></label>
+                                        </div>
+                                        <div class="depth-option">
+                                            <input type="radio" id="depthMedium" name="depth" value="medium" checked>
+                                            <label for="depthMedium">Medium<br><small
+                                                    style="font-weight:400;font-size:0.7rem">1-2
+                                                    follow-ups</small></label>
+                                        </div>
+                                        <div class="depth-option">
+                                            <input type="radio" id="depthDeep" name="depth" value="deep">
+                                            <label for="depthDeep">Deep<br><small
+                                                    style="font-weight:400;font-size:0.7rem">2-3
+                                                    follow-ups</small></label>
+                                        </div>
                                     </div>
                                 </div>
+                                <div class="form-group full-width">
+                                    <label for="customQuestions" style="display:flex;align-items:center;gap:0.5rem;">
+                                        Custom Questions <span class="optional-tag">optional, one per line</span>
+                                    </label>
+                                    <textarea id="customQuestions" name="customQuestions" class="form-input" rows="3"
+                                        placeholder="Tell me about a time you had to influence without authority.&#10;Describe a project that failed and what you learned."></textarea>
+                                </div>
+                                <div class="form-group full-width">
+                                    <button type="button" class="btn-secondary" id="starInfoBtn"
+                                        style="width:auto;padding:0.5rem 1rem;font-size:0.875rem;">
+                                        What is the STAR Method?
+                                    </button>
+                                </div>
                             </div>
-                            <div class="form-group full-width">
-                                <label for="customQuestions" style="display:flex;align-items:center;gap:0.5rem;">
-                                    Custom Questions <span style="color:var(--text-light);font-weight:400;">(optional,
-                                        one per line)</span>
-                                </label>
-                                <textarea id="customQuestions" name="customQuestions" class="form-input" rows="3"
-                                    placeholder="Tell me about a time you had to influence without authority.&#10;Describe a project that failed and what you learned."></textarea>
+
+                            <!-- Technical Voice Track Section -->
+                            <div class="track-section" id="technicalVoiceSection">
+                                <div class="form-group full-width">
+                                    <label>Topics to Cover <span class="optional-tag">select up to 3</span></label>
+                                    <div class="topic-grid" id="topicGrid">
+                                        <!-- Default topics, updated by JS based on role -->
+                                    </div>
+                                    <button type="button" class="btn-secondary" id="suggestTopicsBtn"
+                                        style="margin-top:0.75rem;width:auto;padding:0.5rem 1rem;font-size:0.875rem;display:none;">
+                                        Suggest topics from resume
+                                    </button>
+                                </div>
+                                <div class="form-group full-width">
+                                    <label for="customTopics">Custom Topics <span class="optional-tag">optional,
+                                            comma-separated</span></label>
+                                    <input type="text" id="customTopics" name="customTopics" class="form-input"
+                                        placeholder="e.g., Redis, Kafka, GraphQL">
+                                </div>
                             </div>
-                            <div class="form-group full-width">
-                                <button type="button" class="btn-secondary" id="starInfoBtn"
-                                    style="width:auto;padding:0.5rem 1rem;font-size:0.875rem;">
-                                    What is the STAR Method?
-                                </button>
+
+                            <!-- Coding Track Section -->
+                            <div class="track-section" id="codingSection">
+                                <div class="form-group full-width">
+                                    <label for="preferredLanguage">Preferred Language</label>
+                                    <select id="preferredLanguage" name="preferredLanguage" class="form-input">
+                                        <option value="python">Python</option>
+                                        <option value="javascript">JavaScript</option>
+                                        <option value="java">Java</option>
+                                        <option value="cpp">C++</option>
+                                        <option value="go">Go</option>
+                                    </select>
+                                </div>
+                                <div class="form-group full-width">
+                                    <label>Number of Problems</label>
+                                    <div class="depth-options">
+                                        <div class="depth-option">
+                                            <input type="radio" id="prob1" name="problem_count" value="1">
+                                            <label for="prob1">1 Problem<br><small
+                                                    style="font-weight:400;font-size:0.7rem">~15 min</small></label>
+                                        </div>
+                                        <div class="depth-option">
+                                            <input type="radio" id="prob2" name="problem_count" value="2" checked>
+                                            <label for="prob2">2 Problems<br><small
+                                                    style="font-weight:400;font-size:0.7rem">~30 min</small></label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group full-width">
+                                    <label>Difficulty</label>
+                                    <div class="depth-options">
+                                        <div class="depth-option">
+                                            <input type="radio" id="diffEasy" name="problem_difficulty" value="easy">
+                                            <label for="diffEasy">Easy</label>
+                                        </div>
+                                        <div class="depth-option">
+                                            <input type="radio" id="diffMedium" name="problem_difficulty" value="medium"
+                                                checked>
+                                            <label for="diffMedium">Medium</label>
+                                        </div>
+                                        <div class="depth-option">
+                                            <input type="radio" id="diffHard" name="problem_difficulty" value="hard">
+                                            <label for="diffHard">Hard</label>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <!-- Technical Voice Track Section -->
-                        <div class="track-section" id="technicalVoiceSection">
-                            <div class="form-group full-width">
-                                <label>Topics to Cover <span style="color:var(--text-light);font-weight:400;">(select up
-                                        to 3)</span></label>
-                                <div class="topic-grid" id="topicGrid">
-                                    <!-- Default topics, updated by JS based on role -->
-                                </div>
-                                <button type="button" class="btn-secondary" id="suggestTopicsBtn"
-                                    style="margin-top:0.75rem;width:auto;padding:0.5rem 1rem;font-size:0.875rem;display:none;">
-                                    Suggest topics from resume
-                                </button>
-                            </div>
-                            <div class="form-group full-width">
-                                <label for="customTopics">Custom Topics <span
-                                        style="color:var(--text-light);font-weight:400;">(optional,
-                                        comma-separated)</span></label>
-                                <input type="text" id="customTopics" name="customTopics" class="form-input"
-                                    placeholder="e.g., Redis, Kafka, GraphQL">
-                            </div>
-                        </div>
-
-                        <!-- Coding Track Section -->
-                        <div class="track-section" id="codingSection">
-                            <div class="form-group full-width">
-                                <label for="preferredLanguage">Preferred Language</label>
-                                <select id="preferredLanguage" name="preferredLanguage" class="form-input">
-                                    <option value="python">Python</option>
-                                    <option value="javascript">JavaScript</option>
-                                    <option value="java">Java</option>
-                                    <option value="cpp">C++</option>
-                                    <option value="go">Go</option>
-                                </select>
-                            </div>
-                            <div class="form-group full-width">
-                                <label>Number of Problems</label>
-                                <div class="depth-options">
-                                    <div class="depth-option">
-                                        <input type="radio" id="prob1" name="problem_count" value="1">
-                                        <label for="prob1">1 Problem<br><small
-                                                style="font-weight:400;font-size:0.7rem">~15 min</small></label>
-                                    </div>
-                                    <div class="depth-option">
-                                        <input type="radio" id="prob2" name="problem_count" value="2" checked>
-                                        <label for="prob2">2 Problems<br><small
-                                                style="font-weight:400;font-size:0.7rem">~30 min</small></label>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="form-group full-width">
-                                <label>Difficulty</label>
-                                <div class="depth-options">
-                                    <div class="depth-option">
-                                        <input type="radio" id="diffEasy" name="problem_difficulty" value="easy">
-                                        <label for="diffEasy">Easy</label>
-                                    </div>
-                                    <div class="depth-option">
-                                        <input type="radio" id="diffMedium" name="problem_difficulty" value="medium"
-                                            checked>
-                                        <label for="diffMedium">Medium</label>
-                                    </div>
-                                    <div class="depth-option">
-                                        <input type="radio" id="diffHard" name="problem_difficulty" value="hard">
-                                        <label for="diffHard">Hard</label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-section-label" style="grid-column: 1 / -1; margin-top: 10px;">Optional</div>
-
-                        <div class="form-group full-width">
-                            <label>Resume Upload <span style="color: var(--text-light); font-weight: 400;">(PDF, DOCX,
-                                    TXT)</span></label>
-                            <div class="file-upload-area" id="resumeUploadArea">
-                                <input type="file" id="resumeFile" accept=".pdf,.docx,.doc,.txt,.md">
-                                <svg class="file-upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                    stroke-width="2">
-                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                                    <polyline points="17 8 12 3 7 8" />
-                                    <line x1="12" y1="3" x2="12" y2="15" />
+                        <!-- EXPLORE AGENT — future feature (coming soon) -->
+                        <div class="explore-card" aria-disabled="true">
+                            <span class="explore-badge">Coming soon</span>
+                            <div class="explore-card-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="11" cy="11" r="7" />
+                                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
                                 </svg>
-                                <p class="file-upload-text"><strong>Click to upload</strong> or drag and drop</p>
                             </div>
-                            <div class="file-info" id="resumeFileInfo" style="display: none;">
-                                <span id="resumeFileName"></span>
-                                <span class="remove-file" id="removeResume">Remove</span>
+                            <div class="explore-card-body">
+                                <h3 class="explore-card-title">Plan for a real interview</h3>
+                                <p class="explore-card-desc">Enter a specific company, role and interviewer. A research
+                                    agent will study the job description, Glassdoor &amp; forums, and your interviewer —
+                                    then curate an interview tailored to exactly what you're walking into.</p>
                             </div>
-                            <div class="upload-status" id="resumeStatus" style="display: none;"></div>
+                        </div>
+                    </section>
+
+                    <!-- ============ Step 3 · Optional context ============ -->
+                    <section class="setup-section" aria-labelledby="step-context-label">
+                        <div class="setup-section-head">
+                            <span class="setup-step-num" aria-hidden="true">3</span>
+                            <div>
+                                <h2 class="setup-section-title" id="step-context-label">Add context
+                                    <span class="optional-tag">all optional</span></h2>
+                                <p class="setup-section-hint">Anything here helps us tailor the questions to you. Skip it
+                                    and we'll still run a great interview.</p>
+                            </div>
                         </div>
 
-                        <div class="form-group full-width">
-                            <label for="jobDescription">Job Description <span
-                                    style="color: var(--text-light); font-weight: 400;">(paste here)</span></label>
-                            <textarea id="jobDescription" name="jobDescription"
-                                placeholder="Paste the job description to tailor your interview questions..."
-                                class="form-input" rows="4"></textarea>
-                        </div>
+                        <div class="form-grid">
+                            <div class="form-group full-width">
+                                <label>Resume <span class="optional-tag">optional · PDF, DOCX, TXT</span></label>
+                                <div class="file-upload-area" id="resumeUploadArea">
+                                    <input type="file" id="resumeFile" accept=".pdf,.docx,.doc,.txt,.md">
+                                    <svg class="file-upload-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                        <polyline points="17 8 12 3 7 8" />
+                                        <line x1="12" y1="3" x2="12" y2="15" />
+                                    </svg>
+                                    <p class="file-upload-text"><strong>Click to upload</strong> or drag and drop</p>
+                                </div>
+                                <div class="file-info" id="resumeFileInfo" style="display: none;">
+                                    <span id="resumeFileName"></span>
+                                    <span class="remove-file" id="removeResume">Remove</span>
+                                </div>
+                                <div class="upload-status" id="resumeStatus" style="display: none;"></div>
+                            </div>
 
-                        <div class="form-group full-width">
-                            <div class="profile-toggle">
-                                <input type="checkbox" id="includeProfile" name="includeProfile" checked>
-                                <label for="includeProfile">Include my profile text in interview (resume & JD will be
-                                    used to tailor questions)</label>
+                            <div class="form-group full-width">
+                                <label for="portfolioUrl">Portfolio / LinkedIn URL <span
+                                        class="optional-tag">optional</span></label>
+                                <input type="url" id="portfolioUrl" name="portfolioUrl" class="form-input"
+                                    placeholder="https://linkedin.com/in/you  ·  yourportfolio.com"
+                                    autocomplete="url">
+                                <p class="field-hint">We keep this as a reference — we don't open private links
+                                    automatically. Paste the highlights below (or attach a resume above) so we can
+                                    actually use them.</p>
+                            </div>
+
+                            <div class="form-group full-width">
+                                <label for="workExperience">Your work, in your own words <span
+                                        class="optional-tag">optional</span></label>
+                                <textarea id="workExperience" name="workExperience" class="form-input" rows="4"
+                                    placeholder="No resume or portfolio file handy? Paste portfolio highlights here — or just tell us in a few lines: where you've worked, what you built, and what you're most proud of."></textarea>
+                            </div>
+
+                            <div class="form-group full-width">
+                                <label for="jobDescription">Job Description <span class="optional-tag">optional · paste
+                                        here</span></label>
+                                <textarea id="jobDescription" name="jobDescription"
+                                    placeholder="Paste the job description to tailor your interview questions..."
+                                    class="form-input" rows="4"></textarea>
+                            </div>
+
+                            <div class="form-group full-width">
+                                <div class="profile-toggle">
+                                    <input type="checkbox" id="includeProfile" name="includeProfile" checked>
+                                    <label for="includeProfile">Use my resume, links &amp; the job description to tailor
+                                        questions</label>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    </section>
 
                     <input type="hidden" id="resumeCacheKey" name="resumeCacheKey" value="">
                 </form>
@@ -500,7 +400,8 @@
                         <span class="loading-progress-timer" id="loadingProgressTimer">0:00</span>
                     </div>
                     <div class="loading-progress-retry" id="loadingProgressRetry">
-                        <button type="button" class="loading-progress-retry-btn" id="loadingProgressRetryBtn">Retry</button>
+                        <button type="button" class="loading-progress-retry-btn"
+                            id="loadingProgressRetryBtn">Retry</button>
                     </div>
                 </div>
 
@@ -525,14 +426,12 @@
 
                 <p class="required-note"><span class="required-mark">*</span> Required fields</p>
 
-                <div
-                    style="margin-top: 1.5rem; padding: 1rem; background: rgba(255, 152, 0, 0.1); border-left: 3px solid var(--warning); border-radius: 8px;">
-                    <p style="font-size: 0.8125rem; line-height: 1.5; color: var(--text-secondary); margin: 0;">
-                        <strong style="color: var(--warning);">Demo Notice:</strong> This service is deployed on Render
+                <div class="demo-notice">
+                    <p>
+                        <strong>Demo Notice:</strong> This service is deployed on Render
                         free tier (0.1 CPU). Voice may break or service might be slow. For better performance, run
                         locally using the <a href="https://github.com/PranavMishra17/MockFlow-AI" target="_blank"
-                            rel="noopener" style="color: var(--text-primary); text-decoration: underline;">GitHub
-                            repository</a>.
+                            rel="noopener">GitHub repository</a>.
                     </p>
                 </div>
             </div>
@@ -603,7 +502,6 @@
                 initInputValidation();
                 initFileUpload();
                 initTrackSelector();
-                applyTrackColors();
                 initStarModal();
                 initSuggestTopics();
                 updateButtonState();
@@ -786,15 +684,25 @@
                             if (data.success) {
                                 resumeCacheKey = data.cache_key;
                                 document.getElementById('resumeCacheKey').value = data.cache_key;
-                                showStatus('success', 'Extracted ' + data.char_count + ' characters');
+                                var chars = (data.char_count || 0).toLocaleString();
+                                showStatus('success', 'Resume added — we read ' + chars + ' characters and will tailor your questions to it.');
+                                if (typeof showToast === 'function') {
+                                    showToast('Resume uploaded — ' + file.name, { type: 'success' });
+                                }
                             } else {
                                 showStatus('error', data.message || 'Upload failed');
+                                if (typeof showToast === 'function') {
+                                    showToast(data.message || 'Resume upload failed', { type: 'error' });
+                                }
                                 clearFile();
                             }
                         })
                         .catch(function (err) {
                             console.error('[UPLOAD] Error:', err);
                             showStatus('error', 'Upload failed: ' + err.message);
+                            if (typeof showToast === 'function') {
+                                showToast('Resume upload failed. Please try again.', { type: 'error' });
+                            }
                             clearFile();
                         });
                 }
@@ -928,12 +836,26 @@
                 var customTopicsVal = document.getElementById('customTopics') ? document.getElementById('customTopics').value.trim() : '';
                 var customTopicsArr = customTopicsVal ? customTopicsVal.split(',').map(function (t) { return t.trim(); }).filter(Boolean) : [];
 
+                // Optional context fields (portfolio + free-text work experience).
+                // The backend tailors questions from `jobDescription`, so we fold
+                // these into that context string without touching server logic.
+                var portfolioUrl = (formData.get('portfolioUrl') || '').trim();
+                var workExperience = (formData.get('workExperience') || '').trim();
+                var jobDescription = formData.get('jobDescription') || '';
+
+                var extraContext = '';
+                if (portfolioUrl) { extraContext += '\n\nCandidate portfolio / LinkedIn: ' + portfolioUrl; }
+                if (workExperience) { extraContext += '\n\nCandidate-provided work experience: ' + workExperience; }
+                var jobDescriptionForApi = (jobDescription + extraContext).trim();
+
                 var data = {
                     name: formData.get('name'),
                     email: formData.get('email'),
                     role: formData.get('role'),
                     level: formData.get('level'),
-                    jobDescription: formData.get('jobDescription') || '',
+                    jobDescription: jobDescriptionForApi,
+                    portfolioUrl: portfolioUrl,
+                    workExperience: workExperience,
                     resumeCacheKey: document.getElementById('resumeCacheKey').value,
                     includeProfile: document.getElementById('includeProfile').checked,
                     track: selectedTrack,
@@ -1077,18 +999,11 @@
                 }
             }
 
-            var TRACK_COLORS = {
-                intro: '#22c55e',
-                behavioral: '#f59e0b',
-                technical_voice: '#3b82f6',
-                coding: '#8b5cf6'
-            };
-
             var TRACK_DETAILS = {
-                intro: '5 stages · ~20 min · Self-intro \u2192 Experience \u2192 Company fit · Speak naturally, real-time AI responses · You can skip stages',
+                intro: '5 stages · ~20 min · Self-intro → Experience → Company fit · Speak naturally, real-time AI responses · You can skip stages',
                 behavioral: '4 stages · ~25 min · STAR-format questions · Framework-aligned (Amazon / Google / Meta / Generic) · Follow-up depth configurable',
                 technical_voice: '5 stages · ~30 min · Concept-deep questions on selected topics · Resume-aware topic suggestions available',
-                coding: '5 stages · ~35 min · Live Monaco code editor · 1\u20132 LLM-generated problems · 15 min timer per problem · Up to 3 attempts · Code evaluated in real-time'
+                coding: '5 stages · ~35 min · Live Monaco code editor · 1–2 LLM-generated problems · 15 min timer per problem · Up to 3 attempts · Code evaluated in real-time'
             };
 
             function updateTrackDetailBox(track) {
@@ -1099,25 +1014,29 @@
                 box.classList.add('visible');
             }
 
-            function applyTrackColors() {
-                document.querySelectorAll('.track-card[data-track]').forEach(function (card) {
-                    var track = card.getAttribute('data-track');
-                    var color = TRACK_COLORS[track];
-                    if (color) card.style.setProperty('--track-accent', color);
+            function selectTrack(card) {
+                document.querySelectorAll('.track-card').forEach(function (c) {
+                    c.classList.remove('selected');
+                    if (c.hasAttribute('role')) c.setAttribute('aria-checked', 'false');
                 });
+                card.classList.add('selected');
+                if (card.hasAttribute('role')) card.setAttribute('aria-checked', 'true');
+                var track = card.getAttribute('data-track');
+                document.getElementById('selectedTrack').value = track;
+                updateTrackDetailBox(track);
+                showTrackSection(track);
+                updateButtonState();
             }
 
             function initTrackSelector() {
                 var cards = document.querySelectorAll('.track-card:not(.disabled)');
                 cards.forEach(function (card) {
-                    card.addEventListener('click', function () {
-                        document.querySelectorAll('.track-card').forEach(function (c) { c.classList.remove('selected'); });
-                        card.classList.add('selected');
-                        var track = card.getAttribute('data-track');
-                        document.getElementById('selectedTrack').value = track;
-                        updateTrackDetailBox(track);
-                        showTrackSection(track);
-                        updateButtonState();
+                    card.addEventListener('click', function () { selectTrack(card); });
+                    card.addEventListener('keydown', function (e) {
+                        if (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar') {
+                            e.preventDefault();
+                            selectTrack(card);
+                        }
                     });
                 });
                 updateTrackDetailBox('intro');
@@ -1217,6 +1136,7 @@
         'name', 'email', 'role',
         'level', 'framework', 'preferredLanguage',
         'customQuestions', 'customTopics', 'jobDescription',
+        'portfolioUrl', 'workExperience',
         'selectedTrack'
       ];
       const RADIO_NAMES = ['depth', 'problem_count', 'problem_difficulty'];
@@ -1268,6 +1188,16 @@
         });
       }
 
+      // Reflect a restored track into the visual selector (cards + detail box + sections).
+      function syncRestoredTrack() {
+        const trackEl = document.getElementById('selectedTrack');
+        if (!trackEl || !trackEl.value) return;
+        const card = document.querySelector('.track-card[data-track="' + trackEl.value + '"]');
+        if (card && !card.classList.contains('selected')) {
+          card.click();
+        }
+      }
+
       function applyState() {
         const state = readState();
 
@@ -1289,6 +1219,7 @@
           if (el) el.checked = !!checked;
         });
 
+        syncRestoredTrack();
         applyTopicState();
 
         const savedName = localStorage.getItem(FILENAME_KEY);
