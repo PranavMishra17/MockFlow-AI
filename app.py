@@ -143,6 +143,77 @@ def _safe_room_component(name: str) -> str:
     return slug or 'candidate'
 
 
+# ==================== FREE TIER (owner-funded trial interviews) ====================
+# When enabled, a new user gets a small number of interviews on the OWNER's keys
+# (SYSTEM_* env vars) before they must bring their own. Bounded per verified email
+# and by a global monthly ceiling (kill-switch). Off unless FREE_TIER_ENABLED=true.
+
+FREE_TIER_ENABLED = os.getenv('FREE_TIER_ENABLED', 'false').lower() == 'true'
+FREE_TIER_MONTHLY_MAX_CALLS = int(os.getenv('FREE_TIER_MONTHLY_MAX_CALLS', '500'))
+
+_SYSTEM_KEY_SHAPE = (
+    ('livekit_url', 'SYSTEM_LIVEKIT_URL'),
+    ('livekit_api_key', 'SYSTEM_LIVEKIT_API_KEY'),
+    ('livekit_api_secret', 'SYSTEM_LIVEKIT_API_SECRET'),
+    ('openai_key', 'SYSTEM_OPENAI_KEY'),
+    ('deepgram_key', 'SYSTEM_DEEPGRAM_KEY'),
+)
+_BYOK_REQUIRED = ('livekit_url', 'livekit_api_key', 'livekit_api_secret', 'openai_key', 'deepgram_key')
+
+
+def _system_keys():
+    """Owner-funded keys (same shape as get_api_keys), or None if not fully set."""
+    keys = {field: os.getenv(env) for field, env in _SYSTEM_KEY_SHAPE}
+    return keys if all(keys.values()) else None
+
+
+def _current_month() -> str:
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).strftime('%Y-%m')
+
+
+def free_tier_available(user_id: str) -> bool:
+    """True if the owner-funded free tier can serve this user right now."""
+    if not FREE_TIER_ENABLED or _system_keys() is None:
+        return False
+    if supabase_client.free_calls_this_month(_current_month()) >= FREE_TIER_MONTHLY_MAX_CALLS:
+        logger.warning("[FREE] Monthly free-tier ceiling reached; free calls paused")
+        return False
+    used, granted = supabase_client.get_free_calls(user_id)
+    return used < granted
+
+
+def resolve_interview_keys(user_id: str):
+    """
+    Decide which keys fund this interview.
+    Returns (keys|None, is_free_call, error|None) where error is a plain
+    (body_dict, status_code) tuple the caller serializes with jsonify.
+    Prefer the user's complete BYOK set; otherwise the owner free tier.
+    """
+    byok = supabase_client.get_api_keys(user_id)
+    if byok and all(byok.get(k) for k in _BYOK_REQUIRED):
+        return byok, False, None
+    if free_tier_available(user_id):
+        return _system_keys(), True, None
+    if FREE_TIER_ENABLED:
+        msg = 'Add your API keys in Settings, or you have used all your free interviews.'
+    else:
+        msg = 'Please configure your API keys in Settings before starting an interview.'
+    return None, False, ({'error': 'API keys not configured', 'message': msg}, 400)
+
+
+def resolve_openai_key(user_id: str):
+    """OpenAI key for server-side LLM calls: user's BYOK, else owner key (free tier)."""
+    byok = supabase_client.get_api_keys(user_id)
+    if byok and byok.get('openai_key'):
+        return byok['openai_key']
+    if FREE_TIER_ENABLED:
+        sysk = _system_keys()
+        if sysk:
+            return sysk['openai_key']
+    return None
+
+
 # ==================== AUTH ENDPOINTS ====================
 # /auth/login, /auth/google/callback, /auth/logout, /api/auth/status
 # are registered in auth_helpers.register_auth_routes(app) above.
@@ -157,20 +228,40 @@ def get_keys_status():
     try:
         user_id = get_user_id()
         keys = supabase_client.get_api_keys(user_id)
+        used, granted = supabase_client.get_free_calls(user_id)
+        free_remaining = max(0, granted - used)
 
         if keys:
             return jsonify({
                 'has_keys': True,
+                'free_calls_remaining': free_remaining,
                 'livekit_url_masked': f"wss://{keys['livekit_url'].split('//')[1][:15]}...",
                 'livekit_key_masked': f"{keys['livekit_api_key'][:8]}...",
                 'openai_masked': f"sk-...{keys['openai_key'][-4:]}",
                 'deepgram_masked': f"...{keys['deepgram_key'][-4:]}"
             })
 
-        return jsonify({'has_keys': False})
+        return jsonify({'has_keys': False, 'free_calls_remaining': free_remaining})
     except Exception as e:
         logger.error(f"[API] Failed to get keys status: {e}", exc_info=True)
-        return jsonify({'has_keys': False})
+        return jsonify({'has_keys': False, 'free_calls_remaining': 0})
+
+
+@app.route('/api/user/stats')
+@require_auth
+def user_stats():
+    """Aggregate dashboard stats for the authenticated user (count, tracks, avg score, free calls)."""
+    try:
+        user_id = get_user_id()
+        stats = supabase_client.get_user_stats(user_id) or {}
+        used, granted = supabase_client.get_free_calls(user_id)
+        stats['free_calls_used'] = used
+        stats['free_calls_granted'] = granted
+        stats['free_calls_remaining'] = max(0, granted - used)
+        return jsonify(stats)
+    except Exception as e:
+        logger.error(f"[API] Failed to build user stats: {e}", exc_info=True)
+        return jsonify({'total_interviews': 0, 'tracks': {}, 'free_calls_remaining': 0}), 200
 
 
 @app.route('/api/user/keys', methods=['POST'])
@@ -370,26 +461,14 @@ def generate_token():
 
         logger.info(f"[TOKEN] Token request from user {user_id} ({name})")
 
-        # Get user's API keys from database
-        keys = supabase_client.get_api_keys(user_id)
-
-        if not keys:
-            logger.error(f"[TOKEN] No API keys found for user: {user_id}")
-            return jsonify({
-                'error': 'API keys not configured',
-                'message': 'Please configure your API keys in Settings before starting an interview.'
-            }), 400
-
-        # Validate keys are present
-        required_keys = ['livekit_url', 'livekit_api_key', 'livekit_api_secret', 'openai_key', 'deepgram_key']
-        missing_keys = [k for k in required_keys if not keys.get(k)]
-
-        if missing_keys:
-            logger.error(f"[TOKEN] Missing keys for user {user_id}: {missing_keys}")
-            return jsonify({
-                'error': 'Incomplete API keys',
-                'message': f'Missing keys: {", ".join(missing_keys)}'
-            }), 400
+        # Resolve interview keys: the user's BYOK set, or the owner-funded free tier.
+        keys, is_free_call, key_error = resolve_interview_keys(user_id)
+        if key_error is not None:
+            logger.error(f"[TOKEN] No usable keys for user: {user_id}")
+            body, status = key_error
+            return jsonify(body), status
+        if is_free_call:
+            logger.info(f"[TOKEN] Free-tier interview for user {user_id} (owner keys)")
 
         # Create unique room name
         timestamp = int(time.time())
@@ -416,6 +495,11 @@ def generate_token():
 
         logger.info(f"[TOKEN] Worker ready for room: {room_name}")
 
+        # Claim the free credit only after a successful spawn (abandoned setups
+        # before this point don't burn an interview).
+        if is_free_call:
+            supabase_client.consume_free_call(user_id, _current_month())
+
         # Build participant attributes (without API keys - already in worker)
         attributes = {
             'user_id': user_id,
@@ -429,6 +513,7 @@ def generate_token():
             'custom_questions': custom_questions,
             'topics': ','.join(topics) if isinstance(topics, list) else topics,
             'custom_topics': ','.join(custom_topics) if isinstance(custom_topics, list) else custom_topics,
+            'is_free_call': str(is_free_call).lower(),
         }
 
         # Add resume text if cached
@@ -500,12 +585,12 @@ def extract_topics():
             return jsonify({'topics': []})
 
         user_id = get_user_id()
-        keys = supabase_client.get_api_keys(user_id)
-        if not keys or not keys.get('openai_key'):
+        openai_key = resolve_openai_key(user_id)
+        if not openai_key:
             return jsonify({'topics': []})
 
         from openai import OpenAI
-        client = OpenAI(api_key=keys['openai_key'])
+        client = OpenAI(api_key=openai_key)
 
         from prompts import QUESTION_GENERATION
         prompt = QUESTION_GENERATION.topic_extraction_system.format(
@@ -1306,11 +1391,11 @@ def generate_feedback_scores():
             interview_chat=interview_chat
         )
 
-        # Get authenticated user's OpenAI key from database (BYOK model)
+        # OpenAI key: user's BYOK, or the owner key for free-tier interviews.
         user_id = get_user_id()
-        keys = supabase_client.get_api_keys(user_id)
+        openai_key = resolve_openai_key(user_id)
 
-        if not keys or not keys.get('openai_key'):
+        if not openai_key:
             return jsonify({
                 'error': 'API key not configured',
                 'message': 'Please configure your OpenAI API key in Settings'
@@ -1318,7 +1403,7 @@ def generate_feedback_scores():
 
         logger.info(f"[API] Extracting scores via OpenAI for {interview_id}")
 
-        client = OpenAI(api_key=keys['openai_key'])
+        client = OpenAI(api_key=openai_key)
         
         response = client.chat.completions.create(
             model="gpt-4o-mini",
@@ -1481,11 +1566,11 @@ Include a brief "Speech Analytics" section mentioning filler word count ({speech
 
         user_prompt = user_prompt.rstrip() + coding_context
 
-        # Get authenticated user's OpenAI key from database (BYOK model)
+        # OpenAI key: user's BYOK, or the owner key for free-tier interviews.
         user_id = get_user_id()
-        keys = supabase_client.get_api_keys(user_id)
+        openai_key = resolve_openai_key(user_id)
 
-        if not keys or not keys.get('openai_key'):
+        if not openai_key:
             return jsonify({
                 'error': 'API key not configured',
                 'message': 'Please configure your OpenAI API key in Settings'
@@ -1493,7 +1578,7 @@ Include a brief "Speech Analytics" section mentioning filler word count ({speech
 
         logger.info(f"[API] Generating feedback via OpenAI for {interview_id}")
 
-        client = OpenAI(api_key=keys['openai_key'])
+        client = OpenAI(api_key=openai_key)
         
         response = client.chat.completions.create(
             model="gpt-4o-mini",

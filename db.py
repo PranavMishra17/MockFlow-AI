@@ -52,6 +52,101 @@ class DB:
             raise ValueError("Encryption key not configured")
         return self.cipher.decrypt(encrypted_text.encode()).decode()
 
+    # ---- Free tier (owner-funded trial interviews) ----
+
+    def get_free_calls(self, user_id: str) -> tuple:
+        """Return (used, granted) free interview counts for a user."""
+        try:
+            row = self._fetchone(
+                "SELECT free_calls_used, free_calls_granted FROM users WHERE id = %s",
+                (user_id,),
+            )
+            if not row:
+                return (0, 0)
+            return (int(row.get("free_calls_used") or 0), int(row.get("free_calls_granted") or 0))
+        except Exception as e:
+            logger.error(f"Error reading free calls: {e}")
+            return (0, 0)
+
+    def consume_free_call(self, user_id: str, month: str) -> bool:
+        """
+        Atomically claim one free interview if the user has allowance left, and
+        bump the global monthly counter. Returns True if a credit was consumed.
+        """
+        try:
+            row = self._fetchone(
+                """
+                UPDATE users
+                SET free_calls_used = free_calls_used + 1
+                WHERE id = %s AND free_calls_used < free_calls_granted
+                RETURNING free_calls_used
+                """,
+                (user_id,),
+            )
+            if not row:
+                return False
+            self._execute(
+                """
+                INSERT INTO free_tier_usage (month, calls) VALUES (%s, 1)
+                ON CONFLICT (month) DO UPDATE
+                    SET calls = free_tier_usage.calls + 1, updated_at = NOW()
+                """,
+                (month,),
+            )
+            return True
+        except Exception as e:
+            logger.error(f"Error consuming free call: {e}")
+            return False
+
+    def free_calls_this_month(self, month: str) -> int:
+        """Global count of free interviews served in the given 'YYYY-MM'."""
+        try:
+            row = self._fetchone(
+                "SELECT calls FROM free_tier_usage WHERE month = %s", (month,)
+            )
+            return int(row["calls"]) if row else 0
+        except Exception as e:
+            logger.error(f"Error reading monthly free usage: {e}")
+            return 0
+
+    def get_user_stats(self, user_id: str) -> Dict[str, Any]:
+        """Aggregate dashboard stats for a user (counts, tracks, avg score, recency)."""
+        empty = {
+            "total_interviews": 0,
+            "tracks": {},
+            "avg_overall_score": None,
+            "last_interview_date": None,
+        }
+        try:
+            agg = self._fetchone(
+                "SELECT COUNT(*) AS total, MAX(interview_date) AS last_date "
+                "FROM interviews WHERE user_id = %s",
+                (user_id,),
+            )
+            by_track = self._fetchall(
+                "SELECT track, COUNT(*) AS n FROM interviews WHERE user_id = %s GROUP BY track",
+                (user_id,),
+            )
+            rows = self._fetchall(
+                "SELECT feedback_data FROM feedback WHERE user_id = %s", (user_id,)
+            )
+            scores = []
+            for r in rows:
+                fd = r.get("feedback_data") or {}
+                val = fd.get("overall_score") if isinstance(fd, dict) else None
+                if isinstance(val, (int, float)):
+                    scores.append(val)
+            last_date = agg.get("last_date") if agg else None
+            return {
+                "total_interviews": int(agg["total"]) if agg else 0,
+                "tracks": {r["track"]: int(r["n"]) for r in by_track if r.get("track")},
+                "avg_overall_score": round(sum(scores) / len(scores), 2) if scores else None,
+                "last_interview_date": last_date.isoformat() if last_date else None,
+            }
+        except Exception as e:
+            logger.error(f"Error building user stats: {e}")
+            return empty
+
     def ping(self) -> bool:
         """Return True if the database answers a trivial query, else False."""
         try:
