@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![MockFlow-AI Banner](static/mf.png)
+![MockFlow-AI — Practice the interview, for real](docs/assets/hero.png)
 
 **It interviews you out loud, reads your live code as you type, and scores how you actually deliver — like a real panel, on demand.**
 
@@ -50,10 +50,18 @@ It runs on a **BYOK (Bring Your Own Keys)** model: each user supplies their own 
 
 ### Real interviewer, not a chatbot
 
+<img src="docs/assets/orb.gif" align="right" width="170" alt="The living-orb interviewer" />
+
 - **Speaks out loud in real time** — STT via Deepgram, LLM + TTS via OpenAI, over LiveKit's WebRTC pipeline.
-- **Signature "living orb"** animated interviewer that reacts as the conversation moves.
+- **Signature "living orb"** animated interviewer (shown here) that reacts as the conversation moves — built on a reusable CSS/JS motion kit.
 - **FSM-driven stages** with explicit transitions, fallback timers, and skip controls so an interview always progresses.
 - **Resume + JD aware** — uploads are parsed and injected into the agent's context.
+
+<br clear="right" />
+
+### Four ways to sweat the reps
+
+![The four interview tracks](docs/assets/tracks.png)
 
 ### Coding track that grades objectively
 
@@ -74,8 +82,11 @@ It runs on a **BYOK (Bring Your Own Keys)** model: each user supplies their own 
 
 ### Polished, distinctive UI
 
-- Warm **cream/charcoal theme** with a **light/dark toggle** (defaults to light).
-- A reusable **CSS motion kit** (`static/animations.css`) with a live gallery at [`/static/animations.html`](static/animations.html).
+![The one-page interview setup](docs/assets/form.png)
+
+- A warm, **light cream/charcoal theme** and a YC-grade landing built to convert.
+- A one-page **interview setup**: color-coded track cards, optional resume upload with live feedback, and name/role that cache to your browser.
+- A reusable **CSS + JS motion kit** (`static/animations.css`, `static/mf-rays.js`) powering the living orb, with a live gallery at [`/static/animations.html`](static/animations.html).
 
 ---
 
@@ -196,6 +207,8 @@ python -m ruff check .    # lint
 
 A **Playwright smoke harness** lives under `tests/e2e/` for end-to-end checks. CI on every push to `main` (`.github/workflows/deploy.yml`) runs ruff + pytest and gates the Render deploy.
 
+To exercise the system **end-to-end by hand** — from Google sign-in through a live voice (and coding) interview to the scored report — follow the step-by-step runbook in **[`docs/TESTING_E2E.md`](docs/TESTING_E2E.md)** (prerequisites, the Google OAuth localhost callback, BYOK keys, and a green-path checklist).
+
 ---
 
 ## Deployment
@@ -245,7 +258,7 @@ SAOUL License — see [LICENSE](LICENSE).
 <table align="center">
 <tr>
 <td width="200px">
-  <img src="public/images/me.jpg" alt="Pranav Mishra" width="180" style="border: 5px solid; border-image: linear-gradient(45deg, #9d4edd, #ff006e) 1;">
+  <img src="static/me.jpg" alt="Pranav Mishra" width="180" style="border: 5px solid; border-image: linear-gradient(45deg, #9d4edd, #ff006e) 1;">
 </td>
 <td>
 
