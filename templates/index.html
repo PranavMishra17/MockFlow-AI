@@ -26,26 +26,18 @@
     <div class="action-buttons" id="actionButtons"></div>
 
     <main class="hero">
-        <!-- Ambient living-orb atmosphere behind everything -->
-        <div class="mf-aura hero-aura" aria-hidden="true"></div>
-
         <div class="hero-content">
             <div class="hero-lead">
-                <div class="hero-eyebrow reveal" data-reveal="1">
-                    <span class="mf-pulse-dot" aria-hidden="true"></span>
-                    Voice-native AI interviewer
-                </div>
-
-                <div class="logo-mark reveal" data-reveal="2" id="logoMark" role="button" tabindex="0" aria-label="MockFlow.ai logo">
+                <div class="logo-mark mf-greet reveal" data-reveal="2" id="logoMark" role="button" tabindex="0" aria-label="MockFlow.ai logo — click to say hi">
                     <svg viewBox="0 0 48 48" width="72" height="100" fill="none" xmlns="http://www.w3.org/2000/svg">
                         <circle cx="24" cy="24" r="20" fill="#C8E6C9"/>
                         <circle cx="24" cy="24" r="12" fill="#81C784"/>
                         <circle cx="24" cy="24" r="6" fill="#4CAF50"/>
                     </svg>
-                    <span class="logo-eyes" aria-hidden="true"><i></i><i></i></span>
+                    <span class="mf-greet__eyes" aria-hidden="true"><i></i><i></i></span>
                 </div>
 
-                <h1 class="reveal" data-reveal="3"><span class="mf-shimmer-text">MockFlow<span class="mf-shimmer-text__lock">.ai</span></span></h1>
+                <h1 class="reveal" data-reveal="3"><span class="mf-shimmer-text">MockFlow.<span class="mf-shimmer-text__lock">ai</span></span></h1>
                 <p class="tagline reveal" data-reveal="4">It interviews you out loud, reads your live code as you type, and scores how you actually deliver — like a real panel, on demand.</p>
 
                 <ul class="features" aria-label="What MockFlow.ai does">
@@ -116,11 +108,10 @@
                 <div class="mf-bloom hero-orb-bloom" aria-hidden="true">
                     <span></span><span></span><span></span><span></span>
                 </div>
-                <div class="mf-orb hero-orb" id="heroOrb" role="img"
-                     aria-label="MockFlow.ai's AI interviewer — a living green orb that listens and speaks">
-                    <div class="mf-orb__core"></div>
-                    <div class="mf-orb__rays" id="heroOrbRays"></div>
-                    <div class="mf-orb__eyes" aria-hidden="true"><i></i><i></i></div>
+                <div class="hero-orb" id="heroOrb" role="img"
+                     aria-label="MockFlow.ai's AI interviewer — a living ring of sound with eyes that listens and speaks">
+                    <div class="mf-rays" id="heroOrbRays"></div>
+                    <span class="mf-eyes hero-orb-eyes" aria-hidden="true"><i></i><i></i></span>
                 </div>
                 <p class="hero-orb-caption" aria-hidden="true">
                     <span class="mf-pulse-dot"></span> Ready when you are
@@ -163,60 +154,13 @@
     </footer>
 
     <style>
-        /* The logo can hold the agent's eyes; hidden until the greeting plays. */
-        .logo-mark { position: relative; overflow: visible; }
-        .logo-mark svg { transform-origin: center center; }
-        .logo-eyes {
-            position: absolute; inset: 0;
-            display: flex; align-items: center; justify-content: center;
-            gap: 13px; pointer-events: none; opacity: 0; z-index: 2;
-        }
-        .logo-eyes i {
-            width: 9px; height: 9px; border-radius: 50%;
-            background: var(--text-primary); transform: scale(0);
-        }
-        html[data-theme="dark"] .logo-eyes i { background: #a79e93; }
-
-        /* CLICK GREETING — the concentric circles expand, snap-collapse, the
-           agent's eyes pop out and blink, then everything returns home. ~3.4s. */
-        .logo-mark.is-greeting {
-            background: transparent; border-color: transparent; box-shadow: none;
-        }
-        .logo-mark { transition: background-color .4s ease, border-color .4s ease, box-shadow .4s ease; }
-        .logo-mark.is-greeting svg      { animation: logo-greet-circles 3.4s cubic-bezier(0.4,0,0.2,1) both; }
-        .logo-mark.is-greeting .logo-eyes   { animation: logo-greet-eyewrap 3.4s ease both; }
-        .logo-mark.is-greeting .logo-eyes i { animation: logo-greet-eye 3.4s ease both; }
-        .logo-mark.is-greeting .logo-eyes i:nth-child(2) { animation-delay: .05s; }
-
-        @keyframes logo-greet-circles {
-            0%   { transform: scale(1); }
-            16%  { transform: scale(1.55); }   /* expand */
-            30%  { transform: scale(0.5); }    /* quick collapse */
-            42%  { transform: scale(0.72); }
-            80%  { transform: scale(0.72); }   /* hold small while the eyes are out */
-            100% { transform: scale(1); }      /* return home */
-        }
-        @keyframes logo-greet-eyewrap {
-            0%, 32% { opacity: 0; }
-            40%, 76% { opacity: 1; }
-            90%, 100% { opacity: 0; }
-        }
-        @keyframes logo-greet-eye {
-            0%, 32% { transform: scale(0); }
-            42%     { transform: scale(1.4); }            /* pop */
-            50%     { transform: scale(1); }
-            62%     { transform: scale(1) scaleY(1); }
-            66%     { transform: scale(1) scaleY(0.14); } /* blink */
-            70%     { transform: scale(1) scaleY(1); }
-            80%     { transform: scale(1); }
-            90%, 100% { transform: scale(0); }
-        }
-
+        /* The logo card dissolves to just the circles while its greeting plays.
+           The greeting choreography itself lives in animations.css (.mf-greet). */
+        .logo-mark { position: relative; overflow: visible;
+            transition: background-color .4s ease, border-color .4s ease, box-shadow .4s ease; }
+        .logo-mark.is-greeting { background: transparent; border-color: transparent; box-shadow: none; }
         @media (prefers-reduced-motion: reduce) {
-            .logo-mark.is-greeting svg,
-            .logo-mark.is-greeting .logo-eyes,
-            .logo-mark.is-greeting .logo-eyes i { animation: none !important; }
-            .logo-mark.is-greeting { background: var(--bg-card); border-color: var(--hairline); }
+            .logo-mark.is-greeting { background: var(--bg-card); border-color: var(--hairline); box-shadow: var(--shadow-medium); }
         }
     </style>
     <script src="/static/header.js"></script>
@@ -254,8 +198,8 @@
             var orb = document.getElementById('heroOrb');
             var orbRays = document.getElementById('heroOrbRays');
             if (orb && orbRays) {
-                var RAY_COUNT = 48;
-                orb.style.setProperty('--mf-ray-count', RAY_COUNT);
+                var RAY_COUNT = 56;
+                orbRays.style.setProperty('--mf-ray-count', RAY_COUNT);
                 var rayHTML = '';
                 for (var i = 0; i < RAY_COUNT; i++) rayHTML += '<span style="--i:' + i + '"></span>';
                 orbRays.innerHTML = rayHTML;
@@ -264,10 +208,10 @@
                 // then it settles into a calm idle breathing. Skipped if reduced.
                 if (!reduceMotion) {
                     var speak = function (ms) {
-                        orb.classList.add('mf-orb--speaking');
+                        orb.classList.add('is-speaking');
                         window.clearTimeout(orb._speakT);
                         orb._speakT = window.setTimeout(function () {
-                            orb.classList.remove('mf-orb--speaking');
+                            orb.classList.remove('is-speaking');
                         }, ms);
                     };
                     window.setTimeout(function () { speak(2600); }, 900);

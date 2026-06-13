@@ -255,6 +255,19 @@
 '</div>'
         },
         {
+            name: '.mf-greet',
+            note: 'Click the mark — circles burst, eyes pop, it returns',
+            html:
+'<div class="mf-greet" role="button" tabindex="0" title="Click me">\n' +
+'  <svg viewBox="0 0 48 48" width="84" height="84">\n' +
+'    <circle cx="24" cy="24" r="20" fill="#C8E6C9"/>\n' +
+'    <circle cx="24" cy="24" r="12" fill="#81C784"/>\n' +
+'    <circle cx="24" cy="24" r="6"  fill="#4CAF50"/>\n' +
+'  </svg>\n' +
+'  <span class="mf-greet__eyes"><i></i><i></i></span>\n' +
+'</div>'
+        },
+        {
             name: '.mf-eyes',
             note: 'Look-around + blink',
             html:
@@ -297,10 +310,10 @@
         },
         {
             name: '.mf-shimmer-text',
-            note: 'Green wave sweeps R→L, then sticks in the locked letters',
+            note: 'Wave sweeps the headline, sticks green in the locked letters',
             html:
 '<h2 class="mf-shimmer-text" style="font-size:2rem;font-weight:800">\n' +
-'  MockFlow<span class="mf-shimmer-text__lock">.ai</span>\n' +
+'  MockFlow.<span class="mf-shimmer-text__lock">ai</span>\n' +
 '</h2>'
         },
         {
@@ -359,6 +372,19 @@
         gallery.appendChild(card);
 
         buildRays(stage);
+
+        // Click-to-greet for any .mf-greet mark on this card's stage.
+        stage.querySelectorAll('.mf-greet').forEach(function (g) {
+            function greet() {
+                if (g.classList.contains('is-greeting')) return;
+                g.classList.add('is-greeting');
+                setTimeout(function () { g.classList.remove('is-greeting'); }, 3450);
+            }
+            g.addEventListener('click', greet);
+            g.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); greet(); }
+            });
+        });
     });
 
     /* expand the brand orb in the header too */

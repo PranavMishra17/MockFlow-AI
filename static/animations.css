@@ -479,17 +479,83 @@ html[data-theme="dark"] {
     animation: mf-float calc(6s / var(--mf-speed)) ease-in-out infinite;
 }
 
+/* 6e. .mf-greet — a concentric-circle mark that, on .is-greeting, expands,
+   snap-collapses, pops the agent's eyes out (with a blink), then settles home
+   (~3.4s). Toggle .is-greeting via JS on click and remove it after ~3450ms.
+   Plug-in:
+     <div class="mf-greet" role="button" tabindex="0">
+       <svg viewBox="0 0 48 48" width="72" height="72">
+         <circle cx="24" cy="24" r="20" fill="#C8E6C9"/>
+         <circle cx="24" cy="24" r="12" fill="#81C784"/>
+         <circle cx="24" cy="24" r="6"  fill="#4CAF50"/>
+       </svg>
+       <span class="mf-greet__eyes"><i></i><i></i></span>
+     </div>                                                                      */
+.mf-greet {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+.mf-greet svg { transform-origin: center center; display: block; }
+.mf-greet__eyes {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 13px;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 2;
+}
+.mf-greet__eyes > i {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    background: var(--mf-eye);
+    transform: scale(0);
+}
+.mf-greet.is-greeting svg                { animation: mf-greet-circles 3.4s cubic-bezier(0.4, 0, 0.2, 1) both; }
+.mf-greet.is-greeting .mf-greet__eyes    { animation: mf-greet-eyewrap 3.4s ease both; }
+.mf-greet.is-greeting .mf-greet__eyes > i { animation: mf-greet-eye 3.4s ease both; }
+.mf-greet.is-greeting .mf-greet__eyes > i:nth-child(2) { animation-delay: 0.05s; }
+
+@keyframes mf-greet-circles {
+    0%   { transform: scale(1); }
+    16%  { transform: scale(1.55); }   /* expand */
+    30%  { transform: scale(0.5); }    /* quick collapse */
+    42%  { transform: scale(0.72); }
+    80%  { transform: scale(0.72); }   /* hold small while the eyes are out */
+    100% { transform: scale(1); }      /* return home */
+}
+@keyframes mf-greet-eyewrap {
+    0%, 32%   { opacity: 0; }
+    40%, 76%  { opacity: 1; }
+    90%, 100% { opacity: 0; }
+}
+@keyframes mf-greet-eye {
+    0%, 32%   { transform: scale(0); }
+    42%       { transform: scale(1.4); }            /* pop */
+    50%       { transform: scale(1); }
+    62%       { transform: scale(1) scaleY(1); }
+    66%       { transform: scale(1) scaleY(0.14); } /* blink */
+    70%       { transform: scale(1) scaleY(1); }
+    80%       { transform: scale(1); }
+    90%, 100% { transform: scale(0); }
+}
+
 
 /* =============================================================================
    KEYFRAMES
    ============================================================================= */
 
+/* Symmetric crest — staggered around the ring it reads as one smooth travelling
+   wave that loops seamlessly (rest at both 0% and 100%, no hitch at the wrap). */
 @keyframes mf-ray {
     0%, 100% { height: var(--mf-ray-rest); }
-    /* a soft asymmetric crest so the wave feels organic, not metronomic */
-    35%      { height: calc(var(--mf-ray-rest) + (var(--mf-ray-peak) - var(--mf-ray-rest)) * 0.55); }
     50%      { height: var(--mf-ray-peak); }
-    70%      { height: calc(var(--mf-ray-rest) + (var(--mf-ray-peak) - var(--mf-ray-rest)) * 0.3); }
 }
 
 @keyframes mf-breathe {
@@ -557,8 +623,9 @@ html[data-theme="dark"] {
 }
 
 @keyframes mf-lock-green {
-    0%, 30%  { -webkit-text-fill-color: transparent; color: transparent; text-shadow: none; }
-    35%, 90% { -webkit-text-fill-color: var(--mf-ink); color: var(--mf-ink);
+    /* Sticks green AS the wave crosses it (early), not long after it has gone. */
+    0%, 6%   { -webkit-text-fill-color: transparent; color: transparent; text-shadow: none; }
+    12%, 88% { -webkit-text-fill-color: var(--mf-ink); color: var(--mf-ink);
                text-shadow: 0 0 12px var(--mf-glow); }
     100%     { -webkit-text-fill-color: transparent; color: transparent; text-shadow: none; }
 }
@@ -589,7 +656,10 @@ html[data-theme="dark"] {
     .mf-orbit > span,
     .mf-pulse-dot::after,
     .mf-shimmer-text,
-    .mf-float {
+    .mf-float,
+    .mf-greet.is-greeting svg,
+    .mf-greet.is-greeting .mf-greet__eyes,
+    .mf-greet.is-greeting .mf-greet__eyes > i {
         animation: none !important;
     }
 

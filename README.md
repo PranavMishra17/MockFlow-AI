@@ -211,6 +211,18 @@ Deployed on **Render**:
 
 ---
 
+## Roadmap
+
+MockFlow-AI is evolving from a mock-interview tool into a **one-stop interview-prep hub** — the place you run your whole job search from. Planned work:
+
+- **Interview & application tracker.** A lightweight place to log the calls and applications you have coming up — recruiter screens, founder calls, technical assessments, panels — with company, role, date, and notes. The home/dashboard becomes mission control for your search, not just a list of past sessions.
+- **"Plan for your actual call" → curated custom tracks.** From the start page, alongside the four standard tracks, an option to prep for a *real* upcoming interview. You provide the company, role, and any details; with your confirmation, a **deep-research agent** gathers context — job description, what the company tends to ask, signals from Glassdoor / Reddit / forums, and the interviewer's background where available — and a **track-builder agent** assembles a tailored interview (recruiter call, founder chat, two-engineer panel, etc.) using the existing track machinery with custom inputs.
+- **Personality dashboard, surfaced.** The "Interview Personality" view (already built) grows into a richer behavioral profile after a few sessions — how you come across, recurring filler patterns, pacing, strongest/weakest competencies, and concrete things to work on — and is showcased on the landing page so new users see where they're headed.
+- **Free trial slots.** New users get a couple of interviews on the house (no BYOK keys needed) to experience the product before configuring anything.
+- **Signed-in vs signed-out experience.** A marketing-grade landing for visitors; a personalized home for signed-in users (free slots remaining, upcoming calls, jump-back-in).
+
+---
+
 ## License
 
 SAOUL License — see [LICENSE](LICENSE).

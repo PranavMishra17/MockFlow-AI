@@ -677,11 +677,33 @@ a.badge:hover {
     align-self: center;
 }
 
-/* The orb scales fluidly with the viewport but never gets absurd. */
+/* The orb: a ring of sun-rays with eyes at the centre (the user's preferred
+   .mf-rays + .mf-eyes motif). Scales fluidly with the viewport. */
 .hero-orb {
-    --mf-orb-size: clamp(180px, 24vw, 300px);
     position: relative;
+    width: clamp(210px, 27vw, 330px);
+    height: clamp(210px, 27vw, 330px);
+    display: grid;
+    place-items: center;
     z-index: 1;
+}
+.hero-orb .mf-rays {
+    --mf-rays-size: clamp(210px, 27vw, 330px);
+    --mf-ray-count: 56;
+}
+.hero-orb-eyes {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    --mf-eye-size: clamp(11px, 1.5vw, 16px);
+    z-index: 2;
+}
+/* "Speaking" — rays reach higher + sweep faster (mirrors the live visualizer). */
+.hero-orb.is-speaking .mf-rays { --mf-ray-peak: calc(var(--mf-rays-size) * 0.21); }
+.hero-orb.is-speaking .mf-rays > span {
+    animation-duration: calc(1.5s / var(--mf-speed));
+    animation-delay: calc((var(--i) / var(--mf-ray-count)) * -1.5s / var(--mf-speed));
 }
 
 /* Bloom rings centered on the orb, sized a touch larger so they ripple past it.
@@ -2288,8 +2310,10 @@ footer a:hover {
     }
 
     .hero-orb {
-        --mf-orb-size: clamp(170px, 46vw, 240px);
+        width: clamp(180px, 52vw, 240px);
+        height: clamp(180px, 52vw, 240px);
     }
+    .hero-orb .mf-rays { --mf-rays-size: clamp(180px, 52vw, 240px); }
 
     .hero-orb-bloom {
         --mf-bloom-size: clamp(300px, 80vw, 460px);
