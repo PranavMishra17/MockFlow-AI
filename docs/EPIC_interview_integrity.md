@@ -21,7 +21,20 @@ never executed**, so there's no ground truth. This wing fixes both.
   is solvable and correctly specified. Plus runner behavior (wrong answer flagged,
   timeout, missing entrypoint, exceptions) and selector tests.
 
-## Next (needs your decision before wiring to live candidate code)
+## Wired into the agent (this branch)
+
+- **Problem selection**: `agent_worker.py` coding stage now calls `select_problems(level, count)`
+  from the vetted bank instead of the LLM generation prompt — no more unsolvable/ambiguous
+  problems, deterministic, zero token cost. Drop-in (same problem shape).
+- **Objective grounding (Piston)**: `coding/piston_runner.py` runs candidate code against the
+  problem's hidden test cases on Piston (decision: hosted runner). In `evaluate_code_submission`,
+  when `PISTON_ENABLED=true` and the problem ships test cases, the objective pass/fail is appended
+  to the evaluator prompt (LLM judges *approach* on top), surfaced in the UI `evaluation_result`
+  payload (`objective_tests`), and spoken in the agent's feedback. Falls back to LLM-only when
+  disabled/unreachable. 5 HTTP-mocked tests in `tests/test_piston_runner.py`.
+- Config: `PISTON_ENABLED` / `PISTON_URL` / `PISTON_PYTHON_VERSION` (env.template). Off by default.
+
+## Remaining / still LLM-only when Piston disabled
 
 1. **Wire the bank into the agent** (`agent_worker.py` coding stage): replace the
    LLM problem-generation call with `select_problems(level=..., count=active_problem_count)`.

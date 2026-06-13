@@ -494,42 +494,19 @@ class InterviewAgent(Agent):
                 return f"Generated questions for {len(all_questions)} topics. Now transition to self_intro."
 
             elif track_type == 'coding':
-                from prompts import QUESTION_GENERATION
+                # Use the VETTED problem bank instead of LLM-invented problems.
+                # Curated problems ship test cases + reference solutions and are
+                # proven solvable (no unsolvable/ambiguous generations).
+                from coding import select_problems, difficulty_for_level
                 problem_count = getattr(ctx.userdata, 'active_problem_count', 2)
-                preferred_language = getattr(ctx.userdata, 'preferred_language', 'python')
-                difficulty = 'medium'  # Could be passed from form later
-
-                # Adjust difficulty based on experience level
                 level = ctx.userdata.experience_level or 'mid'
-                if level in ('entry', 'junior'):
-                    difficulty = 'easy'
-                elif level in ('senior', 'lead', 'staff'):
-                    difficulty = 'hard'
+                difficulty = difficulty_for_level(level)
 
-                prompt = QUESTION_GENERATION.coding_system.format(
-                    count=problem_count,
-                    role=ctx.userdata.job_role or 'Software Engineer',
-                    level=level,
-                    resume_snippet=(ctx.userdata.uploaded_resume_text or '')[:1000] or 'Not provided',
-                    language=preferred_language,
-                    difficulty=difficulty,
-                    time_limit_minutes=15,
-                )
-
-                response = client.chat.completions.create(
-                    model='gpt-4o-mini',
-                    messages=[{'role': 'user', 'content': prompt}],
-                    temperature=0.7,
-                    max_tokens=1500,
-                )
-                raw = response.choices[0].message.content.strip()
-                parsed = _json.loads(raw)
-                problems = parsed.get('problems', [])
-
+                problems = select_problems(level=level, count=problem_count)
                 ctx.userdata.generated_problems = problems
-                ctx.userdata.active_problem_count = min(len(problems), 2)
-                logger.info(f"[AGENT] Generated {len(problems)} coding problems (difficulty: {difficulty})")
-                return f"Generated {len(problems)} coding problems. Active problem count: {ctx.userdata.active_problem_count}. Now transition_stage when ready to begin."
+                ctx.userdata.active_problem_count = max(1, min(len(problems), 2))
+                logger.info(f"[AGENT] Selected {len(problems)} vetted coding problems (difficulty: {difficulty})")
+                return f"Selected {len(problems)} vetted coding problems. Active problem count: {ctx.userdata.active_problem_count}. Now transition_stage when ready to begin."
 
         except Exception as e:
             logger.error(f"[AGENT] Question generation error: {e}", exc_info=True)
@@ -670,6 +647,27 @@ class InterviewAgent(Agent):
                 code=code,
             )
 
+            # Ground the evaluation in OBJECTIVE test results when the problem
+            # ships test cases and hosted execution (Piston) is enabled. The LLM
+            # then judges approach/quality on top of real pass/fail.
+            objective_summary = None
+            try:
+                from coding.piston_runner import PISTON_ENABLED, run_via_piston
+                test_cases = problem.get('test_cases')
+                entrypoint = problem.get('entrypoint')
+                if PISTON_ENABLED and test_cases and entrypoint and language.lower().startswith('py'):
+                    run = run_via_piston(code, entrypoint, test_cases, language='python')
+                    if run.get('error') is None:
+                        objective_summary = f"{run['passed']}/{run['total']} hidden test cases passed"
+                        user_prompt += (
+                            f"\n\nOBJECTIVE TEST RESULTS (ground truth — weight correctness on this): "
+                            f"{objective_summary}."
+                        )
+                    else:
+                        logger.info(f"[CODE] Piston run skipped/failed: {run.get('error')}")
+            except Exception as exec_err:
+                logger.warning(f"[CODE] Objective execution error (continuing with LLM-only): {exec_err}")
+
             response = client.chat.completions.create(
                 model='gpt-4o-mini',
                 messages=[
@@ -698,6 +696,7 @@ class InterviewAgent(Agent):
                     'attempt': attempt_num,
                     'max_attempts': max_attempts,
                     'problem_index': problem_index,
+                    'objective_tests': objective_summary,
                 })
                 if self.room and self.room.local_participant:
                     await self.room.local_participant.publish_data(eval_payload.encode('utf-8'))
@@ -724,7 +723,9 @@ class InterviewAgent(Agent):
                 logger.warning(f"[AGENT] Failed to save submission to DB: {db_err}")
 
             verbal_feedback = evaluation.get('brief_verbal_feedback', 'Interesting approach. Let me share some observations.')
-            logger.info(f"[AGENT] Code evaluated: correctness={evaluation.get('correctness')}, approach={evaluation.get('approach_quality')}")
+            if objective_summary:
+                verbal_feedback = f"{verbal_feedback} ({objective_summary})"
+            logger.info(f"[AGENT] Code evaluated: correctness={evaluation.get('correctness')}, approach={evaluation.get('approach_quality')}, tests={objective_summary}")
 
             attempts_remaining = max_attempts - attempt_num
             if attempts_remaining > 0 and evaluation.get('correctness') != 'pass':
