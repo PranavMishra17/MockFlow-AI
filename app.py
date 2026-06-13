@@ -1493,6 +1493,130 @@ def generate_feedback_scores():
         }), 500
 
 
+@app.route('/api/feedback/verdict', methods=['POST'])
+@require_auth
+def generate_verdict():
+    """
+    Wing D: the hiring-lens VERDICT — the reinvented feedback engine.
+
+    Judges the candidate from one interviewer's chair (track x role x seniority
+    x archetype): named signals, each banded only with a verbatim transcript
+    quote; the 7-point recommendation and scope/ownership level-read are
+    computed in code from those bands. Replaces the legacy 1-5 scorer.
+    """
+    import json as json_module
+    from openai import OpenAI
+    from feedback_scoring import build_speech_summary
+    from speech_analytics import analyze_transcript
+    from evaluator import (
+        RECOMMENDATIONS, build_evaluator_messages, build_rubric, finalize_verdict,
+        infer_archetype, infer_role, infer_seniority, pick_evaluator_model,
+    )
+
+    try:
+        data = request.json or {}
+        interview_id = data.get('interview_id')
+        if not interview_id:
+            return jsonify({'error': 'Missing interview_id'}), 400
+
+        interview_chat, candidate_profile, job_summary, meta, conversation, raw_conversation, error = _load_interview_context(interview_id)
+        if error:
+            return jsonify({'error': 'Interview not found', 'message': error}), 404
+
+        track = meta.get('track', 'intro')
+        role = infer_role(meta.get('job_role'))
+        seniority = infer_seniority(meta.get('experience_level'))
+        archetype = infer_archetype(meta.get('job_role'))
+
+        try:
+            speech_data = analyze_transcript(raw_conversation if isinstance(raw_conversation, dict) else {})
+        except Exception as e:
+            logger.warning(f"[API] Speech analytics failed for verdict: {e}")
+            speech_data = {}
+
+        # Ground the coding track in the objective execution results we store.
+        coding_results = None
+        if track == 'coding':
+            try:
+                subs = supabase_client.get_coding_submissions(interview_id)
+                lines = []
+                for s in subs:
+                    ev = s.get('evaluation_result') or {}
+                    lines.append(
+                        f"- {s.get('problem_title', 'problem')} [{s.get('language', '')}]: "
+                        f"passed={ev.get('passed', ev.get('all_passed', '?'))}, "
+                        f"approach={ev.get('approach_grade', ev.get('grade', '?'))}, "
+                        f"complexity={ev.get('time_complexity', '?')}"
+                    )
+                coding_results = "\n".join(lines) if lines else None
+            except Exception as e:
+                logger.warning(f"[API] Coding results for verdict failed: {e}")
+
+        rubric = build_rubric(track, role, seniority, archetype)
+        messages = build_evaluator_messages(
+            rubric,
+            candidate_profile=candidate_profile,
+            job_summary=job_summary,
+            transcript=interview_chat,
+            speech_summary=build_speech_summary(speech_data),
+            coding_results=coding_results,
+        )
+
+        user_id = get_user_id()
+        openai_key = resolve_openai_key(user_id)
+        if not openai_key:
+            return jsonify({
+                'error': 'API key not configured',
+                'message': 'Please configure your OpenAI API key in Settings'
+            }), 400
+
+        model = pick_evaluator_model()
+        logger.info(f"[API] Generating verdict for {interview_id} ({track}/{role}/{seniority}) via {model}")
+        client = OpenAI(api_key=openai_key)
+        resp = client.chat.completions.create(
+            model=model,
+            messages=messages,
+            temperature=0,  # judges should be deterministic
+            response_format={"type": "json_object"},
+            max_tokens=2200,
+        )
+
+        try:
+            raw_verdict = json_module.loads(resp.choices[0].message.content)
+        except (json_module.JSONDecodeError, TypeError) as e:
+            logger.error(f"[API] Verdict JSON parse failed: {e}")
+            return jsonify({'error': 'Verdict parse failed',
+                            'message': 'The evaluator returned malformed output. Please retry.'}), 502
+
+        # The deterministic spine: drop evidence-less signals, recompute the
+        # recommendation + level-read from bands, inject delivery, attach the gap.
+        verdict = finalize_verdict(raw_verdict, speech_data, weights=rubric.get('weighting'))
+        verdict['context'] = {'track': track, 'role': role,
+                              'seniority': seniority, 'archetype': archetype}
+
+        try:
+            if user_id:
+                idx = RECOMMENDATIONS.index(verdict['overall'].get('recommendation', 'on_fence'))
+                supabase_client.save_interview_scores(
+                    user_id=user_id, interview_id=interview_id, track=track,
+                    scores={'verdict': verdict, 'overall_score': idx, 'kind': 'verdict'},
+                )
+        except Exception as e:
+            logger.warning(f"[API] Could not persist verdict: {e}")
+
+        return jsonify({
+            'success': True,
+            'interview_id': interview_id,
+            'verdict': verdict,
+            'meta': {'candidate': meta.get('candidate'), 'track': track,
+                     'role': role, 'seniority': seniority, 'model': model},
+        })
+
+    except Exception as e:
+        logger.error(f"[API] Verdict generation error: {e}", exc_info=True)
+        return jsonify({'error': 'Verdict generation failed', 'message': str(e)}), 500
+
+
 @app.route('/api/feedback', methods=['POST'])
 @require_auth
 def generate_feedback():
