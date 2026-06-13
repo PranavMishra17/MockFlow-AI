@@ -159,6 +159,7 @@
         </div>
     </div>
 
+    <script src="/static/utils.js"></script>
     <script src="/static/header.js"></script>
     <script src="/static/modal.js"></script>
     <script>
@@ -752,25 +753,8 @@
             return result.join('\n');
         }
         
-        function formatDate(isoDate) {
-            if (!isoDate) return 'Unknown';
-            try {
-                var date = new Date(isoDate);
-                return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-            } catch (e) { return isoDate; }
-        }
-        
-        function formatStage(stage) {
-            var map = { 'welcome': 'Welcome', 'self_intro': 'Intro', 'past_experience': 'Experience', 'company_fit': 'Fit', 'closing': 'Closing' };
-            return map[stage] || stage || '';
-        }
-        
-        function escapeHtml(text) {
-            if (!text) return '';
-            var div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
+        // escapeHtml, formatDate, and formatStage are provided globally by
+        // static/utils.js (loaded before this script).
     })();
     </script>
 </body>

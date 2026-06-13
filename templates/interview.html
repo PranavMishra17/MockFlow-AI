@@ -249,6 +249,8 @@
         }
     </script>
 
+    <script src="/static/utils.js"></script>
+
     <script>
     (function() {
         'use strict';
@@ -1594,7 +1596,7 @@
                         window.location.href = '/feedback/' + encodeURIComponent(state.interviewDatabaseId);
                     } else {
                         // No interview_id received - show error
-                        alert('Interview was not saved properly. Please check your Past Interviews page.');
+                        showToast('Interview was not saved properly. Please check your Past Interviews page.', 'error');
                         window.location.href = '/past-calls';
                     }
                 };

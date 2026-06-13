@@ -46,13 +46,7 @@ const TRACK_PERSONA = {
     technical_coding: 'a coding interviewer\'s favorite'
 };
 
-function escapeHtml(value) {
-    return String(value).replace(/[&<>"']/g, function (ch) {
-        return {
-            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-        }[ch];
-    });
-}
+// escapeHtml is provided globally by static/utils.js (loaded before this script).
 
 function setHidden(el, hidden) {
     if (!el) return;
