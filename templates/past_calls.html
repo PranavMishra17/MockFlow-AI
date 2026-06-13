@@ -111,6 +111,7 @@
         </div>
     </div>
 
+    <script src="/static/utils.js"></script>
     <script src="/static/header.js"></script>
     <script src="/static/modal.js"></script>
     <script>
@@ -395,23 +396,8 @@
             return TRACK_LABELS[track] || track;
         }
 
-        function formatDate(isoDate) {
-            // Format like "Dec 6, 2024 · 3:42 PM" (date + time to disambiguate same-day interviews).
-            try {
-                var date = new Date(isoDate);
-                if (isNaN(date.getTime())) return isoDate;
-                var datePart = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-                var timePart = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-                return datePart + ' · ' + timePart;
-            } catch (e) { return isoDate; }
-        }
-
-        function escapeHtml(text) {
-            if (text === null || typeof text === 'undefined') return '';
-            var div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
+        // formatDate and escapeHtml are provided globally by static/utils.js
+        // (loaded before this script).
 
         // ==================== CONTROL EVENT WIRING ====================
 
