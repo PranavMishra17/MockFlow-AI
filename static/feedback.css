@@ -2,11 +2,10 @@
 /* Inherits variables from styles.css */
 
 .feedback-page {
-    height: 100vh;
+    min-height: 100vh;
     display: flex;
     flex-direction: column;
     background: var(--bg-cream);
-    overflow: hidden;
 }
 
 /* ==================== PAGE HEADER ==================== */
@@ -1722,3 +1721,182 @@
     border-radius: 8px;
 }
 .signal-card.info-open .signal-info-text { display: block; }
+
+/* ── Wing D C7: single-column progressive reveal ── */
+.reveal-stage {
+    width: 100%;
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 1.9rem 1.25rem 5rem;
+}
+.reveal-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 360px;
+    text-align: center;
+}
+.reveal-stage .generate-section { margin-top: 2rem; }
+#heroSlot, #nextRepSlot, #signalsSlot, #trajectorySlot { display: block; }
+#nextRepSlot:empty, #trajectorySlot:empty { display: none; }
+
+/* Moment 1 — the verdict hero (bigger, calmer than the inline card) */
+.verdict-hero {
+    padding: 1.6rem 1.6rem 1.5rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--bg-soft);
+    border-left: 6px solid var(--text-light);
+    background: var(--bg-card);
+    animation: vhIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.verdict-hero.verdict-pos { border-left-color: var(--accent-green-deep); background: color-mix(in srgb, var(--accent-green) 16%, var(--bg-card)); }
+.verdict-hero.verdict-mid { border-left-color: #E0A100; background: color-mix(in srgb, #F6C453 12%, var(--bg-card)); }
+.verdict-hero.verdict-neg { border-left-color: #E07A3F; background: color-mix(in srgb, #E07A3F 10%, var(--bg-card)); }
+.vh-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-top: 0.15rem; }
+.vh-reco { font-size: 2.3rem; font-weight: 800; letter-spacing: -0.025em; line-height: 1.04; color: var(--text-primary); }
+.vh-confidence {
+    flex-shrink: 0;
+    font-size: 0.64rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-light);
+    background: var(--bg-card);
+    border: 1px solid var(--bg-soft);
+    padding: 0.28rem 0.6rem;
+    border-radius: var(--radius-full);
+    white-space: nowrap;
+    margin-top: 0.4rem;
+}
+.vh-level { font-size: 0.92rem; color: var(--text-secondary); margin-top: 0.55rem; }
+.vh-headline { font-size: 1rem; font-style: italic; color: var(--text-primary); line-height: 1.5; margin: 0.85rem 0 0; }
+.vh-gap {
+    margin-top: 0.95rem;
+    padding: 0.7rem 0.95rem;
+    border-radius: 12px;
+    background: var(--bg-warm);
+    font-size: 0.86rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+.vh-gap strong { color: var(--text-primary); }
+
+/* spectrum "YOU" caret */
+.spectrum-wrap { position: relative; padding-top: 9px; }
+.spectrum-caret {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    width: 0; height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 7px solid var(--text-primary);
+    transition: left 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Moment 3 — next rep CTA (slab is reused from Phase 5) */
+.next-rep { margin-top: 1.2rem; animation: vhIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both; }
+.next-rep-cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-top: 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    background: var(--bg-card);
+    padding: 0.5rem 0.9rem;
+    border-radius: var(--radius-full);
+    text-decoration: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.next-rep-cta:hover { transform: translateY(-1px); box-shadow: var(--shadow-medium); }
+
+/* Moment 2 — signals reveal */
+.signals-reveal-title, .tf-divider {
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-light);
+    margin: 1.7rem 0 0.9rem;
+}
+.tf-divider { border-top: 1px solid var(--bg-soft); padding-top: 1.2rem; }
+.signal-star { color: #E0A100; margin-left: 0.3rem; }
+.sig-reveal {
+    opacity: 0;
+    transform: translateY(16px);
+    transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    transition-delay: calc(var(--i, 0) * 70ms);
+}
+.sig-reveal.is-in { opacity: 1; transform: none; }
+
+/* Moment 4 — trajectory fold */
+.ga-line {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.9rem;
+}
+.ga-line strong { color: var(--text-primary); }
+.vs-last {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    flex-wrap: wrap;
+    padding: 0.7rem 0.95rem;
+    border-radius: 12px;
+    background: var(--bg-warm);
+    border: 1px solid var(--bg-soft);
+    margin-bottom: 1rem;
+}
+.vs-label { font-size: 0.64rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-light); }
+.vs-body { font-size: 0.9rem; color: var(--text-secondary); }
+.vs-body strong { color: var(--text-primary); }
+.vs-up .vs-body strong { color: var(--accent-green-deep); }
+.vs-down .vs-body strong { color: #E07A3F; }
+.vs-link { margin-left: auto; font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); text-decoration: none; }
+.vs-link:hover { color: var(--text-primary); }
+
+/* delivery personality chips */
+.delivery-stats { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.9rem; }
+.delivery-chip {
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    background: var(--bg-warm);
+    border: 1px solid var(--bg-soft);
+    padding: 0.32rem 0.62rem;
+    border-radius: var(--radius-full);
+}
+.delivery-chip strong { color: var(--text-primary); font-weight: 800; }
+
+/* report footer */
+.report-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 1.8rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--bg-soft);
+}
+.report-footer .btn-view-transcript { width: auto; flex: 1 1 240px; }
+
+@keyframes vhIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+    .verdict-hero, .next-rep { animation: none; }
+    .sig-reveal { opacity: 1; transform: none; transition: none; }
+    .spectrum-caret { transition: none; }
+}
+
+/* print: the reveal flows naturally onto pages */
+@media print {
+    .reveal-stage { max-width: none; padding: 0; }
+    .report-footer, .generate-section, .reveal-loading, .cached-indicator { display: none !important; }
+    .sig-reveal { opacity: 1 !important; transform: none !important; }
+    .verdict-hero, .next-rep { animation: none !important; }
+    .signal-card, .verdict-hero, .delivery-panel, .coding-card { break-inside: avoid; page-break-inside: avoid; }
+}

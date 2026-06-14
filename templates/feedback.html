@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Interview Feedback &mdash; MockFlow-AI</title>
-    <meta name="description" content="AI-powered interview feedback from MockFlow-AI: per-competency scores, top strengths, focus areas, and an actionable narrative report you can print or share.">
+    <meta name="description" content="Your hiring verdict from MockFlow-AI: where you'd land in a real loop today, the evidence behind the call, and your single highest-leverage next rep.">
     <meta property="og:title" content="Interview Feedback &mdash; MockFlow-AI">
-    <meta property="og:description" content="AI-powered interview feedback: per-competency scores, top strengths, focus areas, and an actionable narrative report.">
+    <meta property="og:description" content="Your hiring verdict: where you'd land today, the evidence behind the call, and your next rep.">
     <meta property="og:type" content="article">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
@@ -32,111 +32,83 @@
 
         <!-- Loading State -->
         <div class="loading-state" id="loadingState">Loading interview...</div>
-        
+
         <!-- Error State -->
         <div class="error-state" id="errorState" style="display: none;"></div>
 
-        <!-- 2-Panel Container -->
-        <div class="panels-container" id="panelsContainer" style="display: none;">
-            <!-- Left Panel: Scores + Transcript Button -->
-            <div class="panel-left">
-                <!-- Scores Infographics Tablet -->
-                <div class="scores-tablet" id="scoresTablet" style="display: none;">
-                    <div class="tablet-header">
-                        <h3>Performance Scores</h3>
-                        <span class="cached-indicator" id="cachedIndicator" style="display: none;">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-                                <polyline points="22 4 12 14.01 9 11.01"/>
-                            </svg>
-                            Cached
-                        </span>
-                    </div>
-                    <div class="scores-content" id="scoresContent"></div>
-                </div>
+        <!-- Single-column progressive reveal (Wing D) -->
+        <div class="reveal-stage" id="revealStage" style="display: none;">
 
-                <!-- Loading State for Scores -->
-                <div class="scores-loading" id="scoresLoading" style="display: none;">
-                    <div class="loading-spinner-big"></div>
-                    <p class="loading-text">Analyzing interview performance...</p>
-                </div>
+            <!-- Generate (shown only when no verdict yet) -->
+            <div class="generate-section" id="generateSection" style="display: none;">
+                <button class="btn-generate-main" id="generateBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+                    </svg>
+                    <span>Reveal your verdict</span>
+                </button>
+                <p class="generate-hint">See where you'd land in a real hiring loop today &mdash; the call, the evidence behind it, and your next rep.</p>
+            </div>
 
-                <!-- Transcript Button -->
-                <div class="transcript-section">
-                    <button class="btn-view-transcript" id="viewTranscriptBtn">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                            <polyline points="14 2 14 8 20 8"/>
-                            <line x1="16" y1="13" x2="8" y2="13"/>
-                            <line x1="16" y1="17" x2="8" y2="17"/>
-                            <line x1="10" y1="9" x2="8" y2="9"/>
-                        </svg>
-                        <span>View Full Transcript</span>
-                        <span class="turn-count" id="turnCount"></span>
-                    </button>
-                </div>
-
-                <!-- Generate Button (if no feedback yet) -->
-                <div class="generate-section" id="generateSection">
-                    <button class="btn-generate-main" id="generateBtn">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
-                        </svg>
-                        <span>Generate Feedback</span>
-                    </button>
-                    <p class="generate-hint">Get AI-powered insights on your interview performance</p>
+            <!-- 4-phase loader, centered where the verdict will land -->
+            <div class="reveal-loading" id="feedbackLoading" style="display: none;">
+                <div class="loading-spinner-big"></div>
+                <p class="loading-phase" id="loadingPhase">Reading your transcript...</p>
+                <div class="phase-indicators">
+                    <span class="phase-dot active" data-phase="1"></span>
+                    <span class="phase-dot" data-phase="2"></span>
+                    <span class="phase-dot" data-phase="3"></span>
+                    <span class="phase-dot" data-phase="4"></span>
                 </div>
             </div>
 
-            <!-- Right Panel: Detailed Feedback -->
-            <div class="panel-right">
-                <div class="feedback-header">
-                    <h2>Detailed Feedback</h2>
-                    <!-- Report actions: hidden until feedback exists -->
-                    <div class="report-actions" id="reportActions" style="display: none;">
-                        <button type="button" class="btn-report-action" id="downloadPdfBtn"
-                                aria-label="Download this feedback report as a PDF using the browser print dialog">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <path d="M6 9V2h12v7"/>
-                                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-                                <rect x="6" y="14" width="12" height="8"/>
-                            </svg>
-                            <span>Download PDF</span>
-                        </button>
-                        <button type="button" class="btn-report-action" id="copyMarkdownBtn"
-                                aria-label="Copy this feedback report to the clipboard as Markdown">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                            </svg>
-                            <span class="btn-action-label" id="copyMarkdownLabel">Copy as Markdown</span>
-                        </button>
-                        <span class="copy-confirm" id="copyConfirm" role="status" aria-live="polite"></span>
-                    </div>
-                </div>
+            <!-- The four moments (populated by JS) -->
+            <div class="reveal-moments" id="revealMoments" style="display: none;">
+                <span class="cached-indicator" id="cachedIndicator" style="display: none;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                        <polyline points="22 4 12 14.01 9 11.01"/>
+                    </svg>
+                    Saved report
+                </span>
+                <div id="heroSlot"></div>        <!-- Moment 1: the verdict -->
+                <div id="nextRepSlot"></div>     <!-- Moment 3: your next rep -->
+                <div id="signalsSlot"></div>     <!-- Moment 2: signals, your own words -->
+                <div id="trajectorySlot"></div>  <!-- Moment 4: trajectory + delivery + coding -->
+            </div>
 
-                <!-- Loading State for Feedback Report -->
-                <div class="feedback-loading" id="feedbackLoading" style="display: none;">
-                    <div class="loading-spinner-big"></div>
-                    <p class="loading-phase" id="loadingPhase">Reading transcript...</p>
-                    <div class="phase-indicators">
-                        <span class="phase-dot active" data-phase="1"></span>
-                        <span class="phase-dot" data-phase="2"></span>
-                        <span class="phase-dot" data-phase="3"></span>
-                        <span class="phase-dot" data-phase="4"></span>
-                    </div>
-                </div>
-
-                <!-- Feedback Content -->
-                <div class="feedback-content" id="feedbackContent">
-                    <div class="feedback-placeholder" id="feedbackPlaceholder">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <circle cx="12" cy="12" r="10"/>
-                            <line x1="12" y1="16" x2="12" y2="12"/>
-                            <line x1="12" y1="8" x2="12.01" y2="8"/>
+            <!-- Footer actions -->
+            <div class="report-footer" id="reportFooter" style="display: none;">
+                <button class="btn-view-transcript" id="viewTranscriptBtn">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                        <line x1="16" y1="13" x2="8" y2="13"/>
+                        <line x1="16" y1="17" x2="8" y2="17"/>
+                        <line x1="10" y1="9" x2="8" y2="9"/>
+                    </svg>
+                    <span>View full transcript</span>
+                    <span class="turn-count" id="turnCount"></span>
+                </button>
+                <div class="report-actions" id="reportActions">
+                    <button type="button" class="btn-report-action" id="downloadPdfBtn"
+                            aria-label="Download this feedback report as a PDF using the browser print dialog">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <path d="M6 9V2h12v7"/>
+                            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                            <rect x="6" y="14" width="12" height="8"/>
                         </svg>
-                        <p>Generate feedback to see detailed analysis and actionable insights.</p>
-                    </div>
+                        <span>Download PDF</span>
+                    </button>
+                    <button type="button" class="btn-report-action" id="copyMarkdownBtn"
+                            aria-label="Copy this feedback report to the clipboard as Markdown">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        </svg>
+                        <span class="btn-action-label" id="copyMarkdownLabel">Copy as Markdown</span>
+                    </button>
+                    <span class="copy-confirm" id="copyConfirm" role="status" aria-live="polite"></span>
                 </div>
             </div>
         </div>
@@ -182,42 +154,36 @@
 
         var filename = '{{ filename }}';
         var feedbackState = {
-            scoresGenerated: false,
-            reportGenerated: false,
-            scoresData: null,
             verdict: null,
             conversationData: null,
-            feedbackText: null,
             codingSubmissions: null,
-            meta: null
+            meta: null,
+            reportGenerated: false
         };
 
         var elements = {
             loadingState: document.getElementById('loadingState'),
             errorState: document.getElementById('errorState'),
-            panelsContainer: document.getElementById('panelsContainer'),
             interviewInfo: document.getElementById('interviewInfo'),
 
-            scoresTablet: document.getElementById('scoresTablet'),
-            scoresContent: document.getElementById('scoresContent'),
-            scoresLoading: document.getElementById('scoresLoading'),
-            transcriptSection: document.querySelector('.transcript-section'),
-            viewTranscriptBtn: document.getElementById('viewTranscriptBtn'),
-            turnCount: document.getElementById('turnCount'),
+            revealStage: document.getElementById('revealStage'),
             generateSection: document.getElementById('generateSection'),
             generateBtn: document.getElementById('generateBtn'),
-            cachedIndicator: document.getElementById('cachedIndicator'),
-
-            feedbackHeader: document.querySelector('.feedback-header'),
-            reportActions: document.getElementById('reportActions'),
-            downloadPdfBtn: document.getElementById('downloadPdfBtn'),
-            copyMarkdownBtn: document.getElementById('copyMarkdownBtn'),
-            copyMarkdownLabel: document.getElementById('copyMarkdownLabel'),
-            copyConfirm: document.getElementById('copyConfirm'),
             feedbackLoading: document.getElementById('feedbackLoading'),
             loadingPhase: document.getElementById('loadingPhase'),
-            feedbackContent: document.getElementById('feedbackContent'),
-            feedbackPlaceholder: document.getElementById('feedbackPlaceholder'),
+            revealMoments: document.getElementById('revealMoments'),
+            cachedIndicator: document.getElementById('cachedIndicator'),
+            heroSlot: document.getElementById('heroSlot'),
+            nextRepSlot: document.getElementById('nextRepSlot'),
+            signalsSlot: document.getElementById('signalsSlot'),
+            trajectorySlot: document.getElementById('trajectorySlot'),
+
+            reportFooter: document.getElementById('reportFooter'),
+            viewTranscriptBtn: document.getElementById('viewTranscriptBtn'),
+            turnCount: document.getElementById('turnCount'),
+            downloadPdfBtn: document.getElementById('downloadPdfBtn'),
+            copyMarkdownBtn: document.getElementById('copyMarkdownBtn'),
+            copyConfirm: document.getElementById('copyConfirm'),
 
             transcriptModal: document.getElementById('transcriptModal'),
             transcriptModalBackdrop: document.getElementById('transcriptModalBackdrop'),
@@ -236,7 +202,7 @@
             elements.downloadPdfBtn.addEventListener('click', function() { window.print(); });
             elements.copyMarkdownBtn.addEventListener('click', copyFeedbackAsMarkdown);
         }
-        
+
         function loadInterview() {
             fetch('/api/interview/' + encodeURIComponent(filename))
                 .then(function(response) {
@@ -245,12 +211,10 @@
                 })
                 .then(function(data) {
                     elements.loadingState.style.display = 'none';
-
                     if (data.error) {
                         showError('Interview not found in database: ' + data.error);
                         return;
                     }
-
                     renderInterview(data);
                     checkCachedFeedback();
                 })
@@ -273,8 +237,9 @@
         }
 
         function renderInterview(data) {
-            elements.panelsContainer.style.display = 'grid';
+            elements.revealStage.style.display = 'block';
             elements.interviewInfo.style.display = 'flex';
+            elements.generateSection.style.display = 'flex';
 
             var meta = data.meta || {};
             var conversation = data.ordered_conversation || [];
@@ -316,46 +281,32 @@
                 startFeedbackGeneration();
             }
         }
-        
+
         function checkCachedFeedback() {
             fetch('/api/feedback/get/' + encodeURIComponent(filename))
-                .then(function(response) {
-                    if (!response.ok) return null;
-                    return response.json();
-                })
+                .then(function(response) { return response.ok ? response.json() : null; })
                 .then(function(data) {
                     if (data && data.feedback_data && data.feedback_data.verdict) {
                         console.log('[FEEDBACK] Found cached verdict in database');
-                        feedbackState.verdict = data.feedback_data.verdict;
-                        feedbackState.scoresGenerated = true;
                         feedbackState.reportGenerated = true;
-                        renderVerdict(data.feedback_data.verdict, true);
-                        renderSignals(data.feedback_data.verdict);
-                        elements.generateSection.style.display = 'none';
+                        renderReveal(data.feedback_data.verdict, true);
                     } else {
                         console.log('[FEEDBACK] No cached verdict found');
                     }
                 })
-                .catch(function(err) {
-                    console.log('[FEEDBACK] No cached feedback available');
-                });
+                .catch(function() { console.log('[FEEDBACK] No cached feedback available'); });
         }
 
         function startFeedbackGeneration() {
             if (feedbackState.reportGenerated) return;
-
             elements.generateBtn.disabled = true;
-            elements.generateSection.style.display = 'none';
-
             generateVerdict();
         }
 
-        // Wing D: a single call to the hiring-lens evaluator. The verdict IS the
-        // feedback — no more 1-5 gauge + separate narrative essay.
+        // Wing D: a single call to the hiring-lens evaluator. The verdict IS the feedback.
         function generateVerdict() {
             console.log('[FEEDBACK] Generating hiring verdict...');
-            elements.scoresLoading.style.display = 'flex';
-            elements.feedbackPlaceholder.style.display = 'none';
+            elements.generateSection.style.display = 'none';
             elements.feedbackLoading.style.display = 'flex';
 
             var phases = ['Reading your transcript...', 'Weighing the signals...',
@@ -377,27 +328,17 @@
             .then(function(response) { return response.json(); })
             .then(function(data) {
                 clearInterval(phaseInterval);
-                if (data.error) {
-                    showScoresError(data.message || data.error);
-                    showFeedbackError(data.message || data.error);
-                    return;
-                }
+                if (data.error) { showRevealError(data.message || data.error); return; }
                 console.log('[FEEDBACK] Verdict generated');
-                feedbackState.verdict = data.verdict;
-                feedbackState.codingSubmissions = data.coding_submissions || null;
-                feedbackState.scoresGenerated = true;
                 feedbackState.reportGenerated = true;
-
-                renderVerdict(data.verdict, false);
-                renderSignals(data.verdict);
-
+                feedbackState.codingSubmissions = data.coding_submissions || null;
+                renderReveal(data.verdict, false);
                 saveFeedbackToDatabase(filename, { verdict: data.verdict });
             })
             .catch(function(err) {
                 clearInterval(phaseInterval);
                 console.error('[FEEDBACK] Verdict error:', err);
-                showScoresError('Failed to evaluate interview: ' + err.message);
-                showFeedbackError('Failed to evaluate interview: ' + err.message);
+                showRevealError('Failed to evaluate interview: ' + err.message);
             });
         }
 
@@ -406,24 +347,35 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({
-                    interview_id: interviewId,
-                    feedback: feedbackData
-                })
+                body: JSON.stringify({ interview_id: interviewId, feedback: feedbackData })
             })
             .then(function(response) { return response.json(); })
             .then(function(result) {
-                if (result.success) {
-                    console.log('[FEEDBACK] Saved to database successfully');
-                } else {
-                    console.error('[FEEDBACK] Save failed:', result.message);
-                }
+                if (result.success) console.log('[FEEDBACK] Saved to database successfully');
+                else console.error('[FEEDBACK] Save failed:', result.message);
             })
-            .catch(function(err) {
-                console.error('[FEEDBACK] Save error:', err);
-            });
+            .catch(function(err) { console.error('[FEEDBACK] Save error:', err); });
         }
 
+        // ── Wing D labels ──
+        var RECO_LABEL = {strong_no_hire:'Strong No-Hire', no_hire:'No-Hire', lean_no_hire:'Leaning No-Hire',
+                          on_fence:'On the Fence', lean_hire:'Leaning Hire', hire:'Hire', strong_hire:'Strong Hire'};
+        var RECO_TONE = {strong_no_hire:'neg', no_hire:'neg', lean_no_hire:'neg',
+                         on_fence:'mid', lean_hire:'pos', hire:'pos', strong_hire:'pos'};
+        var LEVEL_LABEL = {below_intern:'developing', intern:'intern', new_grad:'new-grad',
+                           mid:'mid-level', above_mid:'above mid-level'};
+        var BAND_LABEL = {outstanding:'Outstanding', solid:'Solid', borderline:'Borderline',
+                          poor:'Poor', cannot_determine:'Not shown'};
+        var ARCH_LABEL = {big_tech:'Big Tech', high_bar_startup:'high-bar startup'};
+        var ROLE_LABEL = {swe:'software engineer', pm:'product manager', ds_mle:'data / ML'};
+        var RECO_ORDER = ['strong_no_hire','no_hire','lean_no_hire','on_fence','lean_hire','hire','strong_hire'];
+        var BAND_INFO = {
+            outstanding: 'Top-tier — a clear strength that sets you apart from other candidates at this level.',
+            solid: 'Meets the bar for this level — a reliable, positive hire signal.',
+            borderline: 'On the fence — present but not yet convincing. This is where offers are won or lost.',
+            poor: 'Below the bar — a likely no-hire driver on this signal.',
+            cannot_determine: 'There wasn’t enough in the transcript to judge this fairly.'
+        };
         var DELIVERY_TIPS = {
             wpm: {
                 slow: 'A touch slow — add energy and momentum so you sound engaged.',
@@ -439,13 +391,134 @@
             }
         };
 
+        function nextRecoLabel(reco) {
+            var i = RECO_ORDER.indexOf(reco);
+            if (i < 0 || i >= RECO_ORDER.length - 1) return null;
+            return RECO_LABEL[RECO_ORDER[i + 1]];
+        }
+
+        // ── The reveal: four moments in one vertical narrative ──
+        function renderReveal(v, fromCache) {
+            feedbackState.verdict = v;
+            elements.feedbackLoading.style.display = 'none';
+            elements.generateSection.style.display = 'none';
+            if (fromCache) elements.cachedIndicator.style.display = 'inline-flex';
+
+            elements.heroSlot.innerHTML = renderHero(v);
+            elements.nextRepSlot.innerHTML = renderNextRep(v);
+            elements.signalsSlot.innerHTML = renderSignals(v);
+            elements.trajectorySlot.innerHTML = renderTrajectory(v);
+
+            elements.revealMoments.style.display = 'block';
+            elements.reportFooter.style.display = 'flex';
+            setupProgressiveReveal();
+            loadVsLast();
+        }
+
+        // Moment 1 — the verdict (the one earned read).
+        function renderHero(v) {
+            var o = v.overall || {}, ctx = v.context || {}, tone = RECO_TONE[o.recommendation] || 'mid';
+            var aim = ctx.seniority ? (LEVEL_LABEL[ctx.seniority] || ctx.seniority) : null;
+            var html = '<div class="verdict-hero verdict-' + tone + '">';
+            html += '<div class="verdict-eyebrow">Where you’d land today';
+            if (ctx.archetype && ctx.role) html += ' · ' + escapeHtml((ARCH_LABEL[ctx.archetype] || ctx.archetype) + ' ' + (ROLE_LABEL[ctx.role] || ctx.role));
+            if (aim) html += ' · ' + escapeHtml(aim) + ' bar';
+            html += '</div>';
+            html += '<div class="vh-top"><div class="vh-reco">' + escapeHtml(RECO_LABEL[o.recommendation] || 'On the Fence') + '</div>';
+            if (o.confidence) html += '<span class="vh-confidence">' + escapeHtml(o.confidence) + ' confidence</span>';
+            html += '</div>';
+            html += renderSpectrum(o.recommendation);
+            var lvl = LEVEL_LABEL[o.level_read];
+            if (lvl) html += '<div class="vh-level">performing at <strong>' + lvl + '</strong> level</div>';
+            if (o.headline) html += '<p class="vh-headline">' + escapeHtml(o.headline) + '</p>';
+            if (v.gap_to_next && v.gap_to_next.signal) {
+                var g = v.gap_to_next, to = nextRecoLabel(o.recommendation);
+                html += '<div class="vh-gap">' +
+                    (to ? '<strong>One band from ' + escapeHtml(to) + ':</strong> ' : '<strong>To raise your verdict:</strong> ') +
+                    escapeHtml(g.signal) + ' — ' + escapeHtml(g.move || '') + '</div>';
+            }
+            html += '</div>';
+            return html;
+        }
+
+        // The 7-point scale with a "YOU" caret so a new user sees where they sit.
+        function renderSpectrum(reco) {
+            var idx = RECO_ORDER.indexOf(reco);
+            if (idx < 0) idx = 3;
+            var caretLeft = ((idx + 0.5) / RECO_ORDER.length * 100).toFixed(2);
+            var html = '<div class="verdict-spectrum" aria-label="Hire-recommendation scale">';
+            html += '<div class="spectrum-wrap"><span class="spectrum-caret" style="left:' + caretLeft + '%"></span><div class="spectrum-track">';
+            for (var i = 0; i < RECO_ORDER.length; i++) {
+                var cls = 'spectrum-seg seg-' + RECO_TONE[RECO_ORDER[i]] + (i === idx ? ' is-current' : '');
+                html += '<span class="' + cls + '" title="' + RECO_LABEL[RECO_ORDER[i]] + '"></span>';
+            }
+            html += '</div></div>';
+            html += '<div class="spectrum-ends"><span>Strong No-Hire</span><span>you are here</span><span>Strong Hire</span></div>';
+            html += '</div>';
+            return html;
+        }
+
+        // Moment 3 — your next rep (the single action that drives return).
+        function renderNextRep(v) {
+            if (!v.gap_to_next || !v.gap_to_next.signal) return '';
+            var g = v.gap_to_next, ctx = v.context || {};
+            var qs = ctx.track ? ('?track=' + encodeURIComponent(ctx.track)) : '';
+            return '<div class="next-rep">' +
+                '<div class="next-rep-label">Your next rep</div>' +
+                '<p class="next-rep-body"><strong>' + escapeHtml(g.signal) + '</strong> — ' + escapeHtml(g.move || '') + '</p>' +
+                '<a class="next-rep-cta" href="/start' + qs + '">Practice this again →</a>' +
+                '</div>';
+        }
+
+        // Moment 2 — signals, in your own words (revealed progressively on scroll).
+        function renderSignals(v) {
+            var sigs = v.signals || [];
+            var html = '<div class="signals-reveal-title">The call, signal by signal — backed by your own words</div>';
+            sigs.forEach(function(s, i) {
+                var band = s.band || 'cannot_determine';
+                var star = band === 'outstanding' ? '<span class="signal-star" title="A great answer">★</span>' : '';
+                html += '<div class="signal-card sig-reveal signal-' + band + '" style="--i:' + i + '">';
+                html += '<div class="signal-head"><span class="signal-name">' + escapeHtml(s.name || '') + star + '</span>';
+                html += '<span class="signal-band-wrap"><span class="signal-band band-' + band + '">' + (BAND_LABEL[band] || band) + '</span>';
+                html += '<button type="button" class="signal-info-btn" aria-label="What does this band mean?" ' +
+                        'onclick="this.closest(\'.signal-card\').classList.toggle(\'info-open\')">i</button></span></div>';
+                html += '<p class="signal-info-text">' + (BAND_INFO[band] || '') + '</p>';
+                if (s.reasoning) html += '<p class="signal-reason">' + escapeHtml(s.reasoning) + '</p>';
+                if (band === 'cannot_determine') {
+                    html += '<p class="signal-na">Not enough in the transcript to judge this fairly.</p>';
+                } else if (s.evidence && s.evidence.length) {
+                    s.evidence.forEach(function(q) { html += '<blockquote class="signal-evidence">“' + escapeHtml(q) + '”</blockquote>'; });
+                }
+                if (s.to_raise && band !== 'outstanding' && band !== 'cannot_determine') {
+                    html += '<p class="signal-raise"><span>To raise this</span> ' + escapeHtml(s.to_raise) + '</p>';
+                }
+                html += '</div>';
+            });
+            if (v.differentiators && v.differentiators.length) {
+                html += '<div class="differentiators sig-reveal" style="--i:' + sigs.length + '"><div class="diff-title">What would make you a strong hire</div><ul>';
+                v.differentiators.forEach(function(d) { html += '<li>' + escapeHtml(d) + '</li>'; });
+                html += '</ul></div>';
+            }
+            return html;
+        }
+
+        // Moment 4 — the evidence behind the call (folded in last, never buries the verdict).
+        function renderTrajectory(v) {
+            var html = '<div class="tf-divider">The evidence behind the call</div>';
+            html += '<div id="vsLastSlot"></div>';
+            var ga = v.great_answers || 0;
+            if (ga) html += '<div class="ga-line"><span class="signal-star">★</span> <strong>' + ga + '</strong> great answer' + (ga > 1 ? 's' : '') + ' in this interview</div>';
+            html += renderDeliveryPanel(v.delivery);
+            html += renderCodingBlock(feedbackState.codingSubmissions);
+            return html;
+        }
+
         function renderDeliveryPanel(d) {
             if (!d) return '';
             var html = '<div class="delivery-panel">';
             html += '<div class="delivery-title">Delivery <span class="delivery-sub">measured from your speech</span></div>';
             html += '<div class="delivery-grid">';
 
-            // Pace
             html += '<div class="delivery-metric delivery-' + (d.wpm_band || 'unknown') + '">';
             html += '<div class="delivery-metric-head"><span class="delivery-metric-name">Speaking pace</span>';
             html += '<span class="delivery-metric-val">' + (d.wpm || 0) + ' <small>wpm</small></span></div>';
@@ -453,7 +526,6 @@
             if (DELIVERY_TIPS.wpm[d.wpm_band]) html += '<p class="delivery-tip">' + DELIVERY_TIPS.wpm[d.wpm_band] + '</p>';
             html += '</div>';
 
-            // Filler rate
             html += '<div class="delivery-metric delivery-' + (d.filler_band || 'good') + '">';
             html += '<div class="delivery-metric-head"><span class="delivery-metric-name">Filler words</span>';
             html += '<span class="delivery-metric-val">' + (d.filler_per_min || 0) + '<small>/min</small></span></div>';
@@ -461,7 +533,18 @@
             if (DELIVERY_TIPS.filler[d.filler_band]) html += '<p class="delivery-tip">' + DELIVERY_TIPS.filler[d.filler_band] + '</p>';
             html += '</div>';
 
-            html += '</div></div>';
+            html += '</div>';  // .delivery-grid
+
+            // Personality extras (Wing D): countable, personal, deterministic.
+            var chips = '';
+            if (d.word_count) chips += '<span class="delivery-chip"><strong>' + d.word_count + '</strong> words spoken</span>';
+            if (d.sentence_count) chips += '<span class="delivery-chip"><strong>' + d.sentence_count + '</strong> sentences</span>';
+            if (d.top_crutch_word && d.top_crutch_word.word) chips += '<span class="delivery-chip">your crutch word: <strong>“' + escapeHtml(d.top_crutch_word.word) + '” ×' + d.top_crutch_word.count + '</strong></span>';
+            if (typeof d.talk_ratio === 'number' && d.talk_ratio > 0) chips += '<span class="delivery-chip">you held <strong>' + Math.round(d.talk_ratio * 100) + '%</strong> of the talk time</span>';
+            if (d.longest_monologue_s) chips += '<span class="delivery-chip">longest answer <strong>~' + Math.round(d.longest_monologue_s) + 's</strong></span>';
+            if (chips) html += '<div class="delivery-stats">' + chips + '</div>';
+
+            html += '</div>';  // .delivery-panel
             return html;
         }
 
@@ -486,9 +569,7 @@
                 if (ev.time_complexity) html += '<span class="coding-pill">' + escapeHtml(ev.time_complexity) + '</span>';
                 if (sub.time_spent_seconds) html += '<span class="coding-pill">' + Math.round(sub.time_spent_seconds / 60) + ' min</span>';
                 html += '</div>';
-                if (ev.feedback || ev.summary) {
-                    html += '<p class="coding-note">' + escapeHtml(ev.feedback || ev.summary) + '</p>';
-                }
+                if (ev.feedback || ev.summary) html += '<p class="coding-note">' + escapeHtml(ev.feedback || ev.summary) + '</p>';
                 if (ev.edge_cases_missed && ev.edge_cases_missed.length) {
                     html += '<p class="coding-note coding-miss"><strong>Edge cases missed:</strong> ' + escapeHtml(ev.edge_cases_missed.join(', ')) + '</p>';
                 }
@@ -498,134 +579,47 @@
             return html;
         }
 
-        // ── Wing D: the hiring verdict reveal ──
-        var RECO_LABEL = {strong_no_hire:'Strong No-Hire', no_hire:'No-Hire', lean_no_hire:'Leaning No-Hire',
-                          on_fence:'On the Fence', lean_hire:'Leaning Hire', hire:'Hire', strong_hire:'Strong Hire'};
-        var RECO_TONE = {strong_no_hire:'neg', no_hire:'neg', lean_no_hire:'neg',
-                         on_fence:'mid', lean_hire:'pos', hire:'pos', strong_hire:'pos'};
-        var LEVEL_LABEL = {below_intern:'developing', intern:'intern', new_grad:'new-grad',
-                           mid:'mid-level', above_mid:'above mid-level'};
-        var BAND_LABEL = {outstanding:'Outstanding', solid:'Solid', borderline:'Borderline',
-                          poor:'Poor', cannot_determine:'Not shown'};
-        var ARCH_LABEL = {big_tech:'Big Tech', high_bar_startup:'high-bar startup'};
-        var ROLE_LABEL = {swe:'software engineer', pm:'product manager', ds_mle:'data / ML'};
-        var RECO_ORDER = ['strong_no_hire','no_hire','lean_no_hire','on_fence','lean_hire','hire','strong_hire'];
-        var BAND_INFO = {
-            outstanding: 'Top-tier — a clear strength that sets you apart from other candidates at this level.',
-            solid: 'Meets the bar for this level — a reliable, positive hire signal.',
-            borderline: 'On the fence — present but not yet convincing. This is where offers are won or lost.',
-            poor: 'Below the bar — a likely no-hire driver on this signal.',
-            cannot_determine: 'There wasn’t enough in the transcript to judge this fairly.'
-        };
-
-        // The 7-point scale, so a new user can see where their verdict sits.
-        function renderSpectrum(reco) {
-            var idx = RECO_ORDER.indexOf(reco);
-            if (idx < 0) idx = 3;
-            var html = '<div class="verdict-spectrum" aria-label="Hire-recommendation scale">';
-            html += '<div class="spectrum-track">';
-            for (var i = 0; i < RECO_ORDER.length; i++) {
-                var cls = 'spectrum-seg seg-' + RECO_TONE[RECO_ORDER[i]] + (i === idx ? ' is-current' : '');
-                html += '<span class="' + cls + '" title="' + RECO_LABEL[RECO_ORDER[i]] + '"></span>';
-            }
-            html += '</div>';
-            html += '<div class="spectrum-ends"><span>Strong No-Hire</span><span>you are here</span><span>Strong Hire</span></div>';
-            html += '</div>';
-            return html;
+        // "vs your last session" strip — from the user's recommendation trajectory.
+        function loadVsLast() {
+            fetch('/api/user/insights')
+                .then(function(r) { return r.ok ? r.json() : null; })
+                .then(function(d) {
+                    if (!d || !d.reco_series || d.reco_series.length < 2) return;
+                    var s = d.reco_series, prev = s[s.length - 2], curr = s[s.length - 1];
+                    if (prev.index == null || curr.index == null) return;
+                    var dir = curr.index > prev.index ? 'up' : (curr.index < prev.index ? 'down' : 'flat');
+                    var arrow = dir === 'up' ? '▲' : (dir === 'down' ? '▼' : '→');
+                    var slot = document.getElementById('vsLastSlot');
+                    if (!slot) return;
+                    slot.innerHTML = '<div class="vs-last vs-' + dir + '">' +
+                        '<span class="vs-label">vs your last session</span>' +
+                        '<span class="vs-body">' + arrow + ' ' + escapeHtml(RECO_LABEL[prev.recommendation] || '') +
+                        ' → <strong>' + escapeHtml(RECO_LABEL[curr.recommendation] || '') + '</strong></span>' +
+                        '<a class="vs-link" href="/dashboard">See your trajectory →</a></div>';
+                })
+                .catch(function() {});
         }
 
-        function renderVerdict(v, fromCache) {
-            elements.scoresLoading.style.display = 'none';
-            elements.scoresTablet.style.display = 'block';
-            if (fromCache) elements.cachedIndicator.style.display = 'inline-flex';
-
-            var o = v.overall || {};
-            var ctx = v.context || {};
-            var tone = RECO_TONE[o.recommendation] || 'mid';
-
-            var html = '<div class="verdict-card verdict-' + tone + '">';
-            html += '<div class="verdict-eyebrow">Where you’d land today';
-            if (ctx.archetype && ctx.role) {
-                html += ' · ' + escapeHtml((ARCH_LABEL[ctx.archetype] || ctx.archetype) + ' ' + (ROLE_LABEL[ctx.role] || ctx.role));
+        // Progressive reveal of the signal cards (calm, reduced-motion-safe).
+        function setupProgressiveReveal() {
+            var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            var items = document.querySelectorAll('.sig-reveal');
+            if (reduce || !('IntersectionObserver' in window)) {
+                items.forEach(function(el) { el.classList.add('is-in'); });
+                return;
             }
-            html += '</div>';
-            html += '<div class="verdict-reco">' + escapeHtml(RECO_LABEL[o.recommendation] || 'On the Fence') + '</div>';
-            html += renderSpectrum(o.recommendation);
-            var lvl = LEVEL_LABEL[o.level_read];
-            if (lvl) {
-                html += '<div class="verdict-level">performing at <strong>' + lvl + '</strong> level' +
-                        (o.confidence ? ' · ' + escapeHtml(o.confidence) + ' confidence' : '') + '</div>';
-            }
-            if (o.headline) html += '<p class="verdict-headline">' + escapeHtml(o.headline) + '</p>';
-            html += '</div>';
-
-            if (v.gap_to_next) {
-                html += '<div class="next-rep">';
-                html += '<div class="next-rep-label">Your next rep</div>';
-                html += '<p class="next-rep-body"><strong>' + escapeHtml(v.gap_to_next.signal || '') + '</strong> — ' +
-                        escapeHtml(v.gap_to_next.move || '') + '</p>';
-                html += '</div>';
-            }
-
-            html += renderDeliveryPanel(v.delivery);
-            html += renderCodingBlock(feedbackState.codingSubmissions);
-            elements.scoresContent.innerHTML = html;
+            var io = new IntersectionObserver(function(entries) {
+                entries.forEach(function(e) {
+                    if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); }
+                });
+            }, { threshold: 0.12 });
+            items.forEach(function(el) { io.observe(el); });
         }
 
-        function renderSignals(v) {
+        function showRevealError(message) {
             elements.feedbackLoading.style.display = 'none';
-            elements.feedbackPlaceholder.style.display = 'none';
-            var ra = document.getElementById('reportActions');
-            if (ra) ra.style.display = 'flex';
-
-            var sigs = v.signals || [];
-            var html = '<div class="signals-intro">The call, signal by signal — each backed by your own words.</div>';
-            html += '<div class="signals-list">';
-            sigs.forEach(function(s) {
-                var band = s.band || 'cannot_determine';
-                html += '<div class="signal-card signal-' + band + '">';
-                html += '<div class="signal-head"><span class="signal-name">' + escapeHtml(s.name || '') + '</span>';
-                html += '<span class="signal-band-wrap"><span class="signal-band band-' + band + '">' + (BAND_LABEL[band] || band) + '</span>';
-                html += '<button type="button" class="signal-info-btn" aria-label="What does this band mean?" ' +
-                        'onclick="this.closest(\'.signal-card\').classList.toggle(\'info-open\')">i</button></span></div>';
-                html += '<p class="signal-info-text">' + (BAND_INFO[band] || '') + '</p>';
-                if (s.reasoning) html += '<p class="signal-reason">' + escapeHtml(s.reasoning) + '</p>';
-                if (band === 'cannot_determine') {
-                    html += '<p class="signal-na">Not enough in the transcript to judge this fairly.</p>';
-                } else if (s.evidence && s.evidence.length) {
-                    s.evidence.forEach(function(q) {
-                        html += '<blockquote class="signal-evidence">“' + escapeHtml(q) + '”</blockquote>';
-                    });
-                }
-                if (s.to_raise && band !== 'outstanding' && band !== 'cannot_determine') {
-                    html += '<p class="signal-raise"><span>To raise this</span> ' + escapeHtml(s.to_raise) + '</p>';
-                }
-                html += '</div>';
-            });
-            html += '</div>';
-
-            if (v.differentiators && v.differentiators.length) {
-                html += '<div class="differentiators"><div class="diff-title">What would make you a strong hire</div><ul>';
-                v.differentiators.forEach(function(d) { html += '<li>' + escapeHtml(d) + '</li>'; });
-                html += '</ul></div>';
-            }
-            elements.feedbackContent.innerHTML = html;
-        }
-
-        function showScoresError(message) {
-            elements.scoresLoading.style.display = 'none';
-            elements.scoresTablet.style.display = 'block';
-            elements.scoresContent.innerHTML =
-                '<div class="scores-error">' +
-                    '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>' +
-                    '<p>' + escapeHtml(message) + '</p>' +
-                    '<button class="btn-retry" onclick="location.reload()">Retry</button>' +
-                '</div>';
-        }
-
-        function showFeedbackError(message) {
-            elements.feedbackLoading.style.display = 'none';
-            elements.feedbackContent.innerHTML =
+            elements.revealMoments.style.display = 'block';
+            elements.heroSlot.innerHTML =
                 '<div class="feedback-error">' +
                     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>' +
                     '<p>' + escapeHtml(message) + '</p>' +
@@ -633,6 +627,7 @@
                 '</div>';
         }
 
+        // ── Markdown export ──
         function buildMarkdown() {
             var meta = feedbackState.meta || {};
             var v = feedbackState.verdict || {};
@@ -651,8 +646,7 @@
                 lines.push('## Verdict: ' + (RECO_LABEL[o.recommendation] || o.recommendation));
                 if (o.level_read) lines.push('Performing at **' + (LEVEL_LABEL[o.level_read] || o.level_read) + '** level' +
                                              (o.confidence ? ' (' + o.confidence + ' confidence)' : '') + '.');
-                if (o.headline) lines.push('');
-                if (o.headline) lines.push('> ' + o.headline);
+                if (o.headline) { lines.push(''); lines.push('> ' + o.headline); }
                 lines.push('');
             }
 
@@ -684,6 +678,8 @@
                 lines.push('## Delivery');
                 lines.push('- Pace: ' + v.delivery.wpm + ' wpm (target ' + v.delivery.wpm_target + ')');
                 lines.push('- Filler words: ' + v.delivery.filler_per_min + '/min (target ' + v.delivery.filler_target + ')');
+                if (v.delivery.sentence_count) lines.push('- Sentences spoken: ' + v.delivery.sentence_count);
+                if (v.delivery.top_crutch_word && v.delivery.top_crutch_word.word) lines.push('- Crutch word: "' + v.delivery.top_crutch_word.word + '" x' + v.delivery.top_crutch_word.count);
                 lines.push('');
             }
 
@@ -692,14 +688,8 @@
 
         function copyFeedbackAsMarkdown() {
             var markdown = buildMarkdown();
-
-            function onSuccess() {
-                showCopyConfirm('Copied!');
-            }
-            function onFailure() {
-                showCopyConfirm('Copy failed');
-            }
-
+            function onSuccess() { showCopyConfirm('Copied!'); }
+            function onFailure() { showCopyConfirm('Copy failed'); }
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 navigator.clipboard.writeText(markdown).then(onSuccess).catch(function() {
                     fallbackCopy(markdown) ? onSuccess() : onFailure();
@@ -745,63 +735,8 @@
             elements.transcriptModal.classList.remove('visible');
             document.body.style.overflow = '';
         }
-        
-        function parseMarkdown(text) {
-            if (!text) return '<p>No feedback available.</p>';
-            
-            var html = text;
-            html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            
-            html = html.replace(/^## (\d+)\. (.+)$/gm, '<h2 class="feedback-h2"><span class="section-num">$1</span>$2</h2>');
-            html = html.replace(/^## (.+)$/gm, '<h2 class="feedback-h2">$1</h2>');
-            html = html.replace(/^### (.+)$/gm, '<h3 class="feedback-h3">$1</h3>');
-            
-            html = html.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
-            html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-            html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
-            
-            html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-            
-            html = html.replace(/```(\w*)\n([\s\S]*?)```/g, function(match, lang, code) {
-                return '<pre class="code-block"><code>' + code.trim() + '</code></pre>';
-            });
-            
-            html = html.replace(/^---+$/gm, '<hr class="feedback-hr">');
-            
-            html = html.replace(/^&gt; (.+)$/gm, '<blockquote class="feedback-quote">$1</blockquote>');
-            
-            html = html.replace(/^- (.+)$/gm, '<li class="feedback-li">$1</li>');
-            html = html.replace(/(<li class="feedback-li">.+<\/li>\n?)+/g, '<ul class="feedback-ul">$&</ul>');
-            
-            html = html.replace(/^\d+\. \[([^\]]+)\] (.+)$/gm, '<li class="feedback-li"><span class="list-tag">$1</span>$2</li>');
-            html = html.replace(/^\d+\. (.+)$/gm, '<li class="feedback-li-num">$1</li>');
-            html = html.replace(/(<li class="feedback-li-num">.+<\/li>\n?)+/g, '<ol class="feedback-ol">$&</ol>');
-            
-            var lines = html.split('\n');
-            var result = [];
-            var inPara = false;
-            
-            for (var i = 0; i < lines.length; i++) {
-                var line = lines[i].trim();
-                if (!line) {
-                    if (inPara) { result.push('</p>'); inPara = false; }
-                    continue;
-                }
-                if (line.match(/^<(h[23]|ul|ol|li|pre|blockquote|hr)/)) {
-                    if (inPara) { result.push('</p>'); inPara = false; }
-                    result.push(line);
-                    continue;
-                }
-                if (!inPara) { result.push('<p class="feedback-p">'); inPara = true; }
-                result.push(line);
-            }
-            if (inPara) result.push('</p>');
-            
-            return result.join('\n');
-        }
-        
-        // escapeHtml, formatDate, and formatStage are provided globally by
-        // static/utils.js (loaded before this script).
+
+        // escapeHtml, formatDate, and formatStage are provided globally by static/utils.js.
     })();
     </script>
 </body>
