@@ -36,14 +36,22 @@ const TRACK_META = [
     { key: 'intro', label: 'Intro' },
     { key: 'behavioral', label: 'Behavioral' },
     { key: 'technical_voice', label: 'Technical (Voice)' },
-    { key: 'technical_coding', label: 'Technical (Coding)' }
+    { key: 'coding', label: 'Coding' }
 ];
 
-const TRACK_PERSONA = {
-    intro: 'a warm-up specialist',
-    behavioral: 'a behavioral candidate',
-    technical_voice: 'a technical communicator',
-    technical_coding: 'a coding interviewer\'s favorite'
+// Wing D verdict vocabulary (mirrors feedback.html).
+const RECO_LABEL = {strong_no_hire:'Strong No-Hire', no_hire:'No-Hire', lean_no_hire:'Leaning No-Hire',
+    on_fence:'On the Fence', lean_hire:'Leaning Hire', hire:'Hire', strong_hire:'Strong Hire'};
+const RECO_TONE = {strong_no_hire:'neg', no_hire:'neg', lean_no_hire:'neg',
+    on_fence:'mid', lean_hire:'pos', hire:'pos', strong_hire:'pos'};
+const LEVEL_LABEL = {below_intern:'developing', intern:'intern', new_grad:'new-grad',
+    mid:'mid-level', above_mid:'above mid-level'};
+const BAND_LABEL = {outstanding:'Outstanding', solid:'Solid', borderline:'Borderline',
+    poor:'Poor', cannot_determine:'Not shown'};
+const TREND_META = {
+    improving: {icon: '↑', cls: 'up', label: 'improving'},
+    regressing: {icon: '↓', cls: 'down', label: 'slipping'},
+    flat: {icon: '→', cls: 'flat', label: 'steady'}
 };
 
 // escapeHtml is provided globally by static/utils.js (loaded before this script).
@@ -82,108 +90,77 @@ function freeBadgeMarkup(remaining) {
         '<span>Bring your own keys for unlimited</span></span>';
 }
 
-function strongestTrack(tracks) {
-    if (!tracks) return null;
-    let best = null;
-    let bestCount = 0;
-    TRACK_META.forEach(function (t) {
-        const count = Number(tracks[t.key]) || 0;
-        if (count > bestCount) {
-            bestCount = count;
-            best = t.key;
-        }
-    });
-    return best && bestCount > 0 ? best : null;
-}
-
-function buildPersonalitySummary(stats) {
+function buildPersonalitySummary(data) {
     const parts = [];
-    const total = Number(stats.total_interviews) || 0;
-
-    if (total === 1) {
-        parts.push('1 interview in');
-    } else {
-        parts.push(total + ' interviews in');
+    const n = Number(data.total_sessions) || 0;
+    parts.push(n === 1 ? '1 session in' : n + ' sessions in');
+    if (data.strongest && data.strongest.label) {
+        parts.push('strongest at ' + data.strongest.label.toLowerCase());
     }
-
-    const best = strongestTrack(stats.tracks);
-    if (best && TRACK_PERSONA[best]) {
-        parts.push('strongest as ' + TRACK_PERSONA[best]);
-    }
-
-    if (stats.avg_overall_score != null) {
-        parts.push('averaging ' + Number(stats.avg_overall_score).toFixed(1) + ' / 5');
-    }
-
-    const remaining = Number(stats.free_calls_remaining);
+    if (data.recommendation_trend === 'improving') parts.push('trending up ↑');
+    else if (data.recommendation_trend === 'regressing') parts.push('dipped recently');
+    const remaining = Number(data.free_calls_remaining);
     if (Number.isFinite(remaining) && remaining > 0) {
         parts.push(remaining === 1 ? '1 free interview left' : remaining + ' free interviews left');
     }
-
     return parts.join(' · ');
 }
 
-function renderStatsContent(stats) {
-    const total = Number(stats.total_interviews) || 0;
-    const avg = stats.avg_overall_score;
+function renderInsightsContent(data) {
+    const latest = data.latest || {};
+    const tone = RECO_TONE[latest.recommendation] || 'mid';
 
-    // Average score card
-    let avgCard;
-    if (avg == null) {
-        avgCard =
-            '<div class="stat-card">' +
-                '<span class="stat-label">Average Score</span>' +
-                '<span class="stat-value muted">&mdash;</span>' +
-                '<span class="stat-hint">Take your first interview</span>' +
+    // The headline verdict card.
+    let verdict = '<div class="insight-verdict tone-' + tone + '">';
+    verdict += '<span class="iv-eyebrow">Latest verdict' +
+        (latest.track ? ' · ' + escapeHtml(latest.track) : '') + '</span>';
+    verdict += '<span class="iv-reco">' + escapeHtml(RECO_LABEL[latest.recommendation] || '—') + '</span>';
+    if (LEVEL_LABEL[latest.level_read]) {
+        verdict += '<span class="iv-level">performing at <strong>' +
+            LEVEL_LABEL[latest.level_read] + '</strong> level</span>';
+    }
+    if (latest.headline) verdict += '<p class="iv-headline">' + escapeHtml(latest.headline) + '</p>';
+    verdict += '</div>';
+
+    // Per-competency bands + trend across sessions.
+    let comps = '';
+    if (data.competencies && data.competencies.length) {
+        const rows = data.competencies.map(function (c) {
+            const t = TREND_META[c.trend] || TREND_META.flat;
+            const pct = Math.round((Number(c.latest_score) / 4) * 100);
+            return '<div class="comp-row">' +
+                '<span class="comp-name">' + escapeHtml(c.label) + '</span>' +
+                '<span class="comp-bar"><span class="comp-fill band-' + c.latest_band + '" style="width:' + pct + '%"></span></span>' +
+                '<span class="comp-band band-chip-' + c.latest_band + '">' + (BAND_LABEL[c.latest_band] || c.latest_band) + '</span>' +
+                '<span class="comp-trend trend-' + t.cls + '" title="' + t.label + ' (' + c.sessions + ' sessions)">' + t.icon + '</span>' +
             '</div>';
-    } else {
-        avgCard =
-            '<div class="stat-card accent-green">' +
-                '<span class="stat-label">Average Score</span>' +
-                '<span class="stat-value">' + Number(avg).toFixed(1) +
-                    ' <span class="stat-unit">/ 5</span></span>' +
-                '<span class="stat-hint">across all your interviews</span>' +
-            '</div>';
+        }).join('');
+        comps = '<div class="insight-comps"><div class="ic-title">Competencies — latest band &amp; trend</div>' + rows + '</div>';
     }
 
-    // Recency card
-    const recency = formatRelativeDate(stats.last_interview_date);
-    const recencyCard =
-        '<div class="stat-card">' +
-            '<span class="stat-label">Last Active</span>' +
-            '<span class="stat-value">' + (recency ? escapeHtml(recency) : '&mdash;') + '</span>' +
-            '<span class="stat-hint">' + (recency ? 'keep the streak going' : 'no sessions yet') + '</span>' +
-        '</div>';
+    // Compact stat row: sessions, recency, by-track.
+    const total = Number(data.total_sessions) || 0;
+    const recency = formatRelativeDate(latest.date);
+    const totalCard = '<div class="stat-card"><span class="stat-label">Sessions</span>' +
+        '<span class="stat-value">' + total + '</span>' +
+        '<span class="stat-hint">' + (total === 1 ? 'completed' : 'completed') + '</span></div>';
+    const recencyCard = '<div class="stat-card"><span class="stat-label">Last Active</span>' +
+        '<span class="stat-value">' + (recency ? escapeHtml(recency) : '&mdash;') + '</span>' +
+        '<span class="stat-hint">keep the streak going</span></div>';
 
-    // Total card
-    const totalCard =
-        '<div class="stat-card">' +
-            '<span class="stat-label">Total Interviews</span>' +
-            '<span class="stat-value">' + total + '</span>' +
-            '<span class="stat-hint">' + (total === 1 ? 'session completed' : 'sessions completed') + '</span>' +
-        '</div>';
-
-    // Track breakdown card
-    const tracks = stats.tracks || {};
-    const maxTrack = TRACK_META.reduce(function (m, t) {
-        return Math.max(m, Number(tracks[t.key]) || 0);
-    }, 0);
+    const tracks = data.by_track || {};
+    const maxTrack = TRACK_META.reduce(function (m, t) { return Math.max(m, Number(tracks[t.key]) || 0); }, 0);
     const trackRows = TRACK_META.map(function (t) {
         const count = Number(tracks[t.key]) || 0;
         const pct = maxTrack > 0 ? Math.round((count / maxTrack) * 100) : 0;
-        return '<div class="track-row">' +
-            '<span class="track-name">' + escapeHtml(t.label) + '</span>' +
+        return '<div class="track-row"><span class="track-name">' + escapeHtml(t.label) + '</span>' +
             '<span class="track-bar"><span class="track-bar-fill" style="width:' + pct + '%"></span></span>' +
-            '<span class="track-count">' + count + '</span>' +
-        '</div>';
+            '<span class="track-count">' + count + '</span></div>';
     }).join('');
-    const trackCard =
-        '<div class="stat-card" style="grid-column: span 2; min-width: 0;">' +
-            '<span class="stat-label">By Track</span>' +
-            '<div class="track-breakdown">' + trackRows + '</div>' +
-        '</div>';
+    const trackCard = '<div class="stat-card" style="grid-column: span 2; min-width: 0;">' +
+        '<span class="stat-label">By Track</span><div class="track-breakdown">' + trackRows + '</div></div>';
 
-    return '<div class="stat-grid">' + totalCard + avgCard + recencyCard + trackCard + '</div>';
+    return verdict + comps + '<div class="stat-grid">' + totalCard + recencyCard + trackCard + '</div>';
 }
 
 async function loadUserStats() {
@@ -197,21 +174,20 @@ async function loadUserStats() {
     const emptyBadgeSlot = document.getElementById('emptyFreeBadgeSlot');
 
     try {
-        const response = await fetch('/api/user/stats');
+        const response = await fetch('/api/user/insights');
         if (!response.ok) {
-            throw new Error('Stats request failed: ' + response.status);
+            throw new Error('Insights request failed: ' + response.status);
         }
-        const stats = await response.json();
+        const data = await response.json();
 
         setHidden(skeleton, true);
 
-        const remaining = Number(stats.free_calls_remaining);
+        const remaining = Number(data.free_calls_remaining);
         if (badgeSlot) badgeSlot.innerHTML = freeBadgeMarkup(remaining);
 
-        const total = Number(stats.total_interviews) || 0;
+        const total = Number(data.total_sessions) || 0;
 
         if (total <= 0) {
-            // Empty state — surface the free badge to pull them in.
             if (emptyBadgeSlot) emptyBadgeSlot.innerHTML = freeBadgeMarkup(remaining);
             setHidden(content, true);
             setHidden(summary, true);
@@ -219,12 +195,11 @@ async function loadUserStats() {
             return;
         }
 
-        // Has data — render cards + personality line.
-        content.innerHTML = renderStatsContent(stats);
+        content.innerHTML = renderInsightsContent(data);
         setHidden(content, false);
         setHidden(empty, true);
 
-        const line = buildPersonalitySummary(stats);
+        const line = buildPersonalitySummary(data);
         if (line && summaryText) {
             summaryText.textContent = line;
             setHidden(summary, false);
@@ -232,9 +207,7 @@ async function loadUserStats() {
             setHidden(summary, true);
         }
     } catch (error) {
-        console.error('[DASHBOARD] Failed to load user stats:', error);
-        // Fail gracefully: hide skeleton, show a small non-blocking notice.
-        // Account info + API keys remain fully functional.
+        console.error('[DASHBOARD] Failed to load user insights:', error);
         setHidden(skeleton, true);
         setHidden(content, true);
         setHidden(empty, true);
