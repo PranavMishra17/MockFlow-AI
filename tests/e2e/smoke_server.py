@@ -83,19 +83,23 @@ def _hist(iid, track, created, reco, level, signals, delivery, great=0):
                                    "gap_to_next": {"signal": signals[-1]["name"], "move": "tighten this signal"}}}}
 
 
+ID_A = "00000000-0000-0000-0000-0000000000a1"  # behavioral, latest
+ID_B = "00000000-0000-0000-0000-0000000000b2"  # coding
+ID_C = "00000000-0000-0000-0000-0000000000c3"  # intro, oldest
+
 _HISTORY = [
-    _hist("iv3", "intro", "2026-05-20T10:00:00", "on_fence", "new_grad",
+    _hist(ID_C, "intro", "2026-05-20T10:00:00", "on_fence", "new_grad",
           [{"name": "Communication & structure", "band": "borderline", "evidence": ["uh I guess my background is"]},
            {"name": "Motivation & authenticity", "band": "solid", "evidence": ["I've wanted to work on infra since my first internship"]}],
           {"word_count": 600, "sentence_count": 40, "filler_total": 18,
            "filler_breakdown": {"like": 12, "um": 6}, "talk_ratio": 0.55, "longest_monologue_s": 30}),
-    _hist("iv2", "coding", "2026-06-02T10:00:00", "lean_hire", "new_grad",
+    _hist(ID_B, "coding", "2026-06-02T10:00:00", "lean_hire", "new_grad",
           [{"name": "Problem-solving", "band": "solid", "evidence": ["I'd start by clarifying the inputs and the expected output"]},
            {"name": "Coding", "band": "solid", "evidence": ["a clean recursion with a memo table to avoid recomputation"]},
            {"name": "Communication & structure", "band": "solid", "evidence": ["narrating the trade-offs as I go"]}],
           {"word_count": 900, "sentence_count": 62, "filler_total": 10,
            "filler_breakdown": {"like": 6, "basically": 4}, "talk_ratio": 0.60, "longest_monologue_s": 40}),
-    {"interview_id": "iv1", "track": "behavioral", "created_at": "2026-06-10T14:30:00",
+    {"interview_id": ID_A, "track": "behavioral", "created_at": "2026-06-10T14:30:00",
      "scores": {"verdict": _VERDICT}},
 ]
 
@@ -111,14 +115,14 @@ db.get_user_stats = lambda uid: {
     "last_interview_date": "2026-06-10T14:30:00",
 }
 db.get_user_interviews = lambda uid, limit=50: [
-    {"id": "iv1", "candidate_name": "Demo Candidate", "job_role": "Backend Engineer",
+    {"id": ID_A, "candidate_name": "Demo Candidate", "job_role": "Backend Engineer",
      "experience_level": "mid", "track": "behavioral", "interview_date": "2026-06-10T14:30:00",
      "room_name": "interview-demo-1", "final_stage": "closing", "total_messages": {"agent": 12, "user": 14}},
-    {"id": "iv2", "candidate_name": "Demo Candidate", "job_role": "ML Engineer",
-     "experience_level": "senior", "track": "technical_coding", "interview_date": "2026-06-08T09:05:00",
+    {"id": ID_B, "candidate_name": "Demo Candidate", "job_role": "ML Engineer",
+     "experience_level": "mid", "track": "coding", "interview_date": "2026-06-02T09:05:00",
      "room_name": "interview-demo-2", "final_stage": "coding_problem_1", "total_messages": {"agent": 8, "user": 9}},
-    {"id": "iv3", "candidate_name": "Demo Candidate", "job_role": "Frontend Engineer",
-     "experience_level": "junior", "track": "intro", "interview_date": "2026-06-08T18:40:00",
+    {"id": ID_C, "candidate_name": "Demo Candidate", "job_role": "Frontend Engineer",
+     "experience_level": "junior", "track": "intro", "interview_date": "2026-05-20T18:40:00",
      "room_name": "interview-demo-3", "final_stage": "closing", "total_messages": {"agent": 10, "user": 11}},
 ]
 db.get_feedback = lambda iid: {"user_id": "demo-user-1", "interview_id": iid, "feedback_data": {"verdict": _VERDICT}}

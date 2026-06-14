@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compare Sessions — MockFlow-AI</title>
+    <meta name="description" content="Compare two MockFlow-AI interview sessions side by side: competency deltas, what improved, and what still lags.">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/radar.css">
+    <link rel="stylesheet" href="/static/modals.css">
+    <style>
+        .compare-page { min-height: 100vh; display: flex; flex-direction: column; background: var(--bg-cream); }
+        .page-header { display: flex; align-items: center; justify-content: center; padding: 1.25rem 2rem; padding-top: 4.25rem; border-bottom: 1px solid var(--bg-soft); background: var(--bg-card); }
+        .page-header h1 { font-size: 1.25rem; font-weight: 700; color: var(--text-primary); }
+        .compare-stage { width: 100%; max-width: 820px; margin: 0 auto; padding: 1.9rem 1.25rem 4rem; }
+        .compare-loading, .compare-error { text-align: center; color: var(--text-secondary); padding: 4rem 1rem; font-weight: 600; }
+        .compare-head { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; margin-bottom: 1.4rem; }
+        .cmp-chip { padding: 1rem 1.1rem; border-radius: var(--radius-lg); border: 1px solid var(--bg-soft); border-left: 5px solid var(--text-light); background: var(--bg-card); }
+        .cmp-chip.tone-pos { border-left-color: var(--accent-green-deep); }
+        .cmp-chip.tone-mid { border-left-color: #E0A100; }
+        .cmp-chip.tone-neg { border-left-color: #E07A3F; }
+        .cmp-chip-label { font-size: 0.64rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-light); }
+        .cmp-chip-reco { font-size: 1.2rem; font-weight: 800; color: var(--text-primary); line-height: 1.15; margin-top: 0.15rem; }
+        .cmp-chip-sub { font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem; }
+        .cmp-radar { background: var(--bg-warm); border: 1px solid var(--bg-soft); border-radius: var(--radius-md); padding: 1.2rem; margin-bottom: 1.4rem; }
+        .cmp-section-title { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-light); margin: 0 0 0.8rem; }
+        .cmp-table { display: flex; flex-direction: column; margin-bottom: 1.4rem; }
+        .cmp-row { display: grid; grid-template-columns: 1fr 5.5rem 2.2rem 5.5rem; align-items: center; gap: 0.5rem; padding: 0.55rem 0.2rem; border-bottom: 1px solid var(--bg-soft); }
+        .cmp-row-head { border-bottom: 2px solid var(--bg-soft); font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-light); }
+        .cmp-row-head span:not(.cmp-cname) { text-align: center; }
+        .cmp-cname { font-size: 0.86rem; font-weight: 600; color: var(--text-primary); }
+        .cmp-delta { text-align: center; font-weight: 800; font-size: 1rem; }
+        .cmp-delta.up { color: var(--accent-green-deep); }
+        .cmp-delta.down { color: #E07A3F; }
+        .cmp-delta.flat { color: var(--text-light); }
+        .cmp-cell { display: flex; justify-content: center; }
+        .cmp-cell .bandpill { min-width: 4.4rem; text-align: center; }
+        .cmp-na { color: var(--text-light); text-align: center; font-size: 0.8rem; }
+        .cmp-summary { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem; }
+        .cmp-col { padding: 1rem 1.1rem; border-radius: var(--radius-md); background: var(--bg-card); border: 1px solid var(--bg-soft); }
+        .cmp-col h3 { font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; margin: 0 0 0.6rem; }
+        .cmp-improved h3 { color: var(--accent-green-deep); }
+        .cmp-lags h3 { color: #E07A3F; }
+        .cmp-col ul { margin: 0; padding-left: 1.1rem; }
+        .cmp-col li { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 0.25rem; }
+        .cmp-none { font-size: 0.85rem; color: var(--text-light); font-style: italic; }
+        .cmp-back { display: inline-flex; align-items: center; gap: 0.35rem; margin-top: 1.6rem; font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); text-decoration: none; }
+        @media (max-width: 640px) { .compare-head, .cmp-summary { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="action-buttons" id="actionButtons"></div>
+
+    <div class="compare-page">
+        <div class="page-header"><h1>Compare Sessions</h1></div>
+        <div class="compare-stage">
+            <div class="compare-loading" id="compareLoading">Loading comparison…</div>
+            <div class="compare-error" id="compareError" style="display:none;"></div>
+            <div id="compareView" style="display:none;"></div>
+        </div>
+    </div>
+
+    <script src="/static/utils.js"></script>
+    <script src="/static/header.js"></script>
+    <script src="/static/radar.js"></script>
+    <script src="/static/modal.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            window.MockFlowHeader.init({ showHome: true, showBack: true, showInfo: true, showGithub: true, showSponsor: true, showSettings: true, showAuth: false });
+        });
+    </script>
+    <script>
+    (function () {
+        'use strict';
+        var RECO_LABEL = {strong_no_hire:'Strong No-Hire', no_hire:'No-Hire', lean_no_hire:'Leaning No-Hire', on_fence:'On the Fence', lean_hire:'Leaning Hire', hire:'Hire', strong_hire:'Strong Hire'};
+        var RECO_TONE = {strong_no_hire:'neg', no_hire:'neg', lean_no_hire:'neg', on_fence:'mid', lean_hire:'pos', hire:'pos', strong_hire:'pos'};
+        var LEVEL_LABEL = {below_intern:'developing', intern:'intern', new_grad:'new-grad', mid:'mid-level', above_mid:'above mid-level'};
+        var BAND_LABEL = {outstanding:'Outstanding', solid:'Solid', borderline:'Borderline', poor:'Poor', cannot_determine:'Not shown'};
+        var TRACK_LABEL = {intro:'Intro', behavioral:'Behavioral', technical_voice:'Technical', coding:'Coding', technical_coding:'Coding'};
+
+        var loadingEl = document.getElementById('compareLoading');
+        var errorEl = document.getElementById('compareError');
+        var viewEl = document.getElementById('compareView');
+
+        function fail(msg) {
+            loadingEl.style.display = 'none';
+            errorEl.textContent = msg;
+            errorEl.style.display = 'block';
+        }
+
+        var params = new URLSearchParams(window.location.search);
+        var ids = params.get('ids');
+        if (!ids) {
+            var a = params.get('a'), b = params.get('b');
+            if (a && b) ids = a + ',' + b;
+        }
+        if (!ids || ids.split(',').filter(Boolean).length < 2) {
+            fail('Pick two sessions from Past Interviews to compare.');
+            return;
+        }
+
+        fetch('/api/user/compare?ids=' + encodeURIComponent(ids))
+            .then(function (r) {
+                if (!r.ok) throw new Error(r.status === 404 ? 'One of those sessions could not be found.' : 'Could not load the comparison.');
+                return r.json();
+            })
+            .then(render)
+            .catch(function (e) { fail(e.message || 'Could not load the comparison.'); });
+
+        function fmtDate(iso) {
+            if (!iso) return '';
+            var d = new Date(iso);
+            return isNaN(d.getTime()) ? '' : d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+        }
+
+        function chip(s) {
+            var tone = RECO_TONE[s.recommendation] || 'mid';
+            var sub = [TRACK_LABEL[s.track] || s.track, LEVEL_LABEL[s.level_read] || s.level_read, fmtDate(s.date)].filter(Boolean).join(' · ');
+            return '<div class="cmp-chip tone-' + tone + '">' +
+                '<div class="cmp-chip-label">' + escapeHtml(fmtDate(s.date) || 'Session') + '</div>' +
+                '<div class="cmp-chip-reco">' + escapeHtml(RECO_LABEL[s.recommendation] || '—') + '</div>' +
+                '<div class="cmp-chip-sub">' + escapeHtml(sub) + '</div></div>';
+        }
+
+        function render(data) {
+            var sessions = data.sessions || [];
+            var comps = data.competencies || [];
+            if (sessions.length < 2) { fail('Need two sessions to compare.'); return; }
+
+            // sessions[0] = older (A), sessions[1] = newer (B). The newer session is
+            // the filled "you" polygon; the older is the purple reference.
+            var axes = comps.map(function (c) { return { key: c.key, label: c.label, you_score: c.scores[1] }; });
+            var prev = {};
+            comps.forEach(function (c) { prev[c.key] = c.scores[0]; });
+            var radar = (window.MockFlowRadar && comps.length)
+                ? window.MockFlowRadar.build({ axes: axes, previous: prev, showTarget: false, size: 340 })
+                : '';
+
+            var rows = comps.map(function (c) {
+                var d = c.delta;
+                var cls = d == null ? 'flat' : (d > 0 ? 'up' : (d < 0 ? 'down' : 'flat'));
+                var arrow = d == null ? '·' : (d > 0 ? '↑' : (d < 0 ? '↓' : '→'));
+                function cell(band) {
+                    return band ? '<span class="cmp-cell"><span class="bandpill bandpill-' + band + '">' + (BAND_LABEL[band] || band) + '</span></span>'
+                                : '<span class="cmp-na">—</span>';
+                }
+                return '<div class="cmp-row">' +
+                    '<span class="cmp-cname">' + escapeHtml(c.label) + '</span>' +
+                    cell(c.bands[0]) +
+                    '<span class="cmp-delta ' + cls + '">' + arrow + '</span>' +
+                    cell(c.bands[1]) + '</div>';
+            }).join('');
+
+            var improved = (data.improved || []);
+            var lagged = (data.lagged || []);
+            var impHtml = improved.length ? '<ul>' + improved.map(function (x) { return '<li>' + escapeHtml(x) + '</li>'; }).join('') + '</ul>'
+                                          : '<p class="cmp-none">No competency improved between these two.</p>';
+            var lagHtml = lagged.length ? '<ul>' + lagged.map(function (x) { return '<li>' + escapeHtml(x) + '</li>'; }).join('') + '</ul>'
+                                        : '<p class="cmp-none">Nothing is sitting at borderline or below — nice.</p>';
+
+            var html = '<div class="compare-head">' + chip(sessions[0]) + chip(sessions[1]) + '</div>';
+            if (radar) {
+                html += '<div class="cmp-radar"><div class="cmp-section-title">Competency shape — both sessions</div>' + radar +
+                    '<div class="radar-legend"><span class="rl rl-you">' + escapeHtml(fmtDate(sessions[1].date) || 'Newer') + '</span>' +
+                    '<span class="rl rl-prev">' + escapeHtml(fmtDate(sessions[0].date) || 'Older') + '</span></div></div>';
+            }
+            html += '<div class="cmp-section-title">Competency by competency</div>';
+            html += '<div class="cmp-table"><div class="cmp-row cmp-row-head"><span class="cmp-cname">Competency</span><span>' +
+                escapeHtml(fmtDate(sessions[0].date) || 'A') + '</span><span>Δ</span><span>' + escapeHtml(fmtDate(sessions[1].date) || 'B') + '</span></div>' + rows + '</div>';
+            html += '<div class="cmp-summary"><div class="cmp-col cmp-improved"><h3>What improved</h3>' + impHtml + '</div>' +
+                '<div class="cmp-col cmp-lags"><h3>What still lags</h3>' + lagHtml + '</div></div>';
+            html += '<a class="cmp-back" href="/past-calls">← Back to Past Interviews</a>';
+
+            loadingEl.style.display = 'none';
+            viewEl.innerHTML = html;
+            viewEl.style.display = 'block';
+        }
+    })();
+    </script>
+</body>
+</html>

@@ -611,3 +611,95 @@
 .verdict-badge.vb-pos { background: color-mix(in srgb, var(--accent-green) 38%, #fff); color: #14532d; }
 .verdict-badge.vb-mid { background: color-mix(in srgb, #F6C453 42%, #fff); color: #7c5e00; }
 .verdict-badge.vb-neg { background: color-mix(in srgb, #E07A3F 22%, #fff); color: #9a3412; }
+
+/* ==================== WING D C9 — SELECT-TO-COMPARE ==================== */
+.control-compare { align-self: flex-end; }
+.compare-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.55rem 0.9rem;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    border: 1px solid var(--bg-soft);
+    background: var(--bg-card);
+    color: var(--text-secondary);
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+.compare-toggle svg { width: 0.95rem; height: 0.95rem; }
+.compare-toggle:hover { border-color: var(--text-light); color: var(--text-primary); }
+.compare-toggle[aria-pressed="true"] { background: var(--text-primary); color: var(--bg-card); border-color: var(--text-primary); }
+
+/* selection affordance on cards (only visible in compare mode) */
+.interview-card { position: relative; }
+.card-check {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 1.6rem;
+    height: 1.6rem;
+    border-radius: 50%;
+    border: 2px solid var(--bg-soft);
+    background: var(--bg-card);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+}
+.card-check svg { width: 0.9rem; height: 0.9rem; stroke: var(--bg-card); opacity: 0; }
+body.compare-mode .interview-card { cursor: pointer; }
+body.compare-mode .card-check { display: flex; }
+body.compare-mode .interview-card[data-verdict="0"] { opacity: 0.5; }
+body.compare-mode .interview-card[data-verdict="0"] .card-check { border-style: dashed; }
+body.compare-mode .interview-card .card-arrow { opacity: 0; }
+.interview-card.is-selected { outline: 2px solid var(--accent-green-deep); outline-offset: 2px; }
+.interview-card.is-selected .card-check { background: var(--accent-green-deep); border-color: var(--accent-green-deep); }
+.interview-card.is-selected .card-check svg { opacity: 1; }
+
+/* sticky action bar */
+.compare-bar {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    padding: 0.9rem 1.25rem;
+    margin-top: 1rem;
+    background: var(--bg-card);
+    border: 1px solid var(--bg-soft);
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
+    z-index: 10;
+}
+.compare-bar-text { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); }
+.compare-bar-actions { display: flex; gap: 0.6rem; }
+.compare-cancel {
+    padding: 0.5rem 0.9rem;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+    background: transparent;
+    border: 1px solid var(--bg-soft);
+    border-radius: var(--radius-full);
+    color: var(--text-secondary);
+    cursor: pointer;
+}
+.compare-go {
+    padding: 0.5rem 1.1rem;
+    font-family: inherit;
+    font-size: 0.82rem;
+    font-weight: 800;
+    background: var(--accent-green-deep);
+    border: none;
+    border-radius: var(--radius-full);
+    color: #fff;
+    cursor: pointer;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+}
+.compare-go:hover:not(:disabled) { transform: translateY(-1px); }
+.compare-go:disabled { opacity: 0.45; cursor: not-allowed; }

@@ -62,6 +62,17 @@
                     <span class="sort-text" id="sortText">Newest first</span>
                 </button>
             </div>
+
+            <div class="control control-compare">
+                <span class="control-label">&nbsp;</span>
+                <button type="button" id="compareToggle" class="compare-toggle" aria-pressed="false"
+                        aria-label="Select two sessions to compare">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 21H5a2 2 0 0 1-2-2v-4m18 0v4a2 2 0 0 1-2 2H9"/>
+                    </svg>
+                    <span id="compareToggleText">Compare</span>
+                </button>
+            </div>
         </div>
 
         <p class="results-count" id="resultsCount" role="status" aria-live="polite" hidden></p>
@@ -109,6 +120,14 @@
                 </div>
             </div>
         </div>
+
+        <div class="compare-bar" id="compareBar" hidden>
+            <span class="compare-bar-text" id="compareBarText">Select 2 sessions to compare</span>
+            <div class="compare-bar-actions">
+                <button type="button" class="compare-cancel" id="compareCancel">Cancel</button>
+                <button type="button" class="compare-go" id="compareGo" disabled>Compare 2 →</button>
+            </div>
+        </div>
     </div>
 
     <script src="/static/utils.js"></script>
@@ -140,7 +159,12 @@
             searchInput: document.getElementById('searchInput'),
             trackFilter: document.getElementById('trackFilter'),
             sortToggle: document.getElementById('sortToggle'),
-            sortText: document.getElementById('sortText')
+            sortText: document.getElementById('sortText'),
+            compareToggle: document.getElementById('compareToggle'),
+            compareBar: document.getElementById('compareBar'),
+            compareBarText: document.getElementById('compareBarText'),
+            compareGo: document.getElementById('compareGo'),
+            compareCancel: document.getElementById('compareCancel')
         };
 
         // Full set of interviews loaded from the API; never mutated after load.
@@ -378,7 +402,10 @@
                     tagsHtml += '<span class="interview-tag track">' + escapeHtml(formatTrack(interview.track)) + '</span>';
                 }
 
-                return '<a href="/feedback/' + encodeURIComponent(interviewId) + '" class="interview-card">' +
+                var hasVerdict = interview.verdict && interview.verdict.recommendation ? '1' : '0';
+                return '<a href="/feedback/' + encodeURIComponent(interviewId) + '" class="interview-card" ' +
+                        'data-id="' + escapeHtml(String(interviewId)) + '" data-verdict="' + hasVerdict + '">' +
+                    '<span class="card-check" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></span>' +
                     '<div class="card-content">' +
                         '<div class="interview-name">' + escapeHtml(interview.candidate_name || 'Unknown') + '</div>' +
                         '<div class="interview-date">' + escapeHtml(date) + '</div>' +
@@ -443,6 +470,79 @@
             elements.sortText.textContent = isOldest ? 'Oldest first' : 'Newest first';
             applyAndRender();
         });
+
+        // ==================== COMPARE MODE (Wing D) ====================
+        var compareMode = false;
+        var selected = [];
+
+        elements.compareToggle.addEventListener('click', function () {
+            if (compareMode) { exitCompareMode(); } else { enterCompareMode(); }
+        });
+        elements.compareCancel.addEventListener('click', exitCompareMode);
+        elements.compareGo.addEventListener('click', goCompare);
+
+        // In compare mode, a card click toggles selection instead of navigating.
+        elements.interviewsGrid.addEventListener('click', function (e) {
+            if (!compareMode) return;
+            var card = e.target.closest('.interview-card');
+            if (!card) return;
+            e.preventDefault();
+            if (card.getAttribute('data-verdict') !== '1') return; // needs a verdict to compare
+            var id = card.getAttribute('data-id');
+            var idx = selected.indexOf(id);
+            if (idx >= 0) {
+                selected.splice(idx, 1);
+                card.classList.remove('is-selected');
+            } else {
+                if (selected.length >= 2) {
+                    var firstId = selected.shift();
+                    var firstCard = elements.interviewsGrid.querySelector('.interview-card[data-id="' + firstId + '"]');
+                    if (firstCard) firstCard.classList.remove('is-selected');
+                }
+                selected.push(id);
+                card.classList.add('is-selected');
+            }
+            updateCompareBar();
+        });
+
+        function enterCompareMode() {
+            compareMode = true;
+            selected = [];
+            document.body.classList.add('compare-mode');
+            elements.compareToggle.setAttribute('aria-pressed', 'true');
+            document.getElementById('compareToggleText').textContent = 'Comparing…';
+            elements.compareBar.hidden = false;
+            updateCompareBar();
+        }
+
+        function exitCompareMode() {
+            compareMode = false;
+            selected = [];
+            document.body.classList.remove('compare-mode');
+            elements.compareToggle.setAttribute('aria-pressed', 'false');
+            document.getElementById('compareToggleText').textContent = 'Compare';
+            elements.compareBar.hidden = true;
+            var sel = elements.interviewsGrid.querySelectorAll('.interview-card.is-selected');
+            for (var i = 0; i < sel.length; i++) sel[i].classList.remove('is-selected');
+        }
+
+        function updateCompareBar() {
+            var n = selected.length;
+            elements.compareBarText.textContent = n === 0 ? 'Select 2 sessions to compare'
+                : (n === 1 ? '1 selected — pick one more' : '2 selected — ready to compare');
+            elements.compareGo.disabled = n !== 2;
+            elements.compareGo.textContent = 'Compare ' + n + ' →';
+        }
+
+        function goCompare() {
+            if (selected.length !== 2) return;
+            var withDate = selected.map(function (id) {
+                var iv = allInterviews.filter(function (x) { return String(x.id) === id; })[0];
+                return { id: id, t: iv ? dateValue(iv.interview_date) : 0 };
+            });
+            withDate.sort(function (a, b) { return a.t - b.t; }); // older session first
+            window.location.href = '/compare?ids=' + withDate.map(function (x) { return encodeURIComponent(x.id); }).join(',');
+        }
     })();
     </script>
 </body>

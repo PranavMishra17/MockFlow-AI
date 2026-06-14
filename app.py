@@ -476,6 +476,13 @@ def interview():
     )
 
 
+@app.route('/compare')
+@require_auth
+def compare_page():
+    """Side-by-side session comparison (Wing D). The client fetches /api/user/compare."""
+    return render_template('compare.html')
+
+
 @app.route('/past-calls')
 def past_calls():
     """Past interviews list page."""
