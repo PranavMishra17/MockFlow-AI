@@ -93,6 +93,25 @@ def main():
                 pg.locator(".lp-persona").screenshot(path=str(SHOTS / "wingd_landing_persona.png"))
             except Exception:
                 pass
+        elif PAGE == "landing_out":
+            # signed-OUT: the illustrative sample + the "coming next" prep section
+            pg.goto(BASE + "/", wait_until="networkidle", timeout=20000)
+            pg.wait_for_timeout(1500)
+            res = {
+                "sample_radar": cnt("#lpSampleRadar .radar-svg"),
+                "sample_reco": (pg.eval_on_selector(".lp-stats.signed-out-only .lp-reco", "e=>e.textContent.trim()") if cnt(".lp-stats.signed-out-only .lp-reco") else None),
+                "prep": cnt(".lp-prep"), "prep_chips": cnt(".lp-prep__chip"),
+                "prep_brief_items": cnt(".lp-prep__brief li"),
+            }
+            try:
+                pg.locator(".lp-persona").scroll_into_view_if_needed()
+                pg.wait_for_timeout(200)
+                pg.locator(".lp-persona").screenshot(path=str(SHOTS / "wingd_sample_persona.png"))
+                pg.locator(".lp-prep").scroll_into_view_if_needed()
+                pg.wait_for_timeout(200)
+                pg.locator(".lp-prep").screenshot(path=str(SHOTS / "wingd_prep.png"))
+            except Exception:
+                pass
 
         pg.evaluate("document.querySelectorAll('.sig-reveal').forEach(e=>e.classList.add('is-in'))")
         pg.wait_for_timeout(200)

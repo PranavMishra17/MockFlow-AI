@@ -97,6 +97,7 @@
         /* Block-level variants for wrappers that aren't inline */
         .signed-in-only.is-block { display: none !important; }
         body[data-auth="in"] .signed-in-only.is-block { display: block !important; }
+        .signed-out-only.is-block { display: block; }  /* hidden-when-signed-in still covered by the rule above */
 
         /* ---------- Buttons (bold, springy) ---------- */
         .lp-btn {
@@ -822,6 +823,26 @@
         .lp-persona-empty h3 { font-size: 1.22rem; letter-spacing: -0.02em; margin: 0.4rem 0; }
         .lp-persona-empty p { color: var(--text-secondary); font-size: 0.95rem; line-height: 1.5; margin: 0 0 1.1rem; max-width: 22rem; margin-left: auto; margin-right: auto; }
 
+        /* Coming-next: tailored interview-prep deep-research teaser */
+        .lp-prep { padding: clamp(2.5rem, 7vw, 5rem) 0; }
+        .lp-prep__grid { display: grid; grid-template-columns: 1fr 1.1fr; gap: clamp(1.5rem, 4vw, 3.5rem); align-items: center; }
+        .lp-coming-badge { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent-purple-deep); background: color-mix(in srgb, var(--accent-purple) 24%, transparent); padding: 0.32rem 0.72rem; border-radius: 999px; margin-bottom: 0.9rem; }
+        .lp-prep__card { background: var(--bg-card); border: 1px solid var(--bg-soft); border-radius: var(--radius-lg); padding: 1.4rem; box-shadow: var(--shadow-medium); display: grid; gap: 0.85rem; }
+        .lp-prep__panel-label { font-size: 0.64rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-light); margin-bottom: 0.5rem; }
+        .lp-prep__target { padding: 0.85rem 0.95rem; background: var(--bg-warm); border-radius: var(--radius-md); }
+        .lp-prep__chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+        .lp-prep__chip { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.8rem; font-weight: 600; color: var(--text-primary); background: var(--bg-card); border: 1px solid var(--bg-soft); padding: 0.32rem 0.62rem; border-radius: 999px; }
+        .lp-prep__flow { display: flex; align-items: center; justify-content: center; gap: 0.45rem; color: var(--accent-purple-deep); font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; }
+        .lp-prep__flow svg { width: 18px; height: 18px; }
+        .lp-prep__brief { padding: 1rem 1.1rem; background: linear-gradient(180deg, color-mix(in srgb, var(--accent-green) 11%, var(--bg-card)) 0%, var(--bg-card) 72%); border: 1px solid var(--bg-soft); border-radius: var(--radius-md); }
+        .lp-prep__brief h4 { font-size: 0.95rem; margin: 0 0 0.6rem; letter-spacing: -0.01em; }
+        .lp-prep__brief ul { margin: 0; padding-left: 1.1rem; }
+        .lp-prep__brief li { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 0.4rem; }
+        .lp-prep__brief li strong { color: var(--text-primary); }
+        .lp-prep__cta { display: inline-flex; align-items: center; gap: 0.45rem; margin-top: 0.85rem; font-size: 0.82rem; font-weight: 800; color: var(--text-light); background: var(--bg-soft); padding: 0.5rem 0.9rem; border-radius: 999px; cursor: default; }
+        .lp-prep__cta em { font-style: normal; opacity: 0.7; font-weight: 600; }
+        @media (max-width: 880px) { .lp-prep__grid { grid-template-columns: 1fr; } }
+
         /* ============================================================
            7 · SOCIAL PROOF (placeholder)
            ============================================================ */
@@ -1349,7 +1370,7 @@
                             <h2 id="persona-h">Meet the version of you that interviews.</h2>
                             <p>After a few interviews, meet your interview personality — your patterns, your tells, and what to lean into. The more you practice, the sharper it gets.</p>
                         </div>
-                        <div class="lp-stats lp-reveal signed-out-only" style="--lp-delay:.12s" role="group" aria-label="Sample interview personality (illustrative)">
+                        <div class="lp-stats lp-reveal signed-out-only is-block" style="--lp-delay:.12s" role="group" aria-label="Sample interview personality (illustrative)">
                             <div class="lp-stats__top">
                                 <div class="lp-stats__avatar" aria-hidden="true">
                                     <div class="mf-rays" data-rays="28"></div>
@@ -1357,49 +1378,71 @@
                                 </div>
                                 <div class="lp-stats__id">
                                     <h3>Your personality</h3>
-                                    <span>12 interviews · sample preview</span>
+                                    <span>5 sessions · sample preview</span>
                                 </div>
                                 <div class="lp-stats__hero">
-                                    <b>4.1<span style="font-size:1rem;color:var(--text-light)">/5</span></b>
-                                    <em>avg score</em>
+                                    <b class="lp-reco lp-reco-pos">Leaning Hire</b>
+                                    <em>latest verdict</em>
                                 </div>
                             </div>
 
-                            <div class="lp-stats__row">
-                                <span class="lp-bar-label">Intro</span>
-                                <span class="lp-bar-track"><span class="lp-bar-fill green" style="--w:88%"></span></span>
-                                <span class="lp-bar-val">4.4</span>
-                            </div>
-                            <div class="lp-stats__row">
-                                <span class="lp-bar-label">Behavioral</span>
-                                <span class="lp-bar-track"><span class="lp-bar-fill pink" style="--w:74%"></span></span>
-                                <span class="lp-bar-val">3.7</span>
-                            </div>
-                            <div class="lp-stats__row">
-                                <span class="lp-bar-label">Tech voice</span>
-                                <span class="lp-bar-track"><span class="lp-bar-fill purple" style="--w:82%"></span></span>
-                                <span class="lp-bar-val">4.1</span>
-                            </div>
-                            <div class="lp-stats__row">
-                                <span class="lp-bar-label">Coding</span>
-                                <span class="lp-bar-track"><span class="lp-bar-fill cyan" style="--w:84%"></span></span>
-                                <span class="lp-bar-val">4.2</span>
-                            </div>
+                            <div class="lp-mini-radar" id="lpSampleRadar"></div>
 
                             <div class="lp-stats__chips">
-                                <span class="lp-chip lp-chip--filler">Signature filler: <code>"um"</code></span>
                                 <span class="lp-chip lp-chip--strength">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                    Strength: clear structure
+                                    Strength: Problem-solving
                                 </span>
                                 <span class="lp-chip lp-chip--focus">
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path></svg>
-                                    Focus: tighten endings
+                                    Focus: Ownership &amp; impact
                                 </span>
+                                <span class="lp-chip lp-chip--filler"><span style="color:#E0A100;font-weight:800">★</span>&nbsp;4 great answers</span>
+                                <span class="lp-chip lp-chip--filler">Top crutch: <code>"like" ×9</code></span>
                             </div>
                         </div>
                         <div class="lp-stats lp-persona-real signed-in-only is-block" id="lpStatsReal" style="--lp-delay:.12s" role="group" aria-label="Your interview personality">
                             <div class="lp-persona-loading">Loading your personality&hellip;</div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============ 6.5 · COMING NEXT — TAILORED INTERVIEW PREP ============ -->
+            <section class="lp-prep" aria-labelledby="prep-h">
+                <div class="lp-wrap">
+                    <div class="lp-prep__grid">
+                        <div class="lp-persona__copy lp-reveal">
+                            <span class="lp-coming-badge">✦ Coming next</span>
+                            <h2 id="prep-h">Walk in already briefed on the real one.</h2>
+                            <p>Got an interview lined up? Tell us the company, the role, the level — even who's interviewing you — and our research agent builds a tailored prep brief, then drills you on exactly what <em>they</em> probe at that bar. Practice the real loop before you live it.</p>
+                        </div>
+                        <div class="lp-prep__card lp-reveal" style="--lp-delay:.12s" role="group" aria-label="Tailored interview prep (coming soon)">
+                            <div>
+                                <div class="lp-prep__panel-label">Your upcoming interview</div>
+                                <div class="lp-prep__target">
+                                    <div class="lp-prep__chips">
+                                        <span class="lp-prep__chip">🏢 Stripe</span>
+                                        <span class="lp-prep__chip">💼 Backend SWE</span>
+                                        <span class="lp-prep__chip">🎚 L4 · mid</span>
+                                        <span class="lp-prep__chip">👤 your panel</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="lp-prep__flow" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"></circle><path d="M21 21l-4.35-4.35"></path></svg>
+                                deep research → tailored brief
+                            </div>
+                            <div class="lp-prep__brief">
+                                <h4>Your prep brief</h4>
+                                <ul>
+                                    <li>How Stripe probes <strong>ownership &amp; practical, PR-ready coding</strong> at L4 — and their exact bar.</li>
+                                    <li>The <strong>3 stories</strong> worth sharpening for their values, mapped to your résumé.</li>
+                                    <li><strong>Likely follow-ups</strong> on your recent work, and the traps to avoid.</li>
+                                    <li>A mock loop tuned to <strong>this</strong> company, role &amp; level — run it with our agent.</li>
+                                </ul>
+                                <span class="lp-prep__cta">Practice this exact loop → <em>soon</em></span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1557,6 +1600,24 @@
                 }, { threshold: 0.16, rootMargin: '0px 0px -8% 0px' });
                 for (var j = 0; j < reveals.length; j++) io.observe(reveals[j]);
             }
+
+            // Illustrative sample radar for the signed-out personality preview
+            // (the same component the real dashboard uses).
+            (function () {
+                var sample = document.getElementById('lpSampleRadar');
+                if (sample && window.MockFlowRadar) {
+                    sample.innerHTML = window.MockFlowRadar.build({
+                        compact: true, size: 220,
+                        axes: [
+                            { key: 'communication', label: 'Communication', you_score: 3, target_score: 3 },
+                            { key: 'problem_solving', label: 'Problem-solving', you_score: 4, target_score: 3 },
+                            { key: 'technical_depth', label: 'Technical depth', you_score: 3, target_score: 4 },
+                            { key: 'ownership_impact', label: 'Ownership & impact', you_score: 2, target_score: 3 },
+                            { key: 'domain_rigor', label: 'Role & domain rigor', you_score: 3, target_score: 3 }
+                        ]
+                    });
+                }
+            })();
 
             // ================================================================
             // SIGNED-IN vs SIGNED-OUT — JS-driven, on load.
