@@ -269,6 +269,27 @@ def user_stats():
         return jsonify({'total_interviews': 0, 'tracks': {}, 'free_calls_remaining': 0}), 200
 
 
+@app.route('/api/user/insights')
+@require_auth
+def user_insights():
+    """
+    Longitudinal "Interview Personality" from the user's verdict history
+    (Wing D Phase 3) — per-competency latest band + trend, strongest/weakest,
+    recommendation trajectory, latest delivery. Replaces the legacy 1-5 average.
+    """
+    from insights import build_insights
+    try:
+        user_id = get_user_id()
+        history = supabase_client.get_user_score_history(user_id) or []
+        data = build_insights(history)
+        data['free_calls_remaining'] = _free_calls_remaining(user_id)
+        return jsonify(data)
+    except Exception as e:
+        logger.error(f"[API] Failed to build user insights: {e}", exc_info=True)
+        return jsonify({'total_sessions': 0, 'latest': None, 'competencies': [],
+                        'by_track': {}, 'free_calls_remaining': 0}), 200
+
+
 @app.route('/api/user/keys', methods=['POST'])
 @require_auth
 def save_user_keys():
