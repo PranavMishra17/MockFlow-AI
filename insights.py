@@ -65,6 +65,24 @@ def _verdict(session: Dict[str, Any]) -> Dict[str, Any]:
     return ((session.get("scores") or {}).get("verdict") or {})
 
 
+def _competency_bands(verdict: Dict[str, Any]) -> Dict[str, tuple]:
+    """
+    Reduce ONE verdict's per-signal bands to the best (band, score) per canonical
+    competency. Shared by build_insights, the radar, and compare_verdicts so the
+    signal->competency taxonomy can never drift between them. Unknown signals and
+    unscorable bands (cannot_determine) are skipped.
+    """
+    best: Dict[str, tuple] = {}
+    for sig in (verdict.get("signals") or []):
+        comp = signal_to_competency(sig.get("name", ""))
+        sc = band_score(sig.get("band"))
+        if comp is None or sc is None:
+            continue
+        if comp not in best or sc > best[comp][1]:
+            best[comp] = (sig.get("band"), sc)
+    return best
+
+
 def _trend(scores: List[int]) -> str:
     """improving / regressing / flat from a series of band-scores."""
     if len(scores) < 2:
@@ -94,15 +112,7 @@ def build_insights(history: List[Dict[str, Any]]) -> Dict[str, Any]:
         by_track[track] = by_track.get(track, 0) + 1
 
         # best band per competency in THIS session
-        best: Dict[str, tuple] = {}
-        for sig in (v.get("signals") or []):
-            comp = signal_to_competency(sig.get("name", ""))
-            sc = band_score(sig.get("band"))
-            if comp is None or sc is None:
-                continue
-            if comp not in best or sc > best[comp][1]:
-                best[comp] = (sig.get("band"), sc)
-        for comp, pair in best.items():
+        for comp, pair in _competency_bands(v).items():
             series[comp].append(pair)
 
     competencies = []

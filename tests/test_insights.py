@@ -9,6 +9,7 @@ strongest/weakest competency, and the recommendation trajectory.
 
 from insights import (
     CANONICAL_COMPETENCIES,
+    _competency_bands,
     build_insights,
     signal_to_competency,
 )
@@ -46,6 +47,31 @@ def test_unknown_signal_maps_to_none():
 def test_canonical_list_is_stable():
     assert "communication" in CANONICAL_COMPETENCIES
     assert "problem_solving" in CANONICAL_COMPETENCIES
+
+
+# ---- _competency_bands reducer (shared by build_insights, radar, compare) ----
+
+def test_competency_bands_keeps_best_per_competency():
+    # Problem-solving AND Trade-off reasoning both map to problem_solving;
+    # the reducer keeps the strongest band for that competency.
+    verdict = {"signals": [
+        _sig("Problem-solving", "solid"),
+        _sig("Trade-off reasoning", "outstanding"),
+        _sig("Communication & structure", "borderline"),
+    ]}
+    bands = _competency_bands(verdict)
+    assert bands["problem_solving"] == ("outstanding", 4)
+    assert bands["communication"] == ("borderline", 2)
+
+def test_competency_bands_skips_unscored_and_unknown():
+    verdict = {"signals": [
+        _sig("Totally Unknown Signal", "solid"),       # unknown -> no competency
+        {"name": "Ownership", "band": "cannot_determine", "evidence": []},  # unscored
+    ]}
+    assert _competency_bands(verdict) == {}
+
+def test_competency_bands_handles_missing_signals():
+    assert _competency_bands({}) == {}
 
 
 # ---- empty / single session ----
