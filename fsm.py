@@ -201,24 +201,29 @@ class InterviewState:
         }
         return transitions.get(self.stage)
 
-    def get_stage_by_name(self, stage_name: str) -> Optional[InterviewStage]:
+    def get_active_stages(self) -> list:
         """
-        Get InterviewStage enum by string name.
-
-        Args:
-            stage_name: The stage name as string
-
-        Returns:
-            InterviewStage enum or None if not found
+        Ordered stages for THIS track. Base = intro track; each track subclass
+        overrides this. Everything stage-ordering (skip, name lookup) routes
+        through here so it is always track-correct.
         """
-        stage_map = {
-            'welcome': InterviewStage.WELCOME,
-            'self_intro': InterviewStage.SELF_INTRO,
-            'past_experience': InterviewStage.PAST_EXPERIENCE,
-            'company_fit': InterviewStage.COMPANY_FIT,
-            'closing': InterviewStage.CLOSING,
-        }
-        return stage_map.get(stage_name.lower())
+        return [
+            InterviewStage.WELCOME,
+            InterviewStage.SELF_INTRO,
+            InterviewStage.PAST_EXPERIENCE,
+            InterviewStage.COMPANY_FIT,
+            InterviewStage.CLOSING,
+        ]
+
+    def get_stage_by_name(self, stage_name: str):
+        """Resolve a stage-value string to this track's stage enum (track-aware)."""
+        if not stage_name:
+            return None
+        name = stage_name.lower()
+        for stage in self.get_active_stages():
+            if stage.value == name:
+                return stage
+        return None
 
     def can_skip_to(self, target_stage: InterviewStage) -> bool:
         """
@@ -231,18 +236,16 @@ class InterviewState:
         Returns:
             True if skip is allowed
         """
-        stage_order = [
-            InterviewStage.WELCOME,
-            InterviewStage.SELF_INTRO,
-            InterviewStage.PAST_EXPERIENCE,
-            InterviewStage.COMPANY_FIT,
-            InterviewStage.CLOSING,
-        ]
-
-        current_index = stage_order.index(self.stage)
-        target_index = stage_order.index(target_stage)
-
-        return target_index > current_index
+        stage_order = self.get_active_stages()
+        # Guard: a target/current stage from a different track (or unknown) must
+        # not raise — it just means the skip isn't valid for this track.
+        if self.stage not in stage_order or target_stage not in stage_order:
+            logger.warning(
+                f"[FSM] can_skip_to: {getattr(target_stage, 'value', target_stage)} "
+                f"not reachable from {getattr(self.stage, 'value', self.stage)} in this track"
+            )
+            return False
+        return stage_order.index(target_stage) > stage_order.index(self.stage)
 
     def queue_skip_to(self, target_stage: InterviewStage) -> bool:
         """
