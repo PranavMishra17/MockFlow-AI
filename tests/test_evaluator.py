@@ -187,6 +187,22 @@ def test_finalize_does_not_mutate_input():
     finalize_verdict(raw, {})
     assert raw["overall"]["recommendation"] == "strong_hire"  # original untouched
 
+
+def test_finalize_counts_great_answers_post_downgrade():
+    raw = _raw_verdict()
+    # one genuine outstanding (has a quote) + one "outstanding" with no evidence
+    # (gets downgraded to cannot_determine and must NOT count as a great answer).
+    raw["signals"].append({"name": "Testing & verification", "band": "outstanding",
+                           "scope_met": "mid", "evidence": ["I tested the edge cases first"], "reasoning": "ok"})
+    raw["signals"].append({"name": "Communication & structure", "band": "outstanding",
+                           "scope_met": "mid", "evidence": [], "reasoning": "no quote"})
+    out = finalize_verdict(raw, {})
+    assert out["great_answers"] == 1
+
+def test_finalize_great_answers_zero_when_none_outstanding():
+    out = finalize_verdict(_raw_verdict(), {})  # two borderline signals
+    assert out["great_answers"] == 0
+
 def test_recommendations_scale_is_seven_points_ordered():
     assert len(RECOMMENDATIONS) == 7
     assert RECOMMENDATIONS[0] == "strong_no_hire"

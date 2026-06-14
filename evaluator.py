@@ -283,6 +283,10 @@ def finalize_verdict(
     out["signals"] = sigs
     out["delivery"] = delivery_metrics(speech or {})
     out["gap_to_next"] = gap_to_next(sigs)
+    # "Great answers" = signals the interviewer rated outstanding. Counted AFTER
+    # the evidence-downgrade so every great answer is backed by a verbatim quote
+    # (and monotonic with the recommendation). Surfaced as a personality stat.
+    out["great_answers"] = sum(1 for s in sigs if s.get("band") == "outstanding")
     return out
 
 
