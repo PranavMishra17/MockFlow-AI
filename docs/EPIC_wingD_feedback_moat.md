@@ -33,6 +33,23 @@ Run `migrations/003_interview_scores.sql` on Neon. Optionally set `EVALUATOR_MOD
 - `feedback.html` render functions are **closure-scoped** (not global) — you can't inject them via `page.evaluate`; drive the real button-click path instead, mocking `/api/feedback/verdict`.
 - The verdict's overall recommendation is **recomputed in code** from per-signal bands (`finalize_verdict`) — don't trust the model's own `overall`; it only supplies `confidence` + `headline`.
 
+### Polish backlog (after the first real end-to-end interview, 2026-06-14)
+
+A real interview ran on Render and the verdict reveal worked. Two-part fix list from that run:
+
+**Part 1 — interview-flow UX** (`interview.html`, `form.html`, `agent_worker.py`, api-keys)
+- [ ] **Live captions.** Captions appear only *after* a turn ends. User captions fire on `is_final` only (`agent_worker.py` `on_user_speech`), agent captions on `conversation_item_added` (after the message). Stream interim transcripts (user) + incremental agent text for live captions.
+- [x] **Form begin-button.** When the form auto-fills from a prior session, Begin stays disabled until a track is re-clicked — enable it on cache restore (`syncRestoredTrack`).
+- [ ] **API-keys can't be updated.** Editing one masked field leaves the other four as `••••`, and `validateKeys()` rejects any masked value → partial update impossible. Add a **partial update** (backend `update_api_keys` that only overwrites provided non-masked fields; frontend sends only changed fields).
+- [ ] **Interview-page layout.** Timer + "Skip stages" placement, the mic/End-Interview buttons, and the orb/candidate panel balance need polish.
+
+**Part 2 — feedback-loop completion** (`feedback.html`, the verdict endpoint, past-interviews, dashboard)
+- [x] **Cached feedback not persisting.** Reopening a past session shows no detailed feedback (must regenerate). Fixed: the verdict endpoint now also saves the verdict to the `feedback` table server-side, so `checkCachedFeedback` always loads it.
+- [x] **Show the spectrum.** A new user doesn't know where "Leaning No-Hire" sits — render the 7-point scale with the current position marked.
+- [x] **Per-signal "i" info.** Each signal card gets an info affordance explaining what the band means + the scope to improve.
+- [ ] **Past Interviews page.** Surface the verdict/score on each card; better layout.
+- [ ] **Interview Personality, surfaced (Phase 3).** Currently buried in Account and mostly empty. Bring it onto the dashboard/home and make it real — the longitudinal build: trends (≥3 sessions), cross-track comparison, competency radar vs a target-level polygon, "vs last session". Data already persists in `interview_scores`.
+
 ---
 
 ## 0. The principle (the moat)

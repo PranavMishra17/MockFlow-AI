@@ -1444,6 +1444,9 @@ def generate_verdict():
                     user_id=user_id, interview_id=interview_id, track=track,
                     scores={'verdict': verdict, 'overall_score': idx, 'kind': 'verdict'},
                 )
+                # Also persist to the feedback table server-side so the report
+                # reliably loads on reopen (don't depend on the client save).
+                supabase_client.save_feedback(user_id, interview_id, {'verdict': verdict})
         except Exception as e:
             logger.warning(f"[API] Could not persist verdict: {e}")
 
