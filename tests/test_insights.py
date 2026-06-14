@@ -13,6 +13,7 @@ from insights import (
     _competency_bands,
     _target_polygon,
     build_insights,
+    compare_verdicts,
     signal_to_competency,
 )
 
@@ -278,3 +279,47 @@ def test_radar_defaults_target_to_new_grad_without_context():
     assert radar["level"] == "new_grad"
     axes = {a["key"]: a for a in radar["axes"]}
     assert axes["technical_depth"]["target_score"] == 3   # the new-grad bar
+
+
+# ---- compare_verdicts: side-by-side across sessions (Wing D C6) ----
+
+def _id(session, iid):
+    session["interview_id"] = iid
+    return session
+
+def test_compare_aligns_competencies_and_deltas():
+    a = _id(_session("on_fence", "new_grad",
+                     [_sig("Problem-solving", "borderline"), _sig("Communication & structure", "solid")],
+                     track="behavioral", date="2026-06-01T10:00:00"), "a")
+    b = _id(_session("hire", "mid",
+                     [_sig("Problem-solving", "outstanding"), _sig("Communication & structure", "solid")],
+                     track="coding", date="2026-06-10T10:00:00"), "b")
+    out = compare_verdicts([a, b])
+    assert [s["interview_id"] for s in out["sessions"]] == ["a", "b"]
+    comp = {c["key"]: c for c in out["competencies"]}
+    assert comp["problem_solving"]["bands"] == ["borderline", "outstanding"]
+    assert comp["problem_solving"]["delta"] == 2          # borderline(2) -> outstanding(4)
+    assert comp["communication"]["delta"] == 0            # solid -> solid
+    assert "Problem-solving" in out["improved"]
+
+def test_compare_delta_none_when_one_side_missing():
+    a = _id(_session("on_fence", "new_grad", [_sig("Coding", "solid")], track="coding"), "a")
+    b = _id(_session("hire", "mid", [_sig("Ownership", "solid")], track="behavioral"), "b")
+    out = compare_verdicts([a, b])
+    comp = {c["key"]: c for c in out["competencies"]}
+    assert comp["technical_depth"]["bands"] == ["solid", None]  # only in A
+    assert comp["technical_depth"]["delta"] is None            # never coerced to 0
+
+def test_compare_lagged_flags_weak_latest():
+    a = _id(_session("hire", "mid", [_sig("Ownership", "solid")]), "a")
+    b = _id(_session("on_fence", "new_grad", [_sig("Ownership", "borderline")]), "b")
+    out = compare_verdicts([a, b])
+    assert "Ownership & impact" in out["lagged"]   # ended at borderline (<= 2)
+
+def test_compare_signals_union_and_delta():
+    a = _id(_session("on_fence", "new_grad", [_sig("Coding", "borderline")]), "a")
+    b = _id(_session("hire", "mid", [_sig("Coding", "solid")]), "b")
+    out = compare_verdicts([a, b])
+    coding = [s for s in out["signals"] if s["name"] == "Coding"][0]
+    assert coding["bands"] == ["borderline", "solid"]
+    assert coding["delta"] == 1

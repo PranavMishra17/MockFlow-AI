@@ -290,6 +290,48 @@ def user_insights():
                         'by_track': {}, 'free_calls_remaining': 0}), 200
 
 
+@app.route('/api/user/compare')
+@require_auth
+def user_compare():
+    """
+    Side-by-side compare of 2-5 of the user's OWN sessions (Wing D Phase 3).
+    Query: ?ids=<uuid>,<uuid>[,...]. Guards: each id must be a well-formed UUID
+    that belongs to the requesting user (ownership), capped at 5.
+    """
+    import uuid as _uuid
+
+    from insights import compare_verdicts
+
+    def _canon(v):
+        try:
+            return str(_uuid.UUID(str(v)))
+        except (ValueError, TypeError, AttributeError):
+            return None
+
+    user_id = get_user_id()
+    ids = [x.strip() for x in request.args.get('ids', '').split(',') if x.strip()]
+    canon = [_canon(x) for x in ids]
+    if any(c is None for c in canon):
+        return jsonify({'error': 'invalid interview id'}), 400
+    if not (2 <= len(canon) <= 5):
+        return jsonify({'error': 'provide between 2 and 5 interview ids'}), 400
+
+    history = supabase_client.get_user_score_history(user_id) or []
+    by_id = {}
+    for h in history:
+        k = _canon(h.get('interview_id'))
+        if k:
+            by_id[k] = h
+
+    rows = []
+    for c in canon:
+        row = by_id.get(c)
+        if row is None:  # not the user's interview (or never scored) -> don't leak
+            return jsonify({'error': 'interview not found'}), 404
+        rows.append(row)
+    return jsonify(compare_verdicts(rows))
+
+
 @app.route('/api/user/keys', methods=['POST'])
 @require_auth
 def save_user_keys():

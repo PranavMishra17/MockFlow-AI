@@ -280,3 +280,61 @@ def build_insights(history: List[Dict[str, Any]]) -> Dict[str, Any]:
         "recurring_to_raise": sorted(gap_counts.values(), key=lambda g: g["count"], reverse=True),
         "radar": radar,
     }
+
+
+def _delta(scores: List[Optional[int]]) -> Optional[int]:
+    """last - first across a per-session score series; None if either end is missing."""
+    if len(scores) < 2 or scores[0] is None or scores[-1] is None:
+        return None
+    return scores[-1] - scores[0]
+
+
+def compare_verdicts(sessions: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Align 2+ sessions for a side-by-side compare. Competencies are mapped onto
+    the canonical taxonomy so cross-track sessions still compare; signals align
+    by name (union). Deltas are first->last via band_score and stay None when
+    either end is unmeasured (never coerced to 0). Pure.
+    """
+    sessions = list(sessions or [])
+    metas, comp_bands_per, sig_bands_per = [], [], []
+    for h in sessions:
+        v = _verdict(h)
+        overall = v.get("overall") or {}
+        metas.append({
+            "interview_id": h.get("interview_id"),
+            "track": h.get("track"),
+            "date": h.get("created_at"),
+            "recommendation": overall.get("recommendation"),
+            "level_read": overall.get("level_read"),
+        })
+        comp_bands_per.append(_competency_bands(v))
+        sig_bands_per.append({s.get("name"): s.get("band")
+                              for s in (v.get("signals") or []) if s.get("name")})
+
+    competencies = []
+    for key in CANONICAL_COMPETENCIES:
+        bands = [cb.get(key, (None, None))[0] for cb in comp_bands_per]
+        scores = [cb.get(key, (None, None))[1] for cb in comp_bands_per]
+        if any(b is not None for b in bands):
+            competencies.append({"key": key, "label": _COMPETENCY_LABEL[key],
+                                 "bands": bands, "scores": scores, "delta": _delta(scores)})
+
+    seen, sig_names = set(), []
+    for sb in sig_bands_per:
+        for name in sb:
+            if name not in seen:
+                seen.add(name)
+                sig_names.append(name)
+    signals = []
+    for name in sig_names:
+        bands = [sb.get(name) for sb in sig_bands_per]
+        signals.append({"name": name, "bands": bands,
+                        "delta": _delta([band_score(b) for b in bands])})
+
+    improved = [c["label"] for c in competencies if (c["delta"] or 0) > 0]
+    lagged = [c["label"] for c in competencies
+              if c["scores"][-1] is not None and c["scores"][-1] <= 2]
+
+    return {"sessions": metas, "competencies": competencies,
+            "signals": signals, "improved": improved, "lagged": lagged}

@@ -84,3 +84,47 @@ def test_verdict_endpoint_wires_evaluator(auth_client, app_module, db_client, mo
 def test_verdict_endpoint_requires_interview_id(auth_client):
     resp = auth_client.post("/api/feedback/verdict", json={})
     assert resp.status_code == 400
+
+
+# ---- GET /api/user/compare (Wing D C6) ----
+
+_A = "00000000-0000-0000-0000-00000000000a"
+_B = "00000000-0000-0000-0000-00000000000b"
+_C = "00000000-0000-0000-0000-00000000000c"
+
+
+def _hist_row(iid, reco, track, band):
+    return {"interview_id": iid, "track": track, "created_at": "2026-06-01T10:00:00",
+            "scores": {"verdict": {"overall": {"recommendation": reco, "level_read": "new_grad"},
+                                   "signals": [{"name": "Problem-solving", "band": band, "evidence": ["q"]}]}}}
+
+
+def test_compare_endpoint_returns_aligned_verdicts(auth_client, db_client, monkeypatch):
+    hist = [_hist_row(_A, "on_fence", "behavioral", "borderline"),
+            _hist_row(_B, "hire", "coding", "outstanding")]
+    monkeypatch.setattr(db_client, "get_user_score_history", lambda uid: hist)
+    resp = auth_client.get(f"/api/user/compare?ids={_A},{_B}")
+    assert resp.status_code == 200, resp.get_data(as_text=True)
+    body = resp.get_json()
+    assert len(body["sessions"]) == 2
+    comp = {c["key"]: c for c in body["competencies"]}
+    assert comp["problem_solving"]["delta"] == 2  # borderline -> outstanding
+
+
+def test_compare_endpoint_rejects_unowned_id(auth_client, db_client, monkeypatch):
+    monkeypatch.setattr(db_client, "get_user_score_history",
+                        lambda uid: [_hist_row(_A, "hire", "coding", "solid")])
+    resp = auth_client.get(f"/api/user/compare?ids={_A},{_C}")  # _C not owned
+    assert resp.status_code == 404
+
+
+def test_compare_endpoint_rejects_bad_uuid(auth_client, db_client, monkeypatch):
+    monkeypatch.setattr(db_client, "get_user_score_history", lambda uid: [])
+    resp = auth_client.get("/api/user/compare?ids=not-a-uuid,also-bad")
+    assert resp.status_code == 400
+
+
+def test_compare_endpoint_requires_at_least_two(auth_client, db_client, monkeypatch):
+    monkeypatch.setattr(db_client, "get_user_score_history", lambda uid: [])
+    resp = auth_client.get(f"/api/user/compare?ids={_A}")
+    assert resp.status_code == 400
