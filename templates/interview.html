@@ -1393,6 +1393,13 @@
                     state.room.on(LK.RoomEvent.DataReceived, onDataReceived);
                     state.room.on(LK.RoomEvent.ParticipantConnected, onParticipantConnected);
                     state.room.on(LK.RoomEvent.LocalTrackPublished, onLocalTrackPublished);
+                    // LiveKit forwards transcription segments synced to audio — consume
+                    // them for LIVE captions (streams as words land). Additive + guarded:
+                    // writes the same caption elements as the manual data-payload path,
+                    // and is a no-op if the client SDK lacks the event.
+                    if (LK.RoomEvent.TranscriptionReceived) {
+                        state.room.on(LK.RoomEvent.TranscriptionReceived, onTranscription);
+                    }
 
                     console.log('[CONNECT] Attempting to connect to LiveKit server...', {url: url, room: room});
                     await state.room.connect(url, token);
@@ -1748,6 +1755,23 @@
                 }
             }
             
+            // Live captions from LiveKit's transcription stream (synced to audio).
+            function onTranscription(segments, participant) {
+                try {
+                    if (!segments || !segments.length) return;
+                    var text = segments.map(function (s) { return s.text || ''; }).join(' ').trim();
+                    if (!text) return;
+                    var localId = state.room && state.room.localParticipant && state.room.localParticipant.identity;
+                    if (participant && participant.identity === localId) {
+                        updateCandidateCaption(text);
+                    } else {
+                        updateAgentCaption(text);
+                    }
+                } catch (e) {
+                    console.error('[TRANSCRIPT] handler error:', e);
+                }
+            }
+
             function onParticipantConnected(participant) {
                 console.log('[PARTICIPANT] Connected:', participant.identity);
                 var isAgent = participant.identity === 'interview-agent' || participant.identity.includes('agent');

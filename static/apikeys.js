@@ -151,60 +151,74 @@ function setupFormListeners() {
     });
 }
 
-function validateKeys() {
-    const livekitUrl = document.getElementById('livekitUrl').value.trim();
-    const livekitApiKey = document.getElementById('livekitApiKey').value.trim();
-    const livekitApiSecret = document.getElementById('livekitApiSecret').value.trim();
-    const openaiKey = document.getElementById('openaiKey').value.trim();
-    const deepgramKey = document.getElementById('deepgramKey').value.trim();
+function currentKeyValues() {
+    return {
+        livekit_url: document.getElementById('livekitUrl').value.trim(),
+        livekit_api_key: document.getElementById('livekitApiKey').value.trim(),
+        livekit_api_secret: document.getElementById('livekitApiSecret').value.trim(),
+        openai_key: document.getElementById('openaiKey').value.trim(),
+        deepgram_key: document.getElementById('deepgramKey').value.trim()
+    };
+}
 
-    // Skip validation if fields are masked and not modified
-    if (hasExistingKeys && !keysModified) {
+function isMasked(v) { return !v || v.includes('•'); }
+
+// Format error for a single field, or null if OK.
+function keyFormatError(field, v) {
+    if (field === 'livekit_url' && !v.startsWith('wss://') && !v.startsWith('ws://'))
+        return 'LiveKit URL must start with wss:// or ws://';
+    if (field === 'livekit_api_key' && v.length < 5) return 'Please enter a valid LiveKit API Key';
+    if (field === 'livekit_api_secret' && v.length < 10) return 'Please enter a valid LiveKit API Secret';
+    if (field === 'openai_key' && !v.startsWith('sk-')) return 'OpenAI key should start with "sk-"';
+    if (field === 'deepgram_key' && v.length < 10) return 'Deepgram key appears too short';
+    return null;
+}
+
+function validateKeys() {
+    const vals = currentKeyValues();
+
+    if (hasExistingKeys) {
+        // Partial update: only validate the fields the user actually changed
+        // (non-empty, non-masked). Masked/blank fields keep their saved value
+        // server-side, so a single key can be updated on its own.
+        for (const field in vals) {
+            if (isMasked(vals[field])) continue;
+            const err = keyFormatError(field, vals[field]);
+            if (err) { showModal('Invalid Input', err); return false; }
+        }
         return true;
     }
 
-    if (livekitUrl.includes('•') || livekitApiKey.includes('•') ||
-        livekitApiSecret.includes('•') || openaiKey.includes('•') || deepgramKey.includes('•')) {
-        showModal('Invalid Input', 'Please enter actual values, not masked placeholders');
-        return false;
+    // First-time setup: all five must be present and valid.
+    for (const field in vals) {
+        if (isMasked(vals[field])) {
+            showModal('Invalid Input', 'Please fill in all five keys with real values.');
+            return false;
+        }
+        const err = keyFormatError(field, vals[field]);
+        if (err) { showModal('Invalid Input', err); return false; }
     }
-
-    if (!livekitUrl.startsWith('wss://') && !livekitUrl.startsWith('ws://')) {
-        showModal('Invalid Input', 'LiveKit URL must start with wss:// or ws://');
-        return false;
-    }
-
-    if (!livekitApiKey || livekitApiKey.length < 5) {
-        showModal('Invalid Input', 'Please enter a valid LiveKit API Key');
-        return false;
-    }
-
-    if (!livekitApiSecret || livekitApiSecret.length < 10) {
-        showModal('Invalid Input', 'Please enter a valid LiveKit API Secret');
-        return false;
-    }
-
-    if (!openaiKey.startsWith('sk-')) {
-        showModal('Invalid Input', 'OpenAI key should start with "sk-"');
-        return false;
-    }
-
-    if (deepgramKey.length < 10) {
-        showModal('Invalid Input', 'Deepgram key appears too short');
-        return false;
-    }
-
     return true;
 }
 
 async function testKeys() {
     if (!validateKeys()) return;
 
-    const livekitUrl = document.getElementById('livekitUrl').value.trim();
-    const livekitApiKey = document.getElementById('livekitApiKey').value.trim();
-    const livekitApiSecret = document.getElementById('livekitApiSecret').value.trim();
-    const openaiKey = document.getElementById('openaiKey').value.trim();
-    const deepgramKey = document.getElementById('deepgramKey').value.trim();
+    const vals = currentKeyValues();
+
+    // Server-side test validates all five formats; if the user is only changing
+    // some keys (others still masked), confirm the changed ones client-side and
+    // tell them to save — we can't server-test masked placeholders.
+    if (hasExistingKeys && Object.values(vals).some(isMasked)) {
+        showModal('✅ Looks good', 'Your changed key has a valid format. Click "Update Keys" to save it — your other keys stay as they are.', 'success');
+        return;
+    }
+
+    const livekitUrl = vals.livekit_url;
+    const livekitApiKey = vals.livekit_api_key;
+    const livekitApiSecret = vals.livekit_api_secret;
+    const openaiKey = vals.openai_key;
+    const deepgramKey = vals.deepgram_key;
 
     // Find test button and show loading state
     const testBtn = event.target;

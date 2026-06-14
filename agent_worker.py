@@ -1258,11 +1258,14 @@ async def run_interview():
         
         @session.on("user_input_transcribed")
         def on_user_speech(event):
+            import time
+            transcript = event.transcript.strip()
+            if not transcript:
+                return
+            # Live caption: stream interim transcripts as the candidate speaks,
+            # not just the final one — so the caption updates in real time.
+            asyncio.create_task(emit_user_caption(room, transcript))
             if event.is_final:
-                import time
-                transcript = event.transcript.strip()
-                if not transcript:
-                    return
                 logger.info(f"[USER] {transcript}")
                 conversation_history["user"].append({
                     "index": len(conversation_history["user"]),
@@ -1272,7 +1275,6 @@ async def run_interview():
                     # evaluator can attribute evidence per stage (Wing D).
                     "stage": interview_state.stage.value,
                 })
-                asyncio.create_task(emit_user_caption(room, transcript))
         
         @session.on("conversation_item_added")
         def on_conversation_item(event):
