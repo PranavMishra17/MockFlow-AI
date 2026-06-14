@@ -93,6 +93,14 @@
 /* Fallback visual tweaks to keep spacing consistent with global styles */
 .stage-circle { box-sizing: border-box; }
 
+/* The stage timer + skip controls are fixed at top-center; keep them hidden
+   during connection so they don't overlap the "connecting to interviewer" card.
+   markAgentJoined() adds .interview-live once the interview actually starts. */
+body:not(.interview-live) .stage-timer-display,
+body:not(.interview-live) .skip-area {
+    display: none !important;
+}
+
 /* Compact skip toggle and row placed under timer */
 .skip-area {
     position: fixed;

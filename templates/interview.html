@@ -670,6 +670,9 @@
             function markAgentJoined() {
                 agentJoined = true;
                 hideConnectPanel();
+                // Reveal the stage timer + skip controls only once the interview is
+                // live, so they don't overlap the "connecting" card during startup.
+                document.body.classList.add('interview-live');
             }
 
             function initConnectRetry() {
