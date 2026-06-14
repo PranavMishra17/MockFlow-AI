@@ -94,26 +94,89 @@ def _trend(scores: List[int]) -> str:
     return "flat"
 
 
+def _empty_lifetime() -> Dict[str, Any]:
+    return {"sessions": 0, "words": 0, "sentences": 0, "fillers": 0,
+            "great_answers": 0, "top_crutch_word": None}
+
+
 def build_insights(history: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Aggregate a user's verdict history into the personality/insights payload."""
     sessions = [h for h in history if _verdict(h).get("signals") is not None or _verdict(h).get("overall")]
     if not sessions:
         return {"total_sessions": 0, "latest": None, "competencies": [],
                 "strongest": None, "weakest": None, "recommendation_trend": "flat",
-                "by_track": {}}
+                "by_track": {}, "lifetime": _empty_lifetime(), "best_lines": [],
+                "reco_series": [], "competency_by_track": {}, "recurring_to_raise": []}
 
     by_track: Dict[str, int] = {}
     # competency_key -> ordered list of (band_str, score) across sessions that had it
     series: Dict[str, List[tuple]] = {c: [] for c in CANONICAL_COMPETENCIES}
 
+    # richer personality aggregates — every read tolerates old rows that predate
+    # the C2/C3 fields (graceful .get(...) so the dashboard never 500s).
+    lt_words = lt_sentences = lt_fillers = lt_great = 0
+    crutch_counts: Dict[str, int] = {}
+    best_lines: List[Dict[str, Any]] = []
+    reco_series: List[Dict[str, Any]] = []
+    comp_by_track: Dict[str, Dict[str, tuple]] = {}
+    gap_counts: Dict[str, Dict[str, Any]] = {}
+
     for h in sessions:
         v = _verdict(h)
         track = h.get("track", "intro")
+        date = h.get("created_at")
         by_track[track] = by_track.get(track, 0) + 1
 
         # best band per competency in THIS session
         for comp, pair in _competency_bands(v).items():
             series[comp].append(pair)
+            slot = comp_by_track.setdefault(comp, {})
+            if track not in slot or pair[1] > slot[track][1]:
+                slot[track] = pair  # best band for this competency within this track
+
+        d = v.get("delivery") or {}
+        lt_words += int(d.get("word_count") or 0)
+        lt_sentences += int(d.get("sentence_count") or 0)
+        lt_fillers += int(d.get("filler_total") or 0)
+        for word, n in (d.get("filler_breakdown") or {}).items():
+            crutch_counts[word] = crutch_counts.get(word, 0) + int(n or 0)
+
+        sigs = v.get("signals") or []
+        great = v.get("great_answers")
+        if great is None:  # old row: recompute from the persisted signal bands
+            great = sum(1 for s in sigs if s.get("band") == "outstanding")
+        lt_great += int(great or 0)
+
+        for s in sigs:  # collect best lines from strong, evidence-backed signals
+            if s.get("band") not in ("outstanding", "solid"):
+                continue
+            comp = signal_to_competency(s.get("name", ""))
+            for q in (s.get("evidence") or []):
+                if q:
+                    best_lines.append({
+                        "quote": q, "signal": s.get("name"), "competency": comp,
+                        "competency_label": _COMPETENCY_LABEL.get(comp, ""),
+                        "band": s.get("band"), "track": track, "date": date,
+                    })
+
+        reco = (v.get("overall") or {}).get("recommendation")
+        try:
+            idx = RECOMMENDATIONS.index(reco)
+        except (ValueError, TypeError):
+            idx = None
+        reco_series.append({"date": date, "track": track, "recommendation": reco, "index": idx})
+
+        gap = v.get("gap_to_next") or {}
+        gsig = gap.get("signal")
+        if gsig:  # cluster recurring gaps by signal (stable across free-text moves)
+            gcomp = signal_to_competency(gsig)
+            slot = gap_counts.setdefault(gsig, {
+                "signal": gsig, "competency": gcomp,
+                "competency_label": _COMPETENCY_LABEL.get(gcomp, ""),
+                "count": 0, "move": ""})
+            slot["count"] += 1
+            if gap.get("move"):
+                slot["move"] = gap.get("move")  # keep the latest (oldest->newest)
 
     competencies = []
     for key in CANONICAL_COMPETENCIES:
@@ -153,6 +216,20 @@ def build_insights(history: List[Dict[str, Any]]) -> Dict[str, Any]:
         "delivery": last_v.get("delivery") or {},
     }
 
+    # best lines: outstanding before solid (stable sort keeps chronological order within a band)
+    best_lines.sort(key=lambda b: 0 if b["band"] == "outstanding" else 1)
+    competency_by_track = {c: {t: pair[0] for t, pair in tracks.items()}
+                           for c, tracks in comp_by_track.items()}
+    lifetime = {
+        "sessions": len(sessions),
+        "words": lt_words,
+        "sentences": lt_sentences,
+        "fillers": lt_fillers,
+        "great_answers": lt_great,
+        "top_crutch_word": ({"word": max(crutch_counts, key=crutch_counts.get),
+                             "count": max(crutch_counts.values())} if crutch_counts else None),
+    }
+
     return {
         "total_sessions": len(sessions),
         "latest": latest,
@@ -161,4 +238,9 @@ def build_insights(history: List[Dict[str, Any]]) -> Dict[str, Any]:
         "weakest": weakest,
         "recommendation_trend": rec_trend,
         "by_track": by_track,
+        "lifetime": lifetime,
+        "best_lines": best_lines[:6],
+        "reco_series": reco_series,
+        "competency_by_track": competency_by_track,
+        "recurring_to_raise": sorted(gap_counts.values(), key=lambda g: g["count"], reverse=True),
     }
