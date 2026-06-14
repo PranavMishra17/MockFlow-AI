@@ -35,6 +35,8 @@ Run `migrations/003_interview_scores.sql` on Neon. Optionally set `EVALUATOR_MOD
 
 ### Polish backlog (after the first real end-to-end interview, 2026-06-14)
 
+> **Update — second pass (2026-06-14), all committed to `main` (unpushed, per Pranav).** DONE this pass: merged the Part 1/Phase-3-core work onto main (server-side verdict persistence + verdict-based dashboard); **track-aware stage skipping** (fixed the production `ValueError: ... not in list` crash on technical/coding tracks + made the skip dropdown show the correct track's stages, not intro); **interview-page overlap** (stage timer + skip controls hid until the interview is live, no longer collide with the "connecting" card); **verdict badges on the Past Interviews cards**. REMAINING: competency **radar vs target polygon**, **compare view** (2+ sessions / "vs last session"), signed-in landing teaser, and **Phase 4 calibration**.
+
 A real interview ran on Render and the verdict reveal worked. Two-part fix list from that run:
 
 **Part 1 — interview-flow UX** (`interview.html`, `form.html`, `agent_worker.py`, api-keys)
