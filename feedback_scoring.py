@@ -55,6 +55,11 @@ def delivery_metrics(speech: Dict[str, Any]) -> Dict[str, Any]:
 
     filler_per_min = round(filler_total / (duration_s / 60.0), 1) if duration_s > 0 else 0.0
 
+    # Personality extras (Wing D): the candidate's signature crutch word + the
+    # countable, personal stats the dashboard surfaces. All deterministic.
+    breakdown = dict(speech.get("filler_breakdown") or {})
+    top = max(breakdown.items(), key=lambda kv: kv[1]) if breakdown else None
+
     return {
         "wpm": wpm,
         "wpm_band": wpm_band(wpm),
@@ -64,6 +69,11 @@ def delivery_metrics(speech: Dict[str, Any]) -> Dict[str, Any]:
         "filler_band": filler_band(filler_per_min),
         "filler_target": "<=5/min",
         "word_count": int(speech.get("word_count", 0) or 0),
+        "sentence_count": int(speech.get("sentence_count", 0) or 0),
+        "filler_breakdown": breakdown,
+        "top_crutch_word": {"word": top[0], "count": top[1]} if top else None,
+        "talk_ratio": round(float(speech.get("talk_ratio", 0) or 0), 2),
+        "longest_monologue_s": round(float(speech.get("longest_monologue_s", 0) or 0), 1),
     }
 
 

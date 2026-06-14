@@ -70,6 +70,30 @@ def test_delivery_metrics_zero_duration_no_crash():
     assert d["filler_per_min"] == 0.0  # avoid divide-by-zero
 
 
+# ---- richer personality metrics surfaced for the dashboard (Wing D C2) ----
+
+def test_delivery_metrics_surfaces_top_crutch_word():
+    speech = {"filler_breakdown": {"like": 3, "um": 5, "so": 1}}
+    d = delivery_metrics(speech)
+    assert d["top_crutch_word"] == {"word": "um", "count": 5}
+    assert d["filler_breakdown"] == {"like": 3, "um": 5, "so": 1}
+
+def test_delivery_metrics_surfaces_sentences_talk_ratio_monologue():
+    speech = {"sentence_count": 42, "talk_ratio": 0.61, "longest_monologue_s": 33.4}
+    d = delivery_metrics(speech)
+    assert d["sentence_count"] == 42
+    assert d["talk_ratio"] == 0.61
+    assert d["longest_monologue_s"] == 33.4
+
+def test_delivery_metrics_empty_has_safe_personality_defaults():
+    d = delivery_metrics({})
+    assert d["top_crutch_word"] is None
+    assert d["sentence_count"] == 0
+    assert d["talk_ratio"] == 0.0
+    assert d["longest_monologue_s"] == 0.0
+    assert d["filler_breakdown"] == {}
+
+
 # ---- build_speech_summary: the text injected into the LLM prompt ----
 
 def test_speech_summary_includes_real_numbers():

@@ -34,11 +34,24 @@ def analyze_transcript(conversation: dict) -> dict:
         if not user_turns:
             return _empty_analytics()
 
+        agent_turns = conversation.get('agent', [])
+
         filler_breakdown = _count_fillers(user_turns)
         filler_total = sum(filler_breakdown.values())
         word_count, duration_seconds = _measure_pace(user_turns)
         avg_wpm = _calc_wpm(word_count, duration_seconds)
         per_turn_pace = _per_turn_pace(user_turns)
+
+        # Richer personality metrics (Wing D): sentences spoken, how much of the
+        # conversation the candidate held (word-based, exact), and their single
+        # longest stretch of talking (estimated at 150 wpm, like the pace model).
+        sentence_count = _count_sentences(user_turns)
+        agent_word_count = sum(len((t.get('text') or '').split()) for t in agent_turns)
+        total_words = word_count + agent_word_count
+        talk_ratio = round(word_count / total_words, 2) if total_words > 0 else 0.0
+        longest_monologue_s = round(
+            max((max(0.5, len((t.get('text') or '').split()) / 150 * 60)
+                 for t in user_turns if (t.get('text') or '').strip()), default=0.0), 1)
 
         result = {
             'filler_total': filler_total,
@@ -47,6 +60,10 @@ def analyze_transcript(conversation: dict) -> dict:
             'total_speaking_duration_seconds': round(duration_seconds, 1),
             'avg_words_per_minute': round(avg_wpm, 1),
             'per_turn_pace': per_turn_pace,
+            'sentence_count': sentence_count,
+            'agent_word_count': agent_word_count,
+            'talk_ratio': talk_ratio,
+            'longest_monologue_s': longest_monologue_s,
         }
         logger.info(f"[ANALYTICS] Analyzed {len(user_turns)} user turns: "
                     f"{filler_total} fillers, {avg_wpm:.0f} avg WPM")
@@ -64,7 +81,27 @@ def _empty_analytics() -> dict:
         'total_speaking_duration_seconds': 0.0,
         'avg_words_per_minute': 0.0,
         'per_turn_pace': [],
+        'sentence_count': 0,
+        'agent_word_count': 0,
+        'talk_ratio': 0.0,
+        'longest_monologue_s': 0.0,
     }
+
+
+def _count_sentences(user_turns: List[dict]) -> int:
+    """
+    Count spoken sentences across user turns. Uses terminal punctuation
+    (. ! ?) when the STT punctuates; falls back to 1 per non-empty turn so an
+    unpunctuated transcript still yields a sane, non-zero count.
+    """
+    total = 0
+    for t in user_turns:
+        text = (t.get('text') or '').strip()
+        if not text:
+            continue
+        marks = len(re.findall(r'[.!?]+', text))
+        total += max(1, marks)
+    return total
 
 
 def _count_fillers(user_turns: List[dict]) -> Dict[str, int]:

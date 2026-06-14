@@ -48,3 +48,41 @@ def test_filler_matching_is_whole_word():
     convo = {"user": [{"text": "summary personalities", "timestamp": 1.0}]}
     result = analyze_transcript(convo)
     assert "um" not in result["filler_breakdown"]
+
+
+# ---- richer personality metrics (Wing D C2) ----
+
+def test_sentence_count_uses_terminal_punctuation():
+    convo = {"user": [
+        {"text": "Hello there. How are you?", "timestamp": 1.0},
+        {"text": "I am good", "timestamp": 5.0},  # no punctuation -> counts as 1
+    ]}
+    result = analyze_transcript(convo)
+    assert result["sentence_count"] == 3
+
+
+def test_talk_ratio_is_word_based():
+    convo = {
+        "user": [{"text": "one two three", "timestamp": 1.0}],          # 3 words
+        "agent": [{"text": "a b c d e f g h i", "timestamp": 0.5}],     # 9 words
+    }
+    result = analyze_transcript(convo)
+    assert result["agent_word_count"] == 9
+    assert result["talk_ratio"] == 0.25  # 3 / (3 + 9)
+
+
+def test_longest_monologue_tracks_biggest_turn():
+    convo = {"user": [
+        {"text": " ".join(["w"] * 10), "timestamp": 1.0},
+        {"text": " ".join(["w"] * 75), "timestamp": 5.0},  # 75/150*60 = 30.0s
+    ]}
+    result = analyze_transcript(convo)
+    assert result["longest_monologue_s"] == 30.0
+
+
+def test_empty_conversation_zeroes_new_metrics():
+    result = analyze_transcript({})
+    assert result["sentence_count"] == 0
+    assert result["agent_word_count"] == 0
+    assert result["talk_ratio"] == 0.0
+    assert result["longest_monologue_s"] == 0.0
