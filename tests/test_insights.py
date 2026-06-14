@@ -9,14 +9,16 @@ strongest/weakest competency, and the recommendation trajectory.
 
 from insights import (
     CANONICAL_COMPETENCIES,
+    TARGET_BANDS_BY_LEVEL,
     _competency_bands,
+    _target_polygon,
     build_insights,
     signal_to_competency,
 )
 
 
 def _session(reco, level, signals, track="intro", date="2026-06-13T10:00:00",
-             delivery=None, gap=None, great=None):
+             delivery=None, gap=None, great=None, context=None):
     """A row shaped like get_user_score_history() returns."""
     verdict = {
         "overall": {"recommendation": reco, "level_read": level, "headline": "h"},
@@ -27,6 +29,8 @@ def _session(reco, level, signals, track="intro", date="2026-06-13T10:00:00",
         verdict["gap_to_next"] = gap
     if great is not None:
         verdict["great_answers"] = great
+    if context is not None:
+        verdict["context"] = context
     return {
         "track": track,
         "created_at": date,
@@ -241,3 +245,36 @@ def test_empty_history_has_personality_keys():
     assert out["reco_series"] == []
     assert out["competency_by_track"] == {}
     assert out["recurring_to_raise"] == []
+    assert out["radar"] is None
+
+
+# ---- competency radar vs target-level polygon (Wing D C5) ----
+
+def test_target_bands_keys_match_canonical_competencies():
+    # The radar axes, the target polygon, and the live taxonomy must agree.
+    for level, targets in TARGET_BANDS_BY_LEVEL.items():
+        assert set(targets.keys()) == set(CANONICAL_COMPETENCIES)
+
+def test_target_polygon_defaults_to_new_grad_when_unknown():
+    assert _target_polygon(None) == TARGET_BANDS_BY_LEVEL["new_grad"]
+    assert _target_polygon("bogus") == TARGET_BANDS_BY_LEVEL["new_grad"]
+
+def test_radar_benchmarks_you_vs_target_level():
+    sess = _session("hire", "mid",
+                    [_sig("Coding", "solid"), _sig("Problem-solving", "outstanding")],
+                    track="coding", context={"seniority": "mid", "role": "swe"})
+    radar = build_insights([sess])["radar"]
+    assert radar["level"] == "mid"           # benchmarked vs what they're aiming at
+    axes = {a["key"]: a for a in radar["axes"]}
+    assert set(axes) == set(CANONICAL_COMPETENCIES)
+    assert axes["technical_depth"]["you_score"] == 3      # Coding solid
+    assert axes["problem_solving"]["you_score"] == 4      # outstanding
+    assert axes["technical_depth"]["target_score"] == 4   # the mid bar
+    assert axes["domain_rigor"]["you_score"] is None      # no signal -> not 0
+
+def test_radar_defaults_target_to_new_grad_without_context():
+    sess = _session("lean_hire", "new_grad", [_sig("Coding", "solid")])  # no context
+    radar = build_insights([sess])["radar"]
+    assert radar["level"] == "new_grad"
+    axes = {a["key"]: a for a in radar["axes"]}
+    assert axes["technical_depth"]["target_score"] == 3   # the new-grad bar

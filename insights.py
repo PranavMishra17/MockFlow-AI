@@ -56,6 +56,21 @@ _COMPETENCY_LABEL = {
     "domain_rigor": "Role & domain rigor",
 }
 
+# The "bar" per competency per target level (band_score 1-4), distilled from the
+# §3.7 scope/ownership exemplars: intern ~ borderline (can do with guidance),
+# new-grad ~ solid across (the canonical early-career bar), mid ~ outstanding on
+# the level-defining axes (problem-solving / depth / ownership / domain) with
+# communication gating at solid. Per-competency-per-level (not a flat polygon)
+# and keyed off CANONICAL_COMPETENCIES (asserted in tests so the axes can't drift).
+TARGET_BANDS_BY_LEVEL = {
+    "intern":   {"communication": 2, "problem_solving": 2, "technical_depth": 2,
+                 "ownership_impact": 2, "domain_rigor": 2},
+    "new_grad": {"communication": 3, "problem_solving": 3, "technical_depth": 3,
+                 "ownership_impact": 3, "domain_rigor": 3},
+    "mid":      {"communication": 3, "problem_solving": 4, "technical_depth": 4,
+                 "ownership_impact": 4, "domain_rigor": 4},
+}
+
 
 def signal_to_competency(name: str) -> Optional[str]:
     return SIGNAL_TO_COMPETENCY.get(name)
@@ -99,6 +114,11 @@ def _empty_lifetime() -> Dict[str, Any]:
             "great_answers": 0, "top_crutch_word": None}
 
 
+def _target_polygon(level: Optional[str]) -> Dict[str, int]:
+    """The 5 axis targets for a target level; defaults to the new-grad bar."""
+    return dict(TARGET_BANDS_BY_LEVEL.get(level or "", TARGET_BANDS_BY_LEVEL["new_grad"]))
+
+
 def build_insights(history: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Aggregate a user's verdict history into the personality/insights payload."""
     sessions = [h for h in history if _verdict(h).get("signals") is not None or _verdict(h).get("overall")]
@@ -106,7 +126,8 @@ def build_insights(history: List[Dict[str, Any]]) -> Dict[str, Any]:
         return {"total_sessions": 0, "latest": None, "competencies": [],
                 "strongest": None, "weakest": None, "recommendation_trend": "flat",
                 "by_track": {}, "lifetime": _empty_lifetime(), "best_lines": [],
-                "reco_series": [], "competency_by_track": {}, "recurring_to_raise": []}
+                "reco_series": [], "competency_by_track": {}, "recurring_to_raise": [],
+                "radar": None}
 
     by_track: Dict[str, int] = {}
     # competency_key -> ordered list of (band_str, score) across sessions that had it
@@ -230,6 +251,20 @@ def build_insights(history: List[Dict[str, Any]]) -> Dict[str, Any]:
                              "count": max(crutch_counts.values())} if crutch_counts else None),
     }
 
+    # radar: your latest band per competency vs the bar for the level you're
+    # AIMING at (context.seniority; level_read is what you DEMONSTRATED). An axis
+    # with no data stays None (not 0) so the UI can dim it rather than imply "poor".
+    you_by_comp = {c["key"]: c["latest_score"] for c in competencies}
+    target_level = (last_v.get("context") or {}).get("seniority") or "new_grad"
+    target = _target_polygon(target_level)
+    radar = {
+        "level": target_level,
+        "level_read": last_overall.get("level_read"),
+        "axes": [{"key": c, "label": _COMPETENCY_LABEL[c],
+                  "you_score": you_by_comp.get(c), "target_score": target[c]}
+                 for c in CANONICAL_COMPETENCIES],
+    }
+
     return {
         "total_sessions": len(sessions),
         "latest": latest,
@@ -243,4 +278,5 @@ def build_insights(history: List[Dict[str, Any]]) -> Dict[str, Any]:
         "reco_series": reco_series,
         "competency_by_track": competency_by_track,
         "recurring_to_raise": sorted(gap_counts.values(), key=lambda g: g["count"], reverse=True),
+        "radar": radar,
     }
