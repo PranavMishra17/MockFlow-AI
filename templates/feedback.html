@@ -509,6 +509,30 @@
                           poor:'Poor', cannot_determine:'Not shown'};
         var ARCH_LABEL = {big_tech:'Big Tech', high_bar_startup:'high-bar startup'};
         var ROLE_LABEL = {swe:'software engineer', pm:'product manager', ds_mle:'data / ML'};
+        var RECO_ORDER = ['strong_no_hire','no_hire','lean_no_hire','on_fence','lean_hire','hire','strong_hire'];
+        var BAND_INFO = {
+            outstanding: 'Top-tier — a clear strength that sets you apart from other candidates at this level.',
+            solid: 'Meets the bar for this level — a reliable, positive hire signal.',
+            borderline: 'On the fence — present but not yet convincing. This is where offers are won or lost.',
+            poor: 'Below the bar — a likely no-hire driver on this signal.',
+            cannot_determine: 'There wasn’t enough in the transcript to judge this fairly.'
+        };
+
+        // The 7-point scale, so a new user can see where their verdict sits.
+        function renderSpectrum(reco) {
+            var idx = RECO_ORDER.indexOf(reco);
+            if (idx < 0) idx = 3;
+            var html = '<div class="verdict-spectrum" aria-label="Hire-recommendation scale">';
+            html += '<div class="spectrum-track">';
+            for (var i = 0; i < RECO_ORDER.length; i++) {
+                var cls = 'spectrum-seg seg-' + RECO_TONE[RECO_ORDER[i]] + (i === idx ? ' is-current' : '');
+                html += '<span class="' + cls + '" title="' + RECO_LABEL[RECO_ORDER[i]] + '"></span>';
+            }
+            html += '</div>';
+            html += '<div class="spectrum-ends"><span>Strong No-Hire</span><span>you are here</span><span>Strong Hire</span></div>';
+            html += '</div>';
+            return html;
+        }
 
         function renderVerdict(v, fromCache) {
             elements.scoresLoading.style.display = 'none';
@@ -526,6 +550,7 @@
             }
             html += '</div>';
             html += '<div class="verdict-reco">' + escapeHtml(RECO_LABEL[o.recommendation] || 'On the Fence') + '</div>';
+            html += renderSpectrum(o.recommendation);
             var lvl = LEVEL_LABEL[o.level_read];
             if (lvl) {
                 html += '<div class="verdict-level">performing at <strong>' + lvl + '</strong> level' +
@@ -560,7 +585,10 @@
                 var band = s.band || 'cannot_determine';
                 html += '<div class="signal-card signal-' + band + '">';
                 html += '<div class="signal-head"><span class="signal-name">' + escapeHtml(s.name || '') + '</span>';
-                html += '<span class="signal-band band-' + band + '">' + (BAND_LABEL[band] || band) + '</span></div>';
+                html += '<span class="signal-band-wrap"><span class="signal-band band-' + band + '">' + (BAND_LABEL[band] || band) + '</span>';
+                html += '<button type="button" class="signal-info-btn" aria-label="What does this band mean?" ' +
+                        'onclick="this.closest(\'.signal-card\').classList.toggle(\'info-open\')">i</button></span></div>';
+                html += '<p class="signal-info-text">' + (BAND_INFO[band] || '') + '</p>';
                 if (s.reasoning) html += '<p class="signal-reason">' + escapeHtml(s.reasoning) + '</p>';
                 if (band === 'cannot_determine') {
                     html += '<p class="signal-na">Not enough in the transcript to judge this fairly.</p>';

@@ -1659,3 +1659,66 @@
     line-height: 1.5;
     margin-bottom: 0.3rem;
 }
+
+/* ── 7-point recommendation spectrum (so a new user knows where they sit) ── */
+.verdict-spectrum { margin-top: 0.9rem; }
+.spectrum-track { display: flex; gap: 3px; align-items: center; }
+.spectrum-seg {
+    flex: 1;
+    height: 7px;
+    border-radius: 3px;
+    background: var(--bg-soft);
+    opacity: 0.5;
+}
+.spectrum-seg.seg-neg { background: #E07A3F; }
+.spectrum-seg.seg-mid { background: #E0A100; }
+.spectrum-seg.seg-pos { background: var(--accent-green-deep); }
+.spectrum-seg.is-current {
+    opacity: 1;
+    height: 13px;
+    border-radius: 4px;
+    box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 3px var(--text-primary);
+}
+.spectrum-ends {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.62rem;
+    color: var(--text-light);
+    margin-top: 0.45rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+.spectrum-ends span:nth-child(2) {
+    color: var(--text-primary);
+    font-weight: 800;
+}
+
+/* ── per-signal info affordance ── */
+.signal-band-wrap { display: inline-flex; align-items: center; gap: 0.4rem; }
+.signal-info-btn {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 1px solid var(--bg-soft);
+    background: var(--bg-card);
+    color: var(--text-light);
+    font-family: Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-weight: 700;
+    font-size: 0.72rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+}
+.signal-info-btn:hover { color: var(--text-primary); border-color: var(--text-light); }
+.signal-info-text {
+    display: none;
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    margin: 0.55rem 0 0;
+    padding: 0.55rem 0.75rem;
+    background: var(--bg-warm);
+    border-radius: 8px;
+}
+.signal-card.info-open .signal-info-text { display: block; }

@@ -1193,9 +1193,10 @@
         const trackEl = document.getElementById('selectedTrack');
         if (!trackEl || !trackEl.value) return;
         const card = document.querySelector('.track-card[data-track="' + trackEl.value + '"]');
-        if (card && !card.classList.contains('selected')) {
-          card.click();
-        }
+        // Always re-fire the selection so updateButtonState() re-runs against the
+        // now-restored name/email/role and enables Begin (it ran once at init,
+        // before the cache was applied — that's why Begin stayed disabled).
+        if (card) card.click();
       }
 
       function applyState() {
