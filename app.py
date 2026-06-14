@@ -272,23 +272,33 @@ def user_stats():
 @app.route('/api/user/keys', methods=['POST'])
 @require_auth
 def save_user_keys():
-    """Save user's API keys (encrypted)"""
+    """
+    Save user's API keys (encrypted), supporting PARTIAL updates: a field that
+    is blank or still masked (contains a bullet) keeps its existing value, so a
+    user can change just one key without re-entering the others.
+    """
     try:
         user_id = get_user_id()
         data = request.json or {}
+        fields = ['livekit_url', 'livekit_api_key', 'livekit_api_secret', 'openai_key', 'deepgram_key']
 
-        livekit_url = data.get('livekit_url')
-        livekit_api_key = data.get('livekit_api_key')
-        livekit_api_secret = data.get('livekit_api_secret')
-        openai_key = data.get('openai_key')
-        deepgram_key = data.get('deepgram_key')
+        existing = supabase_client.get_api_keys(user_id) or {}
+        merged = {}
+        for f in fields:
+            v = (data.get(f) or '').strip()
+            if v and '•' not in v:        # a real, non-masked value -> use it
+                merged[f] = v
+            else:                              # blank/masked -> keep existing
+                merged[f] = existing.get(f, '')
 
-        if not all([livekit_url, livekit_api_key, livekit_api_secret, openai_key, deepgram_key]):
-            return jsonify({'error': 'All API keys required'}), 400
+        missing = [f for f in fields if not merged[f]]
+        if missing:
+            return jsonify({'error': 'All API keys required',
+                            'missing': missing}), 400
 
         success = supabase_client.save_api_keys(
-            user_id, livekit_url, livekit_api_key, livekit_api_secret,
-            openai_key, deepgram_key
+            user_id, merged['livekit_url'], merged['livekit_api_key'],
+            merged['livekit_api_secret'], merged['openai_key'], merged['deepgram_key']
         )
 
         if success:
