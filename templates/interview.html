@@ -63,36 +63,10 @@
 
         <div class="skip-area">
             <button id="skipToggle" class="skip-toggle" aria-expanded="false">Skip stages ▾</button>
-            <div class="skip-row hidden" id="skipRow">
-                <button class="skip-btn current" data-target="self_intro" disabled id="skipSelfIntro">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polygon points="5 3 19 12 5 21 5 3"/>
-                    </svg>
-                    Intro
-                    <span class="skip-tooltip">Skip to Introduction</span>
-                </button>
-                <button class="skip-btn" data-target="past_experience" id="skipPastExp">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polygon points="5 3 19 12 5 21 5 3"/>
-                    </svg>
-                    Experience
-                    <span class="skip-tooltip">Skip to Experience</span>
-                </button>
-                <button class="skip-btn" data-target="company_fit" id="skipCompanyFit">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polygon points="5 3 19 12 5 21 5 3"/>
-                    </svg>
-                    Company Fit
-                    <span class="skip-tooltip">Skip to Company Fit</span>
-                </button>
-                <button class="skip-btn" data-target="closing" id="skipClosing">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <polygon points="5 3 19 12 5 21 5 3"/>
-                    </svg>
-                    Closing
-                    <span class="skip-tooltip">Skip to Closing</span>
-                </button>
-            </div>
+            <!-- Skip targets are built dynamically from the active track's stages
+                 (buildSkipButtons), so a technical/coding interview never shows
+                 intro stage names. -->
+            <div class="skip-row hidden" id="skipRow"></div>
         </div>
         
         <!-- Main Interview Area -->
@@ -499,6 +473,21 @@
                         '<div class="stage-circle">' + (i + 1) + '</div>' +
                         '<span class="stage-label">' + s.label + '</span>' +
                         '</div>';
+                }).join('');
+            }
+
+            // Build skip-stage buttons from the SAME track stage list (not the
+            // hardcoded intro stages) so technical/coding tracks show correct
+            // names + valid targets. First stage (welcome/greeting) is omitted —
+            // you can't skip back to it.
+            var skipRowEl = document.getElementById('skipRow');
+            if (skipRowEl) {
+                skipRowEl.innerHTML = trackStageList.slice(1).map(function(s) {
+                    return '<button class="skip-btn" data-target="' + s.key + '">' +
+                        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>' +
+                        s.label +
+                        '<span class="skip-tooltip">Skip to ' + s.label + '</span>' +
+                    '</button>';
                 }).join('');
             }
             
