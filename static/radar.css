@@ -1,0 +1,114 @@
+/*
+ * Shared styles for the hand-rolled SVG competency radar (radar.js) and the
+ * small band pills it pairs with. Loaded by the dashboard, compare, and landing
+ * surfaces. Inherits tokens from styles.css.
+ */
+
+.radar-svg {
+    width: 100%;
+    max-width: 360px;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+    overflow: visible;
+}
+.radar-ring { fill: none; stroke: var(--bg-soft); stroke-width: 1; }
+.radar-spoke { stroke: var(--bg-soft); stroke-width: 1; }
+.radar-target {
+    fill: none;
+    stroke: var(--text-muted);
+    stroke-width: 2;
+    stroke-dasharray: 5 4;
+    stroke-linejoin: round;
+}
+.radar-prev {
+    fill: none;
+    stroke: var(--accent-purple-deep);
+    stroke-width: 1.5;
+    opacity: 0.6;
+    stroke-linejoin: round;
+}
+.radar-you {
+    fill: color-mix(in srgb, var(--accent-green-deep) 22%, transparent);
+    stroke: var(--accent-green-deep);
+    stroke-width: 2.5;
+    stroke-linejoin: round;
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: radarIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.radar-deficit {
+    stroke: var(--accent-pink-deep);
+    stroke-width: 2;
+    stroke-linecap: round;
+    opacity: 0.75;
+}
+.radar-axis-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    fill: var(--text-secondary);
+    dominant-baseline: middle;
+}
+.radar-axis-dim { fill: var(--text-light); opacity: 0.55; }
+
+@keyframes radarIn {
+    from { transform: scale(0.2); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* Radar legend + auto-caption */
+.radar-legend {
+    display: flex;
+    justify-content: center;
+    gap: 1.1rem;
+    margin-top: 0.6rem;
+    flex-wrap: wrap;
+}
+.rl {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+.rl::before {
+    content: '';
+    width: 14px;
+    height: 0;
+    border-top-width: 3px;
+    border-top-style: solid;
+}
+.rl-you::before { border-top-color: var(--accent-green-deep); }
+.rl-target::before { border-top-style: dashed; border-top-color: var(--text-muted); }
+.rl-prev::before { border-top-color: var(--accent-purple-deep); }
+.radar-caption {
+    font-size: 0.84rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+    text-align: center;
+    margin: 0.7rem auto 0;
+    max-width: 30rem;
+}
+.radar-caption strong { color: var(--text-primary); }
+
+/* Shared small band pill (best lines, stability, landing chips) */
+.bandpill {
+    display: inline-block;
+    font-size: 0.64rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0.18rem 0.5rem;
+    border-radius: var(--radius-full);
+    white-space: nowrap;
+}
+.bandpill-outstanding { background: color-mix(in srgb, var(--accent-green) 45%, #fff); color: #14532d; }
+.bandpill-solid { background: color-mix(in srgb, var(--accent-green) 28%, #fff); color: #166534; }
+.bandpill-borderline { background: color-mix(in srgb, #F6C453 40%, #fff); color: #7c5e00; }
+.bandpill-poor { background: color-mix(in srgb, #E07A3F 22%, #fff); color: #9a3412; }
+.bandpill-cannot_determine { background: var(--bg-soft); color: var(--text-light); }
+
+@media (prefers-reduced-motion: reduce) {
+    .radar-you { animation: none; }
+}

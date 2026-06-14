@@ -106,61 +106,201 @@ function buildPersonalitySummary(data) {
     return parts.join(' · ');
 }
 
-function renderInsightsContent(data) {
+function trackLabel(tr) {
+    const m = { intro: 'Intro', behavioral: 'Behavioral', technical_voice: 'Technical', coding: 'Coding', technical_coding: 'Coding' };
+    return m[tr] || tr;
+}
+
+// ── [A] the epic stat band — countable, personal, each tied to a signal/action ──
+function statTile(label, value, hint, opts) {
+    opts = opts || {};
+    const cls = 'pp-stat' + (opts.accent ? ' pp-stat-accent' : '') + (opts.onclick ? ' pp-stat-link' : '');
+    const attrs = opts.onclick ? ' role="button" tabindex="0" onclick="' + opts.onclick +
+        '" onkeydown="if(event.key===\'Enter\'){this.click();}"' : '';
+    return '<div class="' + cls + '"' + attrs + '>' +
+        '<span class="pp-stat-label">' + label + '</span>' +
+        '<span class="pp-stat-value">' + value + '</span>' +
+        (hint ? '<span class="pp-stat-hint">' + hint + '</span>' : '') + '</div>';
+}
+
+function renderStatBand(data) {
+    const lt = data.lifetime || {};
+    const best = (data.best_lines && data.best_lines[0]) || null;
+    const scrollBest = "var el=document.getElementById('ppBestLines'); if(el){el.scrollIntoView({behavior:'smooth'});}";
+    let t = '';
+    t += statTile('Sessions', (lt.sessions || data.total_sessions || 0), 'completed');
+    if (lt.words) t += statTile('Words spoken', Number(lt.words).toLocaleString(), 'across every answer');
+    if (lt.sentences) t += statTile('Sentences', Number(lt.sentences).toLocaleString(), 'thoughts delivered');
+    t += statTile('Great answers', '<span class="pp-star">★</span> ' + (lt.great_answers || 0),
+        'outstanding signals', { accent: true, onclick: best ? scrollBest : null });
+    if (lt.fillers) {
+        const crutch = lt.top_crutch_word ? ('“' + escapeHtml(lt.top_crutch_word.word) + '” ×' + lt.top_crutch_word.count) : 'well controlled';
+        t += statTile('Filler words', Number(lt.fillers).toLocaleString(), 'top crutch: ' + crutch);
+    }
+    const recency = formatRelativeDate(data.latest && data.latest.date);
+    if (recency) t += statTile('Last active', escapeHtml(recency), 'keep the streak');
+    if (best) {
+        const teaser = '<span class="pp-bestline-teaser">“' + escapeHtml(best.quote.slice(0, 52)) + (best.quote.length > 52 ? '…' : '') + '”</span>';
+        t += statTile('Your best line', teaser, best.competency_label || '', { onclick: scrollBest });
+    }
+    return '<div class="pp-statband">' + t + '</div>';
+}
+
+// ── [B] the competency radar vs the target-level bar ──
+function radarCaption(radar) {
+    if (!radar || !radar.axes) return '';
+    const meas = radar.axes.filter(a => a.you_score != null);
+    if (!meas.length) return '<p class="radar-caption">Take an interview to map your competencies against the bar.</p>';
+    const below = meas.filter(a => a.target_score != null && a.you_score < a.target_score);
+    const lvl = LEVEL_LABEL[radar.level] || radar.level || 'target';
+    const at = meas.length - below.length;
+    let msg = 'At or above the ' + escapeHtml(lvl) + ' bar on <strong>' + at + ' of ' + meas.length + '</strong>';
+    msg += below.length ? ' — push ' + below.map(a => escapeHtml(a.label)).join(' &amp; ') + ' to clear it everywhere.'
+                        : ' — you clear the bar across the board.';
+    return '<p class="radar-caption">' + msg + '</p>';
+}
+
+function renderRadarSection(data) {
+    if (!data.radar || !window.MockFlowRadar) return '';
+    const lvl = LEVEL_LABEL[data.radar.level] || data.radar.level || 'target';
+    const svg = window.MockFlowRadar.build({ axes: data.radar.axes, size: 340 });
+    return '<div class="pp-block pp-radar">' +
+        '<div class="pp-sub-title">Where you stand vs the ' + escapeHtml(lvl) + ' bar</div>' +
+        svg + radarCaption(data.radar) +
+        '<div class="radar-legend"><span class="rl rl-you">You</span><span class="rl rl-target">' + escapeHtml(lvl) + ' bar</span></div>' +
+        '</div>';
+}
+
+// ── [C] trajectory: latest verdict + recommendation sparkline + competency rows ──
+function renderRecoSpark(series) {
+    const pts = (series || []).filter(r => r.index != null);
+    if (pts.length < 2) return '';
+    const W = 240, H = 46, pad = 5, n = pts.length;
+    const coords = pts.map((r, i) => [pad + (i / (n - 1)) * (W - 2 * pad), H - pad - (r.index / 6) * (H - 2 * pad)]);
+    const last = pts[pts.length - 1], tone = RECO_TONE[last.recommendation] || 'mid', lc = coords[coords.length - 1];
+    return '<svg class="reco-spark" viewBox="0 0 ' + W + ' ' + H + '" aria-hidden="true">' +
+        '<polyline points="' + coords.map(c => c[0].toFixed(1) + ',' + c[1].toFixed(1)).join(' ') + '" fill="none"/>' +
+        '<circle class="spark-dot dot-' + tone + '" cx="' + lc[0].toFixed(1) + '" cy="' + lc[1].toFixed(1) + '" r="3.5"/></svg>';
+}
+
+function renderTrajectorySection(data) {
     const latest = data.latest || {};
     const tone = RECO_TONE[latest.recommendation] || 'mid';
-
-    // The headline verdict card.
-    let verdict = '<div class="insight-verdict tone-' + tone + '">';
-    verdict += '<span class="iv-eyebrow">Latest verdict' +
-        (latest.track ? ' · ' + escapeHtml(latest.track) : '') + '</span>';
-    verdict += '<span class="iv-reco">' + escapeHtml(RECO_LABEL[latest.recommendation] || '—') + '</span>';
-    if (LEVEL_LABEL[latest.level_read]) {
-        verdict += '<span class="iv-level">performing at <strong>' +
-            LEVEL_LABEL[latest.level_read] + '</strong> level</span>';
+    let html = '<div class="insight-verdict tone-' + tone + '">';
+    html += '<span class="iv-eyebrow">Latest verdict' + (latest.track ? ' · ' + escapeHtml(trackLabel(latest.track)) : '') + '</span>';
+    html += '<span class="iv-reco">' + escapeHtml(RECO_LABEL[latest.recommendation] || '—') + '</span>';
+    if (LEVEL_LABEL[latest.level_read]) html += '<span class="iv-level">performing at <strong>' + LEVEL_LABEL[latest.level_read] + '</strong> level</span>';
+    if (latest.headline) html += '<p class="iv-headline">' + escapeHtml(latest.headline) + '</p>';
+    const spark = renderRecoSpark(data.reco_series);
+    if (spark) {
+        const n = (data.reco_series || []).filter(r => r.index != null).length;
+        html += '<div class="iv-spark">' + spark + '<span class="iv-spark-cap">your last ' + n + ' sessions</span></div>';
     }
-    if (latest.headline) verdict += '<p class="iv-headline">' + escapeHtml(latest.headline) + '</p>';
-    verdict += '</div>';
+    html += '</div>';
 
-    // Per-competency bands + trend across sessions.
-    let comps = '';
     if (data.competencies && data.competencies.length) {
         const rows = data.competencies.map(function (c) {
             const t = TREND_META[c.trend] || TREND_META.flat;
             const pct = Math.round((Number(c.latest_score) / 4) * 100);
-            return '<div class="comp-row">' +
-                '<span class="comp-name">' + escapeHtml(c.label) + '</span>' +
+            return '<div class="comp-row"><span class="comp-name">' + escapeHtml(c.label) + '</span>' +
                 '<span class="comp-bar"><span class="comp-fill band-' + c.latest_band + '" style="width:' + pct + '%"></span></span>' +
                 '<span class="comp-band band-chip-' + c.latest_band + '">' + (BAND_LABEL[c.latest_band] || c.latest_band) + '</span>' +
-                '<span class="comp-trend trend-' + t.cls + '" title="' + t.label + ' (' + c.sessions + ' sessions)">' + t.icon + '</span>' +
-            '</div>';
+                '<span class="comp-trend trend-' + t.cls + '" title="' + t.label + ' (' + c.sessions + ' sessions)">' + t.icon + '</span></div>';
         }).join('');
-        comps = '<div class="insight-comps"><div class="ic-title">Competencies — latest band &amp; trend</div>' + rows + '</div>';
+        html += '<div class="insight-comps"><div class="ic-title">Competencies — latest band &amp; trend</div>' + rows + '</div>';
     }
 
-    // Compact stat row: sessions, recency, by-track.
-    const total = Number(data.total_sessions) || 0;
-    const recency = formatRelativeDate(latest.date);
-    const totalCard = '<div class="stat-card"><span class="stat-label">Sessions</span>' +
-        '<span class="stat-value">' + total + '</span>' +
-        '<span class="stat-hint">' + (total === 1 ? 'completed' : 'completed') + '</span></div>';
-    const recencyCard = '<div class="stat-card"><span class="stat-label">Last Active</span>' +
-        '<span class="stat-value">' + (recency ? escapeHtml(recency) : '&mdash;') + '</span>' +
-        '<span class="stat-hint">keep the streak going</span></div>';
-
     const tracks = data.by_track || {};
-    const maxTrack = TRACK_META.reduce(function (m, t) { return Math.max(m, Number(tracks[t.key]) || 0); }, 0);
-    const trackRows = TRACK_META.map(function (t) {
-        const count = Number(tracks[t.key]) || 0;
-        const pct = maxTrack > 0 ? Math.round((count / maxTrack) * 100) : 0;
-        return '<div class="track-row"><span class="track-name">' + escapeHtml(t.label) + '</span>' +
-            '<span class="track-bar"><span class="track-bar-fill" style="width:' + pct + '%"></span></span>' +
-            '<span class="track-count">' + count + '</span></div>';
-    }).join('');
-    const trackCard = '<div class="stat-card" style="grid-column: span 2; min-width: 0;">' +
-        '<span class="stat-label">By Track</span><div class="track-breakdown">' + trackRows + '</div></div>';
+    const chips = TRACK_META.filter(tk => Number(tracks[tk.key])).map(tk =>
+        '<span class="tt-chip">' + escapeHtml(tk.label) + ' <strong>' + Number(tracks[tk.key]) + '</strong></span>').join('');
+    if (chips) html += '<div class="tt-strip">' + chips + '</div>';
 
-    return verdict + comps + '<div class="stat-grid">' + totalCard + recencyCard + trackCard + '</div>';
+    return '<div class="pp-block">' + html + '</div>';
+}
+
+// ── [D] cross-track trait stability ──
+function stabilityCallout(cbt, comps, tracks) {
+    const bandScore = { poor: 1, borderline: 2, solid: 3, outstanding: 4 };
+    let best = null;
+    comps.forEach(c => {
+        const byT = cbt[c.key] || {};
+        const vals = tracks.filter(tr => byT[tr]).map(tr => ({ tr, b: byT[tr], s: bandScore[byT[tr]] || 0 }));
+        if (vals.length >= 2) {
+            vals.sort((a, b) => b.s - a.s);
+            const d = vals[0].s - vals[vals.length - 1].s;
+            if (d > 0 && (!best || d > best.d)) best = { d, c, hi: vals[0], lo: vals[vals.length - 1] };
+        }
+    });
+    if (!best) return '';
+    return 'Your <strong>' + escapeHtml(best.c.label.toLowerCase()) + '</strong> is ' +
+        (BAND_LABEL[best.hi.b] || best.hi.b).toLowerCase() + ' in ' + escapeHtml(trackLabel(best.hi.tr).toLowerCase()) +
+        ' but ' + (BAND_LABEL[best.lo.b] || best.lo.b).toLowerCase() + ' in ' + escapeHtml(trackLabel(best.lo.tr).toLowerCase()) +
+        ' — context changes how you show up.';
+}
+
+function renderStability(data) {
+    const cbt = data.competency_by_track || {};
+    const comps = (data.competencies || []).filter(c => cbt[c.key]);
+    const trackSet = {};
+    Object.keys(cbt).forEach(k => Object.keys(cbt[k]).forEach(tr => { trackSet[tr] = true; }));
+    const tracks = Object.keys(trackSet);
+    if (tracks.length < 2 || !comps.length) return '';
+    let cells = '<span class="stab-cell stab-corner"></span>';
+    tracks.forEach(tr => { cells += '<span class="stab-cell stab-th">' + escapeHtml(trackLabel(tr)) + '</span>'; });
+    comps.forEach(c => {
+        cells += '<span class="stab-cell stab-name">' + escapeHtml(c.label) + '</span>';
+        tracks.forEach(tr => {
+            const band = (cbt[c.key] || {})[tr];
+            cells += band ? '<span class="stab-cell"><span class="bandpill bandpill-' + band + '">' + (BAND_LABEL[band] || band) + '</span></span>'
+                          : '<span class="stab-cell stab-empty">—</span>';
+        });
+    });
+    const grid = '<div class="stab-grid" style="grid-template-columns: minmax(6.5rem,1.2fr) repeat(' + tracks.length + ', minmax(0,1fr));">' + cells + '</div>';
+    const callout = stabilityCallout(cbt, comps, tracks);
+    return '<div class="pp-block pp-stability"><div class="pp-sub-title">How your traits hold up across tracks</div>' +
+        grid + (callout ? '<p class="stab-callout">' + callout + '</p>' : '') + '</div>';
+}
+
+// ── [E] your best lines — the highlight reel ──
+function renderBestLines(data) {
+    const lines = data.best_lines || [];
+    let html = '<div class="pp-block pp-bestlines" id="ppBestLines"><div class="pp-sub-title">Your best lines ' +
+        '<span class="pp-sub-note">moments a hiring manager would remember</span></div>';
+    if (!lines.length) {
+        return html + '<div class="bl-empty">Your standout answers will be collected here. Land an outstanding signal to start the reel.</div></div>';
+    }
+    html += '<div class="bl-rail">';
+    lines.forEach(l => {
+        html += '<div class="bl-card"><div class="bl-quote">“' + escapeHtml(l.quote) + '”</div>' +
+            '<div class="bl-meta"><span class="bandpill bandpill-' + l.band + '">' + (BAND_LABEL[l.band] || l.band) + '</span> ' +
+            escapeHtml(l.competency_label || '') + (l.track ? ' · ' + escapeHtml(trackLabel(l.track)) : '') + '</div></div>';
+    });
+    return html + '</div></div>';
+}
+
+// ── [F] work on this next — one prioritized action ──
+function renderNext(data) {
+    const rtr = (data.recurring_to_raise && data.recurring_to_raise[0]) || null;
+    const weakest = data.weakest || null;
+    if (!rtr && !weakest) return '';
+    let body = '<strong>' + escapeHtml((rtr && (rtr.competency_label || rtr.signal)) || weakest.label) + '</strong>';
+    if (rtr && rtr.count > 1) body += ' — your recurring gap across ' + rtr.count + ' sessions.';
+    else if (weakest) body += ' — your lowest signal right now.';
+    if (rtr && rtr.move) body += ' ' + escapeHtml(rtr.move);
+    const items = (data.recurring_to_raise || []).slice(0, 3).map(r =>
+        '<li>' + escapeHtml(r.competency_label || r.signal) + (r.move ? ': ' + escapeHtml(r.move) : '') + '</li>').join('');
+    let html = '<div class="pp-next"><div class="pp-next-label">Work on this next</div><p class="pp-next-body">' + body + '</p>';
+    if (items) html += '<ul class="pp-next-list">' + items + '</ul>';
+    return html + '<a class="pp-next-cta" href="/start">Practice this →</a></div>';
+}
+
+function renderInsightsContent(data) {
+    return renderStatBand(data) +
+        renderRadarSection(data) +
+        renderTrajectorySection(data) +
+        renderStability(data) +
+        renderBestLines(data) +
+        renderNext(data);
 }
 
 async function loadUserStats() {

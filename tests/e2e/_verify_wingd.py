@@ -82,12 +82,19 @@ def main():
 
         pg.evaluate("document.querySelectorAll('.sig-reveal').forEach(e=>e.classList.add('is-in'))")
         pg.wait_for_timeout(200)
+        diag = pg.evaluate("""() => {
+            const pick = s => { const e = document.querySelector(s); return e ? {h: e.offsetHeight, top: Math.round(e.getBoundingClientRect().top), disp: getComputedStyle(e).display} : null; };
+            return { scrollH: document.body.scrollHeight, statsContent: pick('#statsContent'),
+                     pp_next: pick('.pp-next'), bl_rail: pick('.bl-rail'), stab: pick('.stab-grid'),
+                     lp_persona: pick('.lp-persona'), compare: pick('.compare-view') };
+        }""")
         pg.screenshot(path=str(SHOTS / f"wingd_{PAGE}.png"), full_page=True)
         b.close()
 
     print(f"== {PAGE} ==")
     for k, v in res.items():
         print(f"  {k}: {v}")
+    print("DIAG:", diag)
     print("CONSOLE:", errs[:12] if errs else "(clean)")
 
 
