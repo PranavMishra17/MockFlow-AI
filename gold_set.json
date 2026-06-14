@@ -1,0 +1,90 @@
+[
+  {
+    "id": "beh_strong_ng",
+    "track": "behavioral", "role": "swe", "seniority": "new_grad", "archetype": "big_tech",
+    "candidate_profile": "New-grad software engineer, one internship.",
+    "job_summary": "Backend software engineer, new-grad level.",
+    "transcript": "INTERVIEWER: Tell me about a time you owned a problem.\nCANDIDATE: Our deploy step was flaky, so I took it on. I measured the failure rate at about 18%, traced it to a race condition in the migration script, and fixed it. After my change the failure rate dropped under 2%.\nINTERVIEWER: How did you handle disagreement with a teammate on the approach?\nCANDIDATE: A teammate wanted to just add retries. I disagreed but we talked it through, I showed the logs, and we agreed retries hid the bug. We went with the real fix and I owned the rollout.",
+    "signals": [
+      {"name": "Ownership", "band": "solid"},
+      {"name": "Impact & metrics", "band": "solid"},
+      {"name": "Conflict & collaboration", "band": "solid"},
+      {"name": "Communication & structure", "band": "solid"},
+      {"name": "Authenticity", "band": "borderline"}
+    ],
+    "expected_recommendation": "lean_hire"
+  },
+  {
+    "id": "beh_weak_mid",
+    "track": "behavioral", "role": "swe", "seniority": "mid", "archetype": "big_tech",
+    "candidate_profile": "Mid-level engineer, 4 years.",
+    "job_summary": "Mid-level backend engineer.",
+    "transcript": "INTERVIEWER: Tell me about an impactful project.\nCANDIDATE: We built a new service and it went well. We shipped it and people liked it.\nINTERVIEWER: What did you personally do, and what was the result?\nCANDIDATE: I mean, we all worked on it. It was a team thing. I'm not sure about exact numbers, it just felt successful.",
+    "signals": [
+      {"name": "Ownership", "band": "poor"},
+      {"name": "Impact & metrics", "band": "poor"},
+      {"name": "Conflict & collaboration", "band": "borderline"},
+      {"name": "Communication & structure", "band": "borderline"},
+      {"name": "Authenticity", "band": "borderline"}
+    ],
+    "expected_recommendation": "no_hire"
+  },
+  {
+    "id": "code_strong_ng",
+    "track": "coding", "role": "swe", "seniority": "new_grad", "archetype": "big_tech",
+    "candidate_profile": "New-grad, strong CS fundamentals.",
+    "job_summary": "New-grad software engineer.",
+    "transcript": "CANDIDATE: Before I code, let me restate the problem and think about complexity. A brute force is O(n^2); I can do O(n) with a hash map keyed on the complement. Let me write that.\nCANDIDATE: I'll add a test for the empty array and for duplicates before I call it done.\nINTERVIEWER: What if the input is sorted?\nCANDIDATE: Good point — then a two-pointer is O(1) space, I'd switch to that.",
+    "signals": [
+      {"name": "Problem-solving", "band": "outstanding"},
+      {"name": "Coding", "band": "solid"},
+      {"name": "Testing & verification", "band": "solid"},
+      {"name": "Response to hints", "band": "solid"},
+      {"name": "Communication & structure", "band": "solid"}
+    ],
+    "expected_recommendation": "hire"
+  },
+  {
+    "id": "code_weak_ng",
+    "track": "coding", "role": "swe", "seniority": "new_grad", "archetype": "big_tech",
+    "candidate_profile": "New-grad, limited practice.",
+    "job_summary": "New-grad software engineer.",
+    "transcript": "CANDIDATE: Um, I'll just start coding. [long silence] ... this loop isn't working. Maybe another loop.\nINTERVIEWER: What's the time complexity of your approach?\nCANDIDATE: I'm not sure. I'll just try things until the example passes.\nINTERVIEWER: Could a hash map help here?\nCANDIDATE: Maybe? I'll keep using nested loops though.",
+    "signals": [
+      {"name": "Problem-solving", "band": "borderline"},
+      {"name": "Coding", "band": "borderline"},
+      {"name": "Testing & verification", "band": "poor"},
+      {"name": "Response to hints", "band": "poor"},
+      {"name": "Communication & structure", "band": "borderline"}
+    ],
+    "expected_recommendation": "no_hire"
+  },
+  {
+    "id": "intro_mixed_ng",
+    "track": "intro", "role": "swe", "seniority": "new_grad", "archetype": "big_tech",
+    "candidate_profile": "New-grad applying to infra team.",
+    "job_summary": "New-grad software engineer, infrastructure.",
+    "transcript": "INTERVIEWER: Why this role and why now?\nCANDIDATE: I've wanted to work on infrastructure since my first internship where I got pulled into an on-call incident — debugging that system is what made me fall in love with backend reliability.\nINTERVIEWER: What's a weakness you're working on?\nCANDIDATE: I tend to over-engineer early. I've been practicing shipping a simple version first, then iterating.\nINTERVIEWER: What do you know about our team?\nCANDIDATE: Honestly not a lot of specifics, just that you do platform work.",
+    "signals": [
+      {"name": "Motivation & authenticity", "band": "solid"},
+      {"name": "Communication & structure", "band": "solid"},
+      {"name": "Role / company fit", "band": "borderline"},
+      {"name": "Self-awareness", "band": "solid"}
+    ],
+    "expected_recommendation": "lean_hire"
+  },
+  {
+    "id": "tv_pm_strong_mid",
+    "track": "technical_voice", "role": "pm", "seniority": "mid", "archetype": "big_tech",
+    "candidate_profile": "Mid-level PM, consumer apps.",
+    "job_summary": "Mid-level product manager.",
+    "transcript": "CANDIDATE: First the user: I'd segment by new vs power users, and I think the sharpest pain is new-user activation. For a v1 I'd prioritize a guided first session by impact-vs-effort.\nINTERVIEWER: How would you measure success?\nCANDIDATE: Primary metric is day-7 retention, but I'd set a guardrail on support tickets and a counter-metric on notification opt-outs so we don't juice retention by spamming.\nINTERVIEWER: If retention rises but engagement per session falls?\nCANDIDATE: Then I'd dig in — retention from habit is good, but falling session depth could mean we front-loaded value; I'd look at the cohort curves before declaring a win.",
+    "signals": [
+      {"name": "Product sense", "band": "solid"},
+      {"name": "Analytical / execution", "band": "outstanding"},
+      {"name": "Technical fluency", "band": "solid"},
+      {"name": "Communication & structure", "band": "solid"}
+    ],
+    "expected_recommendation": "hire"
+  }
+]

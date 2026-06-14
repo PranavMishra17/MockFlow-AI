@@ -373,6 +373,12 @@ Score ONLY these named signals: {signal_names}.
 For EACH signal:
 {signal_lines}
 
+ANCHORED BAND EXAMPLES (how the same kind of evidence maps to a band — calibrate to these):
+- outstanding: volunteers the key insight unprompted and quantifies impact — e.g. "I cut p99 latency 38% by isolating one slow query."
+- solid: meets the bar with a clear, correct, well-structured answer — e.g. "I clarified the input format, then used a hash map for O(n) lookup."
+- borderline: present but unconvincing — vague, hedged, or only after prompting — e.g. "We made it faster, I think it helped."
+- poor: misses the bar or contradicts the question — e.g. "I'm not sure, maybe just try things until it works."
+
 RULES (non-negotiable):
 1. Assign a band from {rubric['bands']} ONLY if you can cite a VERBATIM quote from the candidate's transcript that justifies it. \
 If you cannot find supporting evidence in their words, set band to "cannot_determine" — never guess.
