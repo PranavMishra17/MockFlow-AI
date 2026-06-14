@@ -969,6 +969,26 @@ def get_user_interviews():
         claim_local_interviews(user_id)
 
         interviews = supabase_client.get_user_interviews(user_id, limit)
+
+        # Attach the hiring verdict (recommendation + level) per interview so the
+        # past-interviews cards can surface the score (Wing D).
+        try:
+            by_id = {}
+            for row in (supabase_client.get_user_score_history(user_id) or []):
+                v = ((row.get('scores') or {}).get('verdict') or {})
+                overall = v.get('overall') or {}
+                if overall.get('recommendation'):
+                    by_id[str(row.get('interview_id'))] = {
+                        'recommendation': overall.get('recommendation'),
+                        'level_read': overall.get('level_read'),
+                    }
+            for iv in interviews:
+                verdict = by_id.get(str(iv.get('id')))
+                if verdict:
+                    iv['verdict'] = verdict
+        except Exception as e:
+            logger.warning(f"[API] Could not attach verdicts to interviews: {e}")
+
         logger.info(f"[API] Retrieved {len(interviews)} interviews for user {user_id}")
         return jsonify(interviews)
     except Exception as e:

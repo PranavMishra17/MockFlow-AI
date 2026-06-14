@@ -347,6 +347,11 @@
             }
         }
 
+        var RECO_LABEL = {strong_no_hire:'Strong No-Hire', no_hire:'No-Hire', lean_no_hire:'Leaning No-Hire',
+            on_fence:'On the Fence', lean_hire:'Leaning Hire', hire:'Hire', strong_hire:'Strong Hire'};
+        var RECO_TONE = {strong_no_hire:'neg', no_hire:'neg', lean_no_hire:'neg',
+            on_fence:'mid', lean_hire:'pos', hire:'pos', strong_hire:'pos'};
+
         function renderInterviews(interviews) {
             var html = interviews.map(function(interview) {
                 var date = interview.interview_date ? formatDate(interview.interview_date) : 'Unknown date';
@@ -354,6 +359,13 @@
                 var totalMessages = (messageCount.agent || 0) + (messageCount.user || 0);
 
                 var interviewId = interview.id;
+
+                var verdictHtml = '';
+                if (interview.verdict && interview.verdict.recommendation) {
+                    var rec = interview.verdict.recommendation;
+                    verdictHtml = '<span class="verdict-badge vb-' + (RECO_TONE[rec] || 'mid') + '">' +
+                        (RECO_LABEL[rec] || rec) + '</span>';
+                }
 
                 var tagsHtml = '';
                 if (interview.job_role) {
@@ -376,6 +388,7 @@
                                 '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>' +
                                 totalMessages + ' msgs' +
                             '</span>' +
+                            verdictHtml +
                         '</div>' +
                     '</div>' +
                     '<svg class="card-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">' +

@@ -596,3 +596,18 @@
         justify-content: center;
     }
 }
+
+/* ==================== Wing D: verdict badge on cards ==================== */
+.verdict-badge {
+    margin-left: auto;
+    font-size: 0.66rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 0.2rem 0.55rem;
+    border-radius: var(--radius-full, 999px);
+    white-space: nowrap;
+}
+.verdict-badge.vb-pos { background: color-mix(in srgb, var(--accent-green) 38%, #fff); color: #14532d; }
+.verdict-badge.vb-mid { background: color-mix(in srgb, #F6C453 42%, #fff); color: #7c5e00; }
+.verdict-badge.vb-neg { background: color-mix(in srgb, #E07A3F 22%, #fff); color: #9a3412; }
