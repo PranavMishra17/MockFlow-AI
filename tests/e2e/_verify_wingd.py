@@ -78,9 +78,21 @@ def main():
         elif PAGE == "landing":
             pg.goto(BASE + "/__testlogin", wait_until="networkidle", timeout=20000)
             pg.goto(BASE + "/", wait_until="networkidle", timeout=20000)
-            pg.wait_for_timeout(1500)
-            res = {"persona": cnt(".lp-persona"), "mini_radar": cnt(".lp-mini-radar"),
-                   "chips": cnt(".lp-chip")}
+            pg.wait_for_timeout(1600)
+            res = {
+                "persona": cnt(".lp-persona"),
+                "real_radar": cnt("#lpStatsReal .radar-svg"),
+                "real_chips": cnt("#lpStatsReal .lp-chip"),
+                "real_reco": (pg.eval_on_selector("#lpStatsReal .lp-reco", "e=>e.textContent.trim()") if cnt("#lpStatsReal .lp-reco") else None),
+                "cta": cnt(".lp-persona-cta"),
+                "sample_display": (pg.eval_on_selector(".lp-stats.signed-out-only", "e=>getComputedStyle(e).display") if cnt(".lp-stats.signed-out-only") else "n/a"),
+            }
+            try:
+                pg.locator(".lp-persona").scroll_into_view_if_needed()
+                pg.wait_for_timeout(300)
+                pg.locator(".lp-persona").screenshot(path=str(SHOTS / "wingd_landing_persona.png"))
+            except Exception:
+                pass
 
         pg.evaluate("document.querySelectorAll('.sig-reveal').forEach(e=>e.classList.add('is-in'))")
         pg.wait_for_timeout(200)

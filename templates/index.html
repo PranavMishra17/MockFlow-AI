@@ -29,6 +29,7 @@
     <link rel="stylesheet" href="/static/styles.css">
     <link rel="stylesheet" href="/static/animations.css">
     <link rel="stylesheet" href="/static/modals.css">
+    <link rel="stylesheet" href="/static/radar.css">
     <style>
         /* ============================================================
            THE LANDING PAGE · "BOLD & PLAYFUL" (promoted Option C)
@@ -806,6 +807,21 @@
         .lp-chip--strength { background: var(--msg-success-bg); color: var(--success); }
         .lp-chip--focus { background: color-mix(in srgb, var(--warning) 16%, transparent); color: var(--warning); }
 
+        /* Wing D C10: real signed-in personality teaser */
+        .lp-persona-real { min-height: 300px; }
+        .lp-persona-loading { color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 3.5rem 1rem; }
+        .lp-mini-radar { display: flex; justify-content: center; margin: 0.4rem 0 0.9rem; }
+        .lp-mini-radar .radar-svg { max-width: 240px; }
+        .lp-mini-radar--ghost { opacity: 0.85; }
+        .lp-stats__hero .lp-reco { font-size: 1.05rem; font-weight: 800; line-height: 1.12; letter-spacing: -0.01em; }
+        .lp-reco-pos { color: var(--accent-green-deep); }
+        .lp-reco-mid { color: #C58A00; }
+        .lp-reco-neg { color: #E07A3F; }
+        .lp-persona-cta { display: inline-flex; margin-top: 1.1rem; font-size: 0.85rem; font-weight: 800; color: var(--text-primary); text-decoration: none; border-bottom: 2px solid var(--accent-green-deep); padding-bottom: 2px; }
+        .lp-persona-empty { text-align: center; padding: 0.5rem 0.5rem 1.2rem; }
+        .lp-persona-empty h3 { font-size: 1.22rem; letter-spacing: -0.02em; margin: 0.4rem 0; }
+        .lp-persona-empty p { color: var(--text-secondary); font-size: 0.95rem; line-height: 1.5; margin: 0 0 1.1rem; max-width: 22rem; margin-left: auto; margin-right: auto; }
+
         /* ============================================================
            7 · SOCIAL PROOF (placeholder)
            ============================================================ */
@@ -1333,7 +1349,7 @@
                             <h2 id="persona-h">Meet the version of you that interviews.</h2>
                             <p>After a few interviews, meet your interview personality — your patterns, your tells, and what to lean into. The more you practice, the sharper it gets.</p>
                         </div>
-                        <div class="lp-stats lp-reveal" style="--lp-delay:.12s" role="group" aria-label="Sample interview personality (illustrative)">
+                        <div class="lp-stats lp-reveal signed-out-only" style="--lp-delay:.12s" role="group" aria-label="Sample interview personality (illustrative)">
                             <div class="lp-stats__top">
                                 <div class="lp-stats__avatar" aria-hidden="true">
                                     <div class="mf-rays" data-rays="28"></div>
@@ -1381,6 +1397,9 @@
                                     Focus: tighten endings
                                 </span>
                             </div>
+                        </div>
+                        <div class="lp-stats lp-persona-real signed-in-only is-block" id="lpStatsReal" style="--lp-delay:.12s" role="group" aria-label="Your interview personality">
+                            <div class="lp-persona-loading">Loading your personality&hellip;</div>
                         </div>
                     </div>
                 </div>
@@ -1457,6 +1476,7 @@
     <script src="/static/auth.js"></script>
     <script src="/static/modal.js"></script>
     <script src="/static/mf-rays.js"></script>
+    <script src="/static/radar.js"></script>
     <script>
         (function () {
             "use strict";
@@ -1558,6 +1578,56 @@
                     var first = (user && user.name ? String(user.name).trim().split(/\s+/)[0] : '');
                     welcome.textContent = first ? ('Welcome back, ' + first) : 'Welcome back';
                 }
+                loadPersonaTeaser();
+            }
+
+            // Wing D: swap the illustrative sample for the user's real personality.
+            var RECO_LABEL_LP = {strong_no_hire:'Strong No-Hire', no_hire:'No-Hire', lean_no_hire:'Leaning No-Hire', on_fence:'On the Fence', lean_hire:'Leaning Hire', hire:'Hire', strong_hire:'Strong Hire'};
+            var RECO_TONE_LP = {strong_no_hire:'neg', no_hire:'neg', lean_no_hire:'neg', on_fence:'mid', lean_hire:'pos', hire:'pos', strong_hire:'pos'};
+            var EMPTY_AXES = [
+                { key: 'communication', label: 'Communication', you_score: null, target_score: 3 },
+                { key: 'problem_solving', label: 'Problem-solving', you_score: null, target_score: 3 },
+                { key: 'technical_depth', label: 'Technical depth', you_score: null, target_score: 3 },
+                { key: 'ownership_impact', label: 'Ownership & impact', you_score: null, target_score: 3 },
+                { key: 'domain_rigor', label: 'Role & domain rigor', you_score: null, target_score: 3 }
+            ];
+
+            function personaReal(d) {
+                var latest = d.latest || {};
+                var radar = (window.MockFlowRadar && d.radar) ? window.MockFlowRadar.build({ axes: d.radar.axes, compact: true, size: 220 }) : '';
+                var best = (d.best_lines && d.best_lines[0]) || null;
+                var html = '<div class="lp-stats__top">' +
+                    '<div class="lp-stats__avatar" aria-hidden="true"><div class="mf-rays" data-rays="28"></div><span class="mf-eyes"><i></i><i></i></span></div>' +
+                    '<div class="lp-stats__id"><h3>Your personality</h3><span>' + d.total_sessions + (d.total_sessions === 1 ? ' session' : ' sessions') + '</span></div>' +
+                    '<div class="lp-stats__hero"><b class="lp-reco lp-reco-' + (RECO_TONE_LP[latest.recommendation] || 'mid') + '">' + escapeText(RECO_LABEL_LP[latest.recommendation] || '—') + '</b><em>latest verdict</em></div></div>';
+                if (radar) html += '<div class="lp-mini-radar">' + radar + '</div>';
+                html += '<div class="lp-stats__chips">';
+                if (d.strongest) html += '<span class="lp-chip lp-chip--strength">★ Strength: ' + escapeText(d.strongest.label) + '</span>';
+                if (d.weakest) html += '<span class="lp-chip lp-chip--focus">Focus: ' + escapeText(d.weakest.label) + '</span>';
+                if (best) html += '<span class="lp-chip lp-chip--filler">Best line: <code>“' + escapeText(best.quote.slice(0, 26)) + (best.quote.length > 26 ? '…' : '') + '”</code></span>';
+                html += '</div><a class="lp-persona-cta" href="/dashboard">See your full personality →</a>';
+                return html;
+            }
+
+            function personaEmpty() {
+                var radar = window.MockFlowRadar ? window.MockFlowRadar.build({ axes: EMPTY_AXES, compact: true, size: 220 }) : '';
+                return '<div class="lp-persona-empty">' + (radar ? '<div class="lp-mini-radar lp-mini-radar--ghost">' + radar + '</div>' : '') +
+                    '<h3>Your interview personality is waiting.</h3>' +
+                    '<p>Take your first interview and watch this fill in — your strengths, your tells, your trajectory.</p>' +
+                    '<a class="lp-btn lp-btn--primary" href="/start">Start your first interview →</a></div>';
+            }
+
+            function loadPersonaTeaser() {
+                var real = document.getElementById('lpStatsReal');
+                if (!real || !window.fetch) return;
+                fetch('/api/user/insights', { credentials: 'same-origin' })
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (d) {
+                        if (!d) return;
+                        real.innerHTML = (Number(d.total_sessions) > 0) ? personaReal(d) : personaEmpty();
+                        real.classList.add('is-in');
+                    })
+                    .catch(function () { /* keep the loading line — harmless */ });
             }
 
             function showBalloon(n) {
