@@ -455,3 +455,48 @@ Scoped to the dashboard page via .dashboard-page where it matters.
         align-items: flex-start;
     }
 }
+
+/* ==================== WING D — INTERVIEW PERSONALITY (verdict-based) ==================== */
+.insight-verdict {
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--bg-soft);
+    border-left: 5px solid var(--text-light);
+    background: var(--bg-card);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin-bottom: var(--spacing-md);
+}
+.insight-verdict.tone-pos { border-left-color: var(--accent-green-deep); background: color-mix(in srgb, var(--accent-green) 14%, var(--bg-card)); }
+.insight-verdict.tone-mid { border-left-color: #E0A100; background: color-mix(in srgb, #F6C453 12%, var(--bg-card)); }
+.insight-verdict.tone-neg { border-left-color: #E07A3F; background: color-mix(in srgb, #E07A3F 10%, var(--bg-card)); }
+.iv-eyebrow { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-light); }
+.iv-reco { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.01em; color: var(--text-primary); line-height: 1.1; }
+.iv-level { font-size: 0.85rem; color: var(--text-secondary); }
+.iv-headline { font-size: 0.9rem; color: var(--text-primary); font-style: italic; margin: 0.4rem 0 0; line-height: 1.45; }
+
+.insight-comps { margin-bottom: var(--spacing-md); }
+.ic-title { font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.6rem; }
+.comp-row { display: grid; grid-template-columns: 9rem 1fr 5.5rem 1.5rem; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; }
+.comp-name { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); }
+.comp-bar { height: 8px; border-radius: var(--radius-full); background: var(--bg-soft); overflow: hidden; }
+.comp-fill { display: block; height: 100%; border-radius: var(--radius-full); background: var(--text-light); }
+.comp-fill.band-outstanding, .comp-fill.band-solid { background: var(--accent-green-deep); }
+.comp-fill.band-borderline { background: #E0A100; }
+.comp-fill.band-poor { background: #E07A3F; }
+.comp-fill.band-cannot_determine { background: var(--bg-soft); }
+.comp-band { font-size: 0.7rem; font-weight: 700; text-align: right; color: var(--text-secondary); }
+.comp-band.band-chip-outstanding, .comp-band.band-chip-solid { color: #166534; }
+.comp-band.band-chip-borderline { color: #7c5e00; }
+.comp-band.band-chip-poor { color: #9a3412; }
+.comp-band.band-chip-cannot_determine { color: var(--text-light); }
+.comp-trend { font-weight: 800; text-align: center; }
+.comp-trend.trend-up { color: var(--accent-green-deep); }
+.comp-trend.trend-down { color: #E07A3F; }
+.comp-trend.trend-flat { color: var(--text-light); }
+
+@media (max-width: 600px) {
+    .comp-row { grid-template-columns: 6.5rem 1fr 1.5rem; }
+    .comp-band { display: none; }
+}

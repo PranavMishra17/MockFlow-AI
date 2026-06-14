@@ -48,7 +48,7 @@ A real interview ran on Render and the verdict reveal worked. Two-part fix list 
 - [x] **Show the spectrum.** A new user doesn't know where "Leaning No-Hire" sits — render the 7-point scale with the current position marked.
 - [x] **Per-signal "i" info.** Each signal card gets an info affordance explaining what the band means + the scope to improve.
 - [ ] **Past Interviews page.** Surface the verdict/score on each card; better layout.
-- [ ] **Interview Personality, surfaced (Phase 3).** Currently buried in Account and mostly empty. Bring it onto the dashboard/home and make it real — the longitudinal build: trends (≥3 sessions), cross-track comparison, competency radar vs a target-level polygon, "vs last session". Data already persists in `interview_scores`.
+- [~] **Interview Personality, surfaced (Phase 3).** CORE DONE: `insights.py` (TDD) aggregates the verdict history into canonical competencies + trends; `/api/user/insights`; the dashboard "Interview Personality" is rebuilt on the verdict data (latest-verdict card, per-competency latest band + trend arrows, strongest/weakest, recommendation trajectory, by-track) — replacing the broken legacy 1-5 "Average Score —". REMAINING: a competency **radar vs a target-level polygon**, a **compare view** (2+ sessions side by side), "vs last session" delta, and surfacing a teaser on the signed-in landing/home. Then **Phase 4** (calibration: human gold set + Cohen's κ).
 
 ---
 
