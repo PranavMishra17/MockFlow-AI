@@ -81,6 +81,41 @@ def test_verdict_endpoint_wires_evaluator(auth_client, app_module, db_client, mo
     assert saved.get("track") == "coding"
 
 
+def test_verdict_persists_feedback_even_if_scores_fail(auth_client, app_module, db_client, monkeypatch):
+    """The recurring bug: save_interview_scores threw (table missing) and took
+    save_feedback down with it, so the verdict persisted to NEITHER table and
+    reopening regenerated. Feedback must save independently."""
+    import openai
+
+    ctx = (
+        "CANDIDATE: I'd clarify the inputs first",
+        "Name: Test", "Role: Software Engineer",
+        {"candidate": "Test", "track": "coding", "job_role": "Software Engineer", "experience_level": "New Grad"},
+        [{"role": "user", "text": "I'd clarify the inputs first"}],
+        {"user": [{"text": "I'd clarify the inputs first", "timestamp": 0.0}]},
+        None,
+    )
+    monkeypatch.setattr(app_module, "_load_interview_context", lambda iid: ctx)
+    monkeypatch.setattr(app_module, "resolve_openai_key", lambda uid: "sk-test")
+    monkeypatch.setattr(openai, "OpenAI", _FakeOpenAI)
+    monkeypatch.setattr(db_client, "get_coding_submissions", lambda iid: [])
+
+    def _boom(**k):
+        raise RuntimeError("relation \"interview_scores\" does not exist")
+    monkeypatch.setattr(db_client, "save_interview_scores", _boom)
+
+    saved_fb = {}
+    monkeypatch.setattr(db_client, "save_feedback",
+                        lambda uid, iid, data: saved_fb.update({"iid": iid, "data": data}) or True)
+
+    resp = auth_client.post("/api/feedback/verdict",
+                            json={"interview_id": "00000000-0000-0000-0000-000000000abc"})
+    assert resp.status_code == 200, resp.get_data(as_text=True)
+    # the verdict reached the feedback table despite the scores-table failure
+    assert saved_fb.get("iid") == "00000000-0000-0000-0000-000000000abc"
+    assert "verdict" in saved_fb.get("data", {})
+
+
 def test_verdict_endpoint_requires_interview_id(auth_client):
     resp = auth_client.post("/api/feedback/verdict", json={})
     assert resp.status_code == 400
@@ -102,7 +137,8 @@ def _hist_row(iid, reco, track, band):
 def test_compare_endpoint_returns_aligned_verdicts(auth_client, db_client, monkeypatch):
     hist = [_hist_row(_A, "on_fence", "behavioral", "borderline"),
             _hist_row(_B, "hire", "coding", "outstanding")]
-    monkeypatch.setattr(db_client, "get_user_score_history", lambda uid: hist)
+    monkeypatch.setattr(db_client, "get_user_score_history", lambda uid, limit=50: hist)
+    monkeypatch.setattr(db_client, "get_user_feedback_history", lambda uid, limit=50: [])
     resp = auth_client.get(f"/api/user/compare?ids={_A},{_B}")
     assert resp.status_code == 200, resp.get_data(as_text=True)
     body = resp.get_json()
@@ -113,7 +149,8 @@ def test_compare_endpoint_returns_aligned_verdicts(auth_client, db_client, monke
 
 def test_compare_endpoint_rejects_unowned_id(auth_client, db_client, monkeypatch):
     monkeypatch.setattr(db_client, "get_user_score_history",
-                        lambda uid: [_hist_row(_A, "hire", "coding", "solid")])
+                        lambda uid, limit=50: [_hist_row(_A, "hire", "coding", "solid")])
+    monkeypatch.setattr(db_client, "get_user_feedback_history", lambda uid, limit=50: [])
     resp = auth_client.get(f"/api/user/compare?ids={_A},{_C}")  # _C not owned
     assert resp.status_code == 404
 

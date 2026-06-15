@@ -577,5 +577,43 @@ class DB:
             logger.error(f"[DB] Error fetching score history: {e}")
             return []
 
+    def get_user_feedback_history(
+        self, user_id: str, limit: int = 50
+    ) -> List[Dict[str, Any]]:
+        """
+        Verdicts saved in the feedback table, shaped like get_user_score_history
+        so build_insights can consume them. A resilience fallback: if a verdict
+        reached `feedback` but not `interview_scores`, the personality/trends
+        still see it.
+        """
+        try:
+            rows = self._fetchall(
+                """
+                SELECT f.interview_id, f.feedback_data, f.created_at,
+                       COALESCE(i.track, 'intro') AS track
+                FROM feedback f
+                LEFT JOIN interviews i ON i.id = f.interview_id
+                WHERE f.user_id = %s
+                ORDER BY f.created_at ASC
+                LIMIT %s
+                """,
+                (user_id, limit),
+            )
+            out = []
+            for r in rows or []:
+                verdict = ((r.get("feedback_data") or {}).get("verdict")) or {}
+                if not (verdict.get("signals") or verdict.get("overall")):
+                    continue
+                out.append({
+                    "interview_id": r.get("interview_id"),
+                    "track": r.get("track", "intro"),
+                    "scores": {"verdict": verdict},
+                    "created_at": r.get("created_at"),
+                })
+            return out
+        except Exception as e:
+            logger.error(f"[DB] Error fetching feedback history: {e}")
+            return []
+
 
 db_client = DB()

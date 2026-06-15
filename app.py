@@ -269,6 +269,23 @@ def user_stats():
         return jsonify({'total_interviews': 0, 'tracks': {}, 'free_calls_remaining': 0}), 200
 
 
+def _user_verdict_history(user_id, limit=50):
+    """
+    All of a user's persisted verdicts, merged from interview_scores (authoritative)
+    + the feedback table (fallback), de-duped by interview_id and sorted
+    oldest->newest. Closes the gap where a verdict that reached `feedback` but not
+    `interview_scores` would be invisible to personality / compare / badges.
+    """
+    history = supabase_client.get_user_score_history(user_id, limit) or []
+    seen = {str(h.get('interview_id')) for h in history}
+    for fb in (supabase_client.get_user_feedback_history(user_id, limit) or []):
+        if str(fb.get('interview_id')) not in seen:
+            history.append(fb)
+            seen.add(str(fb.get('interview_id')))
+    history.sort(key=lambda h: str(h.get('created_at') or ''))
+    return history
+
+
 @app.route('/api/user/insights')
 @require_auth
 def user_insights():
@@ -280,8 +297,7 @@ def user_insights():
     from insights import build_insights
     try:
         user_id = get_user_id()
-        history = supabase_client.get_user_score_history(user_id) or []
-        data = build_insights(history)
+        data = build_insights(_user_verdict_history(user_id))
         data['free_calls_remaining'] = _free_calls_remaining(user_id)
         return jsonify(data)
     except Exception as e:
@@ -316,7 +332,7 @@ def user_compare():
     if not (2 <= len(canon) <= 5):
         return jsonify({'error': 'provide between 2 and 5 interview ids'}), 400
 
-    history = supabase_client.get_user_score_history(user_id) or []
+    history = _user_verdict_history(user_id)
     by_id = {}
     for h in history:
         k = _canon(h.get('interview_id'))
@@ -1023,7 +1039,7 @@ def get_user_interviews():
         # past-interviews cards can surface the score (Wing D).
         try:
             by_id = {}
-            for row in (supabase_client.get_user_score_history(user_id) or []):
+            for row in _user_verdict_history(user_id):
                 v = ((row.get('scores') or {}).get('verdict') or {})
                 overall = v.get('overall') or {}
                 if overall.get('recommendation'):
@@ -1537,18 +1553,24 @@ def generate_verdict():
         verdict['context'] = {'track': track, 'role': role,
                               'seniority': seniority, 'archetype': archetype}
 
-        try:
-            if user_id:
+        # Persist the verdict to BOTH tables, each guarded INDEPENDENTLY so a
+        # failure in one never blocks the other. The feedback table is the reopen
+        # source of truth, so it is saved FIRST and unconditionally — this is the
+        # fix for the recurring "verdict gone on reopen" bug (previously a missing
+        # interview_scores table threw and skipped the feedback save entirely).
+        if user_id:
+            try:
+                supabase_client.save_feedback(user_id, interview_id, {'verdict': verdict})
+            except Exception as e:
+                logger.error(f"[API] Could not save feedback verdict: {e}", exc_info=True)
+            try:
                 idx = RECOMMENDATIONS.index(verdict['overall'].get('recommendation', 'on_fence'))
                 supabase_client.save_interview_scores(
                     user_id=user_id, interview_id=interview_id, track=track,
                     scores={'verdict': verdict, 'overall_score': idx, 'kind': 'verdict'},
                 )
-                # Also persist to the feedback table server-side so the report
-                # reliably loads on reopen (don't depend on the client save).
-                supabase_client.save_feedback(user_id, interview_id, {'verdict': verdict})
-        except Exception as e:
-            logger.warning(f"[API] Could not persist verdict: {e}")
+            except Exception as e:
+                logger.error(f"[API] Could not save interview scores: {e}", exc_info=True)
 
         return jsonify({
             'success': True,
