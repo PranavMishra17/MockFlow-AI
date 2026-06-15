@@ -298,8 +298,8 @@
            signed-in users (links to the dashboard, or lures first-timers). */
         .lp-balloon {
             position: absolute;
-            top: -12%;
-            right: -1%;
+            top: -16%;
+            right: -9%;
             z-index: 4;
             display: none;
             align-items: center;
@@ -324,7 +324,7 @@
             content: '';
             position: absolute;
             bottom: -6px;
-            left: 26px;
+            right: 28px;          /* tail on the right side — points back down at the orb */
             width: 12px; height: 12px;
             background: var(--solid-surface);
             transform: rotate(45deg);
@@ -343,6 +343,10 @@
            2 · POSITIONING LINE + supporting subhead
            ============================================================ */
         .lp-positioning {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
             padding: clamp(4rem, 11vh, 7.5rem) 0;
             text-align: center;
         }
@@ -840,9 +844,9 @@
         .lp-vmeter__caret { position: absolute; top: 0; left: 64%; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 9px solid var(--text-primary); transform: translateX(-50%); }
         .lp-vmeter__ends { display: flex; justify-content: space-between; margin-top: .7rem; font-size: .72rem; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: .04em; }
         .lp-vmeter__verdict { color: var(--accent-green-deep); font-weight: 800; opacity: 0; }
-        .lp-positioning.is-in .lp-vmeter__caret { animation: lpCaretLand 2s cubic-bezier(.5,0,.5,1) .15s both; }
-        .lp-positioning.is-in .vm-seg.land { animation: lpSegGlow 2s ease .15s both; }
-        .lp-positioning.is-in .lp-vmeter__verdict { animation: lpVerdictIn 2s ease .15s both; }
+        .lp-vmeter.anim-in .lp-vmeter__caret { animation: lpCaretLand 2s cubic-bezier(.5,0,.5,1) .15s both; }
+        .lp-vmeter.anim-in .vm-seg.land { animation: lpSegGlow 2s ease .15s both; }
+        .lp-vmeter.anim-in .lp-vmeter__verdict { animation: lpVerdictIn 2s ease .15s both; }
         @keyframes lpCaretLand { 0%{left:7%}20%{left:93%}42%{left:16%}64%{left:80%}82%{left:64%}100%{left:64%} }
         @keyframes lpSegGlow { 0%,70%{opacity:.5;box-shadow:none}84%,100%{opacity:1;box-shadow:0 0 0 2px var(--bg-cream),0 0 0 3px var(--text-primary)} }
         @keyframes lpVerdictIn { 0%,72%{opacity:0;transform:translateY(5px)}88%,100%{opacity:1;transform:none} }
@@ -854,9 +858,9 @@
         .lp-thermo__spark { position: absolute; top: -5px; left: 8%; width: 11px; height: 11px; border-radius: 50%; background: #fff; box-shadow: 0 0 12px var(--accent-green-deep); }
         .lp-thermo__row { display: flex; justify-content: space-between; margin-top: .6rem; font-size: .72rem; font-weight: 700; }
         .lp-thermo__row .cold { color: #5B8DEF; } .lp-thermo__row .conf { color: var(--accent-green-deep); opacity: .4; }
-        .lp-section-head.is-in .lp-thermo__fill { animation: lpWarm 2.2s ease .15s both; }
-        .lp-section-head.is-in .lp-thermo__spark { animation: lpSpark 2.2s ease .15s both; }
-        .lp-section-head.is-in .lp-thermo__row .conf { animation: lpConf 2.2s ease .15s both; }
+        .lp-thermo.anim-in .lp-thermo__fill { animation: lpWarm 2.2s ease .15s both; }
+        .lp-thermo.anim-in .lp-thermo__spark { animation: lpSpark 2.2s ease .15s both; }
+        .lp-thermo.anim-in .lp-thermo__row .conf { animation: lpConf 2.2s ease .15s both; }
         @keyframes lpWarm { 0%{transform:scaleX(.12)}70%,100%{transform:scaleX(1)} }
         @keyframes lpSpark { 0%{left:8%}70%,100%{left:96%} }
         @keyframes lpConf { 0%,60%{opacity:.4}80%,100%{opacity:1;text-shadow:0 0 12px color-mix(in srgb,var(--accent-green-deep) 55%,transparent)} }
@@ -1270,7 +1274,7 @@
                 <div class="lp-wrap">
                     <p class="lp-positioning__head">Stop <span class="lp-hl">winging it</span>. Walk in already warmed up.</p>
                     <p class="lp-positioning__sub">Every answer rehearsed out loud, every line of code reviewed live, and a clear read on how you actually land — before it counts. Here's how it works.</p>
-                    <div class="lp-vmeter" aria-hidden="true">
+                    <div class="lp-vmeter lp-anim" aria-hidden="true">
                         <div class="lp-vmeter__track">
                             <span class="lp-vmeter__caret"></span>
                             <span class="vm-seg neg"></span><span class="vm-seg neg"></span><span class="vm-seg neg"></span>
@@ -1288,7 +1292,7 @@
                         <span class="lp-kicker">Three steps, zero friction</span>
                         <h2 id="how-h">From cold to confident</h2>
                         <p>Pick what you want to practice, jump into a real conversation, and walk away knowing exactly where you stand.</p>
-                        <div class="lp-thermo" aria-hidden="true">
+                        <div class="lp-thermo lp-anim" aria-hidden="true">
                             <div class="lp-thermo__track"><div class="lp-thermo__fill"></div><span class="lp-thermo__spark"></span></div>
                             <div class="lp-thermo__row"><span class="cold">cold start</span><span class="conf">walk in warm</span></div>
                         </div>
@@ -1662,8 +1666,13 @@
 
             // ---- Purposeful scroll reveals (IntersectionObserver) ----
             var reveals = document.querySelectorAll('.lp-reveal');
+            // Animation areas (the verdict-meter, the cold→confident thermo) play
+            // only once they're genuinely on screen — not when their tall parent
+            // section's top edge merely clips in. Gated on the area's OWN visibility.
+            var animAreas = document.querySelectorAll('.lp-anim');
             if (reduceMotion || !('IntersectionObserver' in window)) {
                 for (var k = 0; k < reveals.length; k++) reveals[k].classList.add('is-in');
+                for (var a = 0; a < animAreas.length; a++) animAreas[a].classList.add('anim-in');
             } else {
                 // Toggle (not add-once) so each section replays its reveal every
                 // time it re-enters the viewport — scroll up to rewind, down to replay.
@@ -1673,6 +1682,17 @@
                     });
                 }, { threshold: 0.16, rootMargin: '0px 0px -8% 0px' });
                 for (var j = 0; j < reveals.length; j++) io.observe(reveals[j]);
+
+                // One-shot: the moment the animation area is ~70% in view, play it.
+                var animIo = new IntersectionObserver(function (entries) {
+                    entries.forEach(function (entry) {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('anim-in');
+                            animIo.unobserve(entry.target);
+                        }
+                    });
+                }, { threshold: 0.7 });
+                for (var m = 0; m < animAreas.length; m++) animIo.observe(animAreas[m]);
             }
 
             // ---- Right-edge section nav (back / next / top), appears past the hero ----
