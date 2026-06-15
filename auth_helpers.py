@@ -70,6 +70,30 @@ class AuthUser(UserMixin):
         return self.id
 
 
+def _auth_error(detail: str):
+    """A friendly sign-in error page instead of a bare 401 / silent redirect loop."""
+    logger.error(f"[AUTH] {detail}")
+    html = (
+        "<!doctype html><html><head><meta charset='utf-8'>"
+        "<title>Sign-in problem — MockFlow-AI</title>"
+        "<style>body{font-family:Inter,system-ui,sans-serif;background:#FAF8F5;color:#1A1A1A;"
+        "display:grid;place-items:center;min-height:100vh;margin:0}"
+        ".box{max-width:30rem;text-align:center;padding:2rem;background:#fff;border:1px solid #EFEBE5;"
+        "border-radius:20px;box-shadow:0 8px 40px rgba(0,0,0,.08)}h1{font-size:1.3rem;margin:0 0 .6rem}"
+        "p{color:#4A4A4A;line-height:1.55}a{display:inline-block;margin-top:1rem;padding:.7rem 1.2rem;"
+        "background:#81C784;color:#1A1A1A;font-weight:700;text-decoration:none;border-radius:999px}"
+        ".hint{font-size:.85rem;color:#7A7A7A}</style></head><body><div class='box'>"
+        "<h1>We couldn't finish sign-in</h1>"
+        f"<p>{detail}</p>"
+        "<p class='hint'>If this keeps happening: your browser may be blocking cookies for this site, "
+        "or a stale session is interfering. Try a normal (non-incognito) window, or "
+        "<a href='/auth/logout' style='background:none;color:#7A7A7A;padding:0;text-decoration:underline'>clear your session</a> "
+        "first.</p>"
+        "<a href='/auth/login'>Try signing in again</a></div></body></html>"
+    )
+    return html, 401
+
+
 def init_auth(app) -> None:
     """Initialize LoginManager + Authlib OAuth client. Call once at app startup."""
     secret = os.getenv("SECRET_KEY") or os.getenv("FLASK_SECRET_KEY")
@@ -90,8 +114,14 @@ def init_auth(app) -> None:
 
     @login_manager.user_loader
     def load_user(user_id: str) -> Optional[AuthUser]:
+        # Must never raise: a DB blip here would silently anonymize the user and
+        # bounce them back through @require_auth -> /auth/login -> Google (the loop).
         from db import db_client
-        row = db_client.get_user(user_id)
+        try:
+            row = db_client.get_user(user_id)
+        except Exception as e:
+            logger.error(f"[AUTH] user_loader failed for {user_id}: {e}", exc_info=True)
+            return None
         return AuthUser(row) if row else None
 
     @login_manager.unauthorized_handler
@@ -107,6 +137,9 @@ def register_auth_routes(app) -> None:
 
     @app.route("/auth/login")
     def login():
+        # Persistent session so the OAuth state cookie carries a Max-Age and
+        # isn't dropped as a transient session cookie mid-flow.
+        session.permanent = True
         redirect_uri = url_for("auth_google_callback", _external=True)
         logger.info(f"[AUTH] Starting Google OAuth, callback={redirect_uri}")
         return oauth.google.authorize_redirect(redirect_uri)
@@ -117,35 +150,38 @@ def register_auth_routes(app) -> None:
         try:
             token = oauth.google.authorize_access_token()
         except Exception as e:
-            logger.error(f"[AUTH] OAuth callback failed: {e}", exc_info=True)
-            return "Authentication failed", 401
+            # Almost always a lost/expired session-state cookie (incognito,
+            # blocked cookies, or a changed SECRET_KEY invalidating sessions).
+            return _auth_error(
+                "Your sign-in session expired or your browser didn't return the "
+                "secure cookie we set. (callback: " + type(e).__name__ + ")"
+            )
 
         userinfo = token.get("userinfo") or {}
         email = userinfo.get("email")
         if not email:
-            logger.error("[AUTH] Google returned no email claim")
-            return "Authentication failed: no email", 401
+            return _auth_error("Google didn't return an email for your account.")
 
         google_id = userinfo.get("sub", "")
         name = userinfo.get("name", "")
         picture = userinfo.get("picture", "")
 
-        row = db_client.get_user_by_email(email)
-        if not row:
-            user_id = db_client.create_user(
-                email=email,
-                name=name,
-                google_id=google_id,
-                picture_url=picture,
-            )
-            if not user_id:
-                logger.error(f"[AUTH] Failed to create user for {email}")
-                return "Authentication failed: could not create user", 500
-            row = db_client.get_user(user_id)
+        try:
+            row = db_client.get_user_by_email(email)
+            if not row:
+                user_id = db_client.create_user(
+                    email=email, name=name, google_id=google_id, picture_url=picture,
+                )
+                if not user_id:
+                    return _auth_error("We couldn't create your account. Please try again shortly.")
+                row = db_client.get_user(user_id)
+        except Exception as e:
+            return _auth_error("A database error occurred while loading your account. (" + type(e).__name__ + ")")
 
         if not row:
-            return "Authentication failed: user not found after create", 500
+            return _auth_error("Your account couldn't be loaded after sign-in.")
 
+        session.permanent = True
         login_user(AuthUser(row), remember=True)
         logger.info(f"[AUTH] User logged in: {email} ({row['id']})")
         return redirect(url_for("dashboard"))
