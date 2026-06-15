@@ -14,6 +14,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/styles.css">
+    <link rel="stylesheet" href="/static/radar.css">
     <link rel="stylesheet" href="/static/feedback.css">
     <link rel="stylesheet" href="/static/modals.css">
 </head>
@@ -134,6 +135,7 @@
     <script src="/static/utils.js"></script>
     <script src="/static/header.js"></script>
     <script src="/static/modal.js"></script>
+    <script src="/static/radar.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             window.MockFlowHeader.init({
@@ -239,7 +241,7 @@
         function renderInterview(data) {
             elements.revealStage.style.display = 'block';
             elements.interviewInfo.style.display = 'flex';
-            elements.generateSection.style.display = 'flex';
+            elements.feedbackLoading.style.display = 'flex';  // show the loader immediately; auto-reveal kicks in once we know cache state
 
             var meta = data.meta || {};
             var conversation = data.ordered_conversation || [];
@@ -291,10 +293,11 @@
                         feedbackState.reportGenerated = true;
                         renderReveal(data.feedback_data.verdict, true);
                     } else {
-                        console.log('[FEEDBACK] No cached verdict found');
+                        console.log('[FEEDBACK] No cached verdict — auto-revealing');
+                        startFeedbackGeneration();
                     }
                 })
-                .catch(function() { console.log('[FEEDBACK] No cached feedback available'); });
+                .catch(function() { startFeedbackGeneration(); });
         }
 
         function startFeedbackGeneration() {
@@ -309,8 +312,8 @@
             elements.generateSection.style.display = 'none';
             elements.feedbackLoading.style.display = 'flex';
 
-            var phases = ['Reading your transcript...', 'Weighing the signals...',
-                          'Finding the evidence...', 'Reaching a verdict...'];
+            var phases = ['Replaying your interview…', 'Weighing each answer against the bar…',
+                          'Pulling the evidence from your own words…', 'Writing the hiring call…'];
             var pi = 0;
             var phaseInterval = setInterval(function() {
                 pi = (pi + 1) % phases.length;
@@ -397,7 +400,7 @@
             return RECO_LABEL[RECO_ORDER[i + 1]];
         }
 
-        // ── The reveal: four moments in one vertical narrative ──
+        // ── The reveal: the verdict LANDS, then the breakdown writes in ──
         function renderReveal(v, fromCache) {
             feedbackState.verdict = v;
             elements.feedbackLoading.style.display = 'none';
@@ -411,11 +414,13 @@
 
             elements.revealMoments.style.display = 'block';
             elements.reportFooter.style.display = 'flex';
+            animateHero(v, fromCache);
+            renderSessionRadar(v);
             setupProgressiveReveal();
             loadVsLast();
         }
 
-        // Moment 1 — the verdict (the one earned read).
+        // Moment 1 — the verdict. No left-edge stripe; the spectrum is the read.
         function renderHero(v) {
             var o = v.overall || {}, ctx = v.context || {}, tone = RECO_TONE[o.recommendation] || 'mid';
             var aim = ctx.seniority ? (LEVEL_LABEL[ctx.seniority] || ctx.seniority) : null;
@@ -425,37 +430,117 @@
             if (aim) html += ' · ' + escapeHtml(aim) + ' bar';
             html += '</div>';
             html += '<div class="vh-top"><div class="vh-reco">' + escapeHtml(RECO_LABEL[o.recommendation] || 'On the Fence') + '</div>';
-            if (o.confidence) html += '<span class="vh-confidence">' + escapeHtml(o.confidence) + ' confidence</span>';
+            if (o.confidence) html += '<span class="vh-confidence vh-stagger">' + escapeHtml(o.confidence) + ' confidence</span>';
             html += '</div>';
             html += renderSpectrum(o.recommendation);
             var lvl = LEVEL_LABEL[o.level_read];
-            if (lvl) html += '<div class="vh-level">performing at <strong>' + lvl + '</strong> level</div>';
-            if (o.headline) html += '<p class="vh-headline">' + escapeHtml(o.headline) + '</p>';
+            if (lvl) html += '<div class="vh-level vh-stagger">performing at <strong>' + lvl + '</strong> level</div>';
+            if (o.headline) html += '<p class="vh-headline vh-stagger">' + escapeHtml(o.headline) + '</p>';
             if (v.gap_to_next && v.gap_to_next.signal) {
                 var g = v.gap_to_next, to = nextRecoLabel(o.recommendation);
-                html += '<div class="vh-gap">' +
+                html += '<div class="vh-gap vh-stagger">' +
                     (to ? '<strong>One band from ' + escapeHtml(to) + ':</strong> ' : '<strong>To raise your verdict:</strong> ') +
                     escapeHtml(g.signal) + ' — ' + escapeHtml(g.move || '') + '</div>';
             }
+            html += '<button type="button" class="vh-fullreport vh-stagger" id="fullReportBtn">See the full breakdown ↓</button>';
             html += '</div>';
             return html;
         }
 
-        // The 7-point scale with a "YOU" caret so a new user sees where they sit.
+        // The 7-point scale; the caret flutters then lands (animateHero).
         function renderSpectrum(reco) {
             var idx = RECO_ORDER.indexOf(reco);
             if (idx < 0) idx = 3;
             var caretLeft = ((idx + 0.5) / RECO_ORDER.length * 100).toFixed(2);
             var html = '<div class="verdict-spectrum" aria-label="Hire-recommendation scale">';
-            html += '<div class="spectrum-wrap"><span class="spectrum-caret" style="left:' + caretLeft + '%"></span><div class="spectrum-track">';
+            html += '<div class="spectrum-wrap"><span class="spectrum-caret" style="--target-left:' + caretLeft + '%"></span><div class="spectrum-track">';
             for (var i = 0; i < RECO_ORDER.length; i++) {
-                var cls = 'spectrum-seg seg-' + RECO_TONE[RECO_ORDER[i]] + (i === idx ? ' is-current' : '');
-                html += '<span class="' + cls + '" title="' + RECO_LABEL[RECO_ORDER[i]] + '"></span>';
+                html += '<span class="spectrum-seg seg-' + RECO_TONE[RECO_ORDER[i]] + '" title="' + RECO_LABEL[RECO_ORDER[i]] + '"></span>';
             }
             html += '</div></div>';
             html += '<div class="spectrum-ends"><span>Strong No-Hire</span><span>you are here</span><span>Strong Hire</span></div>';
             html += '</div>';
             return html;
+        }
+
+        // Flutter across the outcomes, LAND on the real one, then write the lines in.
+        function animateHero(v, fromCache) {
+            var idx = RECO_ORDER.indexOf((v.overall || {}).recommendation);
+            if (idx < 0) idx = 3;
+            var finalLeft = ((idx + 0.5) / RECO_ORDER.length * 100) + '%';
+            var caret = elements.heroSlot.querySelector('.spectrum-caret');
+            var segs = elements.heroSlot.querySelectorAll('.spectrum-seg');
+            var lines = elements.heroSlot.querySelectorAll('.vh-stagger');
+            var btn = document.getElementById('fullReportBtn');
+            if (btn) btn.addEventListener('click', function() {
+                document.getElementById('signalsSlot').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            });
+            function land() {
+                if (caret) caret.style.left = finalLeft;
+                segs.forEach(function(s, i) { s.classList.remove('flick'); s.classList.toggle('is-current', i === idx); });
+                lines.forEach(function(el, k) { setTimeout(function() { el.classList.add('in'); }, 120 + k * 110); });
+            }
+            var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (!caret) { lines.forEach(function(el) { el.classList.add('in'); }); return; }
+            caret.classList.add('show');
+            if (reduce || fromCache) { land(); return; }
+            var seq = [6, 0, 5, 1, 4, 2, idx];   // sweep, then settle
+            var step = 0;
+            var iv = setInterval(function() {
+                var p = seq[step];
+                caret.style.left = ((p + 0.5) / RECO_ORDER.length * 100) + '%';
+                segs.forEach(function(s, i) { s.classList.toggle('flick', i === p); });
+                if (++step >= seq.length) { clearInterval(iv); land(); }
+            }, 90);
+        }
+
+        // A radar of this session's signals (you vs the solid bar) — visual scoring.
+        function renderSessionRadar(v) {
+            var slot = document.getElementById('sessionRadarSlot');
+            if (!slot || !window.MockFlowRadar) return;
+            var BAND_SCORE = { poor: 1, borderline: 2, solid: 3, outstanding: 4 };
+            var axes = (v.signals || [])
+                .filter(function(s) { return BAND_SCORE[s.band]; })
+                .map(function(s) { return { key: s.name, label: shortSignal(s.name), you_score: BAND_SCORE[s.band], target_score: 3 }; });
+            if (axes.length < 3) { slot.style.display = 'none'; return; }
+            slot.innerHTML = '<div class="srad-title">Your shape this session</div>' +
+                window.MockFlowRadar.build({ axes: axes, size: 300 }) +
+                '<div class="radar-legend"><span class="rl rl-you">You</span><span class="rl rl-target">the bar (solid)</span></div>';
+        }
+        function shortSignal(name) {
+            var map = {
+                'Communication & structure': 'Communication', 'ML depth & evaluation rigor': 'ML depth',
+                'Statistics & decision logic': 'Statistics', 'SQL & data fluency': 'SQL',
+                'Analytical / execution': 'Analytical', 'Motivation & authenticity': 'Motivation',
+                'Role / company fit': 'Role fit', 'Testing & verification': 'Testing',
+                'Impact & metrics': 'Impact', 'Trade-off reasoning': 'Trade-offs',
+                'Stakeholder communication': 'Stakeholder', 'Response to hints': 'Coachability'
+            };
+            return map[name] || name;
+        }
+
+        // A 4-step band meter (poor → outstanding) — visual, not just a word.
+        function bandMeter(band) {
+            var order = ['poor', 'borderline', 'solid', 'outstanding'];
+            var idx = order.indexOf(band);
+            var html = '<div class="band-meter" aria-hidden="true">';
+            for (var i = 0; i < 4; i++) {
+                html += '<span class="bm-step bm-' + order[i] + ((idx >= 0 && i <= idx) ? ' on' : '') + (i === idx ? ' cur' : '') + '"></span>';
+            }
+            return html + '</div>';
+        }
+
+        // A horizontal gauge with research-band zones + a marker at your value.
+        function gauge(label, valueLabel, value, min, max, zones, band, note) {
+            var pct = Math.max(2, Math.min(98, (value - min) / (max - min) * 100));
+            var zoneHtml = zones.map(function(z) {
+                var l = (z[0] - min) / (max - min) * 100, w = (z[1] - z[0]) / (max - min) * 100;
+                return '<span class="gz gz-' + z[2] + '" style="left:' + l + '%;width:' + w + '%"></span>';
+            }).join('');
+            return '<div class="gauge gauge-' + (band || '') + '">' +
+                '<div class="gauge-head"><span class="gauge-name">' + label + '</span><span class="gauge-val">' + valueLabel + '</span></div>' +
+                '<div class="gauge-track">' + zoneHtml + '<span class="gauge-marker" style="left:' + pct + '%"></span></div>' +
+                (note ? '<p class="gauge-note">' + note + '</p>' : '') + '</div>';
         }
 
         // Moment 3 — your next rep (the single action that drives return).
@@ -482,6 +567,7 @@
                 html += '<span class="signal-band-wrap"><span class="signal-band band-' + band + '">' + (BAND_LABEL[band] || band) + '</span>';
                 html += '<button type="button" class="signal-info-btn" aria-label="What does this band mean?" ' +
                         'onclick="this.closest(\'.signal-card\').classList.toggle(\'info-open\')">i</button></span></div>';
+                html += bandMeter(band);
                 html += '<p class="signal-info-text">' + (BAND_INFO[band] || '') + '</p>';
                 if (s.reasoning) html += '<p class="signal-reason">' + escapeHtml(s.reasoning) + '</p>';
                 if (band === 'cannot_determine') {
@@ -505,6 +591,7 @@
         // Moment 4 — the evidence behind the call (folded in last, never buries the verdict).
         function renderTrajectory(v) {
             var html = '<div class="tf-divider">The evidence behind the call</div>';
+            html += '<div id="sessionRadarSlot" class="session-radar"></div>';
             html += '<div id="vsLastSlot"></div>';
             var ga = v.great_answers || 0;
             if (ga) html += '<div class="ga-line"><span class="signal-star">★</span> <strong>' + ga + '</strong> great answer' + (ga > 1 ? 's' : '') + ' in this interview</div>';
@@ -517,23 +604,18 @@
             if (!d) return '';
             var html = '<div class="delivery-panel">';
             html += '<div class="delivery-title">Delivery <span class="delivery-sub">measured from your speech</span></div>';
-            html += '<div class="delivery-grid">';
 
-            html += '<div class="delivery-metric delivery-' + (d.wpm_band || 'unknown') + '">';
-            html += '<div class="delivery-metric-head"><span class="delivery-metric-name">Speaking pace</span>';
-            html += '<span class="delivery-metric-val">' + (d.wpm || 0) + ' <small>wpm</small></span></div>';
-            html += '<div class="delivery-metric-target">target ' + (d.wpm_target || '130-160') + '</div>';
-            if (DELIVERY_TIPS.wpm[d.wpm_band]) html += '<p class="delivery-tip">' + DELIVERY_TIPS.wpm[d.wpm_band] + '</p>';
-            html += '</div>';
+            // Pace gauge — research bands: ideal 130–160, brisk to 190, flag >190.
+            var wpm = d.wpm || 0;
+            html += gauge('Speaking pace', wpm + ' wpm', wpm, 80, 220,
+                [[110, 130, 'ok'], [130, 160, 'good'], [160, 190, 'warn'], [190, 220, 'bad']],
+                d.wpm_band, DELIVERY_TIPS.wpm[d.wpm_band] || '');
 
-            html += '<div class="delivery-metric delivery-' + (d.filler_band || 'good') + '">';
-            html += '<div class="delivery-metric-head"><span class="delivery-metric-name">Filler words</span>';
-            html += '<span class="delivery-metric-val">' + (d.filler_per_min || 0) + '<small>/min</small></span></div>';
-            html += '<div class="delivery-metric-target">' + (d.filler_total || 0) + ' total · target ' + (d.filler_target || '&le;5/min') + '</div>';
-            if (DELIVERY_TIPS.filler[d.filler_band]) html += '<p class="delivery-tip">' + DELIVERY_TIPS.filler[d.filler_band] + '</p>';
-            html += '</div>';
-
-            html += '</div>';  // .delivery-grid
+            // Filler gauge — ≤5/min good, ~12/min measurably hurts.
+            var fpm = d.filler_per_min || 0;
+            html += gauge('Filler words', fpm + '/min', fpm, 0, 15,
+                [[0, 5, 'good'], [5, 12, 'warn'], [12, 15, 'bad']],
+                d.filler_band, (d.filler_total || 0) + ' total · ' + (DELIVERY_TIPS.filler[d.filler_band] || ''));
 
             // Personality extras (Wing D): countable, personal, deterministic.
             var chips = '';

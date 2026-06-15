@@ -1743,16 +1743,21 @@
 
 /* Moment 1 — the verdict hero (bigger, calmer than the inline card) */
 .verdict-hero {
-    padding: 1.6rem 1.6rem 1.5rem;
+    position: relative;
+    padding: 1.7rem 1.7rem 1.5rem;
     border-radius: var(--radius-lg);
     border: 1px solid var(--bg-soft);
-    border-left: 6px solid var(--text-light);
     background: var(--bg-card);
+    overflow: hidden;
     animation: vhIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-.verdict-hero.verdict-pos { border-left-color: var(--accent-green-deep); background: color-mix(in srgb, var(--accent-green) 16%, var(--bg-card)); }
-.verdict-hero.verdict-mid { border-left-color: #E0A100; background: color-mix(in srgb, #F6C453 12%, var(--bg-card)); }
-.verdict-hero.verdict-neg { border-left-color: #E07A3F; background: color-mix(in srgb, #E07A3F 10%, var(--bg-card)); }
+/* tone = a soft full-card wash + a colour-coded recommendation, NOT a left stripe */
+.verdict-hero.verdict-pos { background: radial-gradient(130% 100% at 0% 0%, color-mix(in srgb, var(--accent-green) 22%, var(--bg-card)) 0%, var(--bg-card) 72%); }
+.verdict-hero.verdict-mid { background: radial-gradient(130% 100% at 0% 0%, color-mix(in srgb, #F6C453 20%, var(--bg-card)) 0%, var(--bg-card) 72%); }
+.verdict-hero.verdict-neg { background: radial-gradient(130% 100% at 0% 0%, color-mix(in srgb, #E07A3F 15%, var(--bg-card)) 0%, var(--bg-card) 72%); }
+.verdict-hero.verdict-pos .vh-reco { color: #1b7a3d; }
+.verdict-hero.verdict-mid .vh-reco { color: #9a6a00; }
+.verdict-hero.verdict-neg .vh-reco { color: #c0532a; }
 .vh-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-top: 0.15rem; }
 .vh-reco { font-size: 2.3rem; font-weight: 800; letter-spacing: -0.025em; line-height: 1.04; color: var(--text-primary); }
 .vh-confidence {
@@ -1787,13 +1792,17 @@
 .spectrum-caret {
     position: absolute;
     top: 0;
+    left: 50%;
     transform: translateX(-50%);
     width: 0; height: 0;
     border-left: 5px solid transparent;
     border-right: 5px solid transparent;
     border-top: 7px solid var(--text-primary);
-    transition: left 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+    opacity: 0;
+    transition: left 0.1s linear, opacity 0.2s ease;
 }
+.spectrum-caret.show { opacity: 1; }
+.spectrum-seg.flick { transform: scaleY(1.45); transition: transform 0.08s ease; }
 
 /* Moment 3 — next rep CTA (slab is reused from Phase 5) */
 .next-rep { margin-top: 1.2rem; animation: vhIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both; }
@@ -1884,12 +1893,51 @@
 }
 .report-footer .btn-view-transcript { width: auto; flex: 1 1 240px; }
 
+/* ── Wing D redesign: staggered lines, band meters, gauges, session radar ── */
+.vh-stagger { opacity: 0; transform: translateY(6px); transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1); }
+.vh-stagger.in { opacity: 1; transform: none; }
+.vh-fullreport {
+    display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 1.15rem;
+    font-family: inherit; font-size: 0.78rem; font-weight: 800; cursor: pointer;
+    color: var(--text-secondary); background: var(--bg-card); border: 1px solid var(--bg-soft);
+    padding: 0.5rem 0.95rem; border-radius: var(--radius-full); transition: all 0.2s ease;
+}
+.vh-fullreport:hover { color: var(--text-primary); border-color: var(--text-light); transform: translateY(-1px); }
+
+/* a 4-step band meter on each signal (poor → outstanding) */
+.band-meter { display: flex; gap: 4px; margin: 0.7rem 0 0.1rem; }
+.bm-step { flex: 1; height: 7px; border-radius: 3px; background: var(--bg-soft); transition: background 0.4s ease; }
+.bm-step.on.bm-poor { background: #E07A3F; }
+.bm-step.on.bm-borderline { background: #E0A100; }
+.bm-step.on.bm-solid, .bm-step.on.bm-outstanding { background: var(--accent-green-deep); }
+.bm-step.cur { box-shadow: 0 0 0 2px var(--bg-card), 0 0 0 3px var(--text-primary); }
+
+/* delivery gauges (visual, with research-band zones + a marker) */
+.gauge { margin-bottom: 1.05rem; }
+.gauge-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.4rem; }
+.gauge-name { font-size: 0.82rem; font-weight: 700; color: var(--text-primary); }
+.gauge-val { font-size: 0.95rem; font-weight: 800; color: var(--text-primary); }
+.gauge-track { position: relative; height: 10px; border-radius: var(--radius-full); background: var(--bg-soft); overflow: hidden; }
+.gz { position: absolute; top: 0; height: 100%; }
+.gz-good { background: color-mix(in srgb, var(--accent-green-deep) 55%, #fff); }
+.gz-ok { background: color-mix(in srgb, #5B8DEF 38%, #fff); }
+.gz-warn { background: color-mix(in srgb, #F6C453 70%, #fff); }
+.gz-bad { background: color-mix(in srgb, #E07A3F 52%, #fff); }
+.gauge-marker { position: absolute; top: -3px; width: 4px; height: 16px; border-radius: 2px; background: var(--text-primary); transform: translateX(-50%); box-shadow: 0 0 0 2px var(--bg-card); transition: left 0.7s cubic-bezier(0.22, 1, 0.36, 1); }
+.gauge-note { font-size: 0.78rem; color: var(--text-secondary); margin: 0.45rem 0 0; line-height: 1.4; }
+
+/* this-session radar */
+.session-radar { margin: 0.4rem 0 1.4rem; padding: 1.1rem; background: var(--bg-warm); border: 1px solid var(--bg-soft); border-radius: var(--radius-lg); text-align: center; }
+.srad-title { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-light); margin-bottom: 0.6rem; }
+
 @keyframes vhIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
     .verdict-hero, .next-rep { animation: none; }
     .sig-reveal { opacity: 1; transform: none; transition: none; }
     .spectrum-caret { transition: none; }
+    .vh-stagger { opacity: 1; transform: none; transition: none; }
+    .gauge-marker { transition: none; }
 }
 
 /* print: the reveal flows naturally onto pages */

@@ -47,12 +47,12 @@ def main():
             pg.wait_for_timeout(1500)
             res = {
                 "hero": cnt(".verdict-hero"), "reco": txt(".vh-reco"),
+                "hero_border_left": (pg.eval_on_selector(".verdict-hero", "e=>getComputedStyle(e).borderLeftWidth") if cnt(".verdict-hero") else None),
                 "caret": cnt(".spectrum-caret"), "current_seg": cnt(".spectrum-seg.is-current"),
-                "level": txt(".vh-level"), "gap": cnt(".vh-gap"),
-                "next_rep_cta": cnt(".next-rep-cta"),
-                "signals": cnt(".signal-card"), "stars": cnt(".signal-star"),
-                "evidence": cnt(".signal-evidence"), "differentiators": cnt(".differentiators"),
-                "vs_last": cnt(".vs-last"), "ga_line": cnt(".ga-line"),
+                "full_report_btn": cnt(".vh-fullreport"),
+                "signals": cnt(".signal-card"), "band_meters": cnt(".band-meter"),
+                "evidence": cnt(".signal-evidence"),
+                "gauges": cnt(".gauge"), "session_radar": cnt("#sessionRadarSlot .radar-svg"),
                 "delivery_chips": cnt(".delivery-chip"),
             }
         elif PAGE == "dashboard":
