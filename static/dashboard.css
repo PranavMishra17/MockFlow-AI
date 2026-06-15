@@ -597,3 +597,139 @@ Scoped to the dashboard page via .dashboard-page where it matters.
 @media (prefers-reduced-motion: reduce) {
     .pp-stat, .pp-stat-link, .pp-next-cta, .comp-fill { transition: none; }
 }
+
+/* ============================================================ */
+/* ========  "THE DOSSIER" PERSONALITY REDESIGN (2026)  ====== */
+/* The stat band becomes a player / trading card; section heads */
+/* get a stronger editorial identity. Display = Fraunces.       */
+/* ============================================================ */
+
+/* page head: a confident editorial title */
+.dash-page-head h1 {
+    font-family: 'Fraunces', Georgia, serif;
+    font-optical-sizing: auto;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+}
+
+/* the section card the personality lives in: give it paper atmosphere */
+.dashboard-page section.dash-section[aria-labelledby="personalityHeading"] {
+    position: relative;
+    overflow: hidden;
+    background:
+        radial-gradient(620px 360px at 100% -10%, color-mix(in srgb, var(--accent-green) 16%, transparent) 0%, transparent 60%),
+        var(--bg-card);
+}
+#personalityHeading {
+    font-family: 'Fraunces', Georgia, serif;
+    font-optical-sizing: auto;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+}
+
+/* ── the player card ── */
+.pp-playercard {
+    border-radius: var(--radius-lg);
+    border: 1px solid color-mix(in srgb, var(--text-primary) 8%, var(--bg-soft));
+    background: var(--bg-card);
+    box-shadow: var(--shadow-medium);
+    overflow: hidden;
+    margin-bottom: 1.6rem;
+}
+.pp-card-banner {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.2rem 1.35rem;
+    border-bottom: 1px solid var(--bg-soft);
+    position: relative;
+    overflow: hidden;
+}
+/* tone wash across the banner (radial, top-right) — no left stripe */
+.pp-card-banner.tone-pos { background: radial-gradient(150% 130% at 100% 0%, color-mix(in srgb, var(--accent-green) 30%, var(--bg-card)) 0%, var(--bg-card) 62%); }
+.pp-card-banner.tone-mid { background: radial-gradient(150% 130% at 100% 0%, color-mix(in srgb, #F6C453 26%, var(--bg-card)) 0%, var(--bg-card) 62%); }
+.pp-card-banner.tone-neg { background: radial-gradient(150% 130% at 100% 0%, color-mix(in srgb, #E07A3F 20%, var(--bg-card)) 0%, var(--bg-card) 62%); }
+/* faint concentric ring field behind the banner — the orb at scale */
+.pp-card-banner::after {
+    content: '';
+    position: absolute;
+    top: -90px; right: -60px;
+    width: 280px; height: 280px;
+    background:
+        radial-gradient(circle, transparent 0 38%, color-mix(in srgb, var(--text-primary) 6%, transparent) 38% 38.7%, transparent 38.7%),
+        radial-gradient(circle, transparent 0 56%, color-mix(in srgb, var(--text-primary) 5%, transparent) 56% 56.6%, transparent 56.6%);
+    pointer-events: none;
+}
+.pp-card-sigil { flex: 0 0 auto; width: 40px; height: 40px; position: relative; z-index: 1; }
+.pp-card-sigil .ring-sigil { width: 40px; height: 40px; }
+.pp-card-id { flex: 1; min-width: 0; position: relative; z-index: 1; }
+.pp-card-eyebrow {
+    display: block;
+    font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em;
+    color: var(--text-light);
+}
+.pp-card-name {
+    display: block;
+    font-family: 'Fraunces', Georgia, serif;
+    font-optical-sizing: auto;
+    font-weight: 600;
+    font-size: clamp(1.5rem, 4vw, 2rem);
+    letter-spacing: -0.02em;
+    line-height: 1.02;
+    margin: 0.1rem 0 0.15rem;
+    color: var(--text-primary);
+}
+.pp-playercard.tone-pos .pp-card-name { color: #1b7a3d; }
+.pp-playercard.tone-mid .pp-card-name { color: #9a6a00; }
+.pp-playercard.tone-neg .pp-card-name { color: #c0532a; }
+.pp-card-sub { font-size: 0.82rem; color: var(--text-secondary); }
+.pp-card-sub strong { color: var(--text-primary); }
+.pp-card-badge {
+    flex: 0 0 auto; position: relative; z-index: 1;
+    text-align: right; display: flex; flex-direction: column; gap: 0.15rem;
+    padding: 0.5rem 0.85rem; border-radius: 14px;
+    background: color-mix(in srgb, var(--bg-card) 70%, transparent);
+    border: 1px solid var(--bg-soft); backdrop-filter: blur(3px);
+}
+.pp-card-badge-label { font-size: 0.56rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-light); }
+.pp-card-badge-val { font-size: 0.84rem; font-weight: 800; color: var(--text-primary); }
+
+/* the stat grid now lives inside the card — flush, no extra margin/shadow */
+.pp-playercard .pp-statband {
+    margin: 0;
+    padding: 1rem 1.1rem 1.15rem;
+    gap: 0.6rem;
+    background: transparent;
+}
+/* inside the card the tiles read as inset chips, not floating cards */
+.pp-playercard .pp-stat {
+    background: color-mix(in srgb, var(--bg-warm) 60%, var(--bg-card));
+    box-shadow: none;
+    border-color: var(--bg-soft);
+}
+.pp-playercard .pp-stat:hover { box-shadow: var(--shadow-soft); transform: translateY(-2px); }
+.pp-stat-value { font-variant-numeric: tabular-nums; }
+
+/* ── stronger section identity: ring-sigil bullet instead of a flat dash ── */
+.pp-sub-title {
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    color: var(--text-secondary);
+}
+.pp-sub-title::before {
+    width: 9px; height: 9px;
+    border-radius: 50%;
+    border: 2px solid var(--accent-green-deep);
+    background: transparent;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-green) 35%, transparent);
+}
+
+/* the latest-verdict block headline gets Fraunces */
+.iv-reco { font-family: 'Fraunces', Georgia, serif; font-optical-sizing: auto; font-weight: 600; font-size: 1.7rem; }
+.bl-quote { font-family: 'Fraunces', Georgia, serif; font-optical-sizing: auto; }
+.pp-next-body strong { font-family: 'Fraunces', Georgia, serif; font-weight: 600; }
+
+@media (max-width: 560px) {
+    .pp-card-banner { flex-wrap: wrap; gap: 0.7rem; }
+    .pp-card-badge { width: 100%; text-align: left; flex-direction: row; justify-content: space-between; align-items: center; }
+}

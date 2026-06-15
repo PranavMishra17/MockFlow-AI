@@ -123,10 +123,19 @@ function statTile(label, value, hint, opts) {
         (hint ? '<span class="pp-stat-hint">' + hint + '</span>' : '') + '</div>';
 }
 
+// The stat band is framed as a "player card": a banner (ring sigil + the
+// latest hiring verdict as the headline) over a grid of countable stat tiles.
+function ringSigil(size) {
+    return (window.MockFlowRadar && window.MockFlowRadar.sigil) ? window.MockFlowRadar.sigil(size || 16) : '';
+}
+
 function renderStatBand(data) {
     const lt = data.lifetime || {};
+    const latest = data.latest || {};
     const best = (data.best_lines && data.best_lines[0]) || null;
     const scrollBest = "var el=document.getElementById('ppBestLines'); if(el){el.scrollIntoView({behavior:'smooth'});}";
+    const tone = RECO_TONE[latest.recommendation] || 'mid';
+
     let t = '';
     t += statTile('Sessions', (lt.sessions || data.total_sessions || 0), 'completed');
     if (lt.words) t += statTile('Words spoken', Number(lt.words).toLocaleString(), 'across every answer');
@@ -143,7 +152,23 @@ function renderStatBand(data) {
         const teaser = '<span class="pp-bestline-teaser">“' + escapeHtml(best.quote.slice(0, 52)) + (best.quote.length > 52 ? '…' : '') + '”</span>';
         t += statTile('Your best line', teaser, best.competency_label || '', { onclick: scrollBest });
     }
-    return '<div class="pp-statband">' + t + '</div>';
+
+    // the banner: a player-card header. Latest verdict reads as the "name".
+    let banner = '<div class="pp-card-banner tone-' + tone + '">';
+    banner += '<div class="pp-card-sigil" aria-hidden="true">' + ringSigil(40) + '</div>';
+    banner += '<div class="pp-card-id">';
+    banner += '<span class="pp-card-eyebrow">Candidate card' + (latest.track ? ' · ' + escapeHtml(trackLabel(latest.track)) : '') + '</span>';
+    banner += '<span class="pp-card-name">' + escapeHtml(RECO_LABEL[latest.recommendation] || 'In progress') + '</span>';
+    if (LEVEL_LABEL[latest.level_read]) banner += '<span class="pp-card-sub">reads at <strong>' + LEVEL_LABEL[latest.level_read] + '</strong> level today</span>';
+    banner += '</div>';
+    if (data.strongest && data.strongest.label) {
+        banner += '<div class="pp-card-badge"><span class="pp-card-badge-label">Signature</span>' +
+            '<span class="pp-card-badge-val">' + escapeHtml(data.strongest.label) + '</span></div>';
+    }
+    banner += '</div>';
+
+    return '<div class="pp-playercard tone-' + tone + '">' + banner +
+        '<div class="pp-statband">' + t + '</div></div>';
 }
 
 // ── [B] the competency radar vs the target-level bar ──
