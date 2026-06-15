@@ -72,12 +72,16 @@ def main():
                 "next_action": cnt(".pp-next"),
             }
         elif PAGE == "compare":
-            ids = "00000000-0000-0000-0000-0000000000b2,00000000-0000-0000-0000-0000000000a1"
+            # optional argv[2] overrides the id pair (use the intro id to force the
+            # <3-shared-competency dumbbell fallback)
+            ids = sys.argv[2] if len(sys.argv) > 2 else "00000000-0000-0000-0000-0000000000b2,00000000-0000-0000-0000-0000000000a1"
             pg.goto(BASE + "/__testlogin", wait_until="networkidle", timeout=20000)
             pg.goto(BASE + "/compare?ids=" + ids, wait_until="networkidle", timeout=20000)
             pg.wait_for_timeout(1500)
             res = {
-                "compare_radar": cnt(".radar-svg"), "delta_rows": cnt(".cmp-row"),
+                "compare_radar": cnt(".radar-svg"), "dumbbell": cnt(".cmp-dumbbell"),
+                "dumbbell_rows": cnt(".cdb-row"), "dumbbell_dots": cnt(".cdb-dot"),
+                "delta_rows": cnt(".cmp-row"),
                 "deltas_up": cnt(".cmp-delta.up"), "chips": cnt(".cmp-chip"),
                 "improved": cnt(".cmp-improved"), "lagged": cnt(".cmp-lags"),
             }

@@ -86,6 +86,7 @@ def _hist(iid, track, created, reco, level, signals, delivery, great=0):
 ID_A = "00000000-0000-0000-0000-0000000000a1"  # behavioral, latest
 ID_B = "00000000-0000-0000-0000-0000000000b2"  # coding
 ID_C = "00000000-0000-0000-0000-0000000000c3"  # intro, oldest
+ID_D = "00000000-0000-0000-0000-0000000000d4"  # 2nd intro (for the <3-axis compare)
 
 _HISTORY = [
     _hist(ID_C, "intro", "2026-05-20T10:00:00", "on_fence", "new_grad",
@@ -93,6 +94,11 @@ _HISTORY = [
            {"name": "Motivation & authenticity", "band": "solid", "evidence": ["I've wanted to work on infra since my first internship"]}],
           {"word_count": 600, "sentence_count": 40, "filler_total": 18,
            "filler_breakdown": {"like": 12, "um": 6}, "talk_ratio": 0.55, "longest_monologue_s": 30}),
+    _hist(ID_D, "intro", "2026-05-27T10:00:00", "lean_hire", "new_grad",
+          [{"name": "Communication & structure", "band": "solid", "evidence": ["let me give you the short version first"]},
+           {"name": "Motivation & authenticity", "band": "solid", "evidence": ["I switched into backend because I liked owning the data path"]}],
+          {"word_count": 720, "sentence_count": 48, "filler_total": 9,
+           "filler_breakdown": {"like": 5, "um": 4}, "talk_ratio": 0.58, "longest_monologue_s": 34}),
     _hist(ID_B, "coding", "2026-06-02T10:00:00", "lean_hire", "new_grad",
           [{"name": "Problem-solving", "band": "solid", "evidence": ["I'd start by clarifying the inputs and the expected output"]},
            {"name": "Coding", "band": "solid", "evidence": ["a clean recursion with a memo table to avoid recomputation"]},
