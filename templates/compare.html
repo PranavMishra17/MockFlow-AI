@@ -8,9 +8,10 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/styles.css">
     <link rel="stylesheet" href="/static/radar.css">
+    <link rel="stylesheet" href="/static/examples.css">
     <link rel="stylesheet" href="/static/modals.css">
     <style>
         .compare-page { min-height: 100vh; display: flex; flex-direction: column; background: var(--bg-cream); }
@@ -66,6 +67,9 @@
         .cmp-none { font-size: 0.85rem; color: var(--text-light); font-style: italic; }
         .cmp-back { display: inline-flex; align-items: center; gap: 0.35rem; margin-top: 1.6rem; font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); text-decoration: none; }
         @media (max-width: 640px) { .compare-head, .cmp-summary { grid-template-columns: 1fr; } }
+        .cmp-example-head { text-align: center; max-width: 560px; margin: 0 auto 1.4rem; }
+        .cmp-example-title { font-family: 'Fraunces', Georgia, serif; font-weight: 600; font-size: 1.55rem; letter-spacing: -0.01em; color: var(--text-primary); margin: 0 0 0.4rem; }
+        .cmp-example-note { font-size: 0.92rem; color: var(--text-secondary); margin: 0; line-height: 1.5; }
     </style>
 </head>
 <body>
@@ -83,6 +87,7 @@
     <script src="/static/utils.js"></script>
     <script src="/static/header.js"></script>
     <script src="/static/radar.js"></script>
+    <script src="/static/john_doe.js"></script>
     <script src="/static/modal.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
@@ -108,6 +113,17 @@
             errorEl.style.display = 'block';
         }
 
+        // When there's nothing to compare yet, show a live "John Doe" example so a
+        // new user sees what a side-by-side comparison reveals — clearly a sample.
+        function showExample(note) {
+            loadingEl.style.display = 'none';
+            var html = '<div class="cmp-example-head"><h2 class="cmp-example-title">Compare two sessions, side by side</h2>' +
+                '<p class="cmp-example-note">' + escapeHtml(note || 'Pick any two of your past interviews to see exactly what moved.') + '</p></div>';
+            if (window.MockFlowExamples) html += window.MockFlowExamples.renderSampleCompare();
+            viewEl.innerHTML = html;
+            viewEl.style.display = 'block';
+        }
+
         var params = new URLSearchParams(window.location.search);
         var ids = params.get('ids');
         if (!ids) {
@@ -115,7 +131,7 @@
             if (a && b) ids = a + ',' + b;
         }
         if (!ids || ids.split(',').filter(Boolean).length < 2) {
-            fail('Pick two sessions from Past Interviews to compare.');
+            showExample('Pick two sessions from Past Interviews to compare — here’s what one looks like.');
             return;
         }
 

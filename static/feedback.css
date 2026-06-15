@@ -2264,3 +2264,10 @@ html, body {
 @media (prefers-reduced-motion: reduce) {
     .ring-target { animation: none; }
 }
+
+/* John Doe sample report shown on the feedback error / empty state */
+.feedback-sample-wrap { margin-top: 2rem; width: 100%; max-width: 600px; }
+.feedback-sample-lead {
+    font-size: 0.86rem; color: var(--text-secondary); text-align: center; margin-bottom: 1rem;
+}
+.dash-empty-example { margin-top: 1.6rem; width: 100%; }

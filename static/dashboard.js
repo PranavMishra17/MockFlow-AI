@@ -354,6 +354,12 @@ async function loadUserStats() {
 
         if (total <= 0) {
             if (emptyBadgeSlot) emptyBadgeSlot.innerHTML = freeBadgeMarkup(remaining);
+            // Show a live "John Doe" example so a brand-new user sees the moat
+            // BEFORE they've done anything — clearly badged as a sample.
+            const exSlot = document.getElementById('statsEmptyExample');
+            if (exSlot && window.MockFlowExamples) {
+                exSlot.innerHTML = window.MockFlowExamples.renderSamplePersonality();
+            }
             setHidden(content, true);
             setHidden(summary, true);
             setHidden(empty, false);

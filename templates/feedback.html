@@ -15,6 +15,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/styles.css">
     <link rel="stylesheet" href="/static/radar.css">
+    <link rel="stylesheet" href="/static/examples.css">
     <link rel="stylesheet" href="/static/feedback.css">
     <link rel="stylesheet" href="/static/modals.css">
 </head>
@@ -137,6 +138,7 @@
     <script src="/static/header.js"></script>
     <script src="/static/modal.js"></script>
     <script src="/static/radar.js"></script>
+    <script src="/static/john_doe.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             window.MockFlowHeader.init({
@@ -230,12 +232,17 @@
 
         function showError(message) {
             elements.loadingState.style.display = 'none';
+            var example = (window.MockFlowExamples)
+                ? '<div class="feedback-sample-wrap">' +
+                    '<p class="feedback-sample-lead">No report here yet — here’s a sample of what a hiring verdict looks like.</p>' +
+                    window.MockFlowExamples.renderMiniDossier() + '</div>'
+                : '';
             elements.errorState.innerHTML =
                 '<p style="margin-bottom: 1rem;">' + message + '</p>' +
                 '<div style="display: flex; gap: 0.75rem; justify-content: center;">' +
                     '<button onclick="location.reload()" class="btn-retry">Retry</button>' +
                     '<a href="/past-calls" class="btn-retry" style="text-decoration: none;">All Interviews</a>' +
-                '</div>';
+                '</div>' + example;
             elements.errorState.style.display = 'flex';
         }
 
