@@ -45,15 +45,21 @@ def main():
             pg.goto(BASE + "/__testlogin", wait_until="networkidle", timeout=20000)
             pg.goto(BASE + "/feedback/" + iid, wait_until="networkidle", timeout=20000)
             pg.wait_for_timeout(1500)
+            def top(sel):
+                return pg.eval_on_selector(sel, "e => Math.round(e.getBoundingClientRect().top + window.scrollY)") if cnt(sel) else None
             res = {
                 "hero": cnt(".verdict-hero"), "reco": txt(".vh-reco"),
                 "hero_border_left": (pg.eval_on_selector(".verdict-hero", "e=>getComputedStyle(e).borderLeftWidth") if cnt(".verdict-hero") else None),
                 "caret": cnt(".spectrum-caret"), "current_seg": cnt(".spectrum-seg.is-current"),
-                "full_report_btn": cnt(".vh-fullreport"),
+                "practice_cta": cnt(".vh-practice"), "full_report_btn": cnt(".vh-fullreport"),
+                "scorecard": cnt(".scorecard"), "sc_shape": cnt(".sc-shape"), "sc_delivery": cnt(".sc-delivery"),
+                "session_radar": cnt("#sessionRadarSlot .radar-svg"), "sc_bars": cnt(".sc-bar"),
                 "signals": cnt(".signal-card"), "band_meters": cnt(".band-meter"),
                 "evidence": cnt(".signal-evidence"),
-                "gauges": cnt(".gauge"), "session_radar": cnt("#sessionRadarSlot .radar-svg"),
-                "delivery_chips": cnt(".delivery-chip"),
+                "gauges": cnt(".gauge"), "delivery_chips": cnt(".delivery-chip"),
+                # order: hero(1) < scorecard(2) < signals(3)
+                "order_ok": (lambda h, sc, sg: (h is not None and sc is not None and sg is not None and h < sc < sg))(top(".verdict-hero"), top(".scorecard"), top(".signal-card")),
+                "tops": {"hero": top(".verdict-hero"), "scorecard": top(".scorecard"), "signals": top(".signal-card"), "trajectory": top(".tf-divider")},
             }
         elif PAGE == "dashboard":
             pg.goto(BASE + "/__testlogin", wait_until="networkidle", timeout=20000)

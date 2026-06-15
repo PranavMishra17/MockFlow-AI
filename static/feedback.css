@@ -1905,8 +1905,18 @@ html, body {
 /* ── Wing D redesign: staggered lines, band meters, gauges, session radar ── */
 .vh-stagger { opacity: 0; transform: translateY(6px); transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.22, 1, 0.36, 1); }
 .vh-stagger.in { opacity: 1; transform: none; }
+/* hero CTA row: practice (primary) + full-breakdown jump (ghost) */
+.vh-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-top: 1.25rem; }
+.vh-practice {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    font-size: 0.82rem; font-weight: 800; text-decoration: none;
+    color: #fff; background: var(--text-primary);
+    padding: 0.58rem 1.05rem; border-radius: var(--radius-full);
+    box-shadow: var(--shadow-soft); transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.vh-practice:hover { transform: translateY(-1px); box-shadow: var(--shadow-medium); }
 .vh-fullreport {
-    display: inline-flex; align-items: center; gap: 0.3rem; margin-top: 1.15rem;
+    display: inline-flex; align-items: center; gap: 0.3rem;
     font-family: inherit; font-size: 0.78rem; font-weight: 800; cursor: pointer;
     color: var(--text-secondary); background: var(--bg-card); border: 1px solid var(--bg-soft);
     padding: 0.5rem 0.95rem; border-radius: var(--radius-full); transition: all 0.2s ease;
@@ -1935,14 +1945,56 @@ html, body {
 .gauge-marker { position: absolute; top: -3px; width: 4px; height: 16px; border-radius: 2px; background: var(--text-primary); transform: translateX(-50%); box-shadow: 0 0 0 2px var(--bg-card); transition: left 0.7s cubic-bezier(0.22, 1, 0.36, 1); }
 .gauge-note { font-size: 0.78rem; color: var(--text-secondary); margin: 0.45rem 0 0; line-height: 1.4; }
 
-/* this-session radar */
-.session-radar { margin: 0.4rem 0 1.4rem; padding: 1.1rem; background: var(--bg-warm); border: 1px solid var(--bg-soft); border-radius: var(--radius-lg); text-align: center; }
-.srad-title { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-light); margin-bottom: 0.6rem; }
+/* ── Moment 2: the scorecard — your shape (radar) + your delivery, side by side ── */
+.scorecard {
+    display: grid;
+    grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.08fr);
+    gap: 1rem;
+    margin-top: 1.5rem;
+    animation: vhIn 0.5s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both;
+}
+.scorecard.sc-solo { grid-template-columns: 1fr; }
+.sc-shape, .sc-delivery {
+    background: var(--bg-warm);
+    border: 1px solid var(--bg-soft);
+    border-radius: var(--radius-lg);
+    padding: 1.05rem 1.2rem 1.2rem;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+.sc-title {
+    font-size: 0.68rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.07em; color: var(--text-light); margin-bottom: 0.55rem;
+}
+/* the delivery panel sits flush inside its cell (no nested card) */
+.sc-delivery .delivery-panel { margin: 0; padding: 0; background: none; border: none; }
+.sc-delivery .delivery-title { display: none; }
+
+/* the radar / bar fallback holder — .sc-shape is the card, this is just content */
+.session-radar { width: 100%; flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.session-radar .radar-legend { margin-top: 0.5rem; }
+
+/* band-bar fallback when there are too few signals for a polygon (the intro case) */
+.sc-bars { width: 100%; display: flex; flex-direction: column; gap: 0.85rem; padding: 0.4rem 0 0.2rem; }
+.sc-bar { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 0.3rem 0.7rem; text-align: left; }
+.sc-bar .band-meter { grid-column: 1 / -1; margin: 0.35rem 0 0; }
+.sc-bar-name { font-size: 0.83rem; font-weight: 700; color: var(--text-primary); }
+.sc-bar-band { font-size: 0.66rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.03em; }
+.sc-bar-band.band-poor { color: #E07A3F; }
+.sc-bar-band.band-borderline { color: #C68A00; }
+.sc-bar-band.band-solid, .sc-bar-band.band-outstanding { color: var(--accent-green-deep); }
+.sc-bar-band.band-cannot_determine { color: var(--text-light); }
+.sc-empty { font-size: 0.85rem; color: var(--text-light); margin: auto 0; text-align: center; }
+
+@media (max-width: 620px) {
+    .scorecard { grid-template-columns: 1fr; }
+}
 
 @keyframes vhIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
 
 @media (prefers-reduced-motion: reduce) {
-    .verdict-hero, .next-rep { animation: none; }
+    .verdict-hero, .scorecard { animation: none; }
     .sig-reveal { opacity: 1; transform: none; transition: none; }
     .spectrum-caret { transition: none; }
     .vh-stagger { opacity: 1; transform: none; transition: none; }
@@ -1954,6 +2006,7 @@ html, body {
     .reveal-stage { max-width: none; padding: 0; }
     .report-footer, .generate-section, .reveal-loading, .cached-indicator { display: none !important; }
     .sig-reveal { opacity: 1 !important; transform: none !important; }
-    .verdict-hero, .next-rep { animation: none !important; }
-    .signal-card, .verdict-hero, .delivery-panel, .coding-card { break-inside: avoid; page-break-inside: avoid; }
+    .verdict-hero, .scorecard { animation: none !important; }
+    .scorecard { grid-template-columns: 1fr 1fr; }
+    .signal-card, .verdict-hero, .delivery-panel, .coding-card, .scorecard { break-inside: avoid; page-break-inside: avoid; }
 }

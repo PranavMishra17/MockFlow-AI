@@ -408,7 +408,7 @@
             if (fromCache) elements.cachedIndicator.style.display = 'inline-flex';
 
             elements.heroSlot.innerHTML = renderHero(v);
-            elements.nextRepSlot.innerHTML = renderNextRep(v);
+            elements.nextRepSlot.innerHTML = renderScorecard(v);
             elements.signalsSlot.innerHTML = renderSignals(v);
             elements.trajectorySlot.innerHTML = renderTrajectory(v);
 
@@ -442,7 +442,11 @@
                     (to ? '<strong>One band from ' + escapeHtml(to) + ':</strong> ' : '<strong>To raise your verdict:</strong> ') +
                     escapeHtml(g.signal) + ' — ' + escapeHtml(g.move || '') + '</div>';
             }
-            html += '<button type="button" class="vh-fullreport vh-stagger" id="fullReportBtn">See the full breakdown ↓</button>';
+            var qs = ctx.track ? ('?track=' + encodeURIComponent(ctx.track)) : '';
+            html += '<div class="vh-actions vh-stagger">' +
+                '<a class="vh-practice" href="/start' + qs + '">Practice this again →</a>' +
+                '<button type="button" class="vh-fullreport" id="fullReportBtn">See the full breakdown ↓</button>' +
+                '</div>';
             html += '</div>';
             return html;
         }
@@ -494,18 +498,40 @@
             }, 90);
         }
 
-        // A radar of this session's signals (you vs the solid bar) — visual scoring.
+        // Moment 2 — the visual scorecard: your SHAPE + your DELIVERY, up top.
+        function renderScorecard(v) {
+            var delivery = renderDeliveryPanel(v.delivery);
+            var deliveryCard = delivery
+                ? '<section class="sc-delivery"><div class="sc-title">Your delivery this session</div>' + delivery + '</section>'
+                : '';
+            return '<div class="scorecard' + (deliveryCard ? '' : ' sc-solo') + '">' +
+                '<section class="sc-shape">' +
+                    '<div class="sc-title">Your shape this session</div>' +
+                    '<div id="sessionRadarSlot" class="session-radar"></div>' +
+                '</section>' +
+                deliveryCard +
+                '</div>';
+        }
+
+        // The session's signals as a radar (you vs the bar). Too few signals for a
+        // polygon (the intro case) → graceful band-bar fallback, never a flat line.
         function renderSessionRadar(v) {
             var slot = document.getElementById('sessionRadarSlot');
-            if (!slot || !window.MockFlowRadar) return;
+            if (!slot) return;
             var BAND_SCORE = { poor: 1, borderline: 2, solid: 3, outstanding: 4 };
-            var axes = (v.signals || [])
-                .filter(function(s) { return BAND_SCORE[s.band]; })
-                .map(function(s) { return { key: s.name, label: shortSignal(s.name), you_score: BAND_SCORE[s.band], target_score: 3 }; });
-            if (axes.length < 3) { slot.style.display = 'none'; return; }
-            slot.innerHTML = '<div class="srad-title">Your shape this session</div>' +
-                window.MockFlowRadar.build({ axes: axes, size: 300 }) +
-                '<div class="radar-legend"><span class="rl rl-you">You</span><span class="rl rl-target">the bar (solid)</span></div>';
+            var scored = (v.signals || []).filter(function(s) { return BAND_SCORE[s.band]; });
+            if (scored.length >= 3 && window.MockFlowRadar) {
+                var axes = scored.map(function(s) { return { key: s.name, label: shortSignal(s.name), you_score: BAND_SCORE[s.band], target_score: 3 }; });
+                slot.innerHTML = window.MockFlowRadar.build({ axes: axes, size: 280 }) +
+                    '<div class="radar-legend"><span class="rl rl-you">You</span><span class="rl rl-target">the bar</span></div>';
+            } else if (scored.length) {
+                slot.innerHTML = '<div class="sc-bars">' + scored.map(function(s) {
+                    return '<div class="sc-bar"><span class="sc-bar-name">' + escapeHtml(shortSignal(s.name)) + '</span>' +
+                        bandMeter(s.band) + '<span class="sc-bar-band band-' + s.band + '">' + (BAND_LABEL[s.band] || s.band) + '</span></div>';
+                }).join('') + '</div>';
+            } else {
+                slot.innerHTML = '<p class="sc-empty">Not enough in this transcript to chart a shape yet.</p>';
+            }
         }
         function shortSignal(name) {
             var map = {
@@ -543,19 +569,7 @@
                 (note ? '<p class="gauge-note">' + note + '</p>' : '') + '</div>';
         }
 
-        // Moment 3 — your next rep (the single action that drives return).
-        function renderNextRep(v) {
-            if (!v.gap_to_next || !v.gap_to_next.signal) return '';
-            var g = v.gap_to_next, ctx = v.context || {};
-            var qs = ctx.track ? ('?track=' + encodeURIComponent(ctx.track)) : '';
-            return '<div class="next-rep">' +
-                '<div class="next-rep-label">Your next rep</div>' +
-                '<p class="next-rep-body"><strong>' + escapeHtml(g.signal) + '</strong> — ' + escapeHtml(g.move || '') + '</p>' +
-                '<a class="next-rep-cta" href="/start' + qs + '">Practice this again →</a>' +
-                '</div>';
-        }
-
-        // Moment 2 — signals, in your own words (revealed progressively on scroll).
+        // Moment 3 — signals, in your own words (revealed progressively on scroll).
         function renderSignals(v) {
             var sigs = v.signals || [];
             var html = '<div class="signals-reveal-title">The call, signal by signal — backed by your own words</div>';
@@ -588,15 +602,15 @@
             return html;
         }
 
-        // Moment 4 — the evidence behind the call (folded in last, never buries the verdict).
+        // Moment 4 — your trajectory: how this session sits against your last (folded in last).
         function renderTrajectory(v) {
-            var html = '<div class="tf-divider">The evidence behind the call</div>';
-            html += '<div id="sessionRadarSlot" class="session-radar"></div>';
-            html += '<div id="vsLastSlot"></div>';
             var ga = v.great_answers || 0;
-            if (ga) html += '<div class="ga-line"><span class="signal-star">★</span> <strong>' + ga + '</strong> great answer' + (ga > 1 ? 's' : '') + ' in this interview</div>';
-            html += renderDeliveryPanel(v.delivery);
-            html += renderCodingBlock(feedbackState.codingSubmissions);
+            var coding = renderCodingBlock(feedbackState.codingSubmissions);
+            var gaLine = ga ? '<div class="ga-line"><span class="signal-star">★</span> <strong>' + ga + '</strong> great answer' + (ga > 1 ? 's' : '') + ' in this interview</div>' : '';
+            var html = '<div class="tf-divider">Your trajectory</div>';
+            html += '<div id="vsLastSlot"></div>';
+            html += gaLine;
+            html += coding;
             return html;
         }
 
