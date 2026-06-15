@@ -79,18 +79,35 @@ Brand-new users see the moat before doing anything, each clearly ribboned
 - Mock data lives in `static/john_doe.js` (one shared `window.MockFlowExamples`
   object: a verdict, a 2-session history, an insights blob). No backend.
 
-## What changed per surface (filled in as built)
+## What changed per surface (as built — all verified in Chromium, console clean)
 
-- **radar.js/.css** — sonar draw-in + interactive axis hotspots + tooltip; new
-  `.ring-sigil`; back-compat.
-- **feedback.html/.css** — dossier hero with verdict stamp + ring target; signals
-  → evidence cards; mesh/grain stage; Fraunces display.
-- **dashboard.js/.css** — player-card stat band; bolder section kickers w/ ring
-  sigils; radar framed as "the read"; John Doe empty state.
-- **compare.html** — dossier framing + sample card for < 2 sessions.
-- **john_doe.js** — shared sample data + a render helper for the mini feedback
-  dossier reused across surfaces.
-- **index.html** — example ribbon on the signed-out sample persona (already a
-  sample; just labelled honestly as an example).
+- **radar.js / radar.css** — `build()` now emits a soft sonar field + per-axis
+  focusable hotspots whose tooltip shows the band + the gap to the target,
+  plus vertex dots; a center-out "sonar" draw-in on first reveal; new
+  `MockFlowRadar.sigil()` ring sigil. API back-compat (compact/landing radars
+  opt out of interactivity). Reduced-motion safe.
+- **feedback.html / feedback.css** — page is now a **candidate dossier**: header
+  kicker "Candidate dossier / The Hiring Verdict" (Fraunces); the verdict hero
+  is a sealed call — a concentric **ring-target stamp** (grade glyph, drop
+  animation) beside the recommendation in big Fraunces, a re-skinned
+  **calibrated dial** spectrum, a Fraunces pull-quote headline, a dark "TIP THE
+  CALL" gap tag; signals became **evidence cards** ("Exhibit 01" mono labels,
+  band verdict chips, "what you said" Fraunces quotes); ring-mesh + grain paper
+  stage behind it all. IA + data contract + every verify selector preserved.
+- **dashboard.js / dashboard.css** — the stat band is now a **candidate /
+  trading card**: a banner (ring sigil + latest verdict as the Fraunces "name"
+  + a "Signature" strength badge + ghosted ring field) over the countable stats
+  as inset chips; section heads carry a ring-bullet; best-lines + verdict in
+  Fraunces. All `.pp-stat` / radar / stability / best-line / next selectors kept.
+- **compare.html** — Fraunces + the sample compare card on the no-ids path
+  (real-id compare unchanged, inherits the sonar radar).
+- **john_doe.js (new) + examples.css (new)** — shared `window.MockFlowExamples`
+  with a sample verdict / insights / compare blob and three renderers
+  (mini dossier, sample personality, sample compare), each badged with an
+  **"Example — this is what yours will look like"** ribbon. Wired into: dashboard
+  zero-session empty state (personality), feedback not-found/error state (mini
+  dossier), `/compare` with no ids (compare). Front-end only — no backend.
+- **index.html** — untouched in this pass (its signed-out sample persona already
+  reads as an illustrative sample; the John-Doe examples cover the new surfaces).
 </content>
 </invoke>
