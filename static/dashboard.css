@@ -458,21 +458,26 @@ Scoped to the dashboard page via .dashboard-page where it matters.
 
 /* ==================== WING D — INTERVIEW PERSONALITY (verdict-based) ==================== */
 .insight-verdict {
-    padding: var(--spacing-md);
-    border-radius: var(--radius-md);
+    padding: 1.25rem 1.4rem;
+    border-radius: var(--radius-lg);
     border: 1px solid var(--bg-soft);
-    border-left: 5px solid var(--text-light);
     background: var(--bg-card);
     display: flex;
     flex-direction: column;
     gap: 0.25rem;
     margin-bottom: var(--spacing-md);
+    position: relative;
+    overflow: hidden;
 }
-.insight-verdict.tone-pos { border-left-color: var(--accent-green-deep); background: color-mix(in srgb, var(--accent-green) 14%, var(--bg-card)); }
-.insight-verdict.tone-mid { border-left-color: #E0A100; background: color-mix(in srgb, #F6C453 12%, var(--bg-card)); }
-.insight-verdict.tone-neg { border-left-color: #E07A3F; background: color-mix(in srgb, #E07A3F 10%, var(--bg-card)); }
-.iv-eyebrow { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-light); }
-.iv-reco { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.01em; color: var(--text-primary); line-height: 1.1; }
+/* tone is a soft top-corner wash + a coloured reco — no left-edge stripe */
+.insight-verdict.tone-pos { background: radial-gradient(120% 80% at 0% 0%, color-mix(in srgb, var(--accent-green) 16%, var(--bg-card)) 0%, var(--bg-card) 60%); }
+.insight-verdict.tone-mid { background: radial-gradient(120% 80% at 0% 0%, color-mix(in srgb, #F6C453 16%, var(--bg-card)) 0%, var(--bg-card) 60%); }
+.insight-verdict.tone-neg { background: radial-gradient(120% 80% at 0% 0%, color-mix(in srgb, #E07A3F 13%, var(--bg-card)) 0%, var(--bg-card) 60%); }
+.iv-eyebrow { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-light); }
+.iv-reco { font-size: 1.55rem; font-weight: 800; letter-spacing: -0.01em; color: var(--text-primary); line-height: 1.1; }
+.insight-verdict.tone-pos .iv-reco { color: var(--accent-green-deep); }
+.insight-verdict.tone-mid .iv-reco { color: #C68A00; }
+.insight-verdict.tone-neg .iv-reco { color: #E07A3F; }
 .iv-level { font-size: 0.85rem; color: var(--text-secondary); }
 .iv-headline { font-size: 0.9rem; color: var(--text-primary); font-style: italic; margin: 0.4rem 0 0; line-height: 1.45; }
 
@@ -480,11 +485,11 @@ Scoped to the dashboard page via .dashboard-page where it matters.
 .ic-title { font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.6rem; }
 .comp-row { display: grid; grid-template-columns: 9rem 1fr 5.5rem 1.5rem; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; }
 .comp-name { font-size: 0.85rem; font-weight: 600; color: var(--text-primary); }
-.comp-bar { height: 8px; border-radius: var(--radius-full); background: var(--bg-soft); overflow: hidden; }
-.comp-fill { display: block; height: 100%; border-radius: var(--radius-full); background: var(--text-light); }
-.comp-fill.band-outstanding, .comp-fill.band-solid { background: var(--accent-green-deep); }
-.comp-fill.band-borderline { background: #E0A100; }
-.comp-fill.band-poor { background: #E07A3F; }
+.comp-bar { height: 9px; border-radius: var(--radius-full); background: var(--bg-soft); overflow: hidden; }
+.comp-fill { display: block; height: 100%; border-radius: var(--radius-full); background: var(--text-light); transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1); }
+.comp-fill.band-outstanding, .comp-fill.band-solid { background: linear-gradient(90deg, color-mix(in srgb, var(--accent-green-deep) 80%, #fff) 0%, var(--accent-green-deep) 100%); }
+.comp-fill.band-borderline { background: linear-gradient(90deg, #F0C24B 0%, #E0A100 100%); }
+.comp-fill.band-poor { background: linear-gradient(90deg, #E89A6E 0%, #E07A3F 100%); }
 .comp-fill.band-cannot_determine { background: var(--bg-soft); }
 .comp-band { font-size: 0.7rem; font-weight: 700; text-align: right; color: var(--text-secondary); }
 .comp-band.band-chip-outstanding, .comp-band.band-chip-solid { color: #166534; }
@@ -503,39 +508,49 @@ Scoped to the dashboard page via .dashboard-page where it matters.
 
 /* ==================== WING D C8 — PERSONALITY REBUILD ==================== */
 
-/* [A] the epic stat band */
+/* [A] the epic stat band — balanced, tactile tiles */
 .pp-statband {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: var(--spacing-sm);
-    margin-bottom: var(--spacing-md);
+    grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+    gap: 0.7rem;
+    margin-bottom: 1.5rem;
 }
 .pp-stat {
     background: var(--bg-card);
     border: 1px solid var(--bg-soft);
     border-radius: var(--radius-md);
-    padding: 0.85rem 1rem;
+    padding: 0.95rem 1.05rem;
     box-shadow: var(--shadow-soft);
     display: flex;
     flex-direction: column;
-    gap: 0.2rem;
+    gap: 0.28rem;
     min-width: 0;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
-.pp-stat-accent { border-color: var(--accent-green); background: linear-gradient(180deg, color-mix(in srgb, var(--accent-green) 16%, var(--bg-card)) 0%, var(--bg-card) 70%); }
-.pp-stat-link { cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease; }
-.pp-stat-link:hover { transform: translateY(-2px); box-shadow: var(--shadow-medium); }
-.pp-stat-label { font-size: 0.64rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-muted); }
-.pp-stat-value { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; color: var(--text-primary); line-height: 1.12; }
-.pp-stat-hint { font-size: 0.75rem; color: var(--text-muted); overflow-wrap: anywhere; }
-.pp-star { color: #E0A100; }
-.pp-bestline-teaser { font-size: 0.92rem; font-weight: 600; font-style: italic; color: var(--text-primary); line-height: 1.3; display: block; }
+.pp-stat:hover { transform: translateY(-2px); box-shadow: var(--shadow-medium); }
+/* the best-line tile carries a quote — give it two columns so the band stays even */
+.pp-stat:has(.pp-bestline-teaser) { grid-column: span 2; }
+.pp-stat-accent {
+    border-color: color-mix(in srgb, var(--accent-green-deep) 45%, var(--bg-soft));
+    background: linear-gradient(155deg, color-mix(in srgb, var(--accent-green) 24%, var(--bg-card)) 0%, var(--bg-card) 72%);
+}
+.pp-stat-link { cursor: pointer; }
+.pp-stat-link:focus-visible { outline: 2px solid var(--accent-green-deep); outline-offset: 2px; }
+.pp-stat-label { font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); }
+.pp-stat-value { font-size: 1.7rem; font-weight: 800; letter-spacing: -0.02em; color: var(--text-primary); line-height: 1.1; }
+.pp-stat-hint { font-size: 0.74rem; color: var(--text-muted); overflow-wrap: anywhere; line-height: 1.35; }
+.pp-star { color: #E0A100; font-size: 1.45rem; vertical-align: -0.06em; filter: drop-shadow(0 1px 2px rgba(224, 161, 0, 0.3)); }
+.pp-bestline-teaser { font-size: 0.9rem; font-weight: 600; font-style: italic; color: var(--text-primary); line-height: 1.35; display: block; }
 
-.pp-block { margin-bottom: var(--spacing-md); }
-.pp-sub-title { font-size: 0.8rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-secondary); margin-bottom: 0.8rem; }
-.pp-sub-note { font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--text-light); margin-left: 0.4rem; }
+.pp-block { margin-bottom: 1.5rem; }
+.pp-sub-title { display: flex; align-items: center; gap: 0.5rem; font-size: 0.74rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-secondary); margin-bottom: 0.85rem; }
+.pp-sub-title::before { content: ''; flex: 0 0 auto; width: 14px; height: 2px; border-radius: 1px; background: var(--accent-green-deep); }
+.pp-sub-note { font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--text-light); }
 
-/* [B] radar block */
-.pp-radar { background: var(--bg-warm); border: 1px solid var(--bg-soft); border-radius: var(--radius-md); padding: var(--spacing-md); }
+/* [B] radar block — the signature visual, centered with calm framing */
+.pp-radar { background: var(--bg-warm); border: 1px solid var(--bg-soft); border-radius: var(--radius-lg); padding: 1.3rem 1.3rem 1.05rem; }
+.pp-radar .radar-svg { display: block; margin: 0.2rem auto 0; max-width: 340px; width: 100%; height: auto; }
+.pp-radar .radar-caption { text-align: center; max-width: 30rem; margin-left: auto; margin-right: auto; }
 
 /* [C] reco sparkline + by-track chips inside trajectory */
 .iv-spark { display: flex; align-items: center; gap: 0.6rem; margin-top: 0.5rem; }
@@ -550,9 +565,11 @@ Scoped to the dashboard page via .dashboard-page where it matters.
 .tt-chip strong { color: var(--text-primary); }
 
 /* [D] cross-track stability matrix */
-.stab-grid { display: grid; gap: 0.45rem 0.5rem; align-items: center; }
-.stab-cell { display: flex; align-items: center; min-width: 0; }
-.stab-th { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); justify-content: center; }
+.pp-stability { background: var(--bg-warm); border: 1px solid var(--bg-soft); border-radius: var(--radius-lg); padding: 1.3rem; }
+.stab-grid { display: grid; gap: 0.55rem 0.5rem; align-items: center; }
+.stab-cell { display: flex; align-items: center; min-width: 0; padding: 0.15rem 0; }
+.stab-th { font-size: 0.66rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); justify-content: center; padding-bottom: 0.5rem; border-bottom: 1px solid var(--bg-soft); }
+.stab-corner { border-bottom: 1px solid var(--bg-soft); }
 .stab-name { font-size: 0.82rem; font-weight: 600; color: var(--text-primary); }
 .stab-cell .bandpill { margin: 0 auto; }
 .stab-empty { justify-content: center; color: var(--text-light); }
@@ -578,5 +595,5 @@ Scoped to the dashboard page via .dashboard-page where it matters.
 .pp-next-cta:hover { transform: translateY(-1px); }
 
 @media (prefers-reduced-motion: reduce) {
-    .pp-stat-link, .pp-next-cta { transition: none; }
+    .pp-stat, .pp-stat-link, .pp-next-cta, .comp-fill { transition: none; }
 }
