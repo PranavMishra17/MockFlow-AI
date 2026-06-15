@@ -1,5 +1,14 @@
-/* ==================== FEEDBACK PAGE - REDESIGNED 2-STAGE SYSTEM ==================== */
+/* ==================== FEEDBACK PAGE ==================== */
 /* Inherits variables from styles.css */
+
+/* CRITICAL: styles.css sets `html,body{overflow:hidden}` for the landing/interview
+   pages. This page is a long scrolling report, so opt back into scrolling — without
+   this the report below the verdict is clipped and unreachable. */
+html, body {
+    overflow-x: hidden;
+    overflow-y: auto;
+    height: auto;
+}
 
 .feedback-page {
     min-height: 100vh;
