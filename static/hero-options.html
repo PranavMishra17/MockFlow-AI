@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Landing hero — pick a direction</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cream:#FAF8F5; --warm:#F5F2ED; --soft:#EFEBE5; --card:#FFFFFF;
+    --green:#C8E6C9; --green-deep:#81C784; --pink-deep:#F06292; --purple-deep:#BA68C8; --cyan:#4AEADC;
+    --ink:#1A1A1A; --sec:#4A4A4A; --muted:#7A7A7A; --light:#9A9A9A;
+    --amber:#E0A100; --orange:#E07A3F;
+    --r:20px; --shadow:0 8px 40px rgba(0,0,0,.08);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--cream);color:var(--ink);font-family:Inter,system-ui,sans-serif;padding:2.5rem 1.25rem 5rem}
+  .wrap{max-width:1180px;margin:0 auto}
+  .pagehead{text-align:center;margin-bottom:2.5rem}
+  .pagehead h1{font-size:clamp(1.6rem,3.5vw,2.4rem);font-weight:800;letter-spacing:-.03em;margin:0 0 .5rem}
+  .pagehead p{color:var(--sec);font-size:1rem;margin:0;max-width:42rem;margin-inline:auto;line-height:1.6}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:1.5rem}
+  @media(max-width:840px){.grid{grid-template-columns:1fr}}
+  .opt{background:var(--card);border:1px solid var(--soft);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column}
+  .opt-tag{display:flex;align-items:center;gap:.6rem;padding:1rem 1.25rem .25rem}
+  .opt-badge{font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--purple-deep);background:color-mix(in srgb,var(--purple-deep) 14%,transparent);padding:.28rem .6rem;border-radius:999px}
+  .opt-name{font-size:.95rem;font-weight:800}
+  .stage{position:relative;height:300px;margin:.5rem 1.25rem;border-radius:14px;background:linear-gradient(180deg,var(--warm),var(--card));border:1px solid var(--soft);overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:1.5rem}
+  .stage h2{font-size:1.25rem;font-weight:800;letter-spacing:-.02em;line-height:1.12;margin:0 0 .9rem;max-width:18rem}
+  .stage h2 .pop{color:var(--green-deep)}
+  .opt-desc{padding:.9rem 1.25rem 1.4rem;color:var(--sec);font-size:.86rem;line-height:1.55}
+  .opt-desc b{color:var(--ink)}
+
+  /* ───────── A · 3-step pipeline ───────── */
+  .pipe{position:relative;width:100%;max-width:20rem;height:80px;margin-top:.4rem}
+  .pipe-line{position:absolute;top:22px;left:8%;right:8%;height:3px;background:var(--soft);border-radius:2px;overflow:hidden}
+  .pipe-line::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,var(--green-deep),var(--cyan));transform-origin:left;animation:pipeFill 3.4s ease-in-out infinite}
+  .pnode{position:absolute;top:14px;width:18px;height:18px;border-radius:50%;background:var(--card);border:2px solid var(--soft);transform:translateX(-50%)}
+  .pnode.n1{left:8%}.pnode.n2{left:50%}.pnode.n3{left:92%}
+  .pnode.n1{animation:nodeLight 3.4s ease-in-out infinite}
+  .pnode.n2{animation:nodeLight 3.4s ease-in-out infinite .9s}
+  .pnode.n3{animation:nodeLight 3.4s ease-in-out infinite 1.8s}
+  .porb{position:absolute;top:15px;left:8%;width:16px;height:16px;border-radius:50%;background:var(--green-deep);box-shadow:0 0 12px var(--green-deep);transform:translateX(-50%);animation:orbRun 3.4s cubic-bezier(.6,0,.4,1) infinite}
+  .plabel{position:absolute;top:44px;font-size:.62rem;font-weight:700;color:var(--muted);transform:translateX(-50%);white-space:nowrap}
+  .plabel.n1{left:8%}.plabel.n2{left:50%}.plabel.n3{left:92%;color:var(--green-deep)}
+  @keyframes pipeFill{0%{transform:scaleX(0)}55%{transform:scaleX(1)}100%{transform:scaleX(1)}}
+  @keyframes orbRun{0%{left:8%}55%{left:92%}100%{left:92%;opacity:1}92%{opacity:1}100%{opacity:0}}
+  @keyframes nodeLight{0%,100%{border-color:var(--soft);background:var(--card)}50%{border-color:var(--green-deep);background:color-mix(in srgb,var(--green) 60%,#fff);box-shadow:0 0 0 4px color-mix(in srgb,var(--green) 35%,transparent)}}
+
+  /* ───────── B · verdict meter ───────── */
+  .meter{width:100%;max-width:20rem;margin-top:.3rem}
+  .meter-track{position:relative;display:flex;gap:3px;padding-top:12px}
+  .mseg{flex:1;height:9px;border-radius:3px;opacity:.55}
+  .mseg.neg{background:var(--orange)}.mseg.mid{background:var(--amber)}.mseg.pos{background:var(--green-deep)}
+  .mcaret{position:absolute;top:0;left:7%;width:0;height:0;border-left:6px solid transparent;border-right:6px solid transparent;border-top:8px solid var(--ink);transform:translateX(-50%);animation:caretLand 3.6s cubic-bezier(.5,0,.5,1) infinite}
+  .mseg.land{animation:segGlow 3.6s ease infinite}
+  .mverdict{margin-top:.9rem;font-size:1.15rem;font-weight:800;color:var(--green-deep);opacity:0;animation:vIn 3.6s ease infinite}
+  @keyframes caretLand{0%{left:7%}14%{left:93%}30%{left:18%}48%{left:78%}66%{left:64%}100%{left:64%}}
+  @keyframes segGlow{0%,60%{opacity:.55;box-shadow:none}72%{opacity:1;box-shadow:0 0 0 2px #fff,0 0 0 3px var(--ink)}100%{opacity:1;box-shadow:0 0 0 2px #fff,0 0 0 3px var(--ink)}}
+  @keyframes vIn{0%,62%{opacity:0;transform:translateY(6px)}80%,100%{opacity:1;transform:none}}
+
+  /* ───────── C · scaled orb ───────── */
+  .orbwrap{position:relative;width:150px;height:150px;margin-bottom:.4rem}
+  .orb-ring{position:absolute;inset:0;border-radius:50%;border:2px solid var(--soft);animation:breathe 3s ease-in-out infinite}
+  .orb-ring.r2{inset:18px;border-color:color-mix(in srgb,var(--green-deep) 30%,var(--soft));animation-delay:.3s}
+  .orb-ring.r3{inset:36px;border-color:color-mix(in srgb,var(--green-deep) 55%,var(--soft));animation-delay:.6s}
+  .orb-rays{position:absolute;inset:0;animation:spin 18s linear infinite}
+  .orb-rays span{position:absolute;top:50%;left:50%;width:2px;height:14px;background:var(--green-deep);border-radius:2px;transform-origin:center -38px;opacity:.5}
+  .orb-eyes{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;gap:14px}
+  .orb-eyes i{width:10px;height:10px;border-radius:50%;background:var(--ink);animation:blink 4s infinite}
+  @keyframes breathe{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.06);opacity:1}}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes blink{0%,92%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+
+  /* ───────── D · cold → confident ───────── */
+  .thermo{width:100%;max-width:18rem;margin-top:.3rem}
+  .thermo-track{position:relative;height:14px;border-radius:999px;background:var(--soft);overflow:hidden}
+  .thermo-fill{position:absolute;inset:0;border-radius:999px;background:linear-gradient(90deg,#5B8DEF,var(--cyan),var(--green-deep));transform-origin:left;animation:warm 3.4s ease-in-out infinite}
+  .thermo-row{display:flex;justify-content:space-between;margin-top:.55rem;font-size:.7rem;font-weight:700}
+  .thermo-row .cold{color:#5B8DEF}.thermo-row .conf{color:var(--green-deep);animation:confPulse 3.4s ease infinite}
+  .spark{position:absolute;top:-6px;width:10px;height:10px;border-radius:50%;background:#fff;box-shadow:0 0 10px var(--green-deep);animation:sparkRun 3.4s ease-in-out infinite}
+  @keyframes warm{0%{transform:scaleX(.12)}60%{transform:scaleX(1)}100%{transform:scaleX(1)}}
+  @keyframes sparkRun{0%{left:8%}60%{left:96%}100%{left:96%}}
+  @keyframes confPulse{0%,55%{opacity:.4}75%,100%{opacity:1;text-shadow:0 0 12px color-mix(in srgb,var(--green-deep) 60%,transparent)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="pagehead">
+    <h1>Landing hero — pick a direction</h1>
+    <p>Four animated takes on the “Stop winging it” intro that opens the feature flow. Each loops below. Tell me a letter (or mix), and I’ll wire the winner into the live landing and polish it.</p>
+  </div>
+  <div class="grid">
+
+    <!-- A -->
+    <div class="opt">
+      <div class="opt-tag"><span class="opt-badge">Option A</span><span class="opt-name">Animated 3-step pipeline</span></div>
+      <div class="stage">
+        <h2>Stop winging it. <span class="pop">Walk in warmed up.</span></h2>
+        <div class="pipe">
+          <div class="pipe-line"></div>
+          <span class="pnode n1"></span><span class="pnode n2"></span><span class="pnode n3"></span>
+          <span class="porb"></span>
+          <span class="plabel n1">Warm up</span><span class="plabel n2">Live review</span><span class="plabel n3">The verdict</span>
+        </div>
+      </div>
+      <div class="opt-desc">An orb <b>travels a glowing path</b> through the three promises — warm up → live review → the verdict — lighting each node as it lands. It literally draws the journey and pulls the eye down into the feature sections.</div>
+    </div>
+
+    <!-- B -->
+    <div class="opt">
+      <div class="opt-tag"><span class="opt-badge">Option B</span><span class="opt-name">Live verdict-meter</span></div>
+      <div class="stage">
+        <h2>A clear read on <span class="pop">how you actually land.</span></h2>
+        <div class="meter">
+          <div class="meter-track">
+            <span class="mcaret"></span>
+            <span class="mseg neg"></span><span class="mseg neg"></span><span class="mseg neg"></span>
+            <span class="mseg mid"></span><span class="mseg pos land"></span><span class="mseg pos"></span><span class="mseg pos"></span>
+          </div>
+          <div class="mverdict">Lean Hire</div>
+        </div>
+      </div>
+      <div class="opt-desc">The product’s <b>signature moment</b> as the hero: the 7-point outcome spectrum sweeps, flutters, and <b>lands</b> on a verdict. Most on-brand with the moat — it previews exactly what you get.</div>
+    </div>
+
+    <!-- C -->
+    <div class="opt">
+      <div class="opt-tag"><span class="opt-badge">Option C</span><span class="opt-name">Scaled-up orb motif</span></div>
+      <div class="stage">
+        <div class="orbwrap">
+          <div class="orb-ring"></div><div class="orb-ring r2"></div><div class="orb-ring r3"></div>
+          <div class="orb-rays" id="raysC"></div>
+          <div class="orb-eyes"><i></i><i></i></div>
+        </div>
+        <h2>Meet your <span class="pop">interviewer.</span></h2>
+      </div>
+      <div class="opt-desc">The real agent’s <b>orb + rays</b>, enlarged as a living centerpiece — concentric rings breathe, rays rotate, eyes blink. Cohesive with the interview you’re about to take; calm and alive.</div>
+    </div>
+
+    <!-- D -->
+    <div class="opt">
+      <div class="opt-tag"><span class="opt-badge">Option D</span><span class="opt-name">Cold → confident</span></div>
+      <div class="stage">
+        <h2>From <span style="color:#5B8DEF">cold</span> to <span class="pop">confident.</span></h2>
+        <div class="thermo">
+          <div class="thermo-track"><div class="thermo-fill"></div><span class="spark"></span></div>
+          <div class="thermo-row"><span class="cold">cold start</span><span class="conf">walk in warm</span></div>
+        </div>
+      </div>
+      <div class="opt-desc">A <b>warm-up meter</b> literal to the tagline: a cool→warm gradient fills as a spark races across, the word “confident” igniting on arrival. Playful, motion-light, instantly readable.</div>
+    </div>
+
+  </div>
+</div>
+<script>
+  // build the rotating rays for Option C
+  var rays = document.getElementById('raysC');
+  if (rays) { for (var i=0;i<28;i++){ var s=document.createElement('span'); s.style.transform='translate(-50%,-50%) rotate('+(i*(360/28))+'deg)'; rays.appendChild(s); } }
+</script>
+</body>
+</html>
