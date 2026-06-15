@@ -121,6 +121,41 @@ def test_verdict_endpoint_requires_interview_id(auth_client):
     assert resp.status_code == 400
 
 
+# ---- GET /api/feedback/get/<id> ownership (the recurring reopen-403 bug) ----
+
+def test_get_feedback_owner_match_with_uuid_typed_user_id(auth_client, db_client, monkeypatch):
+    """psycopg returns the feedback.user_id UUID column as a uuid.UUID object,
+    but the session user id is a str. The ownership check must normalize both
+    sides — otherwise it ALWAYS 403s, the cache always misses, and the verdict
+    is regenerated on every reopen (raised 3-4 times)."""
+    import uuid as _uuid
+
+    iid = "00000000-0000-0000-0000-0000000000fb"
+    me = "00000000-0000-0000-0000-000000000001"  # the auth_client user id
+    monkeypatch.setattr(db_client, "get_feedback", lambda i: {
+        "interview_id": _uuid.UUID(iid),
+        "user_id": _uuid.UUID(me),  # UUID object, exactly as psycopg3 returns it
+        "feedback_data": {"verdict": {"overall": {"recommendation": "lean_hire"}}},
+    })
+    resp = auth_client.get(f"/api/feedback/get/{iid}")
+    assert resp.status_code == 200, resp.get_data(as_text=True)
+
+
+def test_get_feedback_rejects_other_users_row(auth_client, db_client, monkeypatch):
+    """A genuinely different owner must still 403 (no ownership leak)."""
+    import uuid as _uuid
+
+    iid = "00000000-0000-0000-0000-0000000000fc"
+    other = "00000000-0000-0000-0000-0000000000ff"
+    monkeypatch.setattr(db_client, "get_feedback", lambda i: {
+        "interview_id": _uuid.UUID(iid),
+        "user_id": _uuid.UUID(other),
+        "feedback_data": {"verdict": {}},
+    })
+    resp = auth_client.get(f"/api/feedback/get/{iid}")
+    assert resp.status_code == 403
+
+
 # ---- GET /api/user/compare (Wing D C6) ----
 
 _A = "00000000-0000-0000-0000-00000000000a"

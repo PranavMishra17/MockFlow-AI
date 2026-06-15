@@ -1183,8 +1183,11 @@ def get_feedback_by_id(interview_id):
         if not feedback:
             return jsonify({}), 404
 
-        # Verify user owns this interview
-        if feedback.get('user_id') != user_id:
+        # Verify user owns this interview. psycopg returns the UUID column as a
+        # uuid.UUID object while the session id is a str — normalize both sides,
+        # else this ALWAYS 403s, the cache always misses, and the verdict is
+        # regenerated on every reopen (the recurring "verdict gone on reopen" bug).
+        if str(feedback.get('user_id')) != str(user_id):
             return jsonify({'error': 'Unauthorized'}), 403
 
         logger.info(f"[API] Feedback retrieved for interview: {interview_id}")

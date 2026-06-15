@@ -328,7 +328,14 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ interview_id: filename })
             })
-            .then(function(response) { return response.json(); })
+            .then(function(response) {
+                if (!response.ok) {
+                    throw new Error(response.status === 503 || response.status === 502
+                        ? 'The evaluator is busy right now — give it a moment and retry.'
+                        : 'The evaluator returned an error (status ' + response.status + ').');
+                }
+                return response.json();
+            })
             .then(function(data) {
                 clearInterval(phaseInterval);
                 if (data.error) { showRevealError(data.message || data.error); return; }
@@ -336,7 +343,10 @@
                 feedbackState.reportGenerated = true;
                 feedbackState.codingSubmissions = data.coding_submissions || null;
                 renderReveal(data.verdict, false);
-                saveFeedbackToDatabase(filename, { verdict: data.verdict });
+                // No client-side save: /api/feedback/verdict already persists the
+                // verdict to both tables server-side. A second /api/feedback/save
+                // was pure redundancy and the source of the "Unexpected end of
+                // JSON input" error when a busy worker briefly 503'd.
             })
             .catch(function(err) {
                 clearInterval(phaseInterval);
@@ -345,20 +355,6 @@
             });
         }
 
-        function saveFeedbackToDatabase(interviewId, feedbackData) {
-            fetch('/api/feedback/save', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ interview_id: interviewId, feedback: feedbackData })
-            })
-            .then(function(response) { return response.json(); })
-            .then(function(result) {
-                if (result.success) console.log('[FEEDBACK] Saved to database successfully');
-                else console.error('[FEEDBACK] Save failed:', result.message);
-            })
-            .catch(function(err) { console.error('[FEEDBACK] Save error:', err); });
-        }
 
         // ── Wing D labels ──
         var RECO_LABEL = {strong_no_hire:'Strong No-Hire', no_hire:'No-Hire', lean_no_hire:'Leaning No-Hire',
