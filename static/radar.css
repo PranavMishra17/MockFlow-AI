@@ -1,7 +1,7 @@
 /*
- * Shared styles for the hand-rolled SVG competency radar (radar.js) and the
- * small band pills it pairs with. Loaded by the dashboard, compare, and landing
- * surfaces. Inherits tokens from styles.css.
+ * Shared styles for the hand-rolled SVG "sonar" competency radar (radar.js) and
+ * the small band pills + ring sigil it pairs with. Loaded by the dashboard,
+ * compare, feedback and landing surfaces. Inherits tokens from styles.css.
  */
 
 .radar-svg {
@@ -12,8 +12,15 @@
     margin: 0 auto;
     overflow: visible;
 }
+
+/* soft sonar field behind the grid — atmosphere, not a flat fill */
+.radar-field {
+    fill: radial-gradient(circle, transparent 0%, transparent 100%); /* fallback ignored by SVG */
+    fill: color-mix(in srgb, var(--accent-green) 8%, transparent);
+    opacity: 0.7;
+}
 .radar-ring { fill: none; stroke: var(--bg-soft); stroke-width: 1; }
-.radar-spoke { stroke: var(--bg-soft); stroke-width: 1; }
+.radar-spoke { stroke: var(--bg-soft); stroke-width: 1; transition: stroke 0.2s ease, stroke-width 0.2s ease; }
 .radar-target {
     fill: none;
     stroke: var(--text-muted);
@@ -35,7 +42,12 @@
     stroke-linejoin: round;
     transform-box: fill-box;
     transform-origin: center;
-    animation: radarIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.radar-vertex {
+    fill: var(--accent-green-deep);
+    stroke: var(--bg-card);
+    stroke-width: 1.5;
+    transition: r 0.2s ease, fill 0.2s ease;
 }
 .radar-deficit {
     stroke: var(--accent-pink-deep);
@@ -48,13 +60,83 @@
     font-weight: 700;
     fill: var(--text-secondary);
     dominant-baseline: middle;
+    transition: fill 0.2s ease;
 }
 .radar-axis-dim { fill: var(--text-light); opacity: 0.55; }
 
-@keyframes radarIn {
-    from { transform: scale(0.2); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
+/* ── sonar center-out draw-in on first reveal ── */
+.radar-you {
+    animation: radarSonar 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+.radar-vertex { animation: radarDot 0.4s ease both; animation-delay: 0.45s; }
+.radar-field { animation: radarPing 0.9s ease-out both; }
+@keyframes radarSonar {
+    from { transform: scale(0.04); opacity: 0; }
+    60%  { opacity: 1; }
+    to   { transform: scale(1); opacity: 1; }
+}
+@keyframes radarDot { from { opacity: 0; } to { opacity: 1; } }
+@keyframes radarPing {
+    from { opacity: 0; transform-origin: center; }
+    to   { opacity: 0.7; }
+}
+
+/* ── interactive axis hotspots (declarative hover/focus, works via innerHTML) ── */
+.radar-hotspot { cursor: pointer; outline: none; }
+.radar-hit { fill: transparent; }
+.radar-tip { opacity: 0; pointer-events: none; transition: opacity 0.16s ease; }
+.radar-hotspot:hover .radar-tip,
+.radar-hotspot:focus-visible .radar-tip,
+.radar-hotspot:focus .radar-tip { opacity: 1; }
+.radar-tip-bg {
+    fill: var(--text-primary);
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.22));
+}
+.radar-tip-name {
+    fill: #fff;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+}
+.radar-tip-sub {
+    fill: rgba(255, 255, 255, 0.82);
+    font-size: 0.64rem;
+    font-weight: 600;
+}
+/* highlight the hovered/focused spoke + its vertex */
+.radar-hotspot:hover ~ .radar-spoke,
+.radar-hotspot:focus ~ .radar-spoke { /* not reliable cross-order; use :has below */ }
+.radar-svg:has(.radar-hotspot[data-axis="0"]:hover) .radar-spoke[data-spoke="0"],
+.radar-svg:has(.radar-hotspot[data-axis="0"]:focus) .radar-spoke[data-spoke="0"],
+.radar-svg:has(.radar-hotspot[data-axis="1"]:hover) .radar-spoke[data-spoke="1"],
+.radar-svg:has(.radar-hotspot[data-axis="1"]:focus) .radar-spoke[data-spoke="1"],
+.radar-svg:has(.radar-hotspot[data-axis="2"]:hover) .radar-spoke[data-spoke="2"],
+.radar-svg:has(.radar-hotspot[data-axis="2"]:focus) .radar-spoke[data-spoke="2"],
+.radar-svg:has(.radar-hotspot[data-axis="3"]:hover) .radar-spoke[data-spoke="3"],
+.radar-svg:has(.radar-hotspot[data-axis="3"]:focus) .radar-spoke[data-spoke="3"],
+.radar-svg:has(.radar-hotspot[data-axis="4"]:hover) .radar-spoke[data-spoke="4"],
+.radar-svg:has(.radar-hotspot[data-axis="4"]:focus) .radar-spoke[data-spoke="4"],
+.radar-svg:has(.radar-hotspot[data-axis="5"]:hover) .radar-spoke[data-spoke="5"],
+.radar-svg:has(.radar-hotspot[data-axis="5"]:focus) .radar-spoke[data-spoke="5"] {
+    stroke: var(--accent-green-deep);
+    stroke-width: 2.5;
+}
+.radar-svg:has(.radar-hotspot[data-axis="0"]:hover) .radar-vertex[data-vx="0"],
+.radar-svg:has(.radar-hotspot[data-axis="1"]:hover) .radar-vertex[data-vx="1"],
+.radar-svg:has(.radar-hotspot[data-axis="2"]:hover) .radar-vertex[data-vx="2"],
+.radar-svg:has(.radar-hotspot[data-axis="3"]:hover) .radar-vertex[data-vx="3"],
+.radar-svg:has(.radar-hotspot[data-axis="4"]:hover) .radar-vertex[data-vx="4"],
+.radar-svg:has(.radar-hotspot[data-axis="5"]:hover) .radar-vertex[data-vx="5"] {
+    r: 5.5;
+    fill: var(--text-primary);
+}
+
+/* ── ring sigil (orb echo) ── */
+.ring-sigil { display: inline-block; vertical-align: -0.18em; }
+.ring-sigil .rs-ring { fill: none; stroke: var(--accent-green-deep); }
+.ring-sigil .rs-ring-3 { opacity: 0.45; stroke-width: 1; }
+.ring-sigil .rs-ring-2 { opacity: 0.7; stroke-width: 1.2; }
+.ring-sigil .rs-core { fill: var(--accent-green-deep); }
 
 /* Radar legend + auto-caption */
 .radar-legend {
@@ -91,6 +173,14 @@
     max-width: 30rem;
 }
 .radar-caption strong { color: var(--text-primary); }
+.radar-hint {
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-light);
+    text-align: center;
+    margin: 0.35rem auto 0;
+    letter-spacing: 0.01em;
+}
 
 /* Shared small band pill (best lines, stability, landing chips) */
 .bandpill {
@@ -110,5 +200,6 @@
 .bandpill-cannot_determine { background: var(--bg-soft); color: var(--text-light); }
 
 @media (prefers-reduced-motion: reduce) {
-    .radar-you { animation: none; }
+    .radar-you, .radar-vertex, .radar-field { animation: none; }
+    .radar-tip, .radar-spoke, .radar-vertex { transition: none; }
 }
