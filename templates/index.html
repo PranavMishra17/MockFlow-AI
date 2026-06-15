@@ -294,12 +294,12 @@
             color: var(--text-secondary);
         }
 
-        /* Floating "free interviews left" balloon — only revealed via JS for
-           signed-in users who still have free calls. */
+        /* Floating personality CTA above the orb — only revealed via JS for
+           signed-in users (links to the dashboard, or lures first-timers). */
         .lp-balloon {
             position: absolute;
             top: -12%;
-            right: 4%;
+            right: -1%;
             z-index: 4;
             display: none;
             align-items: center;
@@ -313,8 +313,13 @@
             letter-spacing: -0.01em;
             box-shadow: var(--shadow-lifted);
             white-space: nowrap;
+            text-decoration: none;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .lp-balloon.is-on { display: inline-flex; }
+        a.lp-balloon:hover { transform: translateY(-2px); box-shadow: var(--shadow-lifted), 0 10px 26px rgba(0, 0, 0, 0.14); }
+        a.lp-balloon:focus-visible { outline: 2px solid var(--accent-green); outline-offset: 3px; }
         .lp-balloon::after {
             content: '';
             position: absolute;
@@ -1235,10 +1240,10 @@
                     </div>
 
                     <div class="lp-hero__stage lp-reveal" style="--lp-delay:.1s">
-                        <span class="lp-balloon" id="heroBalloon" role="status" aria-live="polite">
+                        <a class="lp-balloon" id="heroBalloon" href="/dashboard">
                             <span class="lp-balloon__dot" aria-hidden="true"></span>
                             <span id="heroBalloonText"></span>
-                        </span>
+                        </a>
                         <div class="lp-hero__orbwrap">
                             <div class="mf-bloom lp-orb__bloom" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
                             <!-- The .mf-orb2 GREET <-> ORB composite — the centerpiece.
@@ -1790,57 +1795,35 @@
                         if (!d) return;
                         real.innerHTML = (Number(d.total_sessions) > 0) ? personaReal(d) : personaEmpty();
                         real.classList.add('is-in');
+                        showPersonalityBalloon(d.total_sessions);  // same fetch drives the orb balloon
                     })
                     .catch(function () { /* keep the loading line — harmless */ });
             }
 
-            var BALLOON_QUIPS = [
-                'Jump back in',
-                'Your interviewer is skimming your résumé…',
-                '…checking out your LinkedIn',
-                '…scanning your portfolio',
-                '…pulling up your GitHub',
-                '…reading between the lines',
-                '…prepping a curveball'
-            ];
-            function showBalloon(n) {
+            // The orb balloon is a static personality CTA: returning users get a
+            // nudge to their dashboard; first-timers get lured into an interview.
+            function showPersonalityBalloon(sessions) {
                 var balloon = document.getElementById('heroBalloon');
                 var txt = document.getElementById('heroBalloonText');
                 if (!balloon || !txt) return;
-                balloon.classList.add('is-on');
-                if (n > 0) {  // free calls left: keep the conversion line static
-                    txt.textContent = n + (n === 1 ? ' free interview left — start now'
-                                                   : ' free interviews left — start now');
-                    return;
+                if (Number(sessions) > 0) {
+                    txt.textContent = 'Check out your personality →';
+                    balloon.setAttribute('href', '/dashboard');
+                } else {
+                    txt.textContent = 'Take an interview to unlock your personality →';
+                    balloon.setAttribute('href', '/start');
                 }
-                // Returning user: cycle playful, interviewer-POV quips.
-                txt.textContent = BALLOON_QUIPS[0];
-                var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-                if (reduce) return;
-                var i = 0;
-                setInterval(function () {
-                    i = (i + 1) % BALLOON_QUIPS.length;
-                    txt.style.transition = 'opacity .3s ease';
-                    txt.style.opacity = '0';
-                    setTimeout(function () { txt.textContent = BALLOON_QUIPS[i]; txt.style.opacity = '1'; }, 300);
-                }, 3400);
+                balloon.classList.add('is-on');
             }
 
-            // Step 1: auth status. Step 2 (only if authed): free-call balloon.
+            // Auth status → signed-in view; applySignedIn() loads the persona
+            // teaser, whose insights fetch also drives the orb personality balloon.
             if (window.fetch) {
                 fetch('/api/auth/status', { credentials: 'same-origin' })
                     .then(function (res) { return res.ok ? res.json() : null; })
                     .then(function (data) {
                         if (!data || !data.authenticated) return; // stay signed-out
                         applySignedIn(data.user || {});
-                        return fetch('/api/user/keys/status', { credentials: 'same-origin' })
-                            .then(function (r) { return r.ok ? r.json() : null; })
-                            .then(function (keys) {
-                                var n = keys && typeof keys.free_calls_remaining === 'number'
-                                    ? keys.free_calls_remaining : 0;
-                                showBalloon(n);
-                            })
-                            .catch(function () { showBalloon(0); });
                     })
                     .catch(function () { /* network/parse error — keep signed-out view */ });
             }

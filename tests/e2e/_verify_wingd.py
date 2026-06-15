@@ -19,6 +19,10 @@ PAGE = sys.argv[1] if len(sys.argv) > 1 else "feedback"
 
 
 def main():
+    try:  # keep prints alive when output contains arrows/quotes on a cp1252 console
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
     with sync_playwright() as p:
         b = p.chromium.launch()
         ctx = b.new_context(viewport={"width": 1180, "height": 1500})
@@ -95,6 +99,10 @@ def main():
                 "real_chips": cnt("#lpStatsReal .lp-chip"),
                 "real_reco": (pg.eval_on_selector("#lpStatsReal .lp-reco", "e=>e.textContent.trim()") if cnt("#lpStatsReal .lp-reco") else None),
                 "cta": cnt(".lp-persona-cta"),
+                "balloon_on": cnt(".lp-balloon.is-on"),
+                "balloon_text": (pg.eval_on_selector("#heroBalloonText", "e=>e.textContent.trim()") if cnt("#heroBalloonText") else None),
+                "balloon_href": (pg.eval_on_selector("#heroBalloon", "e=>e.getAttribute('href')") if cnt("#heroBalloon") else None),
+                "balloon_tag": (pg.eval_on_selector("#heroBalloon", "e=>e.tagName") if cnt("#heroBalloon") else None),
                 "sample_display": (pg.eval_on_selector(".lp-stats.signed-out-only", "e=>getComputedStyle(e).display") if cnt(".lp-stats.signed-out-only") else "n/a"),
             }
             try:
