@@ -298,8 +298,8 @@
            signed-in users who still have free calls. */
         .lp-balloon {
             position: absolute;
-            top: 4%;
-            right: 2%;
+            top: -12%;
+            right: 4%;
             z-index: 4;
             display: none;
             align-items: center;
@@ -824,8 +824,52 @@
         .lp-persona-empty p { color: var(--text-secondary); font-size: 0.95rem; line-height: 1.5; margin: 0 0 1.1rem; max-width: 22rem; margin-left: auto; margin-right: auto; }
 
         /* Coming-next: tailored interview-prep deep-research teaser */
-        .lp-topmark { position: fixed; top: 1rem; left: 1.35rem; z-index: 95; font-size: 1.08rem; font-weight: 800; letter-spacing: -0.02em; text-decoration: none; line-height: 1; }
-        @media (max-width: 560px) { .lp-topmark { font-size: 0.95rem; top: 0.85rem; left: 1rem; } }
+        .lp-topmark { position: fixed; top: 0.9rem; left: 50%; transform: translateX(-50%); z-index: 95; font-size: 1.12rem; font-weight: 800; letter-spacing: -0.02em; text-decoration: none; line-height: 1; }
+        @media (max-width: 560px) { .lp-topmark { font-size: 0.98rem; top: 0.75rem; } }
+
+        /* Option B — live verdict-meter in the 'Stop winging it' section */
+        .lp-vmeter { max-width: 30rem; margin: 1.7rem auto 0; }
+        .lp-vmeter__track { position: relative; display: flex; gap: 4px; padding-top: 14px; }
+        .vm-seg { flex: 1; height: 11px; border-radius: 4px; opacity: .5; }
+        .vm-seg.neg { background: #E07A3F; } .vm-seg.mid { background: #E0A100; } .vm-seg.pos { background: var(--accent-green-deep); }
+        .lp-vmeter__caret { position: absolute; top: 0; left: 64%; width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-top: 9px solid var(--text-primary); transform: translateX(-50%); }
+        .lp-vmeter__ends { display: flex; justify-content: space-between; margin-top: .7rem; font-size: .72rem; font-weight: 700; color: var(--text-light); text-transform: uppercase; letter-spacing: .04em; }
+        .lp-vmeter__verdict { color: var(--accent-green-deep); font-weight: 800; opacity: 0; }
+        .lp-positioning.is-in .lp-vmeter__caret { animation: lpCaretLand 2s cubic-bezier(.5,0,.5,1) .15s both; }
+        .lp-positioning.is-in .vm-seg.land { animation: lpSegGlow 2s ease .15s both; }
+        .lp-positioning.is-in .lp-vmeter__verdict { animation: lpVerdictIn 2s ease .15s both; }
+        @keyframes lpCaretLand { 0%{left:7%}20%{left:93%}42%{left:16%}64%{left:80%}82%{left:64%}100%{left:64%} }
+        @keyframes lpSegGlow { 0%,70%{opacity:.5;box-shadow:none}84%,100%{opacity:1;box-shadow:0 0 0 2px var(--bg-cream),0 0 0 3px var(--text-primary)} }
+        @keyframes lpVerdictIn { 0%,72%{opacity:0;transform:translateY(5px)}88%,100%{opacity:1;transform:none} }
+
+        /* Option D — cold→confident meter under the 'From cold to confident' header */
+        .lp-thermo { max-width: 20rem; margin: 1.3rem auto 0; }
+        .lp-thermo__track { position: relative; height: 14px; border-radius: 999px; background: var(--bg-soft); overflow: hidden; }
+        .lp-thermo__fill { position: absolute; inset: 0; border-radius: 999px; background: linear-gradient(90deg,#5B8DEF,var(--accent-cyan),var(--accent-green-deep)); transform-origin: left; transform: scaleX(.12); }
+        .lp-thermo__spark { position: absolute; top: -5px; left: 8%; width: 11px; height: 11px; border-radius: 50%; background: #fff; box-shadow: 0 0 12px var(--accent-green-deep); }
+        .lp-thermo__row { display: flex; justify-content: space-between; margin-top: .6rem; font-size: .72rem; font-weight: 700; }
+        .lp-thermo__row .cold { color: #5B8DEF; } .lp-thermo__row .conf { color: var(--accent-green-deep); opacity: .4; }
+        .lp-section-head.is-in .lp-thermo__fill { animation: lpWarm 2.2s ease .15s both; }
+        .lp-section-head.is-in .lp-thermo__spark { animation: lpSpark 2.2s ease .15s both; }
+        .lp-section-head.is-in .lp-thermo__row .conf { animation: lpConf 2.2s ease .15s both; }
+        @keyframes lpWarm { 0%{transform:scaleX(.12)}70%,100%{transform:scaleX(1)} }
+        @keyframes lpSpark { 0%{left:8%}70%,100%{left:96%} }
+        @keyframes lpConf { 0%,60%{opacity:.4}80%,100%{opacity:1;text-shadow:0 0 12px color-mix(in srgb,var(--accent-green-deep) 55%,transparent)} }
+
+        /* right-edge scroll nav (appears past the hero) */
+        .lp-scrollnav { position: fixed; right: 1rem; top: 50%; transform: translateY(-50%); z-index: 80; display: flex; flex-direction: column; align-items: center; gap: .5rem; opacity: 0; pointer-events: none; transition: opacity .4s ease; }
+        .lp-scrollnav.is-on { opacity: 1; pointer-events: auto; }
+        .lp-sn-dots { display: flex; flex-direction: column; gap: .55rem; padding: .35rem 0; }
+        .lp-sn-dot { width: 9px; height: 9px; border-radius: 50%; border: none; background: var(--bg-soft); cursor: pointer; padding: 0; transition: transform .25s ease, background .25s ease; }
+        .lp-sn-dot.on { background: var(--accent-green-deep); transform: scale(1.45); }
+        .lp-sn-top, .lp-sn-next { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--bg-soft); background: var(--bg-card); color: var(--text-secondary); cursor: pointer; font-size: .85rem; line-height: 1; display: grid; place-items: center; box-shadow: var(--shadow-soft); }
+        .lp-sn-top:hover, .lp-sn-next:hover { color: var(--text-primary); border-color: var(--text-light); }
+        @media (max-width: 720px) { .lp-scrollnav { display: none; } }
+
+        @media (prefers-reduced-motion: reduce) {
+            .lp-vmeter__caret, .vm-seg.land, .lp-vmeter__verdict, .lp-thermo__fill, .lp-thermo__spark, .lp-thermo__row .conf { animation: none !important; }
+            .lp-vmeter__verdict { opacity: 1; } .lp-vmeter__caret { left: 64%; } .lp-thermo__fill { transform: scaleX(1); } .lp-thermo__row .conf { opacity: 1; }
+        }
         .lp-prep { padding: clamp(2.5rem, 7vw, 5rem) 0; }
         .lp-prep__grid { display: grid; grid-template-columns: 1fr 1.1fr; gap: clamp(1.5rem, 4vw, 3.5rem); align-items: center; }
         .lp-coming-badge { position: relative; display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #6f5200; background: linear-gradient(100deg, #F6E27A, #E8B33A, #F6E27A); background-size: 200% 100%; padding: 0.36rem 0.82rem; border-radius: 999px; margin-bottom: 0.9rem; box-shadow: 0 6px 18px color-mix(in srgb, #E0A100 34%, transparent); animation: goldShimmer 3.5s linear infinite, comingPop 0.6s cubic-bezier(.34, 1.56, .64, 1) both; }
@@ -1131,6 +1175,12 @@
 
     <a class="lp-topmark" href="/" aria-label="MockFlow.ai — home"><span class="mf-shimmer-text">MockFlow.<span class="mf-shimmer-text__lock">ai</span></span></a>
 
+    <nav class="lp-scrollnav" id="lpScrollNav" aria-label="Section navigation">
+        <button class="lp-sn-top" id="lpSnTop" title="Back to top" aria-label="Back to top">↑</button>
+        <div class="lp-sn-dots" id="lpSnDots"></div>
+        <button class="lp-sn-next" id="lpSnNext" title="Next section" aria-label="Next section">↓</button>
+    </nav>
+
     <div class="lp-c">
         <a class="lp-skip" href="#main">Skip to content</a>
 
@@ -1215,6 +1265,14 @@
                 <div class="lp-wrap">
                     <p class="lp-positioning__head">Stop <span class="lp-hl">winging it</span>. Walk in already warmed up.</p>
                     <p class="lp-positioning__sub">Every answer rehearsed out loud, every line of code reviewed live, and a clear read on how you actually land — before it counts. Here's how it works.</p>
+                    <div class="lp-vmeter" aria-hidden="true">
+                        <div class="lp-vmeter__track">
+                            <span class="lp-vmeter__caret"></span>
+                            <span class="vm-seg neg"></span><span class="vm-seg neg"></span><span class="vm-seg neg"></span>
+                            <span class="vm-seg mid"></span><span class="vm-seg pos land"></span><span class="vm-seg pos"></span><span class="vm-seg pos"></span>
+                        </div>
+                        <div class="lp-vmeter__ends"><span>No-Hire</span><span class="lp-vmeter__verdict">Lean Hire</span><span>Strong Hire</span></div>
+                    </div>
                 </div>
             </section>
 
@@ -1225,6 +1283,10 @@
                         <span class="lp-kicker">Three steps, zero friction</span>
                         <h2 id="how-h">From cold to confident</h2>
                         <p>Pick what you want to practice, jump into a real conversation, and walk away knowing exactly where you stand.</p>
+                        <div class="lp-thermo" aria-hidden="true">
+                            <div class="lp-thermo__track"><div class="lp-thermo__fill"></div><span class="lp-thermo__spark"></span></div>
+                            <div class="lp-thermo__row"><span class="cold">cold start</span><span class="conf">walk in warm</span></div>
+                        </div>
                     </div>
                     <div class="lp-steps">
                         <article class="lp-step lp-reveal" style="--lp-delay:.05s">
@@ -1598,16 +1660,49 @@
             if (reduceMotion || !('IntersectionObserver' in window)) {
                 for (var k = 0; k < reveals.length; k++) reveals[k].classList.add('is-in');
             } else {
+                // Toggle (not add-once) so each section replays its reveal every
+                // time it re-enters the viewport — scroll up to rewind, down to replay.
                 var io = new IntersectionObserver(function (entries) {
                     entries.forEach(function (entry) {
-                        if (entry.isIntersecting) {
-                            entry.target.classList.add('is-in');
-                            io.unobserve(entry.target);
-                        }
+                        entry.target.classList.toggle('is-in', entry.isIntersecting);
                     });
                 }, { threshold: 0.16, rootMargin: '0px 0px -8% 0px' });
                 for (var j = 0; j < reveals.length; j++) io.observe(reveals[j]);
             }
+
+            // ---- Right-edge section nav (back / next / top), appears past the hero ----
+            (function () {
+                var nav = document.getElementById('lpScrollNav');
+                var dotsWrap = document.getElementById('lpSnDots');
+                if (!nav || !dotsWrap) return;
+                var sections = Array.prototype.slice.call(document.querySelectorAll('header.lp-hero, main > section'));
+                if (sections.length < 2 || !('IntersectionObserver' in window)) { nav.style.display = 'none'; return; }
+                var current = 0;
+                var dots = sections.map(function (sec, i) {
+                    var d = document.createElement('button');
+                    d.className = 'lp-sn-dot';
+                    d.setAttribute('aria-label', 'Go to section ' + (i + 1));
+                    d.addEventListener('click', function () { sec.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+                    dotsWrap.appendChild(d);
+                    return d;
+                });
+                var snIo = new IntersectionObserver(function (entries) {
+                    entries.forEach(function (e) {
+                        if (!e.isIntersecting) return;
+                        var idx = sections.indexOf(e.target);
+                        if (idx < 0) return;
+                        current = idx;
+                        for (var i = 0; i < dots.length; i++) dots[i].classList.toggle('on', i === idx);
+                        nav.classList.toggle('is-on', idx >= 1);
+                    });
+                }, { threshold: 0.5 });
+                sections.forEach(function (s) { snIo.observe(s); });
+                document.getElementById('lpSnTop').addEventListener('click', function () { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+                document.getElementById('lpSnNext').addEventListener('click', function () {
+                    var n = Math.min(current + 1, sections.length - 1);
+                    sections[n].scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+            })();
 
             // Illustrative sample radar for the signed-out personality preview
             // (the same component the real dashboard uses).
