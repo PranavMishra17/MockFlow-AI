@@ -824,10 +824,16 @@
         .lp-persona-empty p { color: var(--text-secondary); font-size: 0.95rem; line-height: 1.5; margin: 0 0 1.1rem; max-width: 22rem; margin-left: auto; margin-right: auto; }
 
         /* Coming-next: tailored interview-prep deep-research teaser */
+        .lp-topmark { position: fixed; top: 1rem; left: 1.35rem; z-index: 95; font-size: 1.08rem; font-weight: 800; letter-spacing: -0.02em; text-decoration: none; line-height: 1; }
+        @media (max-width: 560px) { .lp-topmark { font-size: 0.95rem; top: 0.85rem; left: 1rem; } }
         .lp-prep { padding: clamp(2.5rem, 7vw, 5rem) 0; }
         .lp-prep__grid { display: grid; grid-template-columns: 1fr 1.1fr; gap: clamp(1.5rem, 4vw, 3.5rem); align-items: center; }
-        .lp-coming-badge { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--accent-purple-deep); background: color-mix(in srgb, var(--accent-purple) 24%, transparent); padding: 0.32rem 0.72rem; border-radius: 999px; margin-bottom: 0.9rem; }
-        .lp-prep__card { background: var(--bg-card); border: 1px solid var(--bg-soft); border-radius: var(--radius-lg); padding: 1.4rem; box-shadow: var(--shadow-medium); display: grid; gap: 0.85rem; }
+        .lp-coming-badge { position: relative; display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #6f5200; background: linear-gradient(100deg, #F6E27A, #E8B33A, #F6E27A); background-size: 200% 100%; padding: 0.36rem 0.82rem; border-radius: 999px; margin-bottom: 0.9rem; box-shadow: 0 6px 18px color-mix(in srgb, #E0A100 34%, transparent); animation: goldShimmer 3.5s linear infinite, comingPop 0.6s cubic-bezier(.34, 1.56, .64, 1) both; }
+        @keyframes goldShimmer { to { background-position: 200% 0; } }
+        @keyframes comingPop { 0% { transform: scale(0.7); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        .lp-prep__card { position: relative; background: var(--bg-card); border: 1px solid color-mix(in srgb, #E0A100 26%, var(--bg-soft)); border-radius: var(--radius-lg); padding: 1.4rem; box-shadow: var(--shadow-medium), 0 0 44px color-mix(in srgb, #F6C453 20%, transparent); display: grid; gap: 0.85rem; }
+        .lp-prep__card::before { content: ''; position: absolute; inset: -1px; border-radius: var(--radius-lg); padding: 1px; background: linear-gradient(135deg, color-mix(in srgb, #E0A100 55%, transparent), transparent 38%, transparent 62%, color-mix(in srgb, #F6C453 55%, transparent)); -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0); -webkit-mask-composite: xor; mask-composite: exclude; pointer-events: none; }
+        @media (prefers-reduced-motion: reduce) { .lp-coming-badge { animation: none; } }
         .lp-prep__panel-label { font-size: 0.64rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-light); margin-bottom: 0.5rem; }
         .lp-prep__target { padding: 0.85rem 0.95rem; background: var(--bg-warm); border-radius: var(--radius-md); }
         .lp-prep__chips { display: flex; flex-wrap: wrap; gap: 0.4rem; }
@@ -1123,6 +1129,8 @@
     <div class="auth-header" id="authHeader"></div>
     <div class="action-buttons" id="actionButtons"></div>
 
+    <a class="lp-topmark" href="/" aria-label="MockFlow.ai — home"><span class="mf-shimmer-text">MockFlow.<span class="mf-shimmer-text__lock">ai</span></span></a>
+
     <div class="lp-c">
         <a class="lp-skip" href="#main">Skip to content</a>
 
@@ -1319,15 +1327,15 @@
                             <ul class="lp-checks">
                                 <li>
                                     <span class="lp-check-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
-                                    The same Monaco editor you already know
+                                    Runs against real test cases — pass/fail, not vibes
                                 </li>
                                 <li>
                                     <span class="lp-check-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
-                                    Hand-vetted problems, not random noise
+                                    Catches the edge case you missed, before you do
                                 </li>
                                 <li>
                                     <span class="lp-check-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
-                                    Reviewed by AI in real time, as you type
+                                    Scored on approach and correctness, like a real onsite
                                 </li>
                             </ul>
                         </div>
@@ -1691,17 +1699,36 @@
                     .catch(function () { /* keep the loading line — harmless */ });
             }
 
+            var BALLOON_QUIPS = [
+                'Jump back in',
+                'Your interviewer is skimming your résumé…',
+                '…checking out your LinkedIn',
+                '…scanning your portfolio',
+                '…pulling up your GitHub',
+                '…reading between the lines',
+                '…prepping a curveball'
+            ];
             function showBalloon(n) {
                 var balloon = document.getElementById('heroBalloon');
                 var txt = document.getElementById('heroBalloonText');
                 if (!balloon || !txt) return;
-                if (n > 0) {
+                balloon.classList.add('is-on');
+                if (n > 0) {  // free calls left: keep the conversion line static
                     txt.textContent = n + (n === 1 ? ' free interview left — start now'
                                                    : ' free interviews left — start now');
-                } else {
-                    txt.textContent = 'Jump back in';
+                    return;
                 }
-                balloon.classList.add('is-on');
+                // Returning user: cycle playful, interviewer-POV quips.
+                txt.textContent = BALLOON_QUIPS[0];
+                var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+                if (reduce) return;
+                var i = 0;
+                setInterval(function () {
+                    i = (i + 1) % BALLOON_QUIPS.length;
+                    txt.style.transition = 'opacity .3s ease';
+                    txt.style.opacity = '0';
+                    setTimeout(function () { txt.textContent = BALLOON_QUIPS[i]; txt.style.opacity = '1'; }, 300);
+                }, 3400);
             }
 
             // Step 1: auth status. Step 2 (only if authed): free-call balloon.
