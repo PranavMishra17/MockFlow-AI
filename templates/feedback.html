@@ -12,7 +12,7 @@
     <link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fraunces:opsz,wght@9..144,400..900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/static/styles.css">
     <link rel="stylesheet" href="/static/radar.css">
     <link rel="stylesheet" href="/static/feedback.css">
@@ -25,7 +25,8 @@
     <div class="feedback-page">
         <!-- Page Header -->
         <div class="page-header">
-            <h1>Interview Feedback</h1>
+            <span class="page-kicker">Candidate dossier</span>
+            <h1>The Hiring Verdict</h1>
         </div>
 
         <!-- Interview Info Bar -->
@@ -416,35 +417,81 @@
             loadVsLast();
         }
 
-        // Moment 1 — the verdict. No left-edge stripe; the spectrum is the read.
+        // Moment 1 — the verdict, rendered as a sealed dossier with an ink-stamp
+        // recommendation inside a concentric ring "target" (the orb motif). No
+        // left-edge stripe; tone is a soft wash + a colour-coded stamp.
         function renderHero(v) {
             var o = v.overall || {}, ctx = v.context || {}, tone = RECO_TONE[o.recommendation] || 'mid';
             var aim = ctx.seniority ? (LEVEL_LABEL[ctx.seniority] || ctx.seniority) : null;
+            var ringSigil = (window.MockFlowRadar && window.MockFlowRadar.sigil) ? window.MockFlowRadar.sigil(15) : '';
             var html = '<div class="verdict-hero verdict-' + tone + '">';
-            html += '<div class="verdict-eyebrow">Where you’d land today';
-            if (ctx.archetype && ctx.role) html += ' · ' + escapeHtml((ARCH_LABEL[ctx.archetype] || ctx.archetype) + ' ' + (ROLE_LABEL[ctx.role] || ctx.role));
-            if (aim) html += ' · ' + escapeHtml(aim) + ' bar';
-            html += '</div>';
-            html += '<div class="vh-top"><div class="vh-reco">' + escapeHtml(RECO_LABEL[o.recommendation] || 'On the Fence') + '</div>';
-            if (o.confidence) html += '<span class="vh-confidence vh-stagger">' + escapeHtml(o.confidence) + ' confidence</span>';
-            html += '</div>';
-            html += renderSpectrum(o.recommendation);
+
+            // the case-file eyebrow line
+            var deskParts = [];
+            if (ctx.archetype && ctx.role) deskParts.push((ARCH_LABEL[ctx.archetype] || ctx.archetype) + ' ' + (ROLE_LABEL[ctx.role] || ctx.role));
+            if (aim) deskParts.push(aim + ' bar');
+            html += '<div class="vh-filerow"><span class="verdict-eyebrow">' + ringSigil +
+                '<span>The hiring call</span></span>' +
+                (deskParts.length ? '<span class="vh-desk">' + escapeHtml(deskParts.join(' · ')) + '</span>' : '') + '</div>';
+
+            // the stamp: the recommendation word sits inside a ring target
+            html += '<div class="vh-stamprow">';
+            html += '<div class="vh-stamp" aria-hidden="true">' + renderRingTarget(o.recommendation) + '</div>';
+            html += '<div class="vh-call">';
+            html += '<div class="vh-kicker">Where you’d land today</div>';
+            html += '<div class="vh-reco">' + escapeHtml(RECO_LABEL[o.recommendation] || 'On the Fence') + '</div>';
             var lvl = LEVEL_LABEL[o.level_read];
-            if (lvl) html += '<div class="vh-level vh-stagger">performing at <strong>' + lvl + '</strong> level</div>';
+            if (lvl || o.confidence) {
+                html += '<div class="vh-callmeta vh-stagger">';
+                if (lvl) html += '<span class="vh-level">reads at <strong>' + lvl + '</strong> level</span>';
+                if (o.confidence) html += '<span class="vh-confidence">' + escapeHtml(o.confidence) + ' confidence</span>';
+                html += '</div>';
+            }
+            html += '</div></div>';
+
+            html += renderSpectrum(o.recommendation);
+
             if (o.headline) html += '<p class="vh-headline vh-stagger">' + escapeHtml(o.headline) + '</p>';
             if (v.gap_to_next && v.gap_to_next.signal) {
                 var g = v.gap_to_next, to = nextRecoLabel(o.recommendation);
                 html += '<div class="vh-gap vh-stagger">' +
+                    '<span class="vh-gap-tag">Tip the call</span>' +
+                    '<span class="vh-gap-body">' +
                     (to ? '<strong>One band from ' + escapeHtml(to) + ':</strong> ' : '<strong>To raise your verdict:</strong> ') +
-                    escapeHtml(g.signal) + ' — ' + escapeHtml(g.move || '') + '</div>';
+                    escapeHtml(g.signal) + ' — ' + escapeHtml(g.move || '') + '</span></div>';
             }
             var qs = ctx.track ? ('?track=' + encodeURIComponent(ctx.track)) : '';
             html += '<div class="vh-actions vh-stagger">' +
                 '<a class="vh-practice" href="/start' + qs + '">Practice this again →</a>' +
-                '<button type="button" class="vh-fullreport" id="fullReportBtn">See the full breakdown ↓</button>' +
+                '<button type="button" class="vh-fullreport" id="fullReportBtn">Read the evidence ↓</button>' +
                 '</div>';
             html += '</div>';
             return html;
+        }
+
+        // A concentric-ring target with the stamp dot landing at the verdict's
+        // position on the dial — pure SVG, echoes the brand orb.
+        function renderRingTarget(reco) {
+            var idx = RECO_ORDER.indexOf(reco);
+            if (idx < 0) idx = 3;
+            var tone = RECO_TONE[reco] || 'mid';
+            return '<svg class="ring-target ring-target-' + tone + '" viewBox="0 0 96 96" aria-hidden="true">' +
+                '<circle class="rt-ring rt-r3" cx="48" cy="48" r="44"/>' +
+                '<circle class="rt-ring rt-r2" cx="48" cy="48" r="31"/>' +
+                '<circle class="rt-ring rt-r1" cx="48" cy="48" r="18"/>' +
+                '<circle class="rt-core" cx="48" cy="48" r="9"/>' +
+                '<text class="rt-grade" x="48" y="48" text-anchor="middle" dominant-baseline="central">' +
+                escapeHtml(gradeFromReco(reco)) + '</text>' +
+                '</svg>';
+        }
+        // a single-glyph "grade" for the stamp center
+        function gradeFromReco(reco) {
+            var i = RECO_ORDER.indexOf(reco);
+            if (i >= 5) return 'A';
+            if (i === 4) return 'B';
+            if (i === 3) return 'C';
+            if (i === 2) return 'D';
+            return 'E';
         }
 
         // The 7-point scale; the caret flutters then lands (animateHero).
@@ -458,7 +505,7 @@
                 html += '<span class="spectrum-seg seg-' + RECO_TONE[RECO_ORDER[i]] + '" title="' + RECO_LABEL[RECO_ORDER[i]] + '"></span>';
             }
             html += '</div></div>';
-            html += '<div class="spectrum-ends"><span>Strong No-Hire</span><span>you are here</span><span>Strong Hire</span></div>';
+            html += '<div class="spectrum-ends"><span>Strong No-Hire</span><span>your read</span><span>Strong Hire</span></div>';
             html += '</div>';
             return html;
         }
@@ -504,6 +551,7 @@
                 '<section class="sc-shape">' +
                     '<div class="sc-title">Your shape this session</div>' +
                     '<div id="sessionRadarSlot" class="session-radar"></div>' +
+                    '<p class="radar-hint">Hover a point to see the band &amp; the gap</p>' +
                 '</section>' +
                 deliveryCard +
                 '</div>';
@@ -565,15 +613,19 @@
                 (note ? '<p class="gauge-note">' + note + '</p>' : '') + '</div>';
         }
 
-        // Moment 3 — signals, in your own words (revealed progressively on scroll).
+        // Moment 3 — signals as case-file evidence cards, in your own words.
         function renderSignals(v) {
             var sigs = v.signals || [];
-            var html = '<div class="signals-reveal-title">The call, signal by signal — backed by your own words</div>';
+            var ringSigil = (window.MockFlowRadar && window.MockFlowRadar.sigil) ? window.MockFlowRadar.sigil(13) : '';
+            var html = '<div class="signals-reveal-title">' + ringSigil + '<span>The evidence — signal by signal, in your own words</span></div>';
             sigs.forEach(function(s, i) {
                 var band = s.band || 'cannot_determine';
                 var star = band === 'outstanding' ? '<span class="signal-star" title="A great answer">★</span>' : '';
+                var exNo = ('0' + (i + 1)).slice(-2);
                 html += '<div class="signal-card sig-reveal signal-' + band + '" style="--i:' + i + '">';
-                html += '<div class="signal-head"><span class="signal-name">' + escapeHtml(s.name || '') + star + '</span>';
+                html += '<div class="signal-head"><span class="signal-id">' +
+                    '<span class="signal-exhibit">Exhibit ' + exNo + '</span>' +
+                    '<span class="signal-name">' + escapeHtml(s.name || '') + star + '</span></span>';
                 html += '<span class="signal-band-wrap"><span class="signal-band band-' + band + '">' + (BAND_LABEL[band] || band) + '</span>';
                 html += '<button type="button" class="signal-info-btn" aria-label="What does this band mean?" ' +
                         'onclick="this.closest(\'.signal-card\').classList.toggle(\'info-open\')">i</button></span></div>';
@@ -583,7 +635,9 @@
                 if (band === 'cannot_determine') {
                     html += '<p class="signal-na">Not enough in the transcript to judge this fairly.</p>';
                 } else if (s.evidence && s.evidence.length) {
-                    s.evidence.forEach(function(q) { html += '<blockquote class="signal-evidence">“' + escapeHtml(q) + '”</blockquote>'; });
+                    s.evidence.forEach(function(q) {
+                        html += '<blockquote class="signal-evidence"><span class="se-mark">what you said</span>“' + escapeHtml(q) + '”</blockquote>';
+                    });
                 }
                 if (s.to_raise && band !== 'outstanding' && band !== 'cannot_determine') {
                     html += '<p class="signal-raise"><span>To raise this</span> ' + escapeHtml(s.to_raise) + '</p>';
@@ -603,7 +657,8 @@
             var ga = v.great_answers || 0;
             var coding = renderCodingBlock(feedbackState.codingSubmissions);
             var gaLine = ga ? '<div class="ga-line"><span class="signal-star">★</span> <strong>' + ga + '</strong> great answer' + (ga > 1 ? 's' : '') + ' in this interview</div>' : '';
-            var html = '<div class="tf-divider">Your trajectory</div>';
+            var ringSigil = (window.MockFlowRadar && window.MockFlowRadar.sigil) ? window.MockFlowRadar.sigil(13) : '';
+            var html = '<div class="tf-divider">' + ringSigil + '<span>Your trajectory</span></div>';
             html += '<div id="vsLastSlot"></div>';
             html += gaLine;
             html += coding;
