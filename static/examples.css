@@ -62,9 +62,8 @@
 .ex-d-sub { font-size: 0.8rem; color: var(--text-secondary); }
 .ex-d-sub strong { color: var(--text-primary); }
 .ex-d-headline {
-    font-family: 'Fraunces', Georgia, serif; font-style: italic; font-size: 1rem; line-height: 1.45;
-    color: var(--text-primary); margin: 1rem 0 0; padding-left: 0.85rem;
-    border-left: 2px solid color-mix(in srgb, var(--accent-green-deep) 55%, transparent);
+    font-family: 'Fraunces', Georgia, serif; font-style: italic; font-size: 1.02rem; line-height: 1.45;
+    color: var(--text-primary); margin: 1rem 0 0;
 }
 .ex-d-evlist { margin-top: 1.1rem; display: flex; flex-direction: column; gap: 0.7rem; }
 .ex-d-ev { padding: 0.8rem 0.9rem; border-radius: 12px; background: var(--bg-warm); border: 1px solid var(--bg-soft); }
