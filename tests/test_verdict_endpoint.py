@@ -7,6 +7,8 @@ recommendation rolled up from bands, delivery injected).
 
 import json
 
+import pytest
+
 
 _RAW_VERDICT = json.dumps({
     "overall": {"confidence": "medium", "headline": "Solid problem-solving, ownership stayed vague"},
@@ -79,6 +81,72 @@ def test_verdict_endpoint_wires_evaluator(auth_client, app_module, db_client, mo
     assert _CREATE_KWARGS.get("temperature") == 0
     # and we persisted a row
     assert saved.get("track") == "coding"
+
+
+_BEHAVIORAL_RAW_VERDICT = json.dumps({
+    "overall": {"confidence": "medium", "headline": "Owns the story, thin on metrics"},
+    "signals": [
+        {"name": "Ownership", "reasoning": "first-person throughout", "band": "solid",
+         "scope_met": "new_grad", "evidence": ["I decided to rewrite the pipeline"], "to_raise": "name the metric moved"},
+        {"name": "Impact & metrics", "reasoning": "claimed impact, no quote", "band": "outstanding",
+         "scope_met": "mid", "evidence": [], "to_raise": "quantify the result"},
+    ],
+    "differentiators": ["genuine ownership language"],
+})
+
+
+@pytest.mark.parametrize("track,raw_verdict,role_signal", [
+    ("behavioral", _BEHAVIORAL_RAW_VERDICT, "Ownership"),
+    ("technical_voice", _RAW_VERDICT.replace("Coding", "Technical depth").replace("Problem-solving", "Technical depth"), "Technical depth"),
+    ("intro", _RAW_VERDICT.replace("Coding", "Self-awareness").replace("Problem-solving", "Motivation & authenticity"), "Motivation & authenticity"),
+])
+def test_verdict_endpoint_wires_non_coding_tracks(auth_client, app_module, db_client, monkeypatch, track, raw_verdict, role_signal):
+    """The evaluator pipeline (build_rubric -> judge -> finalize_verdict) must
+    work end-to-end for every track, not just coding (the only track the
+    original integration test covered). Also proves the coding-only
+    get_coding_submissions branch is skipped cleanly for non-coding tracks."""
+    import openai
+
+    class _FakeOpenAINonCoding:
+        def __init__(self, **kwargs):
+            self.chat = self
+
+        @property
+        def completions(self):
+            return self
+
+        def create(self, **kwargs):
+            msg = type("M", (), {"content": raw_verdict})
+            choice = type("C", (), {"message": msg})
+            return type("R", (), {"choices": [choice]})
+
+    ctx = (
+        "CANDIDATE: I decided to rewrite the pipeline",
+        "Name: Test", "Role: Software Engineer",
+        {"candidate": "Test", "track": track,
+         "job_role": "Software Engineer", "experience_level": "New Grad"},
+        [{"role": "user", "text": "I decided to rewrite the pipeline"}],
+        {"user": [{"text": "I decided to rewrite the pipeline", "timestamp": 0.0}]},
+        None,
+    )
+    monkeypatch.setattr(app_module, "_load_interview_context", lambda iid: ctx)
+    monkeypatch.setattr(app_module, "resolve_openai_key", lambda uid: "sk-test")
+    monkeypatch.setattr(openai, "OpenAI", _FakeOpenAINonCoding)
+    saved = {}
+    monkeypatch.setattr(db_client, "save_interview_scores", lambda **k: saved.update(k) or True)
+    # get_coding_submissions must NOT be called for non-coding tracks; make it
+    # raise so the test fails loudly if that branch is ever mistakenly entered.
+    monkeypatch.setattr(db_client, "get_coding_submissions",
+                        lambda iid: (_ for _ in ()).throw(AssertionError("should not be called for non-coding tracks")))
+
+    resp = auth_client.post("/api/feedback/verdict",
+                            json={"interview_id": "00000000-0000-0000-0000-000000000abd"})
+    assert resp.status_code == 200, resp.get_data(as_text=True)
+    verdict = resp.get_json()["verdict"]
+    assert verdict["context"]["track"] == track
+    named = {s["name"] for s in verdict["signals"]}
+    assert role_signal in named
+    assert saved.get("track") == track
 
 
 def test_verdict_persists_feedback_even_if_scores_fail(auth_client, app_module, db_client, monkeypatch):

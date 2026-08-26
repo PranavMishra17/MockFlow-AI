@@ -119,6 +119,25 @@ def test_technical_voice_ds_mle_has_stats():
     names = [s["name"].lower() for s in r["signals"]]
     assert any("stat" in n or "experiment" in n for n in names)
 
+def test_technical_voice_swe_is_technical_depth():
+    r = build_rubric("technical_voice", "swe", "new_grad")
+    names = [s["name"].lower() for s in r["signals"]]
+    assert any("technical depth" in n for n in names)
+    assert any("trade-off" in n for n in names)
+
+def test_intro_rubric_has_motivation_and_fit():
+    r = build_rubric("intro", "swe", "new_grad")
+    names = [s["name"].lower() for s in r["signals"]]
+    assert any("motivation" in n for n in names)
+    assert any("role / company fit" in n for n in names)
+    assert any("self-awareness" in n for n in names)
+
+def test_unknown_track_falls_back_to_intro_signals_not_crash():
+    # build_rubric must never raise on a bad/legacy track string — it should
+    # degrade to the intro signal set (same fallback _signals_for uses).
+    r = build_rubric("some_future_track", "swe", "new_grad")
+    assert r["signals"] == build_rubric("intro", "swe", "new_grad")["signals"]
+
 def test_rubric_signals_carry_indicators():
     r = build_rubric("coding", "swe", "mid")
     for s in r["signals"]:
@@ -127,6 +146,23 @@ def test_rubric_signals_carry_indicators():
 def test_rubric_includes_seniority_exemplar_and_scales():
     assert build_rubric("coding", "swe", "intern")["level_exemplar"] != \
            build_rubric("coding", "swe", "mid")["level_exemplar"]
+
+def test_coding_weighting_favors_problem_solving_and_coding():
+    r = build_rubric("coding", "swe", "new_grad")
+    w = r["weighting"]
+    assert w["Problem-solving"] == w["Coding"] == 2.0
+    assert w["Problem-solving"] > w["Communication & structure"]
+
+def test_coding_weighting_communication_gates_more_at_mid():
+    new_grad_w = build_rubric("coding", "swe", "new_grad")["weighting"]
+    mid_w = build_rubric("coding", "swe", "mid")["weighting"]
+    assert mid_w["Communication & structure"] > new_grad_w["Communication & structure"]
+
+def test_non_coding_tracks_have_no_special_weighting():
+    # Weighting is a coding-track-only adjustment; other tracks score signals
+    # evenly (rollup_recommendation treats an empty dict as unweighted).
+    assert build_rubric("behavioral", "swe", "mid")["weighting"] == {}
+    assert build_rubric("intro", "swe", "mid")["weighting"] == {}
 
 
 # ---- gap to next band: the constructive "to raise this" ----

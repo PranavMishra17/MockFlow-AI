@@ -1595,14 +1595,15 @@ def generate_verdict():
 def skip_stage():
     """
     Request to skip to a specific interview stage.
-    
+
     Expected JSON body:
         - room_name: The LiveKit room name
-        - target_stage: Stage to skip to (self_intro, past_experience, company_fit, closing)
-        
+        - target_stage: Stage to skip to (stage-value string; valid names vary
+          by track — see fsm.py's per-track stage enums)
+
     Note: This endpoint queues the skip request. The actual transition
     is handled by the agent via data channel messages.
-    
+
     Returns:
         - success: Whether skip was queued
         - target_stage: Confirmed target stage
@@ -1611,25 +1612,34 @@ def skip_stage():
         data = request.json or {}
         room_name = data.get('room_name')
         target_stage = data.get('target_stage')
-        
+
         if not room_name:
             return jsonify({
                 'error': 'Missing room_name',
                 'message': 'Please provide the room name'
             }), 400
-            
+
         if not target_stage:
             return jsonify({
                 'error': 'Missing target_stage',
                 'message': 'Please specify which stage to skip to'
             }), 400
-            
-        # Validate target stage
-        valid_stages = ['self_intro', 'past_experience', 'company_fit', 'closing']
+
+        # Validate target stage against the UNION of all tracks' stage names —
+        # this endpoint doesn't know which track the room is running, and each
+        # track has its own stage set (fsm.py). Hardcoding just the intro
+        # track's 4 names rejected every valid behavioral/technical/coding
+        # skip with a bogus 400. The real per-track validation still happens
+        # downstream in the agent via InterviewState.can_skip_to().
+        from fsm import BehavioralStage, CodingStage, InterviewStage, TechnicalVoiceStage
+        valid_stages = {
+            s.value for enum_cls in (InterviewStage, BehavioralStage, TechnicalVoiceStage, CodingStage)
+            for s in enum_cls
+        }
         if target_stage not in valid_stages:
             return jsonify({
                 'error': 'Invalid target_stage',
-                'message': f'Valid stages: {", ".join(valid_stages)}'
+                'message': f'Valid stages: {", ".join(sorted(valid_stages))}'
             }), 400
             
         logger.info(f"[API] Skip stage request: {room_name} -> {target_stage}")
