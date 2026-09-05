@@ -822,7 +822,6 @@ class InterviewAgent(Agent):
         """Evaluate submitted code using a separate LLM call. Call when code is submitted or timer expires."""
         try:
             from prompts import CODE_EVALUATOR
-            from openai import OpenAI
             import json as _json
 
             problems = getattr(ctx.userdata, 'generated_problems', [])
@@ -830,8 +829,6 @@ class InterviewAgent(Agent):
                 return "No problem found for this index. Proceed naturally."
 
             problem = problems[problem_index]
-
-            client = OpenAI(api_key=_openai_api_key())
 
             user_prompt = CODE_EVALUATOR.user_template.format(
                 problem_title=problem.get('title', 'Coding Problem'),
@@ -851,7 +848,11 @@ class InterviewAgent(Agent):
                 test_cases = problem.get('test_cases')
                 entrypoint = problem.get('entrypoint')
                 if PISTON_ENABLED and test_cases and entrypoint and language.lower().startswith('py'):
-                    run = run_via_piston(code, entrypoint, test_cases, language='python')
+                    # Off the event loop: run_via_piston is a blocking urlopen
+                    # with a 12s timeout, and this runs mid-interview. Left on
+                    # the loop it freezes STT, TTS and VAD for its duration.
+                    run = await asyncio.to_thread(
+                        run_via_piston, code, entrypoint, test_cases, language='python')
                     if run.get('error') is None:
                         objective_summary = f"{run['passed']}/{run['total']} hidden test cases passed"
                         user_prompt += (
@@ -863,7 +864,11 @@ class InterviewAgent(Agent):
             except Exception as exec_err:
                 logger.warning(f"[CODE] Objective execution error (continuing with LLM-only): {exec_err}")
 
-            response = client.chat.completions.create(
+            # AsyncOpenAI, not OpenAI: the blocking client stalled the audio
+            # pipeline for the length of the completion.
+            import openai as _openai
+            client = _openai.AsyncOpenAI(api_key=_openai_api_key())
+            response = await client.chat.completions.create(
                 model='gpt-4o-mini',
                 messages=[
                     {'role': 'system', 'content': CODE_EVALUATOR.system},
@@ -897,13 +902,16 @@ class InterviewAgent(Agent):
             except Exception as emit_err:
                 logger.warning(f"[AGENT] Failed to emit evaluation to UI: {emit_err}")
 
-            # Persist submission via HTTP (fire and forget)
+            # Persist the submission. Not "fire and forget" as the old comment
+            # claimed and not HTTP — it is a synchronous psycopg write, so it
+            # goes to a thread rather than blocking the interview on the pool.
             try:
                 from supabase_client import supabase_client
                 user_id = getattr(ctx.userdata, '_user_id', None)
                 interview_id = getattr(ctx.userdata, '_interview_id', None)
                 if user_id and interview_id:
-                    supabase_client.save_coding_submission(
+                    await asyncio.to_thread(
+                        supabase_client.save_coding_submission,
                         user_id=user_id,
                         interview_id=interview_id,
                         problem_title=problem.get('title', 'Coding Problem'),

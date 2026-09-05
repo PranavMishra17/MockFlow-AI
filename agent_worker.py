@@ -360,8 +360,11 @@ async def run_interview(room=None, http_session=None, job_metadata=None, env=Non
                     ended_by='natural_completion',
                 )
 
+                # psycopg is synchronous, so the save goes to a thread. On the
+                # loop it stalls the closing audio and the disconnect behind it.
                 from supabase_client import supabase_client
-                interview_id = supabase_client.save_interview(user_id, interview_data)
+                interview_id = await asyncio.to_thread(
+                    supabase_client.save_interview, user_id, interview_data)
 
                 if interview_id:
                     interview_state._interview_id = interview_id
@@ -444,7 +447,8 @@ async def run_interview(room=None, http_session=None, job_metadata=None, env=Non
                 )
 
                 from supabase_client import supabase_client
-                interview_id = supabase_client.save_interview(user_id, interview_data)
+                interview_id = await asyncio.to_thread(
+                    supabase_client.save_interview, user_id, interview_data)
 
                 if interview_id:
                     interview_state._interview_id = interview_id
