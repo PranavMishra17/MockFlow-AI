@@ -86,13 +86,27 @@ def _all_combinations():
         yield dict(zip(keys, combo))
 
 
+def _compare(attrs):
+    """Compare on the fields the legacy inline parser actually produced.
+
+    `normalize_config` also carries `preferred_language` and `problem_count`,
+    which the inline parser never emitted — the coding track read those straight
+    off attributes further down. Folding them in is the fix for a crash, not a
+    parsing change, so they are out of scope for this equivalence claim and are
+    covered by their own tests below.
+    """
+    old = legacy_parse(attrs)
+    new = am.normalize_config(attrs)
+    return old, {k: new[k] for k in old}
+
+
 def test_parsers_agree_across_the_whole_value_space():
     """Exhaustive sweep. Any mismatch means direct and dispatch would differ."""
     mismatches = []
     checked = 0
     for attrs in _all_combinations():
         checked += 1
-        old, new = legacy_parse(attrs), am.normalize_config(attrs)
+        old, new = _compare(attrs)
         if old != new:
             mismatches.append((attrs, {k: (old[k], new[k]) for k in old if old[k] != new[k]}))
 
@@ -104,7 +118,8 @@ def test_parsers_agree_across_the_whole_value_space():
 
 @pytest.mark.parametrize("empty", [{}, None])
 def test_parsers_agree_when_no_attributes_were_published(empty):
-    assert legacy_parse(empty) == am.normalize_config(empty)
+    old, new = _compare(empty)
+    assert old == new
 
 
 def test_the_sweep_would_actually_catch_a_regression():
@@ -116,3 +131,42 @@ def test_the_sweep_would_actually_catch_a_regression():
     padded = {'include_profile': ' true'}
     assert legacy_parse(padded)['include_profile'] is False
     assert am.normalize_config(padded)['include_profile'] is False
+
+
+# --------------------------------------------------------------------------
+# Coding-track settings (regression: these bypassed the shared parser)
+# --------------------------------------------------------------------------
+
+def test_coding_settings_default_when_no_attributes_were_published():
+    """Regression guard.
+
+    These were read as `attrs.get(...) if 'attrs' in dir() else <default>`.
+    Once `attrs` became unconditionally bound, that guard was always True and a
+    participant with no attributes raised AttributeError mid-interview, killing
+    the coding track. They now come from the parsed config, which always has
+    defaults.
+    """
+    cfg = am.normalize_config({})
+    assert cfg["preferred_language"] == "python"
+    assert int(cfg["problem_count"]) == 2
+
+    cfg_none = am.normalize_config(None)
+    assert cfg_none["preferred_language"] == "python"
+    assert int(cfg_none["problem_count"]) == 2
+
+
+def test_coding_settings_survive_the_metadata_transport():
+    """They were excluded from CONFIG_FIELDS, so a dispatch job dropped them."""
+    src = {"preferred_language": "java", "problem_count": "1"}
+    assert "preferred_language" in am.CONFIG_FIELDS
+    assert "problem_count" in am.CONFIG_FIELDS
+
+    round_tripped = am.decode_job_metadata(am.encode_job_metadata(am.normalize_config(src)))
+    assert round_tripped["preferred_language"] == "java"
+    assert int(round_tripped["problem_count"]) == 1
+
+
+def test_coding_settings_read_from_attributes_too():
+    cfg = am.merge_config(metadata=None, attributes={"preferred_language": "cpp", "problem_count": "1"})
+    assert cfg["preferred_language"] == "cpp"
+    assert int(cfg["problem_count"]) == 1

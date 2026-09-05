@@ -72,6 +72,10 @@ def test_empty_config_reproduces_the_legacy_defaults():
         "custom_questions": [],
         "topics": [],
         "custom_topics": [],
+        # Coding-track settings, folded in so both transports carry them and so
+        # "no attributes published" yields a default instead of AttributeError.
+        "preferred_language": "python",
+        "problem_count": "2",
     }
 
 

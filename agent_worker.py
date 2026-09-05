@@ -1179,9 +1179,15 @@ async def run_interview(room=None, http_session=None, job_metadata=None):
             interview_state.active_topic_count = len(interview_state.selected_topics)
         elif track_type == 'coding':
             interview_state = CodingInterviewState()
-            preferred_lang = attrs.get('preferred_language', 'python') if 'attrs' in dir() else 'python'
-            interview_state.preferred_language = preferred_lang
-            problem_count = int(attrs.get('problem_count', '2')) if 'attrs' in dir() else 2
+            # Read from the parsed config, not raw attributes: it applies the
+            # defaults for both transports and cannot be None. (The old
+            # `'attrs' in dir()` guard silently stopped working once attrs was
+            # always bound, turning "no attributes" into an AttributeError.)
+            interview_state.preferred_language = config['preferred_language']
+            try:
+                problem_count = int(config['problem_count'])
+            except (TypeError, ValueError):
+                problem_count = 2
             interview_state.active_problem_count = min(max(problem_count, 1), 2)
         else:
             interview_state = InterviewState()

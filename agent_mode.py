@@ -101,6 +101,12 @@ _SCALAR_DEFAULTS: dict[str, Any] = {
     "track": "intro",
     "framework": "amazon",
     "depth": "medium",
+    # Coding-track settings. These used to be read straight off participant
+    # attributes, which meant (a) a metadata-only dispatch silently lost them and
+    # (b) the read was guarded by `'attrs' in dir()`, a check that broke once
+    # `attrs` was always bound. Routing them through the shared parser fixes both.
+    "preferred_language": "python",
+    "problem_count": "2",
 }
 
 #: field -> separator used when the value arrives as a flat string (attributes
