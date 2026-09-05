@@ -30,7 +30,14 @@ These were found while scoping. Several contradict what the code's own comments
 and docs claim. **Verify each yourself before acting**; they are cited, not
 assumed.
 
-### 1.1 `avg_words_per_minute` is a fabricated constant — CONFIRMED, reproduced
+### 1.1 `avg_words_per_minute` was a fabricated constant — ✅ FIXED ON MAIN
+
+**Resolved 2026-09-05** by `fix/delivery-metrics-honest` (`bc1b34a`, `d106ea4`,
+merged `d11801f`). `speech_analytics` now carries `pace_available`, real per-turn
+`duration_s` captured in `agent_worker.py`, and `filler_per_100_words` in place of
+the per-minute rate that divided by the fake duration. **WS3 no longer has to fix
+this** — build on `pace_available`, do not re-derive it. The original finding is
+kept below because §5 and risk #2 still depend on understanding it.
 
 `speech_analytics.py:122-142` estimates each turn's duration as
 `words / 150 * 60`, then `_calc_wpm` divides words by that duration. Algebraically
@@ -52,8 +59,10 @@ NON-NEGOTIABLE that countable delivery metrics are computed in code and injected
 precisely so nothing invents them. Here the *code* invents this one, and the
 feedback UI presents it as measured. `filler_*` and `talk_ratio` are real.
 
-This is pre-existing, not caused by any current branch. **WS3 must fix it**,
-because WS3 is what finally makes real per-turn duration available.
+This was pre-existing, not caused by any current branch — and it is now fixed
+on `main` (see the banner above). What WS3 still owes is the *typed*-session case:
+a session with no voice turns must report `available: false, reason: "typed"`,
+never a zero.
 
 ### 1.2 `POST /api/skip-stage` does not skip anything
 
@@ -93,7 +102,15 @@ closing` for the behavioral track, though `can_skip_to` permits Q2/Q3.
 `generate_interview_questions` and `evaluate_code_submission` construct their own
 OpenAI client directly. Any harness must mock them or CI will burn API keys.
 
-### 1.8 Base-branch decision (blocking)
+### 1.8 Base-branch decision — ✅ RESOLVED, unblocked
+
+**`agent_mode.py` is on `main`** as of `86e4fb8`, landed with both bug fixes so no
+branch inherits the `" true"` divergence or the coding-track crash. It is pure and
+stdlib-only, nothing imports it yet, and `preferred_language`/`problem_count` are
+**already folded into `CONFIG_FIELDS`** — so WT0 no longer has to move them, only
+to make `agent_worker.py` actually call `normalize_config` instead of its inline
+parser. `feat/livekit-dispatch-mode` has `main` merged into it and stays separate.
+**Branch every worktree from `main`.** Original note below, for context.
 
 `agent_mode.py` — the single config parser both transports share — lives on
 `feat/livekit-dispatch-mode` (commit `f9f669f`), **not on `main`**. Every
@@ -127,8 +144,12 @@ function that cannot be imported without LiveKit env.
 > - A `Transport` protocol with `RoomTransport(room)` (publishes JSON as today)
 >   and `NullTransport()` (appends to a list for assertions).
 > - `build_interview_state(config) -> InterviewState` — the per-track state init.
->   Fold `preferred_language` and `problem_count` into `agent_mode`'s config
->   fields; they are currently read outside the shared parser.
+>   `agent_mode.CONFIG_FIELDS` already covers `preferred_language` and
+>   `problem_count` (§1.8), so do NOT re-fold them. What is missing is the call:
+>   `agent_worker.py` does not import `agent_mode` at all today and still parses
+>   participant attributes inline inside `run_interview`. Replace that inline
+>   parser with `agent_mode.normalize_config(...)` and keep
+>   `tests/test_config_equivalence.py` green — it is the proof the swap is inert.
 > - `build_session(state, agent, *, llm, stt=None, tts=None, vad=None, turn_detection=NOT_GIVEN)`.
 > - `attach_handlers(...)` — the transcript/caption event closures. **Apply the
 >   §1.4 fix**: record user turns from `conversation_item_added(role=="user")`;
@@ -341,8 +362,9 @@ streams and RPC. **Use `publishData` for everything in v1**; bumping the client 
 a separate ticket. Anything else fails silently at runtime.
 
 **Delivery metrics when the candidate types — this is the moat-critical part:**
-- Fix §1.1 first: capture **real** per-turn duration for voice turns and tag every
-  turn `mode: "voice"|"text"`.
+- §1.1 is **already fixed on `main`** — real per-turn `duration_s` and
+  `pace_available` exist. Do not redo it. What is left: tag every turn
+  `mode: "voice"|"text"` and thread that tag through.
 - Compute pace/fillers/monologue over **voice turns only**.
 - When a session is typed (or has too few voice turns), delivery returns
   `{"available": false, "reason": "typed"}` and the UI renders "not measured —
@@ -375,10 +397,12 @@ a separate ticket. Anything else fails silently at runtime.
 
 **Sibling worktrees** (parallel):
 - `feat/input-modes-metrics` — owns `speech_analytics.py`, `feedback_scoring.py`,
-  `insights.py` and the feedback delivery panel. **Fixes §1.1** (real WPM) and
-  the typed-session `available: false` path. Decide what to show for historical
-  rows that have no duration data — proposal: "pace not measured (older session)"
-  rather than keeping the fake 150.
+  `insights.py` and the feedback delivery panel. **Scope is now much smaller:**
+  §1.1 and the historical-rows display both shipped in `fix/delivery-metrics-honest`.
+  What remains is only the typed-session path — exclude `mode == "text"` turns from
+  pace, and return `available: false, reason: "typed"` when a session has too few
+  voice turns to measure. Read `tests/test_delivery_honesty.py` before touching
+  anything; it already pins the honesty rules.
 - `feat/input-modes-ui` — owns `templates/form.html` (mode picker),
   `templates/interview.html` (segmented control, composer, PTT, aria-live pill),
   and the participant attribute in `app.py`.
@@ -425,8 +449,9 @@ that dispatch is a dict registry rather than an if/elif chain.
 1. **Verdict scores what was never answered, or fabricates delivery.** Skips
    without the transcript marker + rule + scrub, or a typed session written with
    `filler_total: 0`, silently corrupts the moat. Gate merges on evaluator tests.
-2. **§1.1 fix changes historical comparability.** Old rows have no duration; treat
-   them as "not measured" rather than preserving the fake 150.
+2. ~~**§1.1 fix changes historical comparability.**~~ — discharged: shipped in
+   `fix/delivery-metrics-honest`, old rows read "not measured". Retained so the
+   next person understands why `pace_available` exists.
 3. **WT0 regressing the live flow** — it touches the only production path. Require
    a real interview per track before merge.
 4. ~~**Voice-skip false positives**~~ — not a v1 risk: voice skip is deferred
@@ -449,7 +474,7 @@ Locked with Pranav. **Do not reopen these in a worktree** — ask him instead.
 
 | # | Question | Resolution |
 |---|---|---|
-| 1 | Base branch (§1.8) | **Wait for the merge.** `feat/livekit-dispatch-mode` is being merged to `main` in a separate session. Every worktree, WT0 included, branches from `main` *after* that. Do not start until `agent_mode.py` exists on `main`. |
+| 1 | Base branch (§1.8) | **Done — branch from `main`.** `agent_mode.py` landed at `86e4fb8` with both bug fixes; `fix/delivery-metrics-honest` landed at `d11801f`. `feat/livekit-dispatch-mode` stays a separate branch with `main` merged into it. |
 | 2 | Skip budget | **Unlimited.** No cap, no per-stage counter, no nudge copy. The verdict absorbs it — signals with no evidence become `cannot_determine`, and the feedback surfaces "N questions skipped" beside confidence. A candidate who skips everything gets an honest empty verdict, not a blocked session. |
 | 3 | Voice-initiated skip | **Button only in v1.** WT2 ships no `skip_question` function_tool. Keeps the false-positive class (risk #4) out of production entirely. Voice skip is a follow-up ticket, unblocked once WT1 can test the negative case. |
 | 4 | `skipped_questions` storage | **New JSONB column + migration.** Folding it into an existing JSON blob makes "which questions do candidates skip?" unqueryable, and that is moat telemetry. |
