@@ -10,7 +10,7 @@ Stage Flow: WELCOME -> SELF_INTRO -> PAST_EXPERIENCE -> COMPANY_FIT -> CLOSING
 from enum import Enum
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional, List, Any
+from typing import Callable, Optional, List, Any
 import logging
 
 logger = logging.getLogger(__name__)
@@ -111,6 +111,14 @@ class InterviewState:
     # Skip stage queue - stages requested to skip to
     skip_stage_queue: List[InterviewStage] = field(default_factory=list)
 
+    # Clock. Every wall-clock read in this class goes through `self._now()` so a
+    # harness can drive stage timers deterministically instead of sleeping in
+    # real time. Production leaves it as `datetime.now`, which is what every
+    # call site used inline before.
+    _now: Callable[[], datetime] = field(
+        default=datetime.now, repr=False, compare=False
+    )
+
     def transition_to(self, new_stage: InterviewStage, forced: bool = False, skipped: bool = False) -> None:
         """
         Explicit state transition with timestamp tracking.
@@ -122,8 +130,8 @@ class InterviewState:
         """
         old_stage = self.stage
         self.stage = new_stage
-        self.stage_started_at = datetime.now()
-        self.last_state_verification = datetime.now()
+        self.stage_started_at = self._now()
+        self.last_state_verification = self._now()
         self.transition_count += 1
 
         # Clear pending transition
@@ -157,7 +165,7 @@ class InterviewState:
         Returns:
             Current stage
         """
-        self.last_state_verification = datetime.now()
+        self.last_state_verification = self._now()
         logger.debug(f"[FSM] State verified: {self.stage.value}")
         return self.stage
 
@@ -170,7 +178,7 @@ class InterviewState:
         """
         if not self.stage_started_at:
             return 0.0
-        return (datetime.now() - self.stage_started_at).total_seconds()
+        return (self._now() - self.stage_started_at).total_seconds()
 
     def time_since_verification(self) -> float:
         """
@@ -182,7 +190,7 @@ class InterviewState:
         """
         if not self.last_state_verification:
             return 0.0
-        return (datetime.now() - self.last_state_verification).total_seconds()
+        return (self._now() - self.last_state_verification).total_seconds()
 
     def get_next_stage(self) -> Optional[InterviewStage]:
         """
@@ -931,9 +939,15 @@ class CodingInterviewState(InterviewState):
     current_problem_index: int = 0
 
     # All code submissions: [{problem_index, attempt, code, language, evaluation, timestamp}]
+    # Appended ONLY by record_submission, so every entry has the same shape.
     submissions: List[dict] = field(default_factory=list)
 
     # Submission count per problem: {problem_index_str: attempt_count}
+    # Keys are strings, never ints. Two reasons, and they compound: a dict keyed
+    # by int silently becomes string-keyed the moment it round-trips through
+    # JSON, and a second writer using int keys makes an independent count the
+    # str-keyed reader cannot see. Go through record_submission and
+    # get_attempts_for_problem rather than touching this dict.
     submissions_per_problem: dict = field(default_factory=dict)
 
     # When each problem was started: {problem_index_str: ISO timestamp string}
@@ -1000,7 +1014,6 @@ class CodingInterviewState(InterviewState):
         Returns:
             Attempt number (1-based)
         """
-        from datetime import datetime
         key = str(problem_index)
         attempt = self.submissions_per_problem.get(key, 0) + 1
         self.submissions_per_problem[key] = attempt
@@ -1011,7 +1024,7 @@ class CodingInterviewState(InterviewState):
             'code': code,
             'language': language,
             'evaluation': evaluation,
-            'timestamp': datetime.now().isoformat(),
+            'timestamp': self._now().isoformat(),
         })
         logger.info(f"[FSM] Recorded submission for problem {problem_index}, attempt {attempt}")
         return attempt
