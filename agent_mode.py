@@ -8,21 +8,17 @@ MockFlow-AI historically used ONE transport: the web process spawns
 ("dispatch"), where a long-lived worker registers with a LiveKit project under an
 `agent_name` and the server hands it jobs.
 
-## Status on `main` (read this first)
+## Status on this branch (read this first)
 
-**Only the config layer is live here.** `normalize_config` / `merge_config` /
-`CONFIG_FIELDS` are the shared interview-config contract, and they are what other
-work should build on — they are exhaustively tested against the original inline
-parser in `tests/test_config_equivalence.py`.
+The config layer — `normalize_config` / `merge_config` / `CONFIG_FIELDS` — is the
+shared interview-config contract and is also on `main`, where it is the piece
+other work should build on.
 
-The dispatch transport itself (`worker_manager` routing, `agent_worker`'s
-dispatch entrypoint) is **NOT on main** — it lives on `feat/livekit-dispatch-mode`
-with open blocking defects, listed in that branch's `docs/AGENT_DISPATCH.md`. So
-`resolve_mode`, `can_dispatch`, `agent_name` and the job-metadata helpers below
-are present, tested, and currently **unused by any caller on main**. That is
-deliberate: it gives parallel work one agreed contract to import instead of each
-branch inventing its own parser. Do not infer from their presence that dispatch
-is available.
+The dispatch transport IS present on this branch (`worker_manager` routing,
+`agent_worker`'s dispatch entrypoint) but **must not be enabled**: see the open
+blocking defects at the top of `docs/AGENT_DISPATCH.md`. `AGENT_MODE` defaults to
+`direct`, and the direct path on this branch has not yet been run against a live
+LiveKit room.
 
 Everything here is pure: no LiveKit calls, no I/O, no environment reads beyond an
 explicitly passed mapping. The transports differ only in HOW the room and the
@@ -65,8 +61,37 @@ VALID_MODES = (MODE_DIRECT, MODE_DISPATCH)
 #: string must agree on both sides.
 DEFAULT_AGENT_NAME = "mockflow-interviewer"
 
-#: LiveKit credential fields that must match for a dispatch to be routable.
-_CREDENTIAL_FIELDS = ("livekit_url", "livekit_api_key", "livekit_api_secret")
+#: Every credential that must match for a dispatch to be both ROUTABLE and
+#: correctly BILLED. LiveKit decides routability; OpenAI/Deepgram decide whose
+#: account pays. Comparing only LiveKit would let a user whose project happens to
+#: equal the system one be dispatched onto a worker billing the owner's keys.
+_CREDENTIAL_FIELDS = (
+    "livekit_url", "livekit_api_key", "livekit_api_secret",
+    "openai_key", "deepgram_key",
+)
+
+#: env var per credential field. BOTH the web process and the resident worker
+#: read these, so "the interview's keys equal the worker's keys" is a claim that
+#: can actually be true — the guard previously compared SYSTEM_LIVEKIT_* against
+#: a worker registered with unrelated LIVEKIT_* vars.
+_SYSTEM_ENV = (
+    ("livekit_url", "SYSTEM_LIVEKIT_URL"),
+    ("livekit_api_key", "SYSTEM_LIVEKIT_API_KEY"),
+    ("livekit_api_secret", "SYSTEM_LIVEKIT_API_SECRET"),
+    ("openai_key", "SYSTEM_OPENAI_KEY"),
+    ("deepgram_key", "SYSTEM_DEEPGRAM_KEY"),
+)
+
+
+def system_keys_from_env(env: Optional[Mapping[str, str]]) -> Optional[dict]:
+    """The owner-funded key set, or None if any part is missing.
+
+    This is the single source of truth for the dispatch worker's identity: the
+    worker runs on these keys and the web process compares against these keys.
+    """
+    env = env or {}
+    keys = {field: env.get(var) for field, var in _SYSTEM_ENV}
+    return keys if all(keys.values()) else None
 
 
 # ---------------------------------------------------------------------------
@@ -248,7 +273,7 @@ def can_dispatch(
         return False
     if not _same_url(interview_keys["livekit_url"], worker_keys["livekit_url"]):
         return False
-    return (
-        interview_keys["livekit_api_key"] == worker_keys["livekit_api_key"]
-        and interview_keys["livekit_api_secret"] == worker_keys["livekit_api_secret"]
+    return all(
+        interview_keys[f] == worker_keys[f]
+        for f in _CREDENTIAL_FIELDS if f != "livekit_url"
     )

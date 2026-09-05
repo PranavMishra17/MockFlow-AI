@@ -24,6 +24,8 @@ from livekit.agents import (
 from livekit.rtc import Room, RoomOptions
 from livekit.plugins import openai, deepgram, silero
 
+import agent_mode
+
 from fsm import (InterviewState, InterviewStage, STAGE_TIME_LIMITS, STAGE_MIN_QUESTIONS,
                   BehavioralStage, BehavioralInterviewState,
                   TechnicalVoiceStage, TechnicalVoiceInterviewState,
@@ -61,16 +63,60 @@ LIVEKIT_API_KEY = os.getenv('LIVEKIT_API_KEY')
 LIVEKIT_API_SECRET = os.getenv('LIVEKIT_API_SECRET')
 INTERVIEW_ROOM_NAME = os.getenv('INTERVIEW_ROOM_NAME')
 
-if not all([OPENAI_API_KEY, DEEPGRAM_API_KEY, LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET, INTERVIEW_ROOM_NAME]):
-    logger.error("[CONFIG] Missing required API keys or room name in environment")
-    logger.error(f"[CONFIG] OpenAI: {bool(OPENAI_API_KEY)}, Deepgram: {bool(DEEPGRAM_API_KEY)}")
-    logger.error(f"[CONFIG] LiveKit URL: {bool(LIVEKIT_URL)}, Key: {bool(LIVEKIT_API_KEY)}, Secret: {bool(LIVEKIT_API_SECRET)}")
-    logger.error(f"[CONFIG] Room Name: {bool(INTERVIEW_ROOM_NAME)}")
+# Which transport this process serves. `direct` (default) = spawned per
+# interview by worker_manager for one named room. `dispatch` = a resident worker
+# registered with a LiveKit project, receiving rooms as jobs. See agent_mode.py.
+try:
+    AGENT_MODE = agent_mode.resolve_mode(os.environ)
+except ValueError as e:
+    logger.error(f"[CONFIG] {e}")
     sys.exit(1)
 
-logger.info("[CONFIG] API keys loaded from environment")
+# In DISPATCH mode this process is the resident worker, and it must run on the
+# SAME credentials the web process compares against (agent_mode.system_keys_from_env),
+# or the BYOK guard is comparing against something that isn't us. So SYSTEM_* wins
+# here, falling back to the per-interview vars for a hand-run worker.
+if AGENT_MODE == agent_mode.MODE_DISPATCH:
+    _sys = agent_mode.system_keys_from_env(os.environ)
+    if _sys:
+        LIVEKIT_URL = _sys['livekit_url']
+        LIVEKIT_API_KEY = _sys['livekit_api_key']
+        LIVEKIT_API_SECRET = _sys['livekit_api_secret']
+        OPENAI_API_KEY = _sys['openai_key']
+        DEEPGRAM_API_KEY = _sys['deepgram_key']
+        # The plugins read these from the environment, so export them too.
+        os.environ['OPENAI_API_KEY'] = OPENAI_API_KEY
+        os.environ['DEEPGRAM_API_KEY'] = DEEPGRAM_API_KEY
+        logger.info("[CONFIG] Dispatch worker using SYSTEM_* credentials")
+    else:
+        logger.warning(
+            "[CONFIG] AGENT_MODE=dispatch but the SYSTEM_* key set is incomplete; "
+            "falling back to LIVEKIT_*/OPENAI_API_KEY/DEEPGRAM_API_KEY. The web "
+            "process compares interviews against SYSTEM_*, so unless these are the "
+            "same credentials, no dispatch will ever be routed to this worker."
+        )
+
+# The room name is a per-job value in dispatch mode, so it is only required when
+# this process was spawned to serve one specific room.
+_REQUIRED = [OPENAI_API_KEY, DEEPGRAM_API_KEY, LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET]
+if AGENT_MODE == agent_mode.MODE_DIRECT:
+    _REQUIRED.append(INTERVIEW_ROOM_NAME)
+
+if not all(_REQUIRED):
+    logger.error("[CONFIG] Missing required API keys or room name in environment")
+    logger.error(f"[CONFIG] Mode: {AGENT_MODE}")
+    logger.error(f"[CONFIG] OpenAI: {bool(OPENAI_API_KEY)}, Deepgram: {bool(DEEPGRAM_API_KEY)}")
+    logger.error(f"[CONFIG] LiveKit URL: {bool(LIVEKIT_URL)}, Key: {bool(LIVEKIT_API_KEY)}, Secret: {bool(LIVEKIT_API_SECRET)}")
+    if AGENT_MODE == agent_mode.MODE_DIRECT:
+        logger.error(f"[CONFIG] Room Name: {bool(INTERVIEW_ROOM_NAME)}")
+    sys.exit(1)
+
+logger.info(f"[CONFIG] API keys loaded from environment (mode={AGENT_MODE})")
 logger.info(f"[CONFIG] LiveKit URL: {LIVEKIT_URL}")
-logger.info(f"[CONFIG] Target Room: {INTERVIEW_ROOM_NAME}")
+if AGENT_MODE == agent_mode.MODE_DIRECT:
+    logger.info(f"[CONFIG] Target Room: {INTERVIEW_ROOM_NAME}")
+else:
+    logger.info(f"[CONFIG] Dispatch agent_name: {agent_mode.agent_name(os.environ)}")
 
 
 class InterviewAgent(Agent):
@@ -1038,47 +1084,64 @@ async def _evaluate_code_async(
         logger.error(f"[CODE] _evaluate_code_async failed: {e}", exc_info=True)
 
 
-async def run_interview():
+async def run_interview(room=None, http_session=None, job_metadata=None):
     """
-    Main entry point - EXPLICITLY connects to specific room.
-    
-    This bypasses LiveKit's dispatch system entirely.
-    The worker connects directly to the room it was spawned for.
+    Run one interview. Shared by both transports.
+
+    direct mode (room=None, the default):
+        Mints an agent token for INTERVIEW_ROOM_NAME, creates its own Room, and
+        connects explicitly — bypassing LiveKit's dispatch system. This is the
+        original behavior and stays byte-for-byte the same.
+
+    dispatch mode (room supplied):
+        The caller is `dispatch_entrypoint`, which hands over the already-
+        connected `ctx.room` and lets the agents framework own the room and the
+        HTTP session. `job_metadata` carries the interview config that direct
+        mode reads off participant attributes.
+
+    The session body below is identical in both cases; only how we obtain the
+    room, the HTTP session, and the config differs.
     """
-    logger.info(f"[MAIN] Starting interview agent for room: {INTERVIEW_ROOM_NAME}")
-    
+    owns_room = room is None
+    owns_http_session = http_session is None and owns_room
+
     interview_complete = asyncio.Event()
     fallback_task = None
-    http_session = None
-    room = None
-    
+
     try:
-        # Create shared HTTP session for plugins
-        # This is required when not using cli.run_app()
-        http_session = aiohttp.ClientSession()
-        logger.info("[MAIN] Created shared HTTP session for plugins")
-        
-        # Generate agent token for this specific room
-        token = livekit_api.AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET)
-        token.with_identity("interview-agent")
-        token.with_name("AI Interviewer")
-        token.with_grants(livekit_api.VideoGrants(
-            room_join=True,
-            room=INTERVIEW_ROOM_NAME,
-            can_publish=True,
-            can_subscribe=True,
-        ))
-        agent_token = token.to_jwt()
-        
-        logger.info(f"[MAIN] Generated agent token for room: {INTERVIEW_ROOM_NAME}")
-        
-        # Create room and connect DIRECTLY (no dispatch)
-        room = Room()
-        
-        logger.info(f"[MAIN] Connecting to LiveKit: {LIVEKIT_URL}")
-        await room.connect(LIVEKIT_URL, agent_token)
-        logger.info(f"[MAIN] Connected to room: {room.name}")
-        
+        if owns_room:
+            logger.info(f"[MAIN] Starting interview agent for room: {INTERVIEW_ROOM_NAME}")
+
+            # Create shared HTTP session for plugins
+            # This is required when not using cli.run_app()
+            http_session = aiohttp.ClientSession()
+            logger.info("[MAIN] Created shared HTTP session for plugins")
+
+            # Generate agent token for this specific room
+            token = livekit_api.AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET)
+            token.with_identity("interview-agent")
+            token.with_name("AI Interviewer")
+            token.with_grants(livekit_api.VideoGrants(
+                room_join=True,
+                room=INTERVIEW_ROOM_NAME,
+                can_publish=True,
+                can_subscribe=True,
+            ))
+            agent_token = token.to_jwt()
+
+            logger.info(f"[MAIN] Generated agent token for room: {INTERVIEW_ROOM_NAME}")
+
+            # Create room and connect DIRECTLY (no dispatch)
+            room = Room()
+
+            logger.info(f"[MAIN] Connecting to LiveKit: {LIVEKIT_URL}")
+            await room.connect(LIVEKIT_URL, agent_token)
+            logger.info(f"[MAIN] Connected to room: {room.name}")
+        else:
+            # Dispatch: the framework connected the room before calling us, and
+            # supplies the plugin HTTP session via the job context.
+            logger.info(f"[MAIN] Dispatch job accepted for room: {room.name}")
+
         # Wait for participant to join
         logger.info("[MAIN] Waiting for participant to join...")
         
@@ -1086,51 +1149,41 @@ async def run_interview():
         room_parts = room.name.split('-')
         candidate_name = ' '.join(room_parts[1:-1]).title() if len(room_parts) > 2 else "Candidate"
         
-        role = 'this position'
-        level = 'mid'
-        email = ''
-        resume_text = None
-        job_description = None
-        include_profile = True
-        user_id = None
-        track_type = 'intro'
-        framework = 'amazon'
-        depth = 'medium'
-        custom_questions = []
-        topics = []
-        custom_topics = []
-        
         # Wait for remote participant with timeout
         wait_start = asyncio.get_event_loop().time()
         while not room.remote_participants:
             if asyncio.get_event_loop().time() - wait_start > 60:
                 logger.error("[MAIN] Timeout waiting for participant")
-                await room.disconnect()
+                if owns_room:
+                    await room.disconnect()
                 return
             await asyncio.sleep(0.5)
-        
-        # Get participant attributes
+
+        # Resolve interview config. Both transports funnel through the SAME
+        # parser (agent_mode.merge_config) so defaults and list-splitting cannot
+        # drift between direct and dispatch. Job metadata wins where present;
+        # participant attributes fill the rest.
         participant = list(room.remote_participants.values())[0]
-        if hasattr(participant, 'attributes') and participant.attributes:
-            attrs = participant.attributes
-            role = attrs.get('role', 'this position')
-            level = attrs.get('level', 'mid')
-            email = attrs.get('email', '')
-            resume_text = attrs.get('resume_text')
-            job_description = attrs.get('job_description')
-            include_profile = attrs.get('include_profile', 'true').lower() == 'true'
-            user_id = attrs.get('user_id')
-            track_type = attrs.get('track', 'intro')
-            framework = attrs.get('framework', 'amazon')
-            depth = attrs.get('depth', 'medium')
-            custom_questions_str = attrs.get('custom_questions', '')
-            custom_questions = [q.strip() for q in custom_questions_str.split('\n') if q.strip()] if custom_questions_str else []
-            topics_str = attrs.get('topics', '')
-            topics = [t.strip() for t in topics_str.split(',') if t.strip()] if topics_str else []
-            custom_topics_str = attrs.get('custom_topics', '')
-            custom_topics = [t.strip() for t in custom_topics_str.split(',') if t.strip()] if custom_topics_str else []
-            logger.info(f"[MAIN] Participant attributes - Role: {role}, Level: {level}, Resume: {bool(resume_text)}")
-            logger.info(f"[MAIN] Track: {track_type}, Framework: {framework}, Depth: {depth}, Topics: {topics}")
+        attrs = getattr(participant, 'attributes', None) or None
+        config = agent_mode.merge_config(metadata=job_metadata, attributes=attrs)
+
+        role = config['role']
+        level = config['level']
+        email = config['email']
+        resume_text = config['resume_text']
+        job_description = config['job_description']
+        include_profile = config['include_profile']
+        user_id = config['user_id']
+        track_type = config['track']
+        framework = config['framework']
+        depth = config['depth']
+        custom_questions = config['custom_questions']
+        topics = config['topics']
+        custom_topics = config['custom_topics']
+
+        logger.info(f"[MAIN] Config source: metadata={bool(job_metadata)}, attributes={bool(attrs)}")
+        logger.info(f"[MAIN] Role: {role}, Level: {level}, Resume: {bool(resume_text)}")
+        logger.info(f"[MAIN] Track: {track_type}, Framework: {framework}, Depth: {depth}, Topics: {topics}")
         
         candidate_info = {'name': candidate_name, 'role': role}
         logger.info(f"[MAIN] Candidate: {candidate_name} (Role: {role}, Level: {level})")
@@ -1150,9 +1203,15 @@ async def run_interview():
             interview_state.active_topic_count = len(interview_state.selected_topics)
         elif track_type == 'coding':
             interview_state = CodingInterviewState()
-            preferred_lang = attrs.get('preferred_language', 'python') if 'attrs' in dir() else 'python'
-            interview_state.preferred_language = preferred_lang
-            problem_count = int(attrs.get('problem_count', '2')) if 'attrs' in dir() else 2
+            # Read from the parsed config, not raw attributes: it applies the
+            # defaults for both transports and cannot be None. (The old
+            # `'attrs' in dir()` guard silently stopped working once attrs was
+            # always bound, turning "no attributes" into an AttributeError.)
+            interview_state.preferred_language = config['preferred_language']
+            try:
+                problem_count = int(config['problem_count'])
+            except (TypeError, ValueError):
+                problem_count = 2
             interview_state.active_problem_count = min(max(problem_count, 1), 2)
         else:
             interview_state = InterviewState()
@@ -1641,8 +1700,10 @@ async def run_interview():
         except asyncio.CancelledError:
             pass
 
-        # 3. Disconnect from room (this triggers session cleanup)
-        if room:
+        # 3. Disconnect from room (this triggers session cleanup).
+        # Only when we opened it: in dispatch mode the agents framework owns the
+        # room lifecycle and disconnecting here would race its own teardown.
+        if room and owns_room:
             try:
                 logger.info("[MAIN] Disconnecting from room...")
                 await room.disconnect()
@@ -1656,8 +1717,10 @@ async def run_interview():
         except asyncio.CancelledError:
             pass
 
-        # 5. Close HTTP session LAST (after all plugins are done)
-        if http_session:
+        # 5. Close HTTP session LAST (after all plugins are done) — but only if
+        # we created it. In dispatch mode it belongs to the job context, and
+        # closing it would break the next job on this resident worker.
+        if http_session and owns_http_session:
             try:
                 logger.info("[MAIN] Closing HTTP session...")
                 await http_session.close()
@@ -1665,8 +1728,15 @@ async def run_interview():
             except Exception as e:
                 logger.warning(f"[MAIN] HTTP session close error (non-fatal): {e}")
 
-        logger.info("[MAIN] Cleanup complete, exiting")
-        sys.exit(0)
+        logger.info("[MAIN] Cleanup complete")
+
+        # A direct-mode process exists to serve exactly one interview, and exits
+        # so worker_manager can reap it. A dispatch worker is RESIDENT and must
+        # survive to accept the next job — exiting here would take the whole
+        # agent pool down after a single interview.
+        if owns_room:
+            logger.info("[MAIN] Exiting worker process")
+            sys.exit(0)
 
 
 async def stage_fallback_timer(
@@ -1799,6 +1869,57 @@ async def stage_fallback_timer(
         logger.error(f"[TIMER] Error: {e}", exc_info=True)
 
 
+async def dispatch_entrypoint(ctx):
+    """
+    LiveKit dispatch entrypoint. Called by the agents framework once per job.
+
+    `ctx.room` arrives connected, `ctx.job.metadata` carries the interview config
+    that direct mode reads off participant attributes, and the framework owns
+    both the room lifecycle and the plugin HTTP session — so we hand all three to
+    the shared `run_interview` body and let it skip the parts it does not own.
+    """
+    await ctx.connect()
+
+    metadata = agent_mode.decode_job_metadata(getattr(ctx.job, 'metadata', None))
+    logger.info(
+        f"[DISPATCH] Job {getattr(ctx.job, 'id', '?')} for room {ctx.room.name} "
+        f"(metadata keys: {sorted(metadata) or 'none'})"
+    )
+
+    # http_session stays None: under cli.run_app the plugins resolve their
+    # session from the job context, which is why the direct-mode comment above
+    # says one is only needed when running OUTSIDE cli.run_app.
+    try:
+        await run_interview(room=ctx.room, http_session=None, job_metadata=metadata)
+    finally:
+        # End the job explicitly. The framework waits on a shutdown future that is
+        # only resolved by a room disconnect or this call — and the ownership
+        # gating in run_interview deliberately skips room.disconnect() here. The
+        # web client shows a modal at interview_ending but does not disconnect, so
+        # without this the agent squats in the room with STT/TTS/VAD resident
+        # after the interview has ended.
+        try:
+            ctx.shutdown(reason="interview complete")
+        except Exception as e:
+            logger.warning(f"[DISPATCH] ctx.shutdown failed (non-fatal): {e}")
+
+
+def _run_dispatch_worker():
+    """Run as a resident worker registered with a LiveKit project."""
+    from livekit.agents import WorkerOptions, cli
+
+    name = agent_mode.agent_name(os.environ)
+    logger.info(f"[WORKER] Starting agent worker - DISPATCH MODE (agent_name={name})")
+
+    # agent_name set => EXPLICIT dispatch: LiveKit only routes jobs created via
+    # AgentDispatchService for this name, never every room in the project. That
+    # matters because the web app also creates rooms it drives directly.
+    cli.run_app(WorkerOptions(entrypoint_fnc=dispatch_entrypoint, agent_name=name))
+
+
 if __name__ == "__main__":
-    logger.info("[WORKER] Starting agent worker - DIRECT ROOM CONNECTION MODE")
-    asyncio.run(run_interview())
+    if AGENT_MODE == agent_mode.MODE_DISPATCH:
+        _run_dispatch_worker()
+    else:
+        logger.info("[WORKER] Starting agent worker - DIRECT ROOM CONNECTION MODE")
+        asyncio.run(run_interview())

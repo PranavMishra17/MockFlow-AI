@@ -1670,7 +1670,9 @@ def skip_stage():
 def health_check():
     """Health check: verify the Neon database is reachable, report worker load."""
     db_ok = supabase_client.ping()
-    active_worker_count = len(worker_manager.active_workers)
+    # Counts both transports: locally spawned subprocesses and interviews handed
+    # to a resident worker via LiveKit dispatch.
+    active_worker_count = worker_manager.total_active_count()
     max_workers = worker_manager.max_workers
 
     if not db_ok:

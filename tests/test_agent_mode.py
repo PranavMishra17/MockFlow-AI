@@ -222,6 +222,10 @@ SYS = {
     "livekit_url": "wss://sys.livekit.cloud",
     "livekit_api_key": "APIsys",
     "livekit_api_secret": "secretsys",
+    # OpenAI/Deepgram are compared too: they decide whose account the interview
+    # is billed to, not just whether the job can be routed.
+    "openai_key": "sk-sys",
+    "deepgram_key": "dg-sys",
 }
 
 
@@ -271,3 +275,70 @@ def test_whitespace_padded_include_profile_matches_legacy_exactly(raw):
 
 def test_include_profile_whitespace_is_false_not_true():
     assert am.normalize_config({"include_profile": " true"})["include_profile"] is False
+
+
+# --------------------------------------------------------------------------
+# can_dispatch must cover ALL keys, not just LiveKit
+# --------------------------------------------------------------------------
+
+FULL_SYS = dict(
+    livekit_url="wss://sys.livekit.cloud",
+    livekit_api_key="APIsys",
+    livekit_api_secret="secretsys",
+    openai_key="sk-sys",
+    deepgram_key="dg-sys",
+)
+
+
+def test_dispatch_allowed_when_every_key_matches_the_worker():
+    assert am.can_dispatch(FULL_SYS, FULL_SYS) is True
+
+
+@pytest.mark.parametrize("field", ["openai_key", "deepgram_key"])
+def test_dispatch_refused_when_a_non_livekit_key_differs(field):
+    """The resident worker bills to ITS OWN OpenAI/Deepgram keys.
+
+    If only LiveKit were compared, a user whose LiveKit project happens to match
+    the system one would be dispatched and their interview silently billed to the
+    owner's OpenAI/Deepgram accounts.
+    """
+    byok = dict(FULL_SYS, **{field: "sk-someone-elses"})
+    assert am.can_dispatch(byok, FULL_SYS) is False
+
+
+def test_dispatch_refused_when_the_interview_omits_a_comparable_key():
+    assert am.can_dispatch({k: v for k, v in FULL_SYS.items() if k != "openai_key"}, FULL_SYS) is False
+
+
+# --------------------------------------------------------------------------
+# One source of truth for the resident worker's credentials
+# --------------------------------------------------------------------------
+
+SYS_ENV = {
+    "SYSTEM_LIVEKIT_URL": "wss://sys.livekit.cloud",
+    "SYSTEM_LIVEKIT_API_KEY": "APIsys",
+    "SYSTEM_LIVEKIT_API_SECRET": "secretsys",
+    "SYSTEM_OPENAI_KEY": "sk-sys",
+    "SYSTEM_DEEPGRAM_KEY": "dg-sys",
+}
+
+
+def test_system_keys_from_env_reads_the_full_set():
+    assert am.system_keys_from_env(SYS_ENV) == FULL_SYS
+
+
+def test_system_keys_from_env_is_none_when_incomplete():
+    for missing in SYS_ENV:
+        partial = {k: v for k, v in SYS_ENV.items() if k != missing}
+        assert am.system_keys_from_env(partial) is None, missing
+
+
+def test_system_keys_from_env_is_none_when_empty():
+    assert am.system_keys_from_env({}) is None
+
+
+def test_worker_and_web_agree_because_both_read_the_same_vars():
+    """The guard compared SYSTEM_LIVEKIT_* on the web box against a worker that
+    registered with unrelated LIVEKIT_* vars. Both sides now read SYSTEM_*, so a
+    matching comparison actually implies a routable dispatch."""
+    assert am.can_dispatch(am.system_keys_from_env(SYS_ENV), am.system_keys_from_env(SYS_ENV)) is True
