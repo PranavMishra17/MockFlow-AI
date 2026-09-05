@@ -2,7 +2,8 @@
 
 Pick up here. Three workstreams, designed to run in parallel git worktrees after
 one shared prerequisite lands. Each section marked **PROMPT** is paste-able as an
-agent's opening instruction.
+agent's opening instruction. **§8 records decisions that are already locked —
+read it before running any PROMPT; several prompts below were narrowed by it.**
 
 Written 2026-09-05. Architecture proposal by a Fable review agent; the corrections
 in §1 were verified against the code and one was reproduced empirically.
@@ -183,6 +184,7 @@ livekit's console mode (interactive-only, not scriptable).
    transport events, and the shape of `collect_interview_data`.
 2. **Live tier** (`@pytest.mark.live`, skipped without `OPENAI_API_KEY`): real
    model, assert structure + `judge()` for wording. Expect flake; allow retries.
+   **Run manually before a merge — not nightly in CI (§8.8).**
 3. **Interactive `play`** — a human or an AI agent types as the candidate.
 
 **Explicitly NOT covered** (document this so nobody retires the e2e suite): VAD /
@@ -261,7 +263,8 @@ so skipping can never trap a candidate in a stage whose minimum becomes
 unreachable — but the record marks it unanswered.
 
 **Verdict protection (moat-critical).** A skipped question must never be scored:
-1. Persist `skipped_questions` in `collect_interview_data` and the DB row.
+1. Persist `skipped_questions` in `collect_interview_data` and the DB row —
+   **a new JSONB column + migration** (§8.4), not folded into an existing blob.
 2. Render it in the judge's transcript as `CANDIDATE: [SKIPPED — no answer given]`
    and pass a `<SKIPPED_QUESTIONS>` block to the evaluator.
 3. Add an evaluator rule: *a skipped question is not evidence; never quote the
@@ -284,18 +287,16 @@ unreachable — but the record marks it unanswered.
 > 1. `fsm.py`: add `skipped_questions`, `skip_current_question(source)`,
 >    `current_question_text()`, and make `transition_to(skipped=True)` record the
 >    in-flight question. Base class, so all tracks inherit.
-> 2. `interview_runtime.py`: add ONLY `COMMANDS["skip_question"]` plus a
->    `skip_question` function_tool, and unify the coding data-channel skip to go
->    through `transition_to` (§1.3). Touch no other command — other worktrees own
->    those files' other lines.
+> 2. `interview_runtime.py`: add ONLY `COMMANDS["skip_question"]`, and unify the
+>    coding data-channel skip to go through `transition_to` (§1.3). Touch no other
+>    command — other worktrees own those files' other lines.
 > 3. `prompts.py`: add `SKIP_QUESTION_ACKS` (deterministic ack text per track) and
 >    the tool description. After a skip: say the ack, then immediately generate the
 >    next question — do not leave the model to infer what happened.
-> 4. Both initiations, one handler: button → data-channel `{"type":"skip_question"}`;
->    voice ("can we skip this?") → the function_tool. Guard the tool description
->    narrowly — "only when the candidate explicitly asks to skip the current
->    question, never when they say they'd skip a step inside an answer" — and add a
->    harness scenario for exactly that false positive.
+> 4. **Button only in v1 (§8.3).** The single initiation is the data-channel
+>    `{"type":"skip_question"}`. Do NOT add a `skip_question` function_tool — voice
+>    skip is a deliberate follow-up ticket. Still give `skip_current_question` its
+>    `source` argument so voice drops in later without touching the FSM.
 > 5. Emit `{"type":"question_skipped","stage","outcome","skipped_count"}`.
 >
 > Do NOT change the evaluator or the UI — those are separate worktrees consuming
@@ -428,11 +429,13 @@ that dispatch is a dict registry rather than an if/elif chain.
    them as "not measured" rather than preserving the fake 150.
 3. **WT0 regressing the live flow** — it touches the only production path. Require
    a real interview per track before merge.
-4. **Voice-skip false positives** ("I'd skip caching there"). Narrow tool
-   description; button stays primary; live-tier scenario for the negative case.
+4. ~~**Voice-skip false positives**~~ — not a v1 risk: voice skip is deferred
+   (§8.3), so there is no tool for the model to misfire on. Re-read this before
+   adding the function_tool later; the negative case ("I'd skip caching there")
+   needs a live-tier scenario the day it ships.
 5. **Cassette drift** — prompt edits change real-LLM behavior while cassettes keep
    passing. Cassettes are regression pins, not proof of prompt quality; run the
-   live tier nightly.
+   live tier by hand before merging any prompt change (§8.8).
 6. **`livekit-client@2.5.0`** — text streams / RPC will fail silently. Stay on
    `publishData`.
 7. **Coding-skip unification changes coding-track behavior** — cover with a
@@ -440,18 +443,17 @@ that dispatch is a dict registry rather than an if/elif chain.
 
 ---
 
-## 8. Decisions needed before work starts
+## 8. Decisions — RESOLVED 2026-09-05
 
-1. **Base branch** — merge `feat/livekit-dispatch-mode` to `main`, or branch all
-   worktrees from it? (§1.8; an adversarial review of it is in flight.)
-2. **Skip budget** — unlimited (verdict absorbs via `cannot_determine`), or a cap
-   per stage with a UI nudge?
-3. **Voice-initiated skip in v1**, or button-only first (safer)?
-4. **`skipped_questions` storage** — new JSONB column + migration, or fold into an
-   existing JSON column?
-5. **Text-mode stage-timer multiplier** — 1.5× proposed.
-6. **Historical delivery display** once WPM becomes real — hide, or keep the old
-   constant?
-7. **`/api/skip-stage`** — delete the no-op endpoint, or keep it as a validation
-   stub? (§1.2)
-8. **Live-tier budget** — which key funds nightly live scenarios?
+Locked with Pranav. **Do not reopen these in a worktree** — ask him instead.
+
+| # | Question | Resolution |
+|---|---|---|
+| 1 | Base branch (§1.8) | **Wait for the merge.** `feat/livekit-dispatch-mode` is being merged to `main` in a separate session. Every worktree, WT0 included, branches from `main` *after* that. Do not start until `agent_mode.py` exists on `main`. |
+| 2 | Skip budget | **Unlimited.** No cap, no per-stage counter, no nudge copy. The verdict absorbs it — signals with no evidence become `cannot_determine`, and the feedback surfaces "N questions skipped" beside confidence. A candidate who skips everything gets an honest empty verdict, not a blocked session. |
+| 3 | Voice-initiated skip | **Button only in v1.** WT2 ships no `skip_question` function_tool. Keeps the false-positive class (risk #4) out of production entirely. Voice skip is a follow-up ticket, unblocked once WT1 can test the negative case. |
+| 4 | `skipped_questions` storage | **New JSONB column + migration.** Folding it into an existing JSON blob makes "which questions do candidates skip?" unqueryable, and that is moat telemetry. |
+| 5 | Text-mode stage timer | **1.5×** the voice timer (WCAG 2.2.1 — typing is slower than speaking). |
+| 6 | Historical delivery display | **"pace not measured (older session)".** Rows written before the §1.1 fix have no real duration. Never preserve the fake 150 — that is the fabrication §1.1 exists to remove. |
+| 7 | `/api/skip-stage` (§1.2) | **Delete it**, after grepping for callers. A no-op that returns `success: true` is worse than a 404 — it will be trusted by the next person who finds it. |
+| 8 | Live-tier budget | **No nightly live tier.** CI stays hermetic and key-free. `@pytest.mark.live` runs by hand before a merge, on whatever key is in the local env. Revisit if cassette drift (risk #5) actually bites. |
