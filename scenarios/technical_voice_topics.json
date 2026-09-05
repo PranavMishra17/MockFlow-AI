@@ -1,0 +1,18 @@
+{
+  "name": "technical_voice — topics drive the stages",
+  "candidate_name": "Barbara Liskov",
+  "config": {
+    "track": "technical_voice",
+    "role": "Backend Engineer",
+    "level": "senior",
+    "topics": "caching,databases",
+    "user_id": "harness-user"
+  },
+  "script": [
+    {"say": "Hi, I'm Barbara. Ready."},
+    {"say": "Caching: I'd start with a read-through cache and worry about invalidation as the hard part."},
+    {"expect": {"user_turns": 2}},
+    {"clock": "+700"},
+    {"say": "For databases, I'd reach for Postgres until the write volume forces something else."}
+  ]
+}

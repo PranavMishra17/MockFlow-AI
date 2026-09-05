@@ -1,0 +1,22 @@
+{
+  "name": "behavioral — generated questions, then skip a stage",
+  "candidate_name": "Grace Hopper",
+  "config": {
+    "track": "behavioral",
+    "role": "Staff Engineer",
+    "level": "senior",
+    "framework": "amazon",
+    "depth": "medium",
+    "user_id": "harness-user"
+  },
+  "script": [
+    {"say": "Hi, I'm Grace. Ready when you are."},
+    {"expect": {"tool_called": "generate_interview_questions"}},
+    {"say": "Sure. At my last role I owned the deployment pipeline for a team of forty engineers."},
+    {"command": {"type": "skip_stage", "target_stage": "behavioral_q2"}},
+    {"expect": {"stage": "behavioral_q2"}},
+    {"expect": {"emitted": "stage_change"}},
+    {"say": "A time I disagreed: our director wanted a rewrite. I pushed back with a six week spike instead, and the data killed the rewrite."},
+    {"expect": {"user_turns": 3}}
+  ]
+}
