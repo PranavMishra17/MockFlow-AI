@@ -147,9 +147,67 @@ process's, and that both point at the same LiveKit project.
 
 ---
 
-## Status
+## Status — DO NOT ENABLE `AGENT_MODE=dispatch` YET
 
 Implemented and unit-tested; **not yet exercised against a live LiveKit
-project.** The dispatch path's LiveKit calls are stubbed in tests, so
-`create_dispatch` wiring, job routing, and the resident worker's job lifecycle
-still need a real end-to-end run before this is trusted in production.
+project.** An adversarial review found blocking defects. Two are fixed; the rest
+are open and are the reason dispatch must stay off.
+
+### Fixed
+- **BYOK fallback died instantly.** The fallback subprocess inherits the web
+  process's env, so under `AGENT_MODE=dispatch` it inherited dispatch mode, ran
+  `cli.run_app()` with no subcommand, and exited 2 (`Missing command.`) — every
+  BYOK user would have got a 500. `spawn_worker` now forces `AGENT_MODE=direct`
+  for the child, with a test that asserts the env handed to `Popen`.
+- **Config-parse divergence.** `_as_bool` stripped whitespace; the legacy parser
+  did not, so `" true"` flipped from False to True. Strip removed; the
+  differential sweep now lives in `tests/test_config_equivalence.py` (it was
+  previously an uncommitted script whose sample values were all clean, which is
+  why it missed this).
+
+### Open — blocking
+
+1. **Dispatch capacity leaks monotonically.** `active_dispatches` is only ever
+   cleared by `terminate_worker`, whose sole caller is `cleanup_all_workers` via
+   `atexit`. Nothing in the request path releases a finished dispatched room, and
+   unlike subprocesses there is no `poll()`-based reaper. After
+   `MAX_CONCURRENT_WORKERS` dispatched interviews the web process refuses **all**
+   interviews on **both** transports until restart, while `/health` reports the
+   phantom load. Needs a real end-of-interview signal.
+2. **Dispatched jobs never shut down.** `dispatch_entrypoint` never calls
+   `ctx.shutdown()`, and the ownership gating means `room.disconnect()` no longer
+   runs. The framework waits on a shutdown future set only by a room disconnect
+   or an explicit `ctx.shutdown()`. The client only shows a modal at
+   `interview_ending` — it does not disconnect — so the agent squats in the room
+   with STT/TTS/VAD resident after the interview ends.
+3. **Free-tier credit is consumed before an agent exists.** `app.py` consumes the
+   credit when `spawn_worker` returns True, on the premise that a spawn was
+   verified. Dispatch returns True as soon as LiveKit *accepts* the request, which
+   succeeds even when no worker is registered. Since dispatch serves exactly the
+   free tier, a down worker burns credits for interviews that never start.
+4. **`can_dispatch` compares the wrong source of truth.** It checks the
+   interview's keys against `SYSTEM_LIVEKIT_*` on the web box, but the resident
+   worker registers with whatever `LIVEKIT_*` it was started with. These are
+   unrelated env vars; if they diverge the guard passes and the candidate hangs —
+   the exact failure the guard exists to prevent.
+5. **The documented start command does not work.** `AGENT_MODE=dispatch python
+   agent_worker.py start` exits 1: the module hard-requires `OPENAI_API_KEY`,
+   `DEEPGRAM_API_KEY` and `LIVEKIT_*`, none of which `env.template` defines for a
+   resident worker (it defines only `SYSTEM_*`).
+6. **Per-user OpenAI/Deepgram keys are dropped on the dispatch path.**
+   `_create_dispatch` receives only LiveKit credentials; the resident worker bills
+   to its own keys. Narrow blast radius today because key resolution is
+   all-or-nothing, but there is no guard tying the worker's keys to `SYSTEM_*`.
+
+### Also worth knowing
+- In production the **metadata path is currently dead code**: `app.py` never
+  passes `interview_config`, so dispatch sends empty metadata and config comes
+  from participant attributes. The metadata equivalence tests exercise a path with
+  no production caller (harmless, but it is not evidence the live path works).
+- `preferred_language` and `problem_count` (coding track) are read straight off
+  attributes and are **not** in `CONFIG_FIELDS`, so a metadata-only dispatch would
+  lose them.
+
+Verified as correct: Deepgram's `http_session=None` resolves from the job context
+inside a job; `WorkerOptions(agent_name=...)` is the right explicit-dispatch
+switch; `asyncio.run` from a Flask gthread request thread is safe here.

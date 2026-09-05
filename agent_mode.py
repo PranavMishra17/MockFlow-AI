@@ -124,12 +124,18 @@ def _as_list(value: Any, separator: str) -> list[str]:
 
 
 def _as_bool(value: Any) -> bool:
-    """Legacy rule: `str(value).lower() == 'true'`, but honour a real JSON bool."""
+    """Legacy rule, preserved exactly: `attrs.get(k, 'true').lower() == 'true'`.
+
+    Note the absence of `.strip()`. That is deliberate, not an oversight: the
+    original parser did not strip, so " true" evaluated to False. Adding a strip
+    here would silently flip that one case and break the equivalence this module
+    exists to guarantee. A real JSON bool from job metadata is honoured directly.
+    """
     if isinstance(value, bool):
         return value
     if value is None:
         return True  # legacy default was 'true'
-    return str(value).strip().lower() == "true"
+    return str(value).lower() == "true"
 
 
 def normalize_config(raw: Optional[Mapping[str, Any]]) -> dict[str, Any]:

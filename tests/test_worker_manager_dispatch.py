@@ -203,3 +203,38 @@ def test_a_failed_dispatch_is_not_recorded_as_active(wm, monkeypatch):
     with patch.object(WorkerManager, "_create_dispatch", return_value=False):
         assert wm.spawn_worker(room_name="r1", **SYS_CALL) is False
     assert wm.total_active_count() == 0
+
+
+# --------------------------------------------------------------------------
+# Regression: the child env, which the original tests never inspected
+# --------------------------------------------------------------------------
+
+def test_byok_fallback_child_is_forced_into_direct_mode(wm, monkeypatch):
+    """CRITICAL regression guard.
+
+    The fallback subprocess inherits this process's environment. In dispatch
+    mode it would inherit AGENT_MODE=dispatch, route __main__ to cli.run_app()
+    with no subcommand, and exit 2 ("Missing command.") — so EVERY BYOK user
+    would get a 500. spawn_worker must force AGENT_MODE=direct for the child.
+    """
+    monkeypatch.setenv("AGENT_MODE", "dispatch")
+    for k, v in SYS_ENV.items():
+        monkeypatch.setenv(k, v)
+
+    with patch("subprocess.Popen") as popen, \
+         patch.object(WorkerManager, "_wait_for_worker_ready", return_value=True):
+        assert wm.spawn_worker(room_name="r1", **BYOK_CALL) is True
+
+    child_env = popen.call_args.kwargs["env"]
+    assert child_env["AGENT_MODE"] == "direct", (
+        "fallback child inherited dispatch mode; it would exit 2 on startup"
+    )
+    assert child_env["INTERVIEW_ROOM_NAME"] == "r1"
+
+
+def test_direct_mode_child_also_gets_an_explicit_direct_agent_mode(wm, monkeypatch):
+    monkeypatch.delenv("AGENT_MODE", raising=False)
+    with patch("subprocess.Popen") as popen, \
+         patch.object(WorkerManager, "_wait_for_worker_ready", return_value=True):
+        assert wm.spawn_worker(room_name="r1", **SYS_CALL) is True
+    assert popen.call_args.kwargs["env"]["AGENT_MODE"] == "direct"

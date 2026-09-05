@@ -247,3 +247,23 @@ def test_dispatch_refused_when_interview_credentials_are_absent():
 def test_url_comparison_ignores_trailing_slash_and_case():
     a = dict(SYS, livekit_url="WSS://Sys.LiveKit.Cloud/")
     assert am.can_dispatch(a, SYS) is True
+
+
+# --------------------------------------------------------------------------
+# Regressions found by adversarial review
+# --------------------------------------------------------------------------
+
+@pytest.mark.parametrize("raw", [" true", "true ", "True\n", "\ttrue"])
+def test_whitespace_padded_include_profile_matches_legacy_exactly(raw):
+    """The legacy parser did NOT strip: `attrs.get(k,'true').lower()=='true'`.
+
+    So " true" was False. An earlier version of _as_bool added .strip() and
+    silently flipped this. The original differential sweep missed it because
+    every sampled value was already clean.
+    """
+    legacy = raw.lower() == "true"
+    assert am.normalize_config({"include_profile": raw})["include_profile"] is legacy
+
+
+def test_include_profile_whitespace_is_false_not_true():
+    assert am.normalize_config({"include_profile": " true"})["include_profile"] is False

@@ -143,7 +143,13 @@ class WorkerManager:
                 'OPENAI_API_KEY': openai_api_key,
                 'DEEPGRAM_API_KEY': deepgram_api_key,
                 'INTERVIEW_ROOM_NAME': room_name,
-                'PYTHONUNBUFFERED': '1'
+                'PYTHONUNBUFFERED': '1',
+                # MUST be forced. The child inherits this process's environment,
+                # so in dispatch mode a BYOK fallback spawn would inherit
+                # AGENT_MODE=dispatch, route __main__ to cli.run_app() with no
+                # subcommand, and die instantly with "Missing command." (exit 2)
+                # — breaking the one path the BYOK guard exists to provide.
+                'AGENT_MODE': agent_mode.MODE_DIRECT,
             })
 
             # Spawn subprocess WITHOUT 'dev' command
