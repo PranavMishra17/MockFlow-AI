@@ -192,7 +192,8 @@ def _raw_verdict():
     }
 
 def test_finalize_recomputes_recommendation_from_bands_not_llm_gestalt():
-    speech = {"filler_total": 3, "avg_words_per_minute": 150.0, "total_speaking_duration_seconds": 60.0}
+    speech = {"filler_total": 3, "pace_available": True, "avg_words_per_minute": 150.0,
+              "total_speaking_duration_seconds": 60.0}
     out = finalize_verdict(_raw_verdict(), speech)
     # LLM claimed strong_hire, but two borderline signals must roll up to lean_no_hire
     assert out["overall"]["recommendation"] == "lean_no_hire"
@@ -207,7 +208,7 @@ def test_finalize_drops_evidence_less_signals_to_cannot_determine():
 
 def test_finalize_attaches_delivery_block():
     out = finalize_verdict(_raw_verdict(), {"filler_total": 2, "avg_words_per_minute": 145.0,
-                                            "total_speaking_duration_seconds": 60.0})
+                                            "pace_available": True, "total_speaking_duration_seconds": 60.0})
     assert out["delivery"]["wpm_band"] == "ideal"
 
 def test_finalize_attaches_gap_to_next():

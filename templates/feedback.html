@@ -678,15 +678,28 @@
             html += '<div class="delivery-title">Delivery <span class="delivery-sub">measured from your speech</span></div>';
 
             // Pace gauge — research bands: ideal 130–160, brisk to 190, flag >190.
-            var wpm = d.wpm || 0;
-            html += gauge('Speaking pace', wpm + ' wpm', wpm, 80, 220,
-                [[110, 130, 'ok'], [130, 160, 'good'], [160, 190, 'warn'], [190, 220, 'bad']],
-                d.wpm_band, DELIVERY_TIPS.wpm[d.wpm_band] || '');
+            // Only shown when pace was actually MEASURED from real speaking
+            // durations. It used to render `d.wpm || 0`, and d.wpm was the
+            // constant 150 for every session, so every candidate was told they
+            // spoke at an ideal pace regardless of how they actually spoke.
+            if (d.pace_available && typeof d.wpm === 'number') {
+                html += gauge('Speaking pace', d.wpm + ' wpm', d.wpm, 80, 220,
+                    [[110, 130, 'ok'], [130, 160, 'good'], [160, 190, 'warn'], [190, 220, 'bad']],
+                    d.wpm_band, DELIVERY_TIPS.wpm[d.wpm_band] || '');
+            } else {
+                html += '<div class="delivery-unmeasured">'
+                     +  '<span class="delivery-unmeasured-label">Speaking pace</span>'
+                     +  '<span class="delivery-unmeasured-value">not measured this session</span>'
+                     +  '</div>';
+            }
 
-            // Filler gauge — ≤5/min good, ~12/min measurably hurts.
-            var fpm = d.filler_per_min || 0;
-            html += gauge('Filler words', fpm + '/min', fpm, 0, 15,
-                [[0, 5, 'good'], [5, 12, 'warn'], [12, 15, 'bad']],
+            // Filler gauge — per 100 WORDS, which is exactly countable from the
+            // transcript. (The old per-minute figure divided by an estimated
+            // duration, so it was really a per-word rate wearing a time label.)
+            // Thresholds are the same research anchors rescaled: 3.3 and 8.0.
+            var f100 = (typeof d.filler_per_100w === 'number') ? d.filler_per_100w : 0;
+            html += gauge('Filler words', f100 + ' per 100 words', f100, 0, 10,
+                [[0, 3.3, 'good'], [3.3, 8, 'warn'], [8, 10, 'bad']],
                 d.filler_band, (d.filler_total || 0) + ' total · ' + (DELIVERY_TIPS.filler[d.filler_band] || ''));
 
             // Personality extras (Wing D): countable, personal, deterministic.
