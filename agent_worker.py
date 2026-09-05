@@ -40,6 +40,7 @@ from interview_runtime import (
     build_interview_state,
     build_session,
     collect_interview_data,
+    ensure_questions_generated,
     handle_command,
     stage_fallback_timer,
 )
@@ -324,6 +325,13 @@ async def run_interview(room=None, http_session=None, job_metadata=None, env=Non
 
         track_config = get_track_config(track_type)
         interview_state = build_interview_state(config, candidate_name=candidate_name)
+
+        # Build the track's questions before the interview starts. This used to
+        # depend on the model choosing to call a tool that no prompt asks it to
+        # call, which is why behavioral interviews ran on improvised questions
+        # with the configured framework and custom questions silently dropped.
+        if await ensure_questions_generated(interview_state):
+            logger.info(f"[MAIN] Question bank prepared for track: {track_type}")
 
         stt, llm, tts, vad = _build_voice_components(http_session)
 

@@ -11,7 +11,7 @@
   },
   "script": [
     {"say": "Hi, I'm Grace. Ready when you are."},
-    {"expect": {"tool_called": "generate_interview_questions"}},
+    {"expect": {"questions_generated": 2}},
     {"say": "Sure. At my last role I owned the deployment pipeline for a team of forty engineers."},
     {"command": {"type": "skip_stage", "target_stage": "behavioral_q2"}},
     {"expect": {"stage": "behavioral_q2"}},

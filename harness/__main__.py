@@ -88,6 +88,18 @@ def _check(expect: dict, sess, step_no: int) -> list:
                 raise ExpectationFailed(
                     f"step {step_no}: expected {want} user turns, got {got}")
             passed.append(f"user_turns == {want}")
+        elif key == 'questions_generated':
+            got = len(sess.question_bank())
+            if got < want:
+                raise ExpectationFailed(
+                    f"step {step_no}: expected at least {want} generated question(s), got {got}. "
+                    f"An empty bank means the track fell back to improvising.")
+            passed.append(f"questions_generated >= {want} (got {got})")
+        elif key == 'question_bank_contains':
+            if want.lower() not in sess.question_bank_text():
+                raise ExpectationFailed(
+                    f"step {step_no}: {want!r} is not in the generated question bank")
+            passed.append(f"question_bank_contains {want!r}")
         elif key == 'agent_said':
             joined = ' '.join(t['text'].lower() for t in sess.transcript()['agent'])
             if want.lower() not in joined:

@@ -219,27 +219,17 @@ def test_build_stage_instructions_never_empty(enum_cls, stage):
 
 
 # ---------------------------------------------------------------------------
-# POST /api/skip-stage: this REST endpoint isn't on the live skip path (the
-# frontend sends skip_stage over the LiveKit data channel instead — see
-# templates/interview.html), but it hardcoded valid_stages to ONLY the intro
-# track's 4 stage names. Any caller sending a valid behavioral/technical/
-# coding stage got a bogus 400 "Invalid target_stage". Same bug class as the
-# ValueError regression test_fsm_skip.py guards against, just in the REST
-# validation layer instead of the FSM.
+# POST /api/skip-stage used to exist and skipped nothing. It validated the
+# stage name, logged, and returned {"success": true} — while the actual skip
+# travelled over the LiveKit data channel (templates/interview.html). Nothing
+# ever called it. An endpoint that reports success for work it did not do is
+# worse than no endpoint: the next person to find it will believe it.
 # ---------------------------------------------------------------------------
 
-@pytest.mark.parametrize("stage_name", [
-    "behavioral_q1", "behavioral_q2", "behavioral_q3",
-    "experience_discussion", "technical_concepts_1", "technical_concepts_2", "technical_concepts_3",
-    "warm_up", "coding_problem_1", "coding_problem_2",
-    "greeting", "self_intro", "closing",
-])
-def test_skip_stage_endpoint_accepts_non_intro_track_stages(client, stage_name):
-    resp = client.post("/api/skip-stage", json={"room_name": "interview-demo", "target_stage": stage_name})
-    assert resp.status_code == 200, resp.get_data(as_text=True)
-    assert resp.get_json()["target_stage"] == stage_name
-
-
-def test_skip_stage_endpoint_still_rejects_garbage_stage_name(client):
-    resp = client.post("/api/skip-stage", json={"room_name": "interview-demo", "target_stage": "not_a_real_stage"})
-    assert resp.status_code == 400
+def test_the_no_op_skip_stage_endpoint_is_gone(client):
+    """Deleted deliberately. Do not reinstate it as a validation stub —
+    mid-session commands reach the agent over the data channel, and there is no
+    HTTP path to a running interview."""
+    resp = client.post("/api/skip-stage",
+                       json={"room_name": "interview-demo", "target_stage": "behavioral_q1"})
+    assert resp.status_code == 404
