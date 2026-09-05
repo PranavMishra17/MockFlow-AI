@@ -1,0 +1,19 @@
+{
+  "name": "coding — problem push and skip through the data channel",
+  "candidate_name": "Alan Turing",
+  "config": {
+    "track": "coding",
+    "role": "Software Engineer",
+    "level": "mid",
+    "preferred_language": "python",
+    "problem_count": "2",
+    "user_id": "harness-user"
+  },
+  "script": [
+    {"say": "Hi, I'm Alan. Let's do it."},
+    {"command": {"type": "ready_for_problem"}},
+    {"expect": {"emitted": "coding_problem"}},
+    {"command": {"type": "skip_coding_problem"}},
+    {"expect": {"user_turns": 1}}
+  ]
+}

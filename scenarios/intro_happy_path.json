@@ -1,0 +1,21 @@
+{
+  "name": "intro — greeting through to a stage skip",
+  "candidate_name": "Ada Lovelace",
+  "config": {
+    "track": "intro",
+    "role": "Backend Engineer",
+    "level": "mid",
+    "user_id": "harness-user",
+    "email": "ada@example.com"
+  },
+  "script": [
+    {"say": "Hi! I'm Ada. I'm a backend engineer with about five years on payments systems."},
+    {"expect": {"user_turns": 1}},
+    {"say": "Most recently I led the migration of our ledger service off a single Postgres instance onto a sharded setup."},
+    {"command": {"type": "skip_stage", "target_stage": "past_experience"}},
+    {"expect": {"stage": "past_experience"}},
+    {"expect": {"emitted": "stage_change"}},
+    {"say": "The hardest part was backfilling without downtime. We dual-wrote for two weeks and reconciled nightly."},
+    {"expect": {"user_turns": 3}}
+  ]
+}
