@@ -46,7 +46,7 @@ from livekit.agents import (
     function_tool,
 )
 
-from fsm import (InterviewState, InterviewStage, STAGE_TIME_LIMITS, STAGE_MIN_QUESTIONS,
+from fsm import (InterviewState, InterviewStage, STAGE_TIME_LIMITS,
                   BehavioralStage, BehavioralInterviewState,
                   TechnicalVoiceStage, TechnicalVoiceInterviewState,
                   CodingStage, CodingInterviewState)
@@ -131,6 +131,251 @@ class NullTransport:
 
 
 # ---------------------------------------------------------------------------
+# Stage pointers
+# ---------------------------------------------------------------------------
+
+def sync_stage_pointers(state: InterviewState, new_stage) -> None:
+    """Point the per-track indices at the stage being entered.
+
+    This used to live inline in `transition_stage` only, so any path that
+    changed the stage WITHOUT going through that tool left the pointers behind.
+    `execute_skip_transition` is such a path: skipping to `behavioral_q2` left
+    `current_question_index` at 0 and the agent asked question 1 again, and
+    skipping into a coding problem left `coding_stage_active` False with no
+    start time recorded.
+
+    Safe to call for any track and any stage; it only touches pointers that
+    exist on the state it is given.
+    """
+    track_type = getattr(state, 'track_type', 'intro')
+    stage_val = new_stage.value if hasattr(new_stage, 'value') else str(new_stage)
+
+    if track_type == 'behavioral' and hasattr(state, 'current_question_index'):
+        if stage_val.startswith('behavioral_q'):
+            q_num = int(stage_val[-1]) - 1  # behavioral_q1 -> index 0
+            state.current_question_index = q_num
+            logger.info(f"[AGENT] Behavioral question index set to {q_num}")
+
+    if track_type == 'coding' and hasattr(state, 'current_problem_index'):
+        if stage_val.startswith('coding_problem_'):
+            p_num = int(stage_val.split('_')[-1]) - 1  # coding_problem_1 -> 0
+            state.current_problem_index = p_num
+            state.coding_stage_active = True
+            state.problem_start_times[str(p_num)] = state._now().isoformat()
+            logger.info(f"[AGENT] Coding problem index set to {p_num}")
+        elif stage_val in ('closing', 'warm_up', 'self_intro', 'greeting'):
+            state.coding_stage_active = False
+
+
+# ---------------------------------------------------------------------------
+# The question bank
+#
+# Building the track's questions used to happen only if the model chose to call
+# the `generate_interview_questions` tool — and no prompt on any track asks it
+# to. The tool's own description was the entire instruction, which meant the
+# behavioral track silently ran on improvised questions: no framework
+# competencies, none of the candidate's custom questions, `generated_questions`
+# left empty and `_get_stage_instructions` falling back to "Ask a relevant
+# behavioral question". The differentiator of the track, absent with no error.
+#
+# So generation is a function the runtime calls, and the tool is a wrapper on
+# it. The model may still call the tool; it is idempotent, so doing so is a
+# no-op rather than a second bill.
+# ---------------------------------------------------------------------------
+
+#: Behavioral question count per depth setting. Previously the model chose this
+#: by passing `count`, which is not a judgement it has any basis for.
+_QUESTIONS_FOR_DEPTH = {'light': 2, 'medium': 3, 'deep': 3}
+
+
+def _question_count_for_depth(depth: Optional[str]) -> int:
+    return _QUESTIONS_FOR_DEPTH.get((depth or 'medium').lower(), 3)
+
+
+async def _chat_json(prompt: str, *, max_tokens: int) -> dict:
+    """One JSON-returning completion.
+
+    Uses the ASYNC client. The tool this was extracted from used the blocking
+    `OpenAI` client inside an async function, which stalls the event loop — and
+    therefore the audio pipeline — for the whole generation.
+    """
+    import json as _json
+
+    import openai as _openai
+
+    client = _openai.AsyncOpenAI(api_key=_openai_api_key())
+    response = await client.chat.completions.create(
+        model='gpt-4o-mini',
+        messages=[{'role': 'user', 'content': prompt}],
+        temperature=0.7,
+        max_tokens=max_tokens,
+    )
+    raw = response.choices[0].message.content.strip()
+    if raw.startswith('```'):
+        raw = raw.split('\n', 1)[1].rsplit('```', 1)[0]
+    return _json.loads(raw)
+
+
+def _normalize_question(text: str) -> str:
+    return ''.join(ch for ch in (text or '').lower() if ch.isalnum() or ch.isspace()).strip()
+
+
+def _with_custom_questions(generated: list, custom: list) -> list:
+    """Put the candidate's own questions in the bank, first and verbatim.
+
+    The generation prompt asks the model to "include them as-is", and the model
+    complies about half the time — otherwise it paraphrases them, or drops one.
+    A question the candidate typed out is not a suggestion, so it is not left to
+    the model: any custom question the generator did not reproduce is added
+    here, and they lead the list so the three behavioral stages cannot fill up
+    with generated questions before reaching them.
+    """
+    if not custom:
+        return generated
+
+    generated = list(generated or [])
+    seen = {_normalize_question(q.get('main_question', '')) for q in generated}
+
+    leading = []
+    for question in custom:
+        text = (question or '').strip()
+        if not text:
+            continue
+        norm = _normalize_question(text)
+        # Drop the model's version if it reproduced this one, so the candidate's
+        # exact wording is the one that survives.
+        generated = [
+            q for q in generated
+            if _normalize_question(q.get('main_question', '')) != norm
+        ]
+        if norm in seen:
+            logger.info("[QUESTIONS] Custom question reproduced by the model; using the original")
+        leading.append({
+            'main_question': text,
+            'competency': 'Candidate request',
+            'follow_up_probes': [],
+        })
+
+    if leading:
+        logger.info(f"[QUESTIONS] {len(leading)} custom question(s) placed at the front of the bank")
+    return leading + generated
+
+
+async def generate_questions_for(state: InterviewState, *, count: Optional[int] = None) -> str:
+    """Populate this track's question or problem bank. Returns a summary line.
+
+    Raises nothing: a failure here must degrade the interview, not end it. The
+    caller gets a string describing what happened, which is also what the
+    function tool returns to the model.
+    """
+    from prompts import QUESTION_GENERATION
+
+    track_type = getattr(state, 'track_type', 'intro')
+    if track_type not in ('behavioral', 'technical_voice', 'coding'):
+        return "Question generation only available for behavioral, technical voice, and coding tracks."
+
+    resume_snippet = (state.uploaded_resume_text or '')[:1500]
+    jd_snippet = (state.job_description or '')[:800]
+
+    try:
+        if track_type == 'behavioral':
+            framework = getattr(state, 'framework', 'amazon')
+            depth = getattr(state, 'depth_setting', 'medium')
+            custom_q = getattr(state, 'custom_questions', [])
+            custom_q_str = '\n'.join(custom_q) if custom_q else 'None'
+            competencies = QUESTION_GENERATION.behavioral_framework_competencies.get(
+                framework, QUESTION_GENERATION.behavioral_framework_competencies['generic'])
+
+            parsed = await _chat_json(
+                QUESTION_GENERATION.behavioral_system.format(
+                    count=count or _question_count_for_depth(depth),
+                    framework=framework.title(),
+                    role=state.job_role or 'Software Engineer',
+                    level=state.experience_level or 'mid',
+                    resume_snippet=resume_snippet or 'Not provided',
+                    jd_snippet=jd_snippet or 'Not provided',
+                    custom_questions=custom_q_str,
+                    framework_competencies=competencies,
+                ),
+                max_tokens=1000,
+            )
+            questions = _with_custom_questions(parsed.get('questions', []), custom_q)
+            state.generated_questions = questions
+            state.active_question_count = min(len(questions), 3)
+            logger.info(
+                f"[QUESTIONS] Generated {len(questions)} behavioral questions "
+                f"(framework={framework}, depth={depth}, custom={len(custom_q)})"
+            )
+            return (f"Generated {len(questions)} questions. Active question count: "
+                    f"{state.active_question_count}. Now transition_stage when ready.")
+
+        if track_type == 'technical_voice':
+            topics = getattr(state, 'selected_topics', [])
+            if not topics:
+                return "No topics selected. Please transition to self_intro first."
+
+            all_questions = []
+            for topic in topics[:3]:
+                parsed = await _chat_json(
+                    QUESTION_GENERATION.technical_system.format(
+                        topic=topic,
+                        role=state.job_role or 'Software Engineer',
+                        level=state.experience_level or 'mid',
+                        resume_snippet=resume_snippet or 'Not provided',
+                    ),
+                    max_tokens=400,
+                )
+                all_questions.append({'topic': topic, 'questions': parsed.get('questions', [])})
+
+            state.generated_questions = all_questions
+            state.active_topic_count = len(topics[:3])
+            logger.info(f"[QUESTIONS] Generated questions for {len(all_questions)} topics")
+            return f"Generated questions for {len(all_questions)} topics. Now transition to self_intro."
+
+        # Coding: the VETTED problem bank, not LLM-invented problems. Curated
+        # problems ship test cases + reference solutions and are proven solvable.
+        from coding import difficulty_for_level, select_problems
+        problem_count = getattr(state, 'active_problem_count', 2)
+        level = state.experience_level or 'mid'
+        problems = select_problems(level=level, count=problem_count)
+        state.generated_problems = problems
+        state.active_problem_count = max(1, min(len(problems), 2))
+        logger.info(
+            f"[QUESTIONS] Selected {len(problems)} vetted coding problems "
+            f"(difficulty: {difficulty_for_level(level)})"
+        )
+        return (f"Selected {len(problems)} vetted coding problems. Active problem count: "
+                f"{state.active_problem_count}. Now transition_stage when ready to begin.")
+
+    except Exception as e:
+        logger.error(f"[QUESTIONS] Generation failed: {e}", exc_info=True)
+        return f"Failed to generate questions: {e}. Proceed with general questions based on role."
+
+
+def _has_questions(state: InterviewState) -> bool:
+    track_type = getattr(state, 'track_type', 'intro')
+    if track_type == 'coding':
+        return bool(getattr(state, 'generated_problems', None))
+    return bool(getattr(state, 'generated_questions', None))
+
+
+async def ensure_questions_generated(state: InterviewState) -> bool:
+    """Build the track's question bank if it is not already there.
+
+    Idempotent, and safe to call on any track — the intro track has no bank and
+    returns False without doing work. Call this before the interview starts;
+    every stage that asks a generated question assumes it has already run.
+    """
+    track_type = getattr(state, 'track_type', 'intro')
+    if track_type not in ('behavioral', 'technical_voice', 'coding'):
+        return False
+    if _has_questions(state):
+        return False
+    await generate_questions_for(state)
+    return _has_questions(state)
+
+
+# ---------------------------------------------------------------------------
 # The agent
 # ---------------------------------------------------------------------------
 
@@ -210,25 +455,7 @@ class InterviewAgent(Agent):
 
             ctx.userdata.transition_to(next_stage, forced=False, skipped=False)
 
-            # Update question index for behavioral track
-            if track_type == 'behavioral' and hasattr(ctx.userdata, 'current_question_index'):
-                stage_val = next_stage.value if hasattr(next_stage, 'value') else str(next_stage)
-                if stage_val.startswith('behavioral_q'):
-                    q_num = int(stage_val[-1]) - 1  # behavioral_q1 -> index 0
-                    ctx.userdata.current_question_index = q_num
-                    logger.info(f"[AGENT] Behavioral question index set to {q_num}")
-
-            # Update problem index and activate coding mode for coding track
-            if track_type == 'coding' and hasattr(ctx.userdata, 'current_problem_index'):
-                stage_val = next_stage.value if hasattr(next_stage, 'value') else str(next_stage)
-                if stage_val.startswith('coding_problem_'):
-                    p_num = int(stage_val.split('_')[-1]) - 1  # coding_problem_1 -> 0
-                    ctx.userdata.current_problem_index = p_num
-                    ctx.userdata.coding_stage_active = True
-                    ctx.userdata.problem_start_times[str(p_num)] = ctx.userdata._now().isoformat()
-                    logger.info(f"[AGENT] Coding problem index set to {p_num}")
-                elif stage_val in ('closing', 'warm_up', 'self_intro', 'greeting'):
-                    ctx.userdata.coding_stage_active = False
+            sync_stage_pointers(ctx.userdata, next_stage)
 
             stage_instructions = self._get_stage_instructions(ctx.userdata, next_stage)
             await self.update_instructions(stage_instructions)
@@ -357,7 +584,13 @@ class InterviewAgent(Agent):
         try:
             current_stage = ctx.userdata.stage.value
             stage_questions = ctx.userdata.questions_per_stage.get(current_stage, 0)
-            minimum = STAGE_MIN_QUESTIONS.get(current_stage, 2)
+            # Track-aware, via the state's own override. Reading the intro
+            # STAGE_MIN_QUESTIONS directly reported a default of 2 for every
+            # stage it did not know — including coding_problem_1 and greeting,
+            # whose real minimum is 0 — so the model was told to keep asking
+            # while `assess_response`, which does go through get_question_status,
+            # told it the opposite in the same turn.
+            minimum = ctx.userdata.get_question_status()['minimum']
 
             pending_ack = None
             should_clear_ack = False
@@ -472,99 +705,13 @@ class InterviewAgent(Agent):
         count: Annotated[int, Field(description="Number of main questions to generate (2 for light, 3 for medium/deep)")]
     ) -> str:
         """Generate interview questions via LLM based on track, framework, and candidate context. Call this ONCE at the start of the interview."""
-        try:
-            track_type = getattr(ctx.userdata, 'track_type', 'intro')
-            if track_type not in ('behavioral', 'technical_voice', 'coding'):
-                return "Question generation only available for behavioral, technical voice, and coding tracks."
-
-            from openai import OpenAI
-            from prompts import QUESTION_GENERATION
-            import json as _json
-
-            client = OpenAI(api_key=_openai_api_key())
-            resume_snippet = (ctx.userdata.uploaded_resume_text or '')[:1500]
-            jd_snippet = (ctx.userdata.job_description or '')[:800]
-
-            if track_type == 'behavioral':
-                framework = getattr(ctx.userdata, 'framework', 'amazon')
-                depth = getattr(ctx.userdata, 'depth_setting', 'medium')
-                custom_q = getattr(ctx.userdata, 'custom_questions', [])
-                custom_q_str = '\n'.join(custom_q) if custom_q else 'None'
-                competencies = QUESTION_GENERATION.behavioral_framework_competencies.get(framework, QUESTION_GENERATION.behavioral_framework_competencies['generic'])
-
-                prompt = QUESTION_GENERATION.behavioral_system.format(
-                    count=count,
-                    framework=framework.title(),
-                    role=ctx.userdata.job_role or 'Software Engineer',
-                    level=ctx.userdata.experience_level or 'mid',
-                    resume_snippet=resume_snippet or 'Not provided',
-                    jd_snippet=jd_snippet or 'Not provided',
-                    custom_questions=custom_q_str,
-                    framework_competencies=competencies,
-                )
-
-                response = client.chat.completions.create(
-                    model='gpt-4o-mini',
-                    messages=[{'role': 'user', 'content': prompt}],
-                    temperature=0.7,
-                    max_tokens=1000,
-                )
-                raw = response.choices[0].message.content.strip()
-                parsed = _json.loads(raw)
-                questions = parsed.get('questions', [])
-
-                ctx.userdata.generated_questions = questions
-                ctx.userdata.active_question_count = min(len(questions), 3)
-                logger.info(f"[AGENT] Generated {len(questions)} behavioral questions for framework: {framework}")
-                return f"Generated {len(questions)} questions. Active question count: {ctx.userdata.active_question_count}. Now transition_stage when ready."
-
-            elif track_type == 'technical_voice':
-                topics = getattr(ctx.userdata, 'selected_topics', [])
-                if not topics:
-                    return "No topics selected. Please transition to self_intro first."
-
-                all_questions = []
-                for topic in topics[:3]:
-                    prompt = QUESTION_GENERATION.technical_system.format(
-                        topic=topic,
-                        role=ctx.userdata.job_role or 'Software Engineer',
-                        level=ctx.userdata.experience_level or 'mid',
-                        resume_snippet=resume_snippet or 'Not provided',
-                    )
-                    response = client.chat.completions.create(
-                        model='gpt-4o-mini',
-                        messages=[{'role': 'user', 'content': prompt}],
-                        temperature=0.7,
-                        max_tokens=400,
-                    )
-                    raw = response.choices[0].message.content.strip()
-                    parsed = _json.loads(raw)
-                    q_list = parsed.get('questions', [])
-                    all_questions.append({'topic': topic, 'questions': q_list})
-
-                ctx.userdata.generated_questions = all_questions
-                ctx.userdata.active_topic_count = len(topics[:3])
-                logger.info(f"[AGENT] Generated questions for {len(all_questions)} topics")
-                return f"Generated questions for {len(all_questions)} topics. Now transition to self_intro."
-
-            elif track_type == 'coding':
-                # Use the VETTED problem bank instead of LLM-invented problems.
-                # Curated problems ship test cases + reference solutions and are
-                # proven solvable (no unsolvable/ambiguous generations).
-                from coding import select_problems, difficulty_for_level
-                problem_count = getattr(ctx.userdata, 'active_problem_count', 2)
-                level = ctx.userdata.experience_level or 'mid'
-                difficulty = difficulty_for_level(level)
-
-                problems = select_problems(level=level, count=problem_count)
-                ctx.userdata.generated_problems = problems
-                ctx.userdata.active_problem_count = max(1, min(len(problems), 2))
-                logger.info(f"[AGENT] Selected {len(problems)} vetted coding problems (difficulty: {difficulty})")
-                return f"Selected {len(problems)} vetted coding problems. Active problem count: {ctx.userdata.active_problem_count}. Now transition_stage when ready to begin."
-
-        except Exception as e:
-            logger.error(f"[AGENT] Question generation error: {e}", exc_info=True)
-            return f"Failed to generate questions: {e}. Proceed with general questions based on role."
+        # The runtime already builds the bank before the interview starts, so
+        # this is normally a no-op that tells the model to get on with it. It
+        # stays callable because the prompts still advertise it, and because a
+        # generation that failed at startup deserves a second chance.
+        if _has_questions(ctx.userdata):
+            return "Questions are already prepared. Call get_current_question, or transition_stage when ready."
+        return await generate_questions_for(ctx.userdata, count=count)
 
     @function_tool
     async def get_current_question(
@@ -963,6 +1110,7 @@ async def execute_skip_transition(
         logger.info(f"[SKIP] Executing forced skip: {current_stage.value} -> {target_stage.value}")
 
         interview_state.transition_to(target_stage, forced=False, skipped=True)
+        sync_stage_pointers(interview_state, target_stage)
 
         stage_instructions = agent._get_stage_instructions(interview_state, target_stage)
         await agent.update_instructions(stage_instructions)
@@ -1669,7 +1817,8 @@ async def stage_fallback_timer(
                     logger.warning(f"[FALLBACK] FORCING: {current_stage.value} -> {next_stage.value}")
                     
                     state.transition_to(next_stage, forced=True)
-                    
+                    sync_stage_pointers(state, next_stage)
+
                     try:
                         instructions = agent._get_stage_instructions(state, next_stage)
                         await agent.update_instructions(instructions)

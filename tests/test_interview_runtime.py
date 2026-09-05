@@ -569,3 +569,158 @@ def test_collect_stamps_the_interview_with_the_state_clock():
     state = ir.build_interview_state(_config(track='intro'), now=lambda: fixed)
     row = ir.collect_interview_data(state, _conversation(), room_name='r', ended_by='x')
     assert row['interview_date'] == fixed.isoformat()
+
+
+# ---------------------------------------------------------------------------
+# Stage pointers
+#
+# The index block lived inline in `transition_stage`, so every other path that
+# changed the stage left the pointers behind. Skipping to behavioral_q2 asked
+# question 1 again; skipping into a coding problem left the stage inactive with
+# no start time. These pin the shared helper both paths now call.
+# ---------------------------------------------------------------------------
+
+def test_skipping_to_a_later_behavioral_question_moves_the_index():
+    state = ir.build_interview_state(_config(track='behavioral'))
+    state.generated_questions = [
+        {'main_question': 'Q one', 'competency': 'A'},
+        {'main_question': 'Q two', 'competency': 'B'},
+        {'main_question': 'Q three', 'competency': 'C'},
+    ]
+    ctx = _ctx(state)
+
+    asyncio.run(ir.handle_command(
+        {'type': 'skip_stage', 'target_stage': 'behavioral_q2'}, ctx))
+
+    assert ctx.state.stage.value == 'behavioral_q2'
+    assert ctx.state.current_question_index == 1, "skipping to Q2 must ask Q2, not Q1"
+
+
+def test_the_pointer_helper_is_a_no_op_for_stages_without_an_index():
+    state = ir.build_interview_state(_config(track='behavioral'))
+    before = state.current_question_index
+    ir.sync_stage_pointers(state, BehavioralStage.CLOSING)
+    assert state.current_question_index == before
+
+
+def test_entering_a_coding_problem_activates_it_and_stamps_a_start_time():
+    fixed = datetime(2026, 5, 1, 10, 0, 0)
+    state = ir.build_interview_state(_config(track='coding'), now=lambda: fixed)
+    assert state.coding_stage_active is False
+
+    ir.sync_stage_pointers(state, CodingStage.CODING_PROBLEM_2)
+
+    assert state.current_problem_index == 1
+    assert state.coding_stage_active is True
+    assert state.problem_start_times['1'] == fixed.isoformat()
+
+
+def test_leaving_the_coding_problems_deactivates_the_editor():
+    state = ir.build_interview_state(_config(track='coding'))
+    ir.sync_stage_pointers(state, CodingStage.CODING_PROBLEM_1)
+    assert state.coding_stage_active is True
+
+    ir.sync_stage_pointers(state, CodingStage.CLOSING)
+    assert state.coding_stage_active is False
+
+
+# ---------------------------------------------------------------------------
+# The question bank
+#
+# Generation used to happen only if the model called a tool that no prompt asks
+# it to call. The behavioral track therefore ran on improvised questions with
+# the configured framework and the candidate's custom questions silently
+# dropped. It is the runtime's job now.
+# ---------------------------------------------------------------------------
+
+def test_the_coding_bank_is_built_without_any_model_call():
+    """The coding track selects from a vetted bank, so this needs no network."""
+    state = ir.build_interview_state(_config(track='coding', problem_count='2'))
+    assert not state.generated_problems
+
+    assert asyncio.run(ir.ensure_questions_generated(state)) is True
+    assert len(state.generated_problems) >= 1
+    assert state.active_problem_count >= 1
+
+
+def test_generating_twice_does_not_regenerate():
+    """Idempotent, so the tool firing after startup costs nothing."""
+    state = ir.build_interview_state(_config(track='coding'))
+    asyncio.run(ir.ensure_questions_generated(state))
+    first = state.generated_problems
+
+    assert asyncio.run(ir.ensure_questions_generated(state)) is False
+    assert state.generated_problems is first
+
+
+def test_the_intro_track_has_no_bank_and_does_not_try_to_build_one():
+    state = ir.build_interview_state(_config(track='intro'))
+    assert asyncio.run(ir.ensure_questions_generated(state)) is False
+
+
+@pytest.mark.parametrize('depth,expected', [
+    ('light', 2), ('medium', 3), ('deep', 3), ('LIGHT', 2), (None, 3), ('nonsense', 3),
+])
+def test_question_count_follows_the_depth_setting(depth, expected):
+    """The model used to choose this by passing `count`, which it has no basis for."""
+    assert ir._question_count_for_depth(depth) == expected
+
+
+def test_generation_failure_degrades_the_interview_rather_than_ending_it(monkeypatch):
+    async def boom(*a, **k):
+        raise RuntimeError('openai is down')
+
+    monkeypatch.setattr(ir, '_chat_json', boom)
+    state = ir.build_interview_state(_config(track='behavioral'))
+
+    result = asyncio.run(ir.generate_questions_for(state))
+
+    assert 'Failed to generate questions' in result
+    assert state.generated_questions == []
+
+
+# ---------------------------------------------------------------------------
+# Custom questions
+#
+# The generation prompt asks the model to include the candidate's own questions
+# "as-is". It complied in one run and paraphrased in the next, which meant a
+# question someone typed out might simply never be asked.
+# ---------------------------------------------------------------------------
+
+def test_custom_questions_are_added_verbatim_when_the_model_drops_them():
+    generated = [{'main_question': 'Tell me about a time you led a team', 'competency': 'Ownership'}]
+    custom = ['Tell me about a time you rolled back a release']
+
+    result = ir._with_custom_questions(generated, custom)
+
+    assert [q['main_question'] for q in result] == [
+        'Tell me about a time you rolled back a release',
+        'Tell me about a time you led a team',
+    ]
+
+
+def test_custom_questions_lead_so_the_three_stages_cannot_fill_up_first():
+    generated = [{'main_question': f'Generated {i}'} for i in range(3)]
+    result = ir._with_custom_questions(generated, ['My own question'])
+    assert result[0]['main_question'] == 'My own question'
+
+
+def test_a_custom_question_the_model_reproduced_is_not_duplicated():
+    generated = [
+        {'main_question': 'Tell me about a time you rolled back a release.', 'competency': 'X'},
+        {'main_question': 'Something else', 'competency': 'Y'},
+    ]
+    result = ir._with_custom_questions(generated, ['Tell me about a time you rolled back a release'])
+
+    mains = [q['main_question'] for q in result]
+    assert mains == ['Tell me about a time you rolled back a release', 'Something else']
+
+
+def test_no_custom_questions_leaves_the_generated_list_untouched():
+    generated = [{'main_question': 'A'}, {'main_question': 'B'}]
+    assert ir._with_custom_questions(generated, []) is generated
+
+
+def test_blank_custom_questions_are_ignored():
+    result = ir._with_custom_questions([{'main_question': 'A'}], ['', '   '])
+    assert [q['main_question'] for q in result] == ['A']

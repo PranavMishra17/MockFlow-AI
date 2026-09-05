@@ -1,0 +1,20 @@
+{
+  "name": "behavioral — the candidate's own questions reach the bank",
+  "candidate_name": "Katherine Johnson",
+  "config": {
+    "track": "behavioral",
+    "role": "Engineering Manager",
+    "level": "senior",
+    "framework": "amazon",
+    "depth": "deep",
+    "custom_questions": "Tell me about a time you rolled back a release\nDescribe a hiring decision you regret",
+    "user_id": "harness-user"
+  },
+  "script": [
+    {"expect": {"questions_generated": 3}},
+    {"expect": {"question_bank_contains": "rolled back a release"}},
+    {"expect": {"question_bank_contains": "hiring decision you regret"}},
+    {"say": "Hi, I'm Katherine. Ready to start."},
+    {"expect": {"user_turns": 1}}
+  ]
+}

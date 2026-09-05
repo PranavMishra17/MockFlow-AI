@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
@@ -16,6 +17,7 @@ from interview_runtime import (
     build_interview_state,
     build_session,
     collect_interview_data,
+    ensure_questions_generated,
     handle_command,
 )
 from tracks import get_track_config
@@ -101,6 +103,21 @@ class HarnessSession:
     def transcript(self) -> dict:
         return self.handles.conversation
 
+    def question_bank(self) -> list:
+        """The generated questions (or coding problems) for this track.
+
+        Asserting on this rather than on "did the model call the tool" is
+        deliberate: generation moved into the runtime, so the tool firing is no
+        longer the thing that matters — the bank existing is.
+        """
+        if getattr(self.state, 'track_type', 'intro') == 'coding':
+            return list(getattr(self.state, 'generated_problems', []) or [])
+        return list(getattr(self.state, 'generated_questions', []) or [])
+
+    def question_bank_text(self) -> str:
+        """Everything in the bank as one lowercased blob, for substring checks."""
+        return json.dumps(self.question_bank(), default=str).lower()
+
     def interview_row(self, ended_by: str = 'natural_completion') -> dict:
         """The row that would have been written to the database."""
         return collect_interview_data(
@@ -146,6 +163,10 @@ async def start_interview(
     # still works with no TTS as long as no audio output is attached, so the
     # cached-welcome and skip-acknowledgement paths execute for real.
     session = build_session(state, llm=llm)
+
+    # The production driver builds the question bank before starting; the
+    # harness must too, or every scenario silently tests the improvised path.
+    await ensure_questions_generated(state)
 
     handles = attach_handlers(session, state, transport)
 
