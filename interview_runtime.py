@@ -1215,13 +1215,20 @@ def attach_handlers(
     reach the model and never reach the transcript — or the verdict.
 
     The obvious fix is to record from `conversation_item_added(role="user")`
-    instead, since both voice and typed turns pass through it. That fix is not
-    safe on its own: in livekit-agents 1.3.6 the user message is only added
+    instead, since both voice and typed turns pass through it. That single
+    source is rejected for a different reason than it might appear. The gate in
+    `_pipeline_reply_task_impl` is
     `if new_message is not None and speech_handle.scheduled`
-    (`voice/agent_activity.py`, `_pipeline_reply_task_impl`). A turn whose reply
-    is never scheduled — interrupted, or arriving while scheduling is paused —
-    would silently vanish from the transcript, losing evidence the verdict is
-    built on.
+    (livekit-agents 1.3.6, `voice/agent_activity.py`), and `scheduled` is
+    already true by then — `_schedule_speech` calls `_mark_scheduled()`
+    synchronously before the task body can run, and `interrupt()` does not clear
+    it. So interrupted turns are NOT at risk, and anyone reading this to justify
+    a rewrite should know that.
+
+    The reason to keep the STT path authoritative is narrower and more useful:
+    it is the only source that carries `duration_s`. A turn recorded from the
+    chat item alone has no measured speaking window, and delivery metrics would
+    silently degrade to "not measured" for voice sessions.
 
     So both events are used, and the STT path stays authoritative for voice:
 
@@ -1234,6 +1241,25 @@ def attach_handlers(
     Buffer-emptiness is the discriminator rather than comparing text, because a
     single turn can arrive as several STT finals and reach the chat context as
     one concatenated message; text comparison would double-record it.
+
+    **Known limit, and a hard requirement on whoever adds text input.**
+    Buffer-emptiness is an inference, not a fact. It holds today because nothing
+    types: with no text path, an empty buffer can only mean "no speech". Once a
+    `user_text` command exists, a stray STT final — a cough on a live mic — will
+    make the buffer non-empty and the typed turn will be DISCARDED here, which
+    is the very failure this function exists to prevent, reintroduced silently.
+
+    So text input must do both of these, not either:
+      1. `session.input.set_audio_enabled(False)` when entering text mode, so no
+         final can arrive; and
+      2. set an explicit "the next user item is typed" flag that this handler
+         prefers over buffer-emptiness. A flag set by the handler that injected
+         the text is fact; an empty buffer is a guess.
+
+    Two library paths also emit a user item with no STT final behind it
+    (`agent_activity.py`, the `_closing` branches), so without that flag a voice
+    turn can be recorded as typed — and once `mode` is tagged, mislabelled in
+    the one field that decides whether delivery is reported at all.
     """
     handles = RuntimeHandles()
     conversation_history = handles.conversation

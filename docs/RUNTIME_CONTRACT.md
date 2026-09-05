@@ -246,6 +246,80 @@ Tests monkeypatch `time.time`; see `tests/test_speech_window.py`.
 
 ---
 
+## 7b. Corrections found by tracing, 2026-09-05
+
+Two read-only passes over this code and over livekit-agents 1.3.6 turned up
+things the handoff assumes that are not true. These are normative: the owning
+worktree must handle them, not rediscover them.
+
+### For WT2 (skip the question)
+
+1. **`current_question_text()` cannot be implemented for intro or
+   technical_voice as things stand.** The only writer of question text anywhere
+   is `ask_question` (`interview_runtime.py`), which the model is *asked* to
+   call and never forced to. Intro has no question store at all; technical_voice
+   stores three questions per topic with no pointer to the current one. Decide
+   explicitly: either make `ask_question` the single choke point that records
+   `state.current_question`, and accept that a question asked without the tool
+   is unattributable — or narrow the "every question, no exceptions" claim.
+2. **`execute_skip_transition` does not advance the per-track indices.** The
+   block that sets `current_question_index`, `current_problem_index`,
+   `coding_stage_active` and `problem_start_times` lives only in
+   `transition_stage`. A skip to `behavioral_q2` today leaves the index at 0 and
+   injects Q1's text into the Q2 stage. Extract that block and call it from both
+   paths **before** unifying anything on top of it.
+3. **`skipped_stages` and `skipped_questions` collide.**
+   `transition_to(skipped=True)` unconditionally appends to `skipped_stages`. A
+   single skipped *question* that resolves to NEXT_STAGE would be recorded as a
+   skipped *stage* and shown to the candidate as one.
+4. **The hard gate on the intro track is time, not question count.**
+   `transition_stage` refuses to leave `self_intro`/`past_experience`/
+   `company_fit` before 30/45/30s regardless of any counter. "A skipped question
+   still counts as asked, so skipping can never trap a candidate" is true of the
+   counter and false of the gate.
+5. **Nothing makes the agent ask the next question after a skip.**
+   `execute_skip_transition` ends at `session.say(ack)` with no
+   `generate_reply()`, so today's skips leave the agent silent until the
+   candidate speaks. Name the `generate_reply()` as a required step.
+6. **`track` vs `track_type`.** `state.track` is set dynamically;
+   `track_type` is the declared field, and different call sites read different
+   ones. **`track_type` is authoritative.** New code that guesses wrong gets a
+   silently dead branch.
+
+### For WT5 (input modes)
+
+7. **`session.interrupt()` will RAISE here.** It calls
+   `speech.interrupt(force=False)` on the current speech, which raises when the
+   speech disallows interruptions — and this repo plays three non-interruptible
+   speeches (cached welcome, skip ack, closing). `handle_command` swallows it
+   and the candidate's message vanishes. Use `interrupt(force=True)`. Do not
+   copy livekit's `_default_text_input_cb`; it assumes every speech is
+   interruptible.
+8. **PTT orderings are load-bearing, not stylistic.** `ptt_end` must disable
+   audio *then* commit: `commit_user_turn` only flushes silence into STT to
+   force the final transcript when it sees `audio_detached`. `ptt_start` must
+   enable audio *last*, because `clear_user_turn` restarts the STT stream.
+9. **Mid-session open-mic↔PTT is broken, not merely unverified.**
+   `AgentActivity.update_options` forwards a new `turn_detection` to
+   `AudioRecognition` but never updates its own `_turn_detection`, which four
+   barge-in paths read. Switching to manual leaves barge-in armed; switching
+   away leaves it dead. Keep it out of v1 — and implement text mode with
+   `set_audio_enabled`, never by switching `turn_detection`.
+10. **`agent_state` has five values, not three.** `initializing`, `idle`,
+    `listening`, `thinking`, `speaking` — and `initializing` is the first one
+    the UI ever receives. Widen §3 and give the aria-live pill a default branch.
+11. **Commands can arrive before `session.start()`.** The `data_received`
+    handler is registered before the session starts, and every session method
+    raises `RuntimeError("AgentSession isn't running")` until then. Do not let
+    the UI enable the composer before the first `agent_state`.
+12. **The agent already registers a `lk.chat` text-stream handler** that the
+    pinned client can never reach. Either pass
+    `RoomInputOptions(text_enabled=False)` so there is provably one text path,
+    or adopt it deliberately — two implementations of one thing is what §1.3
+    was about.
+
+---
+
 ## 8. Scenario JSON schema — RESERVED for WT1
 
 JSON, not YAML: `pyyaml` is not a dependency and a dev tool is not a reason to
