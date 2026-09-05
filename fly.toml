@@ -1,0 +1,64 @@
+# MockFlow-AI — Fly.io app config.
+#
+# Goal: the site is ALWAYS up (no Render-style spin-down) on a custom domain.
+#
+# Set the app name with `fly launch --no-deploy --name <your-app>`, or edit it
+# here. Full walkthrough + why Cloudflare Workers can't host this: docs/DEPLOYMENT.md
+
+app = "mockflow-ai"
+
+# IMPORTANT: set this to the region your Neon project lives in. Every request
+# does at least one Postgres round-trip; a cross-continent hop is the single
+# easiest way to make the app feel slow. `fly platform regions` lists them.
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  # gunicorn binds 8080 in the Dockerfile CMD; keep these in agreement.
+  PORT = "8080"
+  FLASK_ENV = "production"
+  # Each interview spawns an agent_worker.py subprocess that loads Silero VAD
+  # (ONNX) and holds the LiveKit session for the whole interview, so this is a
+  # MEMORY cap, not a traffic cap. Raise it only alongside [[vm]] memory below,
+  # and measure with `fly ssh console -C "free -m"` during a live interview.
+  MAX_CONCURRENT_WORKERS = "3"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+
+  # THE ALWAYS-ON SETTING. Render's free tier spun the service down between
+  # visits; this keeps one machine resident so there is no cold start.
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  # Do NOT raise max_machines_running above 1 without reading the
+  # "Why this app pins to one machine" section in docs/DEPLOYMENT.md —
+  # worker_manager keeps active interviews in an in-process dict, so a request
+  # load-balanced to a second machine cannot see the worker running on the first.
+  processes = ["app"]
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 40
+    hard_limit = 60
+
+  [[http_service.checks]]
+    interval = "30s"
+    timeout = "10s"
+    grace_period = "45s"
+    method = "GET"
+    path = "/health"
+    # /health pings Neon and returns 503 when the DB is unreachable, so this
+    # check covers app + database liveness rather than just "the port is open".
+
+[[vm]]
+  # Starting point, not a measured figure: the web process is small, but each
+  # concurrent interview adds an onnxruntime-loaded subprocess. Watch memory
+  # during a real interview before trusting MAX_CONCURRENT_WORKERS=3, and scale
+  # with `fly scale vm shared-cpu-2x --memory 2048`.
+  size = "shared-cpu-2x"
+  memory = "2gb"
