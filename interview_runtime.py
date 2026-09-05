@@ -847,7 +847,6 @@ async def emit_user_caption(transport: "Transport", text: str):
 
 async def _async_skip_coding_problem(interview_state, transport, session):
     """Handle skip_coding_problem: advance to next problem or closing."""
-    import json as _json
     try:
         from fsm import CodingStage
         current_idx = getattr(interview_state, 'current_problem_index', 0)
@@ -859,7 +858,10 @@ async def _async_skip_coding_problem(interview_state, transport, session):
             # Push next problem
             interview_state.current_problem_index = next_idx
             problem = problems[next_idx]
-            attempts_done = getattr(interview_state, 'submissions_per_problem', {}).get(next_idx, 0)
+            attempts_done = (
+                interview_state.get_attempts_for_problem(next_idx)
+                if hasattr(interview_state, 'get_attempts_for_problem') else 0
+            )
             await transport.emit({
                 'type': 'coding_problem',
                 'problem': problem,
@@ -1043,19 +1045,14 @@ async def _evaluate_code_async(
         except Exception:
             evaluation = {'brief_verbal_feedback': 'Thanks for your submission. Let me review it.'}
 
-        # Record submission in state
+        # Record submission in state. This goes through record_submission rather
+        # than incrementing the counter here: this path used to write int keys
+        # while record_submission and get_attempts_for_problem used string keys,
+        # so the two submit paths kept independent counts and the max-attempts
+        # guard never saw the ones made from the editor.
         attempt_num = 1
-        if hasattr(state, 'submissions_per_problem'):
-            state.submissions_per_problem[problem_index] = state.submissions_per_problem.get(problem_index, 0) + 1
-            attempt_num = state.submissions_per_problem[problem_index]
-        if hasattr(state, 'submissions'):
-            state.submissions.append({
-                'problem_index': problem_index,
-                'attempt': attempt_num,
-                'code': code,
-                'language': language,
-                'evaluation': evaluation,
-            })
+        if hasattr(state, 'record_submission'):
+            attempt_num = state.record_submission(problem_index, code, language, evaluation)
 
         # Push evaluation result to frontend
         await transport.emit({

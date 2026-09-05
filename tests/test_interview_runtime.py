@@ -345,6 +345,131 @@ def test_code_submitted_refuses_a_fourth_attempt():
 
 
 # ---------------------------------------------------------------------------
+# One counter, two submit paths
+#
+# `record_submission` (the function_tool path) wrote string keys; the editor's
+# `code_submitted` path incremented the same dict with INT keys, which the
+# string-keyed reader could not see. Each path therefore kept its own private
+# count, and the max-attempts guard never fired for editor submissions — a
+# candidate could submit forever. These tests fail if a second writer returns.
+# ---------------------------------------------------------------------------
+
+class _FakeCompletions:
+    """Stands in for the OpenAI client `_evaluate_code_async` builds itself."""
+
+    def __init__(self):
+        self.calls = 0
+
+    async def create(self, **kwargs):
+        self.calls += 1
+        content = json.dumps({
+            'brief_verbal_feedback': 'Reasonable approach.',
+            'correctness': 'fail',
+        })
+        message = types.SimpleNamespace(content=content)
+        return types.SimpleNamespace(choices=[types.SimpleNamespace(message=message)])
+
+
+class _FakeOpenAI:
+    def __init__(self, api_key=None):
+        self.chat = types.SimpleNamespace(completions=_FakeCompletions())
+
+
+@pytest.fixture
+def no_network(monkeypatch):
+    """`_evaluate_code_async` constructs its own OpenAI client. Stub it out."""
+    monkeypatch.setattr('openai.AsyncOpenAI', _FakeOpenAI)
+
+
+def _coding_ctx():
+    state = ir.build_interview_state(_config(track='coding'))
+    state.generated_problems = [
+        {'title': 'Two Sum', 'description': 'd', 'examples': [], 'constraints': []},
+    ]
+    return _ctx(state)
+
+
+def _submit(ctx, code='x = 1'):
+    asyncio.run(ir.handle_command(
+        {'type': 'code_submitted', 'code': code, 'language': 'python', 'problem_index': 0},
+        ctx))
+
+
+def test_editor_submissions_are_counted_by_the_shared_reader(no_network):
+    ctx = _coding_ctx()
+    for _ in range(2):
+        _submit(ctx)
+
+    assert ctx.state.get_attempts_for_problem(0) == 2
+
+
+def test_the_editor_path_hits_the_max_attempts_guard(no_network):
+    """The guard is on the editor path; before the fix it could never fire."""
+    ctx = _coding_ctx()
+    for _ in range(3):
+        _submit(ctx)
+    assert ctx.transport.of_type('max_attempts_reached') == []
+
+    _submit(ctx)
+
+    assert ctx.transport.of_type('max_attempts_reached') == [
+        {'type': 'max_attempts_reached', 'problem_index': 0}
+    ]
+    # A refused submission must not be evaluated or counted.
+    assert ctx.state.get_attempts_for_problem(0) == 3
+
+
+def test_both_submit_paths_share_one_counter(no_network):
+    """A tool-recorded attempt and editor attempts add up to one total."""
+    ctx = _coding_ctx()
+    ctx.state.record_submission(0, 'first', 'python', {})
+    _submit(ctx, 'second')
+    _submit(ctx, 'third')
+
+    assert ctx.state.get_attempts_for_problem(0) == 3
+    _submit(ctx, 'fourth')
+    assert ctx.transport.of_type('max_attempts_reached') != []
+
+
+def test_the_attempt_counter_is_keyed_by_strings(no_network):
+    """Int keys silently become strings across JSON; mixed keys split the count."""
+    ctx = _coding_ctx()
+    _submit(ctx)
+
+    assert list(ctx.state.submissions_per_problem) == ['0']
+    assert all(isinstance(k, str) for k in ctx.state.submissions_per_problem)
+
+
+def test_every_submission_is_recorded_in_one_shape(no_network):
+    """Both writers used to append to `submissions`; only one had a timestamp."""
+    ctx = _coding_ctx()
+    ctx.state.record_submission(0, 'first', 'python', {})
+    _submit(ctx, 'second')
+
+    assert len(ctx.state.submissions) == 2
+    for entry in ctx.state.submissions:
+        assert set(entry) == {
+            'problem_index', 'attempt', 'code', 'language', 'evaluation', 'timestamp',
+        }
+    assert [e['attempt'] for e in ctx.state.submissions] == [1, 2]
+
+
+def test_skipping_to_the_next_problem_reads_the_shared_counter(no_network):
+    """The skip path reported an attempt number off its own int-keyed read."""
+    ctx = _coding_ctx()
+    ctx.state.generated_problems.append(
+        {'title': 'Next', 'description': 'd', 'examples': [], 'constraints': []})
+    ctx.state.active_problem_count = 2
+    ctx.state.record_submission(1, 'earlier work', 'python', {})
+
+    asyncio.run(ir.handle_command({'type': 'skip_coding_problem'}, ctx))
+
+    pushed = ctx.transport.of_type('coding_problem')[-1]
+    assert pushed['problem_index'] == 1
+    assert pushed['attempt_number'] == 2
+
+
+# ---------------------------------------------------------------------------
 # collect_interview_data
 # ---------------------------------------------------------------------------
 

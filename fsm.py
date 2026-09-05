@@ -939,9 +939,15 @@ class CodingInterviewState(InterviewState):
     current_problem_index: int = 0
 
     # All code submissions: [{problem_index, attempt, code, language, evaluation, timestamp}]
+    # Appended ONLY by record_submission, so every entry has the same shape.
     submissions: List[dict] = field(default_factory=list)
 
     # Submission count per problem: {problem_index_str: attempt_count}
+    # Keys are strings, never ints. Two reasons, and they compound: a dict keyed
+    # by int silently becomes string-keyed the moment it round-trips through
+    # JSON, and a second writer using int keys makes an independent count the
+    # str-keyed reader cannot see. Go through record_submission and
+    # get_attempts_for_problem rather than touching this dict.
     submissions_per_problem: dict = field(default_factory=dict)
 
     # When each problem was started: {problem_index_str: ISO timestamp string}
@@ -1008,7 +1014,6 @@ class CodingInterviewState(InterviewState):
         Returns:
             Attempt number (1-based)
         """
-        from datetime import datetime
         key = str(problem_index)
         attempt = self.submissions_per_problem.get(key, 0) + 1
         self.submissions_per_problem[key] = attempt
