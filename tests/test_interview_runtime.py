@@ -60,10 +60,12 @@ def test_imports_with_no_environment_at_all():
     assert 'ok' in result.stdout
 
 
-def test_agent_worker_does_not_validate_env_at_import():
-    """Env validation belongs in main(), not module scope.
+def test_agent_worker_does_not_resolve_env_at_import():
+    """Env resolution belongs behind a function, not at module scope.
 
-    When it ran at import, `import agent_worker` from a test was a hard exit.
+    Two separate module-level exits used to make `import agent_worker` fatal:
+    the missing-key check, and `agent_mode.resolve_mode` rejecting a typo'd
+    AGENT_MODE.
     """
     import inspect
 
@@ -72,7 +74,35 @@ def test_agent_worker_does_not_validate_env_at_import():
     src = inspect.getsource(agent_worker)
     before_first_def = src.split('\ndef ', 1)[0]
     assert 'sys.exit' not in before_first_def
-    assert callable(agent_worker.validate_env)
+    assert 'resolve_mode' not in before_first_def
+    assert callable(agent_worker.resolve_worker_env)
+
+
+def test_a_typod_agent_mode_is_rejected_but_not_at_import():
+    """resolve_mode raises rather than defaulting, so the operator gets a signal
+    instead of silently running the other transport. That exit belongs to the
+    call, not to the import."""
+    import agent_worker
+
+    with pytest.raises(SystemExit):
+        agent_worker.resolve_worker_env({'AGENT_MODE': 'dsipatch'})
+
+
+def test_direct_mode_requires_a_room_name_and_dispatch_does_not():
+    """The room is a per-job value under dispatch, so it cannot be required."""
+    import agent_worker
+
+    keys = {
+        'OPENAI_API_KEY': 'k', 'DEEPGRAM_API_KEY': 'k', 'LIVEKIT_URL': 'u',
+        'LIVEKIT_API_KEY': 'k', 'LIVEKIT_API_SECRET': 's',
+    }
+
+    with pytest.raises(SystemExit):
+        agent_worker.resolve_worker_env(dict(keys))          # direct, no room
+
+    resolved = agent_worker.resolve_worker_env(dict(keys, INTERVIEW_ROOM_NAME='r'))
+    assert resolved['mode'] == agent_mode.MODE_DIRECT
+    assert resolved['room_name'] == 'r'
 
 
 # ---------------------------------------------------------------------------
