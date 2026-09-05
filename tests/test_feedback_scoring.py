@@ -50,6 +50,7 @@ def test_delivery_metrics_computes_filler_per_minute():
     speech = {
         "filler_total": 10,
         "avg_words_per_minute": 150.0,
+        "pace_available": True,  # analytics measured real per-turn durations
         "total_speaking_duration_seconds": 120.0,  # 2 minutes -> 5 fillers/min
         "word_count": 300,
     }
@@ -61,13 +62,16 @@ def test_delivery_metrics_computes_filler_per_minute():
 
 def test_delivery_metrics_handles_empty_speech():
     d = delivery_metrics({})
-    assert d["filler_per_min"] == 0.0
-    assert d["wpm"] == 0.0
+    # None, not 0.0. A zero is indistinguishable from a real measurement, which
+    # is how a constant 150 wpm shipped to users as if it had been observed.
+    assert d["filler_per_min"] is None
+    assert d["wpm"] is None
     assert d["wpm_band"] == "unknown"
+    assert d["pace_available"] is False
 
 def test_delivery_metrics_zero_duration_no_crash():
-    d = delivery_metrics({"filler_total": 3, "total_speaking_duration_seconds": 0})
-    assert d["filler_per_min"] == 0.0  # avoid divide-by-zero
+    d = delivery_metrics({"filler_total": 3, "pace_available": True, "total_speaking_duration_seconds": 0})
+    assert d["filler_per_min"] is None  # no divide-by-zero, and no invented rate
 
 
 # ---- richer personality metrics surfaced for the dashboard (Wing D C2) ----
@@ -79,7 +83,8 @@ def test_delivery_metrics_surfaces_top_crutch_word():
     assert d["filler_breakdown"] == {"like": 3, "um": 5, "so": 1}
 
 def test_delivery_metrics_surfaces_sentences_talk_ratio_monologue():
-    speech = {"sentence_count": 42, "talk_ratio": 0.61, "longest_monologue_s": 33.4}
+    speech = {"sentence_count": 42, "talk_ratio": 0.61, "longest_monologue_s": 33.4,
+              "pace_available": True}
     d = delivery_metrics(speech)
     assert d["sentence_count"] == 42
     assert d["talk_ratio"] == 0.61
@@ -90,7 +95,7 @@ def test_delivery_metrics_empty_has_safe_personality_defaults():
     assert d["top_crutch_word"] is None
     assert d["sentence_count"] == 0
     assert d["talk_ratio"] == 0.0
-    assert d["longest_monologue_s"] == 0.0
+    assert d["longest_monologue_s"] is None   # absent, not a measured zero
     assert d["filler_breakdown"] == {}
 
 
@@ -98,7 +103,7 @@ def test_delivery_metrics_empty_has_safe_personality_defaults():
 
 def test_speech_summary_includes_real_numbers():
     s = build_speech_summary({"filler_total": 8, "avg_words_per_minute": 175.0,
-                              "total_speaking_duration_seconds": 90.0, "word_count": 260})
+                              "pace_available": True, "total_speaking_duration_seconds": 90.0, "word_count": 260})
     assert "8" in s          # filler total
     assert "175" in s        # wpm
     # it should tell the model these are measured, not to be estimated

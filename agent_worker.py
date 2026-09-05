@@ -1255,7 +1255,33 @@ async def run_interview():
         # Conversation history
         conversation_history = {"agent": [], "user": []}
         closing_finalized = {"done": False}
-        
+
+        # Real speaking windows, so delivery pace is MEASURED rather than
+        # assumed. Without this, speech_analytics reports pace as unavailable —
+        # it used to assume 150 wpm and then "derive" 150 wpm from that.
+        # `started` holds the clock reading at listening -> speaking; `pending`
+        # holds the last completed window, waiting to be attached to the final
+        # transcript (which arrives shortly after speech ends).
+        speech_window = {"started": None, "pending": None}
+
+        @session.on("user_state_changed")
+        def on_user_state(event):
+            """Track how long the candidate actually spoke. Never fatal."""
+            import time
+            try:
+                old = getattr(event.old_state, "value", event.old_state)
+                new = getattr(event.new_state, "value", event.new_state)
+                if new == "speaking":
+                    speech_window["started"] = time.time()
+                elif old == "speaking" and speech_window["started"] is not None:
+                    elapsed = time.time() - speech_window["started"]
+                    speech_window["started"] = None
+                    # Ignore implausible windows rather than record a bad number.
+                    if 0.2 <= elapsed <= 600:
+                        speech_window["pending"] = round(elapsed, 2)
+            except Exception as e:
+                logger.warning(f"[ANALYTICS] Speaking-window capture failed (non-fatal): {e}")
+
         @session.on("user_input_transcribed")
         def on_user_speech(event):
             import time
@@ -1267,10 +1293,24 @@ async def run_interview():
             asyncio.create_task(emit_user_caption(room, transcript))
             if event.is_final:
                 logger.info(f"[USER] {transcript}")
+                # Attach the just-finished speaking window if we have one. If the
+                # final transcript lands before the state flips, fall back to the
+                # window still in progress. None means "not measured" downstream,
+                # which is honest — it is never substituted with an estimate.
+                duration_s = speech_window["pending"]
+                if duration_s is None and speech_window["started"] is not None:
+                    elapsed = time.time() - speech_window["started"]
+                    if 0.2 <= elapsed <= 600:
+                        duration_s = round(elapsed, 2)
+                speech_window["pending"] = None
+
                 conversation_history["user"].append({
                     "index": len(conversation_history["user"]),
                     "text": transcript,
                     "timestamp": time.time(),
+                    # Measured speaking seconds for this turn, or None. Consumed
+                    # by speech_analytics._measure_pace.
+                    "duration_s": duration_s,
                     # Tag with the stage the candidate was answering in, so the
                     # evaluator can attribute evidence per stage (Wing D).
                     "stage": interview_state.stage.value,

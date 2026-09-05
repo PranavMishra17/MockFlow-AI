@@ -1889,6 +1889,30 @@ html, body {
 }
 .delivery-chip strong { color: var(--text-primary); font-weight: 800; }
 
+/* An unmeasured delivery metric. Deliberately NOT a gauge sitting at zero: a
+   gauge reads as an observation, and "we did not measure this" must not look
+   like "you scored nothing". */
+.delivery-unmeasured {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .75rem;
+  padding: .6rem .75rem;
+  margin: .35rem 0 .6rem;
+  border: 1px dashed var(--border-subtle, rgba(0,0,0,.16));
+  border-radius: 10px;
+  background: transparent;
+}
+.delivery-unmeasured-label {
+  font-weight: 700;
+  color: var(--text-primary);
+}
+.delivery-unmeasured-value {
+  font-size: .85rem;
+  color: var(--text-secondary, #6b6b6b);
+  font-style: italic;
+}
+
 /* report footer */
 .report-footer {
     display: flex;

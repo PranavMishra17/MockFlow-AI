@@ -53,8 +53,9 @@
               evidence: ['That dropped our p99 from 800ms to about 540ms'], to_raise: 'Tie every story to a number and the call it changed.' }
         ],
         differentiators: ['A genuine opinion on the trade-off, not just the textbook answer.'],
-        delivery: { wpm: 162, wpm_band: 'ideal', wpm_target: '130-160',
-            filler_total: 11, filler_per_min: 6.1, filler_band: 'moderate', filler_target: '<=5/min',
+        delivery: { pace_available: true, wpm: 162, wpm_band: 'brisk', wpm_target: '130-160',
+            filler_total: 11, filler_per_100w: 4.2, filler_per_min: 6.1,
+            filler_band: 'moderate', filler_target: '<=3.3/100 words',
             word_count: 1040, sentence_count: 74, filler_breakdown: { like: 7, basically: 4 },
             top_crutch_word: { word: 'like', count: 7 }, talk_ratio: 0.61, longest_monologue_s: 44.0 },
         gap_to_next: { signal: 'Ownership', from_band: 'borderline', to_band: 'solid',
