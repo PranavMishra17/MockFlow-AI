@@ -10,6 +10,7 @@ The single most load-bearing assertion in this file is
 only testable because that holds.
 """
 
+import ast
 import asyncio
 import json
 import os
@@ -724,3 +725,82 @@ def test_no_custom_questions_leaves_the_generated_list_untouched():
 def test_blank_custom_questions_are_ignored():
     result = ir._with_custom_questions([{'main_question': 'A'}], ['', '   '])
     assert [q['main_question'] for q in result] == ['A']
+
+
+# ---------------------------------------------------------------------------
+# Nothing blocking on the event loop
+#
+# The interview runs on one asyncio loop that also carries STT, TTS and VAD.
+# A synchronous network or database call inside an `async def` freezes the
+# candidate's audio for its whole duration — and these are not short: the
+# Piston runner allows 12 seconds, and psycopg can block on the pool.
+#
+# This is checked structurally rather than by grepping source text, because it
+# asks about the real parsed module, not a copy of it that could drift.
+# ---------------------------------------------------------------------------
+
+#: Callables that block. Passing one to `asyncio.to_thread` is fine — that is a
+#: reference, not a call — so only direct invocation is flagged.
+BLOCKING_CALLS = {
+    'OpenAI',                  # the sync client; AsyncOpenAI is a different name
+    'run_via_piston',          # urllib.request.urlopen, 12s timeout
+    'save_interview',          # psycopg, synchronous
+    'save_coding_submission',  # psycopg, synchronous
+}
+
+
+def _called_name(node):
+    func = node.func
+    if isinstance(func, ast.Name):
+        return func.id
+    if isinstance(func, ast.Attribute):
+        return func.attr
+    return None
+
+
+def _blocking_calls_in_async(path):
+    """Every (async function, blocking callee) pair in a module."""
+    import io
+
+    tree = ast.parse(io.open(path, encoding='utf-8').read())
+    found = []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.AsyncFunctionDef):
+            continue
+        for inner in ast.walk(node):
+            if isinstance(inner, ast.Call):
+                name = _called_name(inner)
+                if name in BLOCKING_CALLS:
+                    found.append((node.name, name))
+    return found
+
+
+@pytest.mark.parametrize('module', ['interview_runtime.py', 'agent_worker.py'])
+def test_no_blocking_call_runs_on_the_event_loop(module):
+    offenders = _blocking_calls_in_async(os.path.join(REPO_ROOT, module))
+    assert not offenders, (
+        "these block the interview's event loop, and the audio pipeline with it; "
+        f"wrap them in `await asyncio.to_thread(...)`: {offenders}"
+    )
+
+
+def test_the_guard_would_actually_catch_a_regression(tmp_path):
+    """A guard that cannot fail is not a guard."""
+    bad = tmp_path / 'bad.py'
+    bad.write_text(
+        "import asyncio\n"
+        "async def f():\n"
+        "    run_via_piston('x', 'y', [])\n",
+        encoding='utf-8')
+    assert _blocking_calls_in_async(bad) == [('f', 'run_via_piston')]
+
+
+def test_passing_a_blocking_callable_to_a_thread_is_not_flagged(tmp_path):
+    """`asyncio.to_thread(run_via_piston, ...)` is the fix, not the defect."""
+    good = tmp_path / 'good.py'
+    good.write_text(
+        "import asyncio\n"
+        "async def f():\n"
+        "    await asyncio.to_thread(run_via_piston, 'x', 'y', [])\n",
+        encoding='utf-8')
+    assert _blocking_calls_in_async(good) == []
