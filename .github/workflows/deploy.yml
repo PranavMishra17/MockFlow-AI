@@ -39,34 +39,45 @@ jobs:
         run: pytest -q --cov=. --cov-report=term-missing
 
   deploy:
-    name: Deploy gate (Render auto-deploys via webhook)
+    name: Deploy to Fly.io
     runs-on: ubuntu-latest
     needs: [lint, test]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    concurrency:
+      # Never let two deploys race for the single always-on machine.
+      group: fly-deploy-production
+      cancel-in-progress: false
     steps:
-      - name: Announce
+      - uses: actions/checkout@v4
+
+      # Guarded so this workflow stays green before the token exists. Add the
+      # secret with:  fly tokens create deploy -x 999999h
+      # then store it as the FLY_API_TOKEN repo secret.
+      - name: Check for deploy credentials
+        id: creds
         run: |
-          echo "Lint + tests passed. Render auto-deploys this commit via its GitHub integration."
-          echo ""
-          echo "Render env vars required (set in the Render dashboard):"
-          echo "   - DATABASE_URL          (Neon pooled connection string)"
-          echo "   - GOOGLE_CLIENT_ID      (Google Cloud OAuth client)"
-          echo "   - GOOGLE_CLIENT_SECRET"
-          echo "   - SECRET_KEY            (python -c \"import secrets; print(secrets.token_hex(32))\")"
-          echo "   - ENCRYPTION_KEY        (Fernet key — keep stable)"
-          echo "   - FLASK_ENV=production  (enables Secure cookies + fail-fast config)"
-          echo "   - CORS_ORIGINS=https://<your-domain>"
-          echo ""
-          echo "BYOK note: LiveKit / OpenAI / Deepgram keys are NOT env vars —"
-          echo "users provide their own via the in-app Settings page."
+          if [ -n "${{ secrets.FLY_API_TOKEN }}" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::FLY_API_TOKEN is not set - skipping deploy. See docs/DEPLOYMENT.md section 4."
+          fi
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+        if: steps.creds.outputs.ready == 'true'
+
+      - name: Deploy
+        if: steps.creds.outputs.ready == 'true'
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: flyctl deploy --remote-only
 
       - name: Post-deploy health smoke
-        if: ${{ vars.RENDER_URL != '' }}
-        # Best-effort: poll /health until it reports healthy. Render builds take
-        # a few minutes, so we retry with backoff rather than hard-failing on the
-        # first miss. A persistently unhealthy endpoint surfaces in the logs.
+        if: steps.creds.outputs.ready == 'true' && vars.APP_URL != ''
+        # /health pings Neon, so a 200 here proves app + database, not just that
+        # the port is open. Retries because the machine may still be starting.
         run: |
-          url="${{ vars.RENDER_URL }}/health"
+          url="${{ vars.APP_URL }}/health"
           echo "Polling $url ..."
           for i in $(seq 1 20); do
             code=$(curl -s -o /tmp/health.json -w "%{http_code}" --max-time 30 "$url" || echo 000)
@@ -74,6 +85,7 @@ jobs:
             if [ "$code" = "200" ]; then
               echo "Healthy:"; cat /tmp/health.json; exit 0
             fi
-            sleep 20
+            sleep 15
           done
-          echo "::warning::/health did not return 200 within the smoke window; check the Render deploy."
+          echo "::error::/health did not return 200 after deploy."
+          exit 1

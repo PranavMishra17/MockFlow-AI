@@ -1,338 +1,222 @@
 # MockFlow-AI Deployment Guide
 
-Complete guide for deploying MockFlow-AI to Render with Supabase backend.
+Deploying MockFlow-AI to **Fly.io** on a **custom domain**, always-on.
+
+> **This guide replaced a Supabase + Render one.** The backend is **Neon
+> Postgres** (psycopg3 in `db.py`) with **Authlib Google OAuth + Flask-Login** —
+> there is no Supabase project, no `auth.users`, and no RLS. Auth is enforced in
+> Flask (`@require_auth`), not in the database.
 
 ---
 
-## Prerequisites
+## 0. Choosing a host (read this before you pick)
 
-Before deploying, ensure you have:
+The app's shape decides the host. `worker_manager.spawn_worker()` launches
+`agent_worker.py` as an **OS subprocess** per interview, and that process holds a
+live LiveKit session — loading Silero VAD and streaming audio — for the entire
+20–40 minute interview.
 
-1. **GitHub Repository**: Code pushed to GitHub (main branch)
-2. **Supabase Project**: Created and configured
-3. **Google Cloud OAuth**: Credentials configured
-4. **Render Account**: Free tier account created
+| Host | Verdict | Why |
+|---|---|---|
+| **Fly.io** | **Recommended** | Real containers, long-lived processes, subprocess spawning, always-on via `min_machines_running`, free automatic TLS on custom domains. |
+| Render | Works, but | This is what it ran on. The free tier **spins down when idle**, which is exactly the "not always working itself" problem. A paid instance fixes it and needs no code change. |
+| **Cloudflare Workers / Pages** | **Cannot host this** | Workers are V8 isolates running JS/WASM — there is no CPython, no `subprocess.Popen`, and no process that stays resident for a 30-minute call. Not a config problem; the execution model is incompatible. |
 
----
+**Cloudflare still has a job here** (optional): point your domain's DNS at Fly
+and let Cloudflare serve as DNS + CDN for `/static`. Just don't try to *run* the
+Python on it. If you do use Cloudflare's proxy, see the TLS note in §4.
 
-## Part 1: Supabase Configuration
+### Why this app pins to one machine
 
-### 1.1 Create Supabase Project
-
-1. Go to [supabase.com](https://supabase.com)
-2. Create new project
-3. Wait for database provisioning (2-3 minutes)
-
-### 1.2 Run Database Migrations
-
-Execute these SQL commands in Supabase SQL Editor:
-
-```sql
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-
--- Users table (managed by Supabase Auth)
--- No need to create - handled by Supabase
-
--- API Keys table (encrypted BYOK storage)
-CREATE TABLE IF NOT EXISTS user_api_keys (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    livekit_url TEXT,
-    livekit_api_key TEXT,
-    livekit_api_secret TEXT,
-    openai_key TEXT,
-    deepgram_key TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(user_id)
-);
-
--- Interviews table (database-only storage)
-CREATE TABLE IF NOT EXISTS interviews (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    candidate_name TEXT NOT NULL,
-    interview_date TIMESTAMP WITH TIME ZONE NOT NULL,
-    room_name TEXT,
-    job_role TEXT,
-    experience_level TEXT,
-    conversation JSONB,
-    total_messages JSONB,
-    skipped_stages TEXT[],
-    final_stage TEXT,
-    ended_by TEXT,
-    has_resume BOOLEAN DEFAULT FALSE,
-    has_jd BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Feedback table
-CREATE TABLE IF NOT EXISTS feedback (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    interview_id UUID NOT NULL REFERENCES interviews(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    feedback_data JSONB NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(interview_id)
-);
-
--- Indexes for performance
-CREATE INDEX IF NOT EXISTS idx_interviews_user_date
-ON interviews(user_id, interview_date DESC);
-
-CREATE INDEX IF NOT EXISTS idx_feedback_interview
-ON feedback(interview_id);
-
-CREATE INDEX IF NOT EXISTS idx_api_keys_user
-ON user_api_keys(user_id);
-
--- Row Level Security (RLS)
-ALTER TABLE user_api_keys ENABLE ROW LEVEL SECURITY;
-ALTER TABLE interviews ENABLE ROW LEVEL SECURITY;
-ALTER TABLE feedback ENABLE ROW LEVEL SECURITY;
-
--- RLS Policies for user_api_keys
-CREATE POLICY "Users can view own API keys"
-ON user_api_keys FOR SELECT
-USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert own API keys"
-ON user_api_keys FOR INSERT
-WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own API keys"
-ON user_api_keys FOR UPDATE
-USING (auth.uid() = user_id);
-
--- RLS Policies for interviews
-CREATE POLICY "Users can view own interviews"
-ON interviews FOR SELECT
-USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert own interviews"
-ON interviews FOR INSERT
-WITH CHECK (auth.uid() = user_id);
-
--- RLS Policies for feedback
-CREATE POLICY "Users can view own feedback"
-ON feedback FOR SELECT
-USING (auth.uid() = user_id);
-
-CREATE POLICY "Users can insert own feedback"
-ON feedback FOR INSERT
-WITH CHECK (auth.uid() = user_id);
-
-CREATE POLICY "Users can update own feedback"
-ON feedback FOR UPDATE
-USING (auth.uid() = user_id);
-```
-
-### 1.3 Get Supabase Credentials
-
-Navigate to **Project Settings → API**:
-
-- **Supabase URL**: `https://your-project.supabase.co`
-- **Anon Key**: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` (public key)
-- **Service Role Key**: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...` (secret key - NEVER commit to git)
+`worker_manager.active_workers` is an **in-process dict**. A request that lands
+on a second machine cannot see a worker running on the first, so
+`/api/worker-status` and interview teardown would break. Until that state moves
+out of process (Redis, or LiveKit dispatch), keep `min_machines_running = 1` and
+do **not** raise `max_machines_running`. This caps concurrent interviews at one
+machine's memory — which is what `MAX_CONCURRENT_WORKERS` is for.
 
 ---
 
-## Part 2: Google Cloud OAuth Setup
+## 1. Prerequisites
 
-### 2.1 Create OAuth Credentials
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com)
-2. Create new project or select existing
-3. Navigate to **APIs & Services → Credentials**
-4. Click **Create Credentials → OAuth 2.0 Client ID**
-5. Application type: **Web application**
-6. Name: `MockFlow-AI`
-
-### 2.2 Configure Authorized Redirect URIs
-
-Add these URIs (replace with your actual domains):
-
-**For Supabase Auth callback:**
-```
-https://your-project.supabase.co/auth/v1/callback
-```
-
-**For local development:**
-```
-http://localhost:5000/auth/callback
-```
-
-**For production (Render):**
-```
-https://your-app-name.onrender.com/auth/callback
-```
-
-### 2.3 Get OAuth Credentials
-
-Copy these values:
-- **Client ID**: `123456789-abcdef.apps.googleusercontent.com`
-- **Client Secret**: `GOCSPX-abcdef123456` (keep secret)
-
-### 2.4 Configure Supabase Auth
-
-1. Go to Supabase Dashboard → **Authentication → Providers**
-2. Enable **Google** provider
-3. Paste Client ID and Client Secret
-4. Save
+1. **Neon project** with the migrations in `migrations/` applied (see §2).
+2. **Google Cloud OAuth** client (§3).
+3. **flyctl** installed and authenticated: `fly auth login`.
+4. A **domain** you control.
 
 ---
 
-## Part 3: Generate Security Keys
+## 2. Database (Neon)
 
-### 3.1 Generate Encryption Key
-
-This key encrypts user API keys in the database:
+Apply the migrations in order against your Neon branch. `003` is the one that
+backs the whole feedback moat — if it is missing, verdicts fail to persist.
 
 ```bash
-python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+psql "$DATABASE_URL" -f migrations/001_initial_schema.sql
+psql "$DATABASE_URL" -f migrations/002_free_tier_and_stats.sql
+psql "$DATABASE_URL" -f migrations/003_interview_scores.sql
 ```
 
-Example output: `a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6==`
-
-**IMPORTANT**: Save this key securely. Losing it means users can't decrypt their API keys.
-
-### 3.2 Generate Flask Secret Key
-
-Used for session management:
+Verify:
 
 ```bash
-python -c "import secrets; print(secrets.token_hex(32))"
+psql "$DATABASE_URL" -c "\dt"
 ```
 
-Example output: `a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6q7r8s9t0u1v2w3x4y5z6a7b8c9d0e1f2`
+Use the **pooled** Neon connection string as `DATABASE_URL`. Put the Fly app in
+the **same region as the Neon project** (`primary_region` in `fly.toml`).
 
 ---
 
-## Part 4: Render Deployment
+## 3. Google OAuth
 
-### 4.1 Connect GitHub Repository
+`auth_helpers.py` builds the callback with `url_for(..., _external=True)`, and
+`app.py` wraps the WSGI app in `ProxyFix`, so behind Fly's TLS proxy the app
+generates `https://<your-domain>/auth/google/callback` correctly.
 
-1. Go to [Render Dashboard](https://dashboard.render.com)
-2. Click **New → Web Service**
-3. Connect your GitHub account
-4. Select `MockFlow-AI` repository
-5. Click **Connect**
+In Google Cloud Console → Credentials → your OAuth client, register **every**
+origin you will actually use:
 
-### 4.2 Configure Service
+**Authorized redirect URIs**
+- `https://<your-domain>/auth/google/callback`
+- `https://<app-name>.fly.dev/auth/google/callback` *(so you can test before DNS)*
+- `http://localhost:5000/auth/google/callback` *(local dev)*
 
-**Basic Settings:**
-- **Name**: `mockflow-ai`
-- **Region**: Oregon (US West) or closest to you
-- **Branch**: `main`
-- **Runtime**: Python 3
-- **Build Command**: `pip install -r requirements.txt`
-- **Start Command**: `gunicorn app:app --workers 1 --timeout 120`
+**Authorized JavaScript origins**
+- `https://<your-domain>`, `https://<app-name>.fly.dev`, `http://localhost:5000`
 
-**IMPORTANT**: Use `--workers 1` (single worker) because the BYOK model uses subprocess management for agent workers. Multiple gunicorn workers create separate memory spaces, preventing proper subprocess tracking across requests.
-
-**CRITICAL ARCHITECTURE NOTE**: Agent workers use **direct room connection** mode, NOT LiveKit's dispatch system. This prevents old workers from interfering with new deployments. See troubleshooting section for details.
-
-**Instance Type:**
-- Select **Free** tier (512MB RAM, 0.1 CPU)
-
-### 4.3 Set Environment Variables
-
-Click **Advanced → Add Environment Variable** and add each of these:
-
-#### Required Environment Variables
-
-| Variable Name | Where to Get | Example Value |
-|--------------|--------------|---------------|
-| `SUPABASE_URL` | Supabase Project Settings → API | `https://abcdef123456.supabase.co` |
-| `SUPABASE_SERVICE_KEY` | Supabase Project Settings → API → service_role key | `eyJhbGciOiJIUzI1NiIsInR5cCI6...` |
-| `SUPABASE_ANON_KEY` | Supabase Project Settings → API → anon key | `eyJhbGciOiJIUzI1NiIsInR5cCI6...` |
-| `ENCRYPTION_KEY` | Generated in Part 3.1 | `a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6...` |
-| `SECRET_KEY` | Generated in Part 3.2 | `a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6...` |
-| `GOOGLE_CLIENT_ID` | Google Cloud Console OAuth | `123456789-abcdef.apps.googleusercontent.com` |
-| `GOOGLE_CLIENT_SECRET` | Google Cloud Console OAuth | `GOCSPX-abcdef123456` |
-
-#### Optional Environment Variables
-
-| Variable Name | Default | Description |
-|--------------|---------|-------------|
-| `MAX_CONCURRENT_WORKERS` | `3` | Maximum simultaneous interviews |
-| `PYTHON_VERSION` | `3.12` | Python runtime version |
-
-### 4.4 Deploy
-
-1. Click **Create Web Service**
-2. Wait for deployment (3-5 minutes)
-3. Monitor logs for errors
+A missing entry produces Google's `Error 400: redirect_uri_mismatch`. Locally, do
+**not** set `FLASK_ENV=production` — `SESSION_COOKIE_SECURE` would drop the
+session cookie over plain http and OAuth's state check would fail.
 
 ---
 
-## Part 5: Post-Deployment Verification
+## 4. Deploy to Fly
 
-### 5.1 Check Health Endpoint
-
-Visit your deployment URL + `/health`:
+The repo ships a `Dockerfile` and `fly.toml`. Create the app without deploying,
+so you can set secrets first:
 
 ```bash
-curl https://your-app-name.onrender.com/health
+fly launch --no-deploy --name <app-name> --region <neon-region>
 ```
 
-Expected response:
-```json
-{
-  "status": "healthy",
-  "database": "connected",
-  "workers": {
-    "active": 0,
-    "max": 3
-  }
-}
+Generate and set the secrets (these are encrypted at rest and injected as env
+vars; **`ENCRYPTION_KEY` must never change** — it decrypts every stored BYOK key):
+
+```bash
+fly secrets set DATABASE_URL="postgresql://...neon.tech/neondb?sslmode=require" GOOGLE_CLIENT_ID="...apps.googleusercontent.com" GOOGLE_CLIENT_SECRET="..." SECRET_KEY="$(python -c 'import secrets;print(secrets.token_hex(32))')" ENCRYPTION_KEY="$(python -c 'from cryptography.fernet import Fernet;print(Fernet.generate_key().decode())')" CORS_ORIGINS="https://<your-domain>"
 ```
 
-### 5.2 Test Authentication
+`FLASK_ENV=production`, `PORT`, and `MAX_CONCURRENT_WORKERS` are already in
+`fly.toml`'s `[env]`. With `FLASK_ENV=production`, `app.py` **fails fast at boot**
+if a required variable is missing — a crash loop here is a missing secret, so
+check `fly logs` first.
 
-1. Visit `https://your-app-name.onrender.com`
-2. Click **Sign In with Google**
-3. Verify redirect to Google OAuth
-4. After login, verify redirect to Dashboard
+Deploy:
 
-### 5.3 Test Interview Flow
+```bash
+fly deploy
+```
 
-1. Go to **Settings → API Keys**
-2. Enter your LiveKit, OpenAI, and Deepgram keys
-3. Save and test keys
-4. Go to **Dashboard → Start Interview**
-5. Fill form and start interview
-6. Verify agent spawns and speaks
-7. Complete interview
-8. Check Past Interviews page
-9. Generate feedback
+```bash
+curl -fsS https://<app-name>.fly.dev/health
+```
+
+`/health` returns `200` with `{"status":"healthy","database":"reachable"}`, or
+`503` if Neon is unreachable. Fly's health check in `fly.toml` polls this, so a
+DB outage marks the machine unhealthy rather than serving broken pages.
+
+### Custom domain + TLS
+
+```bash
+fly certs add <your-domain>
+```
+
+```bash
+fly certs show <your-domain>
+```
+
+That prints the exact DNS records to create. Add the `A`/`AAAA` (or `CNAME`)
+records at your DNS provider, then wait for issuance (usually minutes):
+
+```bash
+fly certs check <your-domain>
+```
+
+**If your DNS is on Cloudflare:** start with the proxy **off** (grey cloud) so
+Fly can complete the ACME challenge. Once the cert is issued you may turn the
+orange cloud on, but set Cloudflare SSL/TLS mode to **Full (strict)** — the
+default "Flexible" mode talks plain http to the origin, which combined with
+`force_https` in `fly.toml` causes a redirect loop.
+
+Finally, point `CORS_ORIGINS` at the real domain:
+
+```bash
+fly secrets set CORS_ORIGINS="https://<your-domain>"
+```
+
+### Staying always-on
+
+`fly.toml` sets `auto_stop_machines = false` and `min_machines_running = 1`, so
+one machine stays resident — no cold start. Note this means the machine bills
+continuously rather than per-request; that is the trade for always-on.
+
+Neon's free tier still **scale-to-zero**s its compute after inactivity, adding a
+few seconds to the first query, so `.github/workflows/keep-warm.yml` pings it
+directly on a schedule. Set two repo-level values for CI:
+
+- secret **`FLY_API_TOKEN`** (`fly tokens create deploy -x 999999h`) — enables the
+  deploy job in `deploy.yml`; without it that job skips and CI still passes.
+- variable **`APP_URL`** (e.g. `https://<your-domain>`) — used by the post-deploy
+  health smoke and the keep-warm canary.
+
+---
+
+## 5. Post-deploy verification
+
+```bash
+curl -fsS https://<your-domain>/health
+```
+
+Then in a browser: sign in with Google, save BYOK keys in Settings, run a short
+interview, and confirm the verdict renders and survives a page reload (it is
+persisted server-side to the `feedback` table).
+
+Watch memory during a live interview before trusting `MAX_CONCURRENT_WORKERS`:
+
+```bash
+fly ssh console -C "free -m"
+```
 
 ---
 
 ## Important Notes
 
-### About API Keys (BYOK Model)
+### About API keys (BYOK model)
 
-- **LiveKit**, **OpenAI**, and **Deepgram** keys are **NOT** set in Render environment
-- Each user provides their own keys via the Settings page
-- Keys are encrypted in database using `ENCRYPTION_KEY`
-- Workers spawn with user's decrypted keys as subprocess environment variables
+- **LiveKit**, **OpenAI**, and **Deepgram** keys are **NOT** deployment env vars.
+- Each user provides their own via the Settings page; they are encrypted at rest
+  with `ENCRYPTION_KEY` and passed to the worker subprocess as env vars.
+- The optional owner-funded free tier is the exception: `FREE_TIER_ENABLED=true`
+  plus the five `SYSTEM_*` keys (requires migration `002`). It defaults **off**.
 
-### Security Best Practices
+### Security
 
-1. **Never commit** `.env` file to git
-2. **Never expose** `SUPABASE_SERVICE_KEY` publicly
-3. **Never expose** `ENCRYPTION_KEY` (losing this breaks all stored API keys)
-4. **Rotate keys** periodically (SECRET_KEY, GOOGLE_CLIENT_SECRET)
-5. **Use HTTPS** only in production (Render provides this automatically)
+1. Never commit `.env` — it is gitignored, and `.dockerignore` keeps it out of
+   the image.
+2. Never expose `ENCRYPTION_KEY`; losing or rotating it invalidates every stored
+   user API key.
+3. Rotate `SECRET_KEY` / `GOOGLE_CLIENT_SECRET` periodically. Rotating
+   `SECRET_KEY` logs everyone out (it signs the session cookie).
+4. Real interview transcripts (`interviews/`, `feedback/`) are PII — gitignored
+   and excluded from the image.
 
-### Free Tier Limits
+### Capacity
 
-- **Render**: 512MB RAM, 0.1 CPU, sleeps after 15 min inactivity
-- **Supabase**: 500MB database, 2GB bandwidth/month
-- **Max Concurrent Interviews**: 3 (configurable via `MAX_CONCURRENT_WORKERS`)
+- **Fly**: sized in `fly.toml` (`shared-cpu-2x` / 2 GB as a starting point).
+- **Neon free**: 0.5 GB storage, compute scales to zero when idle.
+- **Concurrent interviews**: capped by `MAX_CONCURRENT_WORKERS` (memory-bound —
+  each is an onnxruntime-loaded subprocess), and by the single-machine pin above.
 
 ### Architecture Details
 
@@ -417,7 +301,7 @@ finally:
 
 **The Problem:**
 
-Render free tier has limited CPU (0.1 CPU). Silero VAD (Voice Activity Detection) runs "inference slower than realtime" causing voice to break or hang.
+On a low-CPU instance (Render's free tier gave 0.1 CPU) Silero VAD runs "inference slower than realtime", causing voice to break or hang. The `shared-cpu-2x` sizing in `fly.toml` is chosen to stay clear of this.
 
 **The Solution:**
 
@@ -442,17 +326,17 @@ vad = silero.VAD.load(
 ### Troubleshooting
 
 **Issue: Health check fails**
-- Verify `SUPABASE_URL` and `SUPABASE_SERVICE_KEY` are correct
-- Check Supabase project is not paused (free tier)
+- Verify `DATABASE_URL` is the correct Neon **pooled** connection string
+- Check the Neon project/branch is not suspended, and that `/health` reports `database: reachable`
 
 **Issue: OAuth fails**
 - Verify Google OAuth redirect URI matches exactly
-- Check `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` in Render
+- Check `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` are set (`fly secrets list`)
 
 **Issue: Worker spawn fails**
-- Check Render logs for subprocess errors
-- Verify user has entered API keys in Settings
-- Check memory usage (may hit 512MB limit with multiple workers)
+- Check `fly logs` for subprocess errors
+- Verify the user has entered API keys in Settings
+- Check memory headroom (`fly ssh console -C "free -m"`) — each worker is memory-hungry; lower `MAX_CONCURRENT_WORKERS` or raise `[[vm]] memory`
 
 **Issue: User connects but interview freezes / no agent voice**
 
@@ -475,14 +359,15 @@ Old workers from previous deployments are still registered with LiveKit Cloud an
 2. Navigate to your project
 3. Go to **Agents** or **Workers** section
 4. Terminate ALL registered agents (look for IDs like `AW_4YwS9uFDcCiw`)
-5. Redeploy your Render service
+5. Redeploy: `fly deploy`
 
-**Solution B: Render Hard Reset**
+**Solution B: Hard restart the machine**
 
-1. Go to Render Dashboard
-2. Select your service
-3. Click **Manual Deploy** → **Clear build cache & deploy**
-4. This kills all old containers and starts fresh
+```bash
+fly apps restart <app-name>
+```
+
+This kills every lingering worker subprocess and starts a clean container. To rule out a stale image layer, rebuild without cache: `fly deploy --no-cache`.
 
 **Solution C: Verify Direct Connection Mode**
 
@@ -508,8 +393,8 @@ If you see dispatch mode logs, your code is using the old architecture. Verify:
 **Cause:** Silero VAD running too aggressively on limited CPU.
 
 **Solution:** Already optimized in latest code. If still happening:
-1. Check CPU usage in Render dashboard
-2. Consider upgrading to higher tier (512MB → 2GB RAM, 0.5 CPU)
+1. Check load with `fly ssh console -C "uptime"` during an interview
+2. Scale up: `fly scale vm performance-1x` (dedicated CPU)
 3. Or reduce `max_buffered_speech` further in `agent_worker.py`
 
 **Issue: RuntimeError: Attempted to use an http session outside of a job context**
@@ -526,9 +411,9 @@ llm = openai.LLM(...)  # No http_session parameter
 ```
 
 **Issue: Database queries slow**
-- Verify indexes are created (Part 1.2)
-- Check Supabase logs for slow queries
-- Consider upgrading Supabase plan
+- Verify the migrations in `migrations/` ran (they create the indexes)
+- Confirm `primary_region` in `fly.toml` matches the Neon region — a cross-region hop dominates query time
+- Check the Neon console for slow queries; a scaled-to-zero compute adds a few seconds to the first query
 
 ---
 
@@ -536,9 +421,9 @@ llm = openai.LLM(...)  # No http_session parameter
 
 ### Check Logs
 
-**Render Dashboard:**
-- Go to your service → **Logs** tab
-- Filter by severity (Info, Warning, Error)
+```bash
+fly logs
+```
 
 **Important Log Patterns:**
 - `[WORKER] Spawning worker for room: interview-*` - Worker starting
@@ -551,70 +436,54 @@ llm = openai.LLM(...)  # No http_session parameter
 
 Visit `/health` endpoint to see current worker count:
 ```bash
-watch -n 5 'curl -s https://your-app-name.onrender.com/health | jq'
-```
+watch -n 5 'curl -s https://<your-domain>/health | jq'
 
 ---
 
-## Rollback Plan
+## Rollback
 
-If deployment fails:
+```bash
+fly releases
+```
 
-1. **Revert to previous commit**:
-   ```bash
-   git revert HEAD
-   git push origin main
-   ```
+```bash
+fly releases rollback <version>
+```
 
-2. **Check Render deployment logs** for specific errors
+Or revert the commit and redeploy:
 
-3. **Verify environment variables** in Render dashboard
-
-4. **Test locally** with same environment variables:
-   ```bash
-   # Copy .env.example to .env
-   # Fill in production values
-   python app.py
-   ```
+```bash
+git revert HEAD && git push origin main && fly deploy
+```
 
 ---
 
 ## Support
 
-- **GitHub Issues**: [Report bugs](https://github.com/yourusername/MockFlow-AI/issues)
-- **Render Status**: [status.render.com](https://status.render.com)
-- **Supabase Status**: [status.supabase.com](https://status.supabase.com)
+- **GitHub Issues**: https://github.com/PranavMishra17/MockFlow-AI/issues
+- **Fly status**: [status.flyio.net](https://status.flyio.net)
+- **Neon status**: [neonstatus.com](https://neonstatus.com)
 
 ---
 
-## Summary Checklist
+## Summary checklist
 
-**Pre-Deployment:**
-- [ ] Supabase project created and migrations run
-- [ ] Google Cloud OAuth configured with correct redirect URIs
-- [ ] Encryption key and secret key generated
-- [ ] Render service created and connected to GitHub
-- [ ] All 7 required environment variables set in Render
+**Pre-deploy**
+- [ ] Neon migrations `001`, `002`, `003` applied
+- [ ] Google OAuth redirect URIs registered for the domain **and** `*.fly.dev`
+- [ ] `SECRET_KEY` + `ENCRYPTION_KEY` generated and stored safely
+- [ ] `fly launch --no-deploy` run; all six secrets set
+- [ ] `primary_region` matches the Neon region
 
-**Post-Deployment:**
-- [ ] Service deployed successfully (check logs)
-- [ ] `/health` endpoint returns 200 OK
-- [ ] Logs show: `[WORKER] Starting agent worker - DIRECT ROOM CONNECTION MODE`
-- [ ] NO logs about "dispatch worker" or "registering with LiveKit Cloud"
-- [ ] Google OAuth login works
-- [ ] Users can save API keys
+**Post-deploy**
+- [ ] `fly deploy` succeeded; `fly logs` clean
+- [ ] `/health` returns 200 with `database: reachable`
+- [ ] `fly certs check <domain>` shows the cert issued
+- [ ] `CORS_ORIGINS` points at the real domain
+- [ ] Google sign-in works on the custom domain
 
-**Interview Testing:**
-- [ ] Interview flow works end-to-end (spawn worker, connect, save to DB)
-- [ ] Agent voice is heard within 5 seconds of joining
-- [ ] User voice is detected (check logs for transcription)
-- [ ] Interview completes and saves to database
-- [ ] Feedback generation works
-- [ ] Past interviews loads from database
-
-**Troubleshooting:**
-- [ ] If interview freezes: Clear old LiveKit agents (see Troubleshooting section)
-- [ ] If voice breaks: Check CPU usage, verify VAD settings
-- [ ] If http session error: Verify Deepgram STT has `http_session` parameter
-
-**Deployment Complete!**
+**Interview E2E**
+- [ ] Logs show `DIRECT ROOM CONNECTION MODE` (never "dispatch" / "registering with LiveKit Cloud")
+- [ ] Agent audio within ~5 s; user speech transcribed
+- [ ] Interview saves to Neon; verdict renders and survives a reload
+- [ ] Memory headroom confirmed under a live interview (`fly ssh console -C "free -m"`)

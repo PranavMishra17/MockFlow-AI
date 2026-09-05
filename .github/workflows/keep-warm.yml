@@ -1,9 +1,12 @@
-name: Keep Render + Neon warm
+name: Keep Neon warm
 
-# Runs at 12:00 UTC on the 1st and 15th of every month (~every 14 days).
-# Wakes the Render service (which warms the DB transitively) and pings Neon
-# directly with a no-op query so the project's compute endpoint resets its
-# inactivity timer.
+# Neon's free tier scales its compute to zero after inactivity, which adds a few
+# seconds to the first query, and a project left completely idle for long enough
+# can be suspended. A no-op query on a schedule resets that inactivity timer.
+#
+# The web service itself no longer needs waking: fly.toml pins
+# min_machines_running = 1 with auto_stop_machines = false, so the app is always
+# resident. The health ping below is kept only as a cheap liveness canary.
 on:
   schedule:
     - cron: '0 12 1,15 * *'
@@ -13,10 +16,10 @@ jobs:
   warmup:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Render /health (warms web service + transitively the DB)
-        if: ${{ vars.RENDER_URL != '' }}
+      - name: Ping /health (liveness canary — also warms the DB transitively)
+        if: ${{ vars.APP_URL != '' }}
         run: |
-          curl --max-time 180 --retry 3 --retry-delay 30 -fsS "${{ vars.RENDER_URL }}/health" || true
+          curl --max-time 180 --retry 3 --retry-delay 30 -fsS "${{ vars.APP_URL }}/health" || true
 
       - name: Set up Python
         uses: actions/setup-python@v6

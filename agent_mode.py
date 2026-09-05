@@ -8,6 +8,18 @@ MockFlow-AI historically used ONE transport: the web process spawns
 ("dispatch"), where a long-lived worker registers with a LiveKit project under an
 `agent_name` and the server hands it jobs.
 
+## Status on this branch (read this first)
+
+The config layer — `normalize_config` / `merge_config` / `CONFIG_FIELDS` — is the
+shared interview-config contract and is also on `main`, where it is the piece
+other work should build on.
+
+The dispatch transport IS present on this branch (`worker_manager` routing,
+`agent_worker`'s dispatch entrypoint) but **must not be enabled**: see the open
+blocking defects at the top of `docs/AGENT_DISPATCH.md`. `AGENT_MODE` defaults to
+`direct`, and the direct path on this branch has not yet been run against a live
+LiveKit room.
+
 Everything here is pure: no LiveKit calls, no I/O, no environment reads beyond an
 explicitly passed mapping. The transports differ only in HOW the room and the
 interview config arrive; the interview itself must behave identically. That
