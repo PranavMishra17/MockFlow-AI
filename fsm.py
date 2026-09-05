@@ -10,7 +10,7 @@ Stage Flow: WELCOME -> SELF_INTRO -> PAST_EXPERIENCE -> COMPANY_FIT -> CLOSING
 from enum import Enum
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional, List, Any
+from typing import Callable, Optional, List, Any
 import logging
 
 logger = logging.getLogger(__name__)
@@ -111,6 +111,14 @@ class InterviewState:
     # Skip stage queue - stages requested to skip to
     skip_stage_queue: List[InterviewStage] = field(default_factory=list)
 
+    # Clock. Every wall-clock read in this class goes through `self._now()` so a
+    # harness can drive stage timers deterministically instead of sleeping in
+    # real time. Production leaves it as `datetime.now`, which is what every
+    # call site used inline before.
+    _now: Callable[[], datetime] = field(
+        default=datetime.now, repr=False, compare=False
+    )
+
     def transition_to(self, new_stage: InterviewStage, forced: bool = False, skipped: bool = False) -> None:
         """
         Explicit state transition with timestamp tracking.
@@ -122,8 +130,8 @@ class InterviewState:
         """
         old_stage = self.stage
         self.stage = new_stage
-        self.stage_started_at = datetime.now()
-        self.last_state_verification = datetime.now()
+        self.stage_started_at = self._now()
+        self.last_state_verification = self._now()
         self.transition_count += 1
 
         # Clear pending transition
@@ -157,7 +165,7 @@ class InterviewState:
         Returns:
             Current stage
         """
-        self.last_state_verification = datetime.now()
+        self.last_state_verification = self._now()
         logger.debug(f"[FSM] State verified: {self.stage.value}")
         return self.stage
 
@@ -170,7 +178,7 @@ class InterviewState:
         """
         if not self.stage_started_at:
             return 0.0
-        return (datetime.now() - self.stage_started_at).total_seconds()
+        return (self._now() - self.stage_started_at).total_seconds()
 
     def time_since_verification(self) -> float:
         """
@@ -182,7 +190,7 @@ class InterviewState:
         """
         if not self.last_state_verification:
             return 0.0
-        return (datetime.now() - self.last_state_verification).total_seconds()
+        return (self._now() - self.last_state_verification).total_seconds()
 
     def get_next_stage(self) -> Optional[InterviewStage]:
         """
@@ -1011,7 +1019,7 @@ class CodingInterviewState(InterviewState):
             'code': code,
             'language': language,
             'evaluation': evaluation,
-            'timestamp': datetime.now().isoformat(),
+            'timestamp': self._now().isoformat(),
         })
         logger.info(f"[FSM] Recorded submission for problem {problem_index}, attempt {attempt}")
         return attempt
