@@ -61,8 +61,37 @@ VALID_MODES = (MODE_DIRECT, MODE_DISPATCH)
 #: string must agree on both sides.
 DEFAULT_AGENT_NAME = "mockflow-interviewer"
 
-#: LiveKit credential fields that must match for a dispatch to be routable.
-_CREDENTIAL_FIELDS = ("livekit_url", "livekit_api_key", "livekit_api_secret")
+#: Every credential that must match for a dispatch to be both ROUTABLE and
+#: correctly BILLED. LiveKit decides routability; OpenAI/Deepgram decide whose
+#: account pays. Comparing only LiveKit would let a user whose project happens to
+#: equal the system one be dispatched onto a worker billing the owner's keys.
+_CREDENTIAL_FIELDS = (
+    "livekit_url", "livekit_api_key", "livekit_api_secret",
+    "openai_key", "deepgram_key",
+)
+
+#: env var per credential field. BOTH the web process and the resident worker
+#: read these, so "the interview's keys equal the worker's keys" is a claim that
+#: can actually be true — the guard previously compared SYSTEM_LIVEKIT_* against
+#: a worker registered with unrelated LIVEKIT_* vars.
+_SYSTEM_ENV = (
+    ("livekit_url", "SYSTEM_LIVEKIT_URL"),
+    ("livekit_api_key", "SYSTEM_LIVEKIT_API_KEY"),
+    ("livekit_api_secret", "SYSTEM_LIVEKIT_API_SECRET"),
+    ("openai_key", "SYSTEM_OPENAI_KEY"),
+    ("deepgram_key", "SYSTEM_DEEPGRAM_KEY"),
+)
+
+
+def system_keys_from_env(env: Optional[Mapping[str, str]]) -> Optional[dict]:
+    """The owner-funded key set, or None if any part is missing.
+
+    This is the single source of truth for the dispatch worker's identity: the
+    worker runs on these keys and the web process compares against these keys.
+    """
+    env = env or {}
+    keys = {field: env.get(var) for field, var in _SYSTEM_ENV}
+    return keys if all(keys.values()) else None
 
 
 # ---------------------------------------------------------------------------
@@ -244,7 +273,7 @@ def can_dispatch(
         return False
     if not _same_url(interview_keys["livekit_url"], worker_keys["livekit_url"]):
         return False
-    return (
-        interview_keys["livekit_api_key"] == worker_keys["livekit_api_key"]
-        and interview_keys["livekit_api_secret"] == worker_keys["livekit_api_secret"]
+    return all(
+        interview_keys[f] == worker_keys[f]
+        for f in _CREDENTIAL_FIELDS if f != "livekit_url"
     )

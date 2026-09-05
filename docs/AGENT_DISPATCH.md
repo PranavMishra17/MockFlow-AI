@@ -147,66 +147,82 @@ process's, and that both point at the same LiveKit project.
 
 ---
 
-## Status — DO NOT ENABLE `AGENT_MODE=dispatch` YET
+## Status — all six blockers fixed; NOT yet run against a live LiveKit project
 
-Implemented and unit-tested; **not yet exercised against a live LiveKit
-project.** An adversarial review found blocking defects. Two are fixed; the rest
-are open and are the reason dispatch must stay off.
+An adversarial review found six blocking defects plus two config regressions.
+All are now fixed. What remains is verification, not known bugs.
 
-### Fixed
-- **BYOK fallback died instantly.** The fallback subprocess inherits the web
-  process's env, so under `AGENT_MODE=dispatch` it inherited dispatch mode, ran
-  `cli.run_app()` with no subcommand, and exited 2 (`Missing command.`) — every
-  BYOK user would have got a 500. `spawn_worker` now forces `AGENT_MODE=direct`
-  for the child, with a test that asserts the env handed to `Popen`.
-- **Config-parse divergence.** `_as_bool` stripped whitespace; the legacy parser
-  did not, so `" true"` flipped from False to True. Strip removed; the
-  differential sweep now lives in `tests/test_config_equivalence.py` (it was
-  previously an uncommitted script whose sample values were all clean, which is
-  why it missed this).
+### Fixed earlier
+- **BYOK fallback died on startup.** The fallback subprocess inherited
+  `AGENT_MODE=dispatch`, ran `cli.run_app()` with no subcommand and exited 2, so
+  every BYOK user got a 500. The child is now forced to `AGENT_MODE=direct`, with
+  a test asserting the env handed to `Popen`.
+- **Config-parse divergence.** `_as_bool` stripped whitespace where the legacy
+  parser did not, flipping `" true"`. Strip removed; the differential sweep lives
+  in `tests/test_config_equivalence.py` with whitespace in its value space.
+- **Coding-track crash.** `'attrs' in dir()` stopped guarding once `attrs` was
+  always bound, so a participant with no attributes raised `AttributeError`.
+  `preferred_language`/`problem_count` now come from the shared parser.
 
-### Open — blocking
+### Fixed in this pass — they shared one root
 
-1. **Dispatch capacity leaks monotonically.** `active_dispatches` is only ever
-   cleared by `terminate_worker`, whose sole caller is `cleanup_all_workers` via
-   `atexit`. Nothing in the request path releases a finished dispatched room, and
-   unlike subprocesses there is no `poll()`-based reaper. After
-   `MAX_CONCURRENT_WORKERS` dispatched interviews the web process refuses **all**
-   interviews on **both** transports until restart, while `/health` reports the
-   phantom load. Needs a real end-of-interview signal.
-2. **Dispatched jobs never shut down.** `dispatch_entrypoint` never calls
-   `ctx.shutdown()`, and the ownership gating means `room.disconnect()` no longer
-   runs. The framework waits on a shutdown future set only by a room disconnect
-   or an explicit `ctx.shutdown()`. The client only shows a modal at
-   `interview_ending` — it does not disconnect — so the agent squats in the room
-   with STT/TTS/VAD resident after the interview ends.
-3. **Free-tier credit is consumed before an agent exists.** `app.py` consumes the
-   credit when `spawn_worker` returns True, on the premise that a spawn was
-   verified. Dispatch returns True as soon as LiveKit *accepts* the request, which
-   succeeds even when no worker is registered. Since dispatch serves exactly the
-   free tier, a down worker burns credits for interviews that never start.
-4. **`can_dispatch` compares the wrong source of truth.** It checks the
-   interview's keys against `SYSTEM_LIVEKIT_*` on the web box, but the resident
-   worker registers with whatever `LIVEKIT_*` it was started with. These are
-   unrelated env vars; if they diverge the guard passes and the candidate hangs —
-   the exact failure the guard exists to prevent.
-5. **The documented start command does not work.** `AGENT_MODE=dispatch python
-   agent_worker.py start` exits 1: the module hard-requires `OPENAI_API_KEY`,
-   `DEEPGRAM_API_KEY` and `LIVEKIT_*`, none of which `env.template` defines for a
-   resident worker (it defines only `SYSTEM_*`).
-6. **Per-user OpenAI/Deepgram keys are dropped on the dispatch path.**
-   `_create_dispatch` receives only LiveKit credentials; the resident worker bills
-   to its own keys. Narrow blast radius today because key resolution is
-   all-or-nothing, but there is no guard tying the worker's keys to `SYSTEM_*`.
+`spawn_worker` returning `True` meant different things per transport: "the
+subprocess is alive" (direct) versus "LiveKit accepted the request" (dispatch).
+Every caller — including the free-tier credit — read it as "an interviewer is
+coming". Five of the six defects fell out of that.
+
+1. **Capacity no longer leaks.** `MAX_CONCURRENT_WORKERS` bounds *this box's*
+   memory, so it now gates only spawned subprocesses (`local_capacity_used`). A
+   dispatched interview costs this process nothing and is no longer counted
+   against it — previously dispatch *reduced* capacity, and since nothing
+   released a record, the cap was hit permanently and every interview on both
+   transports was refused until restart. Records still age out
+   (`DISPATCH_TTL_SECONDS`) so `/health` cannot report phantom load forever.
+2. **Dispatched jobs shut down.** `dispatch_entrypoint` calls `ctx.shutdown()` in
+   a `finally`. The framework waits on a shutdown future resolved only by a room
+   disconnect or that call, and the ownership gating deliberately skips
+   `room.disconnect()`; without it the agent squatted in the room with STT/TTS/VAD
+   resident after the interview ended.
+3. **Free-tier credit is only claimed once an interviewer exists.**
+   `_create_dispatch` now polls the room for the agent participant
+   (`_await_agent_join`, `DISPATCH_JOIN_TIMEOUT`) and returns False if none
+   arrives — so `True` means the same thing on both transports.
+4. **`can_dispatch` compares the right thing.** Both sides now read `SYSTEM_*`:
+   the web process via `agent_mode.system_keys_from_env`, and the resident worker
+   by resolving its own credentials from the same vars. Previously it compared
+   `SYSTEM_LIVEKIT_*` against a worker registered with unrelated `LIVEKIT_*`.
+5. **The documented start command works.** `AGENT_MODE=dispatch python
+   agent_worker.py start` now boots with only the `SYSTEM_*` set that
+   `env.template` defines. It used to exit 1 demanding `LIVEKIT_*`/`OPENAI_API_KEY`
+   that nothing supplied for a resident worker.
+6. **Per-user OpenAI/Deepgram keys can no longer be silently absorbed.**
+   `can_dispatch` compares all five credentials, not just LiveKit — LiveKit decides
+   whether a job routes, OpenAI/Deepgram decide whose account pays. A user whose
+   LiveKit project happened to match the system one would previously have been
+   dispatched onto a worker billing the owner's keys.
+
+### Still open — verification, and one design limit
+
+- **Never run against a live LiveKit project.** The dispatch calls are stubbed in
+  tests. `create_dispatch` wiring, job routing, `ctx.shutdown()` behaviour, and
+  the identity prefixes `_await_agent_join` matches on all need one real
+  end-to-end run. Treat the join-confirmation identity check as the most likely
+  thing to need adjusting.
+- **The direct path on this branch has not been re-verified live either**, and it
+  was refactored (config parsing, ownership gating).
+- **Dispatch remains free-tier only, by design.** Because the guard now requires
+  all five credentials to match `SYSTEM_*`, only owner-funded interviews dispatch;
+  BYOK falls back to a direct spawn. So the web box must still be able to spawn,
+  and dispatch does not by itself unlock horizontal scaling.
 
 ### Also worth knowing
-- In production the **metadata path is currently dead code**: `app.py` never
-  passes `interview_config`, so dispatch sends empty metadata and config comes
-  from participant attributes. The metadata equivalence tests exercise a path with
-  no production caller (harmless, but it is not evidence the live path works).
-- `preferred_language` and `problem_count` (coding track) are read straight off
-  attributes and are **not** in `CONFIG_FIELDS`, so a metadata-only dispatch would
-  lose them.
+- In production the **metadata path is still dead code**: `app.py` never passes
+  `interview_config`, so config arrives via participant attributes in both modes.
+- This project already had a dispatch worker once — `agent.py`, gated behind
+  `ENABLE_LIVEKIT_AGENT` on the `prod` branch (Dec 2025), deleted as dead code in
+  the June 2026 hardening. Its `start.sh` pattern (start the second process only
+  when explicitly enabled and credentials exist; keep it alive rather than
+  crash-loop) is the model for running this worker under a process manager.
 
 Verified as correct: Deepgram's `http_session=None` resolves from the job context
 inside a job; `WorkerOptions(agent_name=...)` is the right explicit-dispatch

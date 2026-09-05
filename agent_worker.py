@@ -72,6 +72,30 @@ except ValueError as e:
     logger.error(f"[CONFIG] {e}")
     sys.exit(1)
 
+# In DISPATCH mode this process is the resident worker, and it must run on the
+# SAME credentials the web process compares against (agent_mode.system_keys_from_env),
+# or the BYOK guard is comparing against something that isn't us. So SYSTEM_* wins
+# here, falling back to the per-interview vars for a hand-run worker.
+if AGENT_MODE == agent_mode.MODE_DISPATCH:
+    _sys = agent_mode.system_keys_from_env(os.environ)
+    if _sys:
+        LIVEKIT_URL = _sys['livekit_url']
+        LIVEKIT_API_KEY = _sys['livekit_api_key']
+        LIVEKIT_API_SECRET = _sys['livekit_api_secret']
+        OPENAI_API_KEY = _sys['openai_key']
+        DEEPGRAM_API_KEY = _sys['deepgram_key']
+        # The plugins read these from the environment, so export them too.
+        os.environ['OPENAI_API_KEY'] = OPENAI_API_KEY
+        os.environ['DEEPGRAM_API_KEY'] = DEEPGRAM_API_KEY
+        logger.info("[CONFIG] Dispatch worker using SYSTEM_* credentials")
+    else:
+        logger.warning(
+            "[CONFIG] AGENT_MODE=dispatch but the SYSTEM_* key set is incomplete; "
+            "falling back to LIVEKIT_*/OPENAI_API_KEY/DEEPGRAM_API_KEY. The web "
+            "process compares interviews against SYSTEM_*, so unless these are the "
+            "same credentials, no dispatch will ever be routed to this worker."
+        )
+
 # The room name is a per-job value in dispatch mode, so it is only required when
 # this process was spawned to serve one specific room.
 _REQUIRED = [OPENAI_API_KEY, DEEPGRAM_API_KEY, LIVEKIT_URL, LIVEKIT_API_KEY, LIVEKIT_API_SECRET]
@@ -1825,7 +1849,19 @@ async def dispatch_entrypoint(ctx):
     # http_session stays None: under cli.run_app the plugins resolve their
     # session from the job context, which is why the direct-mode comment above
     # says one is only needed when running OUTSIDE cli.run_app.
-    await run_interview(room=ctx.room, http_session=None, job_metadata=metadata)
+    try:
+        await run_interview(room=ctx.room, http_session=None, job_metadata=metadata)
+    finally:
+        # End the job explicitly. The framework waits on a shutdown future that is
+        # only resolved by a room disconnect or this call — and the ownership
+        # gating in run_interview deliberately skips room.disconnect() here. The
+        # web client shows a modal at interview_ending but does not disconnect, so
+        # without this the agent squats in the room with STT/TTS/VAD resident
+        # after the interview has ended.
+        try:
+            ctx.shutdown(reason="interview complete")
+        except Exception as e:
+            logger.warning(f"[DISPATCH] ctx.shutdown failed (non-fatal): {e}")
 
 
 def _run_dispatch_worker():
