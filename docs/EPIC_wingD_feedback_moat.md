@@ -2,7 +2,7 @@
 
 > This is the most important document in the repo. The voice pipeline and the UI are table stakes; **the moat is whether our feedback is good enough that a candidate trusts it like a Bar Raiser would.** It is built on one principle and on five research passes (four in-app agents + a Claude-web deep-research report) into how top companies and high-bar startups actually decide who to hire.
 
-Companion docs: [`EPIC_wingD_insights.md`](EPIC_wingD_insights.md) (code-level "what's dead/dormant" tactical audit), [`DEEP_RESEARCH_PROMPT.md`](DEEP_RESEARCH_PROMPT.md) (the prompt used), and the full primary-source report at [`research/feedback_moat_deep_research_2026-06.md`](research/feedback_moat_deep_research_2026-06.md). Sources are cited inline and in the Appendix.
+Companion docs: [`EPIC_wingD_insights.md`](EPIC_wingD_insights.md) (code-level "what's dead/dormant" tactical audit), [`DEEP_RESEARCH_PROMPT.md`](deep-research-agent/DEEP_RESEARCH_PROMPT.md) (the prompt used), and the full primary-source report at [`research/feedback_moat_deep_research_2026-06.md`](research/feedback_moat_deep_research_2026-06.md). Sources are cited inline and in the Appendix.
 
 ---
 
@@ -12,7 +12,7 @@ Companion docs: [`EPIC_wingD_insights.md`](EPIC_wingD_insights.md) (code-level "
 
 **Where the research lives:** this doc (synthesised), `docs/research/feedback_moat_deep_research_2026-06.md` (full primary-source report), `docs/deep-research-agent/DEEP_RESEARCH_PROMPT.md` (the prompt; re-run it for the per-cell rubric exemplars / mid-2026 refresh). A new agent should read §0–§5 here before changing the evaluator.
 
-**Where it lives now:** everything is on `main`, **committed but unpushed** — Pranav pushes after a Neon migration check. (The original `feat/wing-d-feedback` branch is superseded.)
+**Where it lives now:** everything is on `main` and **pushed to `origin/main`**. (The original `feat/wing-d-feedback` branch is superseded.)
 
 ### Done & verified (committed on the branch)
 - **Phase 0** — `feedback_scoring.py` (TDD): research delivery bands + deterministic metrics injected; the hallucinated filler count is fixed. Migration `003_interview_scores.sql` + `db.py` `save_interview_scores`/`get_interview_scores`/`get_user_score_history` (queryable per-session scores).
@@ -53,7 +53,7 @@ A real interview ran on Render and the verdict reveal worked. Two-part fix list 
 **Part 1 — interview-flow UX** (`interview.html`, `form.html`, `agent_worker.py`, api-keys)
 - [x] **Live captions.** Shipped: stream interim user transcripts via LiveKit's audio-synced `RoomEvent.TranscriptionReceived` (additive + guarded; agents 1.3.6 forwards transcription by default).
 - [x] **Form begin-button.** When the form auto-fills from a prior session, Begin stays disabled until a track is re-clicked — enable it on cache restore (`syncRestoredTrack`).
-- [ ] **API-keys can't be updated.** Editing one masked field leaves the other four as `••••`, and `validateKeys()` rejects any masked value → partial update impossible. Add a **partial update** (backend `update_api_keys` that only overwrites provided non-masked fields; frontend sends only changed fields).
+- [x] **API-keys can't be updated.** Was: editing one masked field left the other four as `••••` and `validateKeys()` rejected any masked value → partial update impossible. Shipped: the save path merges with the stored row — a blank/masked field keeps its saved value (`app.py`) — and the client validates only the fields the user actually changed (`static/apikeys.js`). First-time setup still requires all five.
 - [ ] **Interview-page layout.** Timer + "Skip stages" placement, the mic/End-Interview buttons, and the orb/candidate panel balance need polish.
 
 **Part 2 — feedback-loop completion** (`feedback.html`, the verdict endpoint, past-interviews, dashboard)
