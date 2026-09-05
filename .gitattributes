@@ -1,2 +1,13 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Files consumed by a Linux container or shell MUST stay LF even when checked
+# out on Windows. Under `text=auto` these would otherwise become CRLF locally,
+# and `fly deploy` builds from the working copy, not from the git blob — a CRLF
+# Dockerfile breaks backslash line-continuations and shebangs inside the image.
+Dockerfile      text eol=lf
+*.dockerfile    text eol=lf
+.dockerignore   text eol=lf
+fly.toml        text eol=lf
+Procfile        text eol=lf
+*.sh            text eol=lf

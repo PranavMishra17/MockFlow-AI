@@ -1,0 +1,32 @@
+# Secrets — never bake these into an image layer.
+.env
+.env.*
+*.env.local
+
+# Real interview transcripts / feedback (PII). Gitignored too.
+interviews/
+feedback/
+
+.git/
+.github/
+.venv/
+venv/
+env/
+__pycache__/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Tests + docs don't belong in the runtime image.
+tests/
+docs/
+*.md
+!README.md
+
+# Local scratch
+.agents/
+.claude/
+banner.png
