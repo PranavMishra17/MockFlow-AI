@@ -1,0 +1,31 @@
+# Caddy fetches and renews a Let's Encrypt certificate automatically. That needs
+# port 80 reachable from the internet for the ACME challenge — do not firewall it
+# off "because everything is HTTPS anyway", or renewal silently fails in 90 days.
+#
+# DOMAIN comes from the environment (see docker-compose.yml / caddy.env).
+
+{$DOMAIN} {
+	reverse_proxy web:8080 {
+		# The app wraps its WSGI app in ProxyFix and reads these to rebuild the
+		# external URL. Without them, Google OAuth's redirect_uri comes back as
+		# http://<container> and the sign-in round-trip fails.
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {host}
+		header_up X-Real-IP {remote_host}
+
+		# The verdict LLM call takes 15-30s and gunicorn allows 120s, so the
+		# proxy must not give up first. (Caddy 2 has no write timeout by
+		# default; this is about the upstream connection specifically.)
+		transport http {
+			read_timeout 180s
+			write_timeout 180s
+		}
+	}
+
+	encode gzip
+
+	log {
+		output stdout
+		format console
+	}
+}

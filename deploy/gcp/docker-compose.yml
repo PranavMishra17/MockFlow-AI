@@ -1,0 +1,62 @@
+# MockFlow-AI on a Google Cloud e2-micro (Always Free).
+#
+# Two containers: the Flask app, and Caddy in front of it for automatic TLS.
+# Run from this directory on the VM:  docker compose up -d --build
+#
+# Memory is the binding constraint here. e2-micro has 1 GB, and each interview
+# spawns an agent_worker.py subprocess that loads Silero VAD (onnxruntime).
+# Measured idle footprint of the app is ~263 MB; a worker is expected to add
+# 300-400 MB (NOT yet measured against a live interview). Hence
+# MAX_CONCURRENT_WORKERS=1 and the swap file the guide has you create.
+
+services:
+  web:
+    build:
+      # The repo root, two levels up — the Dockerfile lives there.
+      context: ../..
+      dockerfile: Dockerfile
+    image: mockflow-ai:local
+    restart: always
+    # Secrets live outside the repo, root-owned, mode 600. See the guide.
+    env_file:
+      - /opt/mockflow/app.env
+    environment:
+      PORT: "8080"
+      FLASK_ENV: "production"
+      # ONE concurrent interview. Raising this on 1 GB will OOM the box.
+      MAX_CONCURRENT_WORKERS: "1"
+    # Not published to the host: only Caddy talks to it.
+    expose:
+      - "8080"
+    # Give the kernel a chance to reclaim before the OOM killer picks a victim,
+    # and keep the app from eating the whole box if a worker leaks.
+    mem_limit: 768m
+    healthcheck:
+      # /health pings Neon, so this covers app + database, not just the port.
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 60s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # Substituted by Compose from deploy/gcp/.env (Compose reads that file
+      # automatically for ${...} substitution — it is NOT the same mechanism as
+      # env_file above, which is passed into the container as-is).
+      DOMAIN: "${DOMAIN:?set DOMAIN in deploy/gcp/.env}"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data      # issued certificates — must persist across restarts
+      - caddy_config:/config
+    depends_on:
+      - web
+
+volumes:
+  caddy_data:
+  caddy_config:

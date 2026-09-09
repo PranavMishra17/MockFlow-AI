@@ -2,6 +2,13 @@
 
 Deploying MockFlow-AI to **Fly.io** on a **custom domain**, always-on.
 
+> **Looking for the zero-cost option?** See
+> [`DEPLOYMENT_GCP.md`](DEPLOYMENT_GCP.md) — a Google Cloud `e2-micro`
+> (Always Free) VM, which has no recurring charge. Fly has no free tier: the
+> always-on setting below (`min_machines_running = 1`) means the machine bills
+> 24/7 by design. This guide is still accurate and is the lower-effort path;
+> the GCP one is the cheaper one.
+
 > **This guide replaced a Supabase + Render one.** The backend is **Neon
 > Postgres** (psycopg3 in `db.py`) with **Authlib Google OAuth + Flask-Login** —
 > there is no Supabase project, no `auth.users`, and no RLS. Auth is enforced in
