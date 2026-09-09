@@ -293,6 +293,45 @@ costs zero code changes. Measured, not guessed.
 Subdomains of a valid registrable domain are fine for Google OAuth, so
 `mockflow.yourname.dedyn.io` passes the D2 test the same way the bare name would.
 
+## ⚠️ Verify against a VALIDATING resolver, not just your ISP's
+
+Your ISP's resolver probably does **not** validate DNSSEC, so `nslookup` can
+succeed while the name is broken for much of the internet. Let's Encrypt *does*
+validate, so a zone with a broken DNSSEC chain can never get a certificate — and
+anyone using 8.8.8.8, 1.1.1.1 or Quad9 cannot reach the site at all.
+
+Check all three explicitly:
+
+```bash
+nslookup <DOMAIN> 8.8.8.8
+```
+
+```bash
+nslookup <DOMAIN> 1.1.1.1
+```
+
+```bash
+nslookup <DOMAIN> 9.9.9.9
+```
+
+Each must return `<VM_IP>`. **`Server failed` (SERVFAIL) from these while your own
+ISP resolves it fine means a broken DNSSEC chain**, and Caddy's log will show
+`DNSSEC: Bogus: validation failure ... covering NSEC3 was not opt-out`.
+
+This happened on a freshly created `dedyn.io` zone: `dedyn.io` itself validated
+fine, but the new child zone SERVFAILed everywhere, so no certificate was
+possible. Options when it happens:
+
+- **Wait.** A newly created zone can have a stale negative DS proof cached
+  upstream, which expires on its own. Caddy retries automatically for up to 30
+  days, so if the chain heals the certificate appears with no action from you.
+- **Move to a provider without DNSSEC on the parent.** `duckdns.org` is not
+  DNSSEC-signed, so there is no chain to break — verified resolving cleanly on all
+  three validating resolvers above.
+
+Whichever you pick, remember the redirect URI in Part G must match the final
+hostname exactly.
+
 ## Verify DNS resolves — required before Part H
 
 ```bash
