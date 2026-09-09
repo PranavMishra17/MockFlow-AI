@@ -6,13 +6,14 @@
 
 **It interviews you out loud, reads your live code as you type, and scores how you actually deliver — like a real panel, on demand.**
 
-[![LIVE](https://img.shields.io/badge/LIVE-mockflow--ai.onrender.com-brightgreen.svg)](https://mockflow-ai.onrender.com)
+[![LIVE](https://img.shields.io/badge/LIVE-mockflow.pranavmishra.dedyn.io-brightgreen.svg)](https://mockflow.pranavmishra.dedyn.io)
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/downloads/)
 [![Flask](https://img.shields.io/badge/Flask-3-000000.svg)](https://flask.palletsprojects.com/)
 [![LiveKit](https://img.shields.io/badge/LiveKit-Agents-00ADD8.svg)](https://docs.livekit.io/agents/)
 [![OpenAI](https://img.shields.io/badge/OpenAI-LLM%20%2B%20TTS-412991.svg)](https://platform.openai.com/)
 [![Deepgram](https://img.shields.io/badge/Deepgram-STT-13EF93.svg)](https://deepgram.com/)
 [![Postgres](https://img.shields.io/badge/Neon-Postgres-00E599.svg)](https://neon.tech/)
+[![Host](https://img.shields.io/badge/Host-Google%20Cloud%20e2--micro-4285F4.svg)](docs/DEPLOYMENT_GCP.md)
 [![License: SAOUL](https://img.shields.io/badge/License-SAOUL-blue.svg)](LICENSE)
 
 [Features](#features) • [Tech Stack](#tech-stack) • [Architecture](#architecture) • [Local Setup](#local-setup) • [Testing](#testing) • [Deployment](#deployment)
@@ -30,7 +31,7 @@ It runs on a **BYOK (Bring Your Own Keys)** model: each user supplies their own 
 **Launch Video**: [Watch on YouTube](https://youtu.be/FUFKHy19oGA?si=bgUxkGAZfik8ABhp)
 **Full Interview Demo**: [Watch on YouTube](https://youtu.be/iJ7ihwlPEhQ)
 
-> **Want to try the live site?** Bring your own keys and configure them at **[mockflow-ai.onrender.com](https://mockflow-ai.onrender.com)** → Settings:
+> **Want to try the live site?** Bring your own keys and configure them at **[mockflow.pranavmishra.dedyn.io](https://mockflow.pranavmishra.dedyn.io)** → Settings:
 > - OpenAI API key → [platform.openai.com](https://platform.openai.com/)
 > - Deepgram API key → [console.deepgram.com](https://console.deepgram.com/)
 > - LiveKit credentials → [cloud.livekit.io](https://cloud.livekit.io/)

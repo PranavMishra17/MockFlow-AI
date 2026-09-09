@@ -68,16 +68,18 @@ app.config.update(
     REMEMBER_COOKIE_SECURE=_is_prod,
     REMEMBER_COOKIE_DURATION=timedelta(days=7),
     PERMANENT_SESSION_LIFETIME=timedelta(days=7),
-    # Cap request bodies/uploads to keep a single Render instance from OOMing.
+    # Cap request bodies/uploads to keep a small single instance from OOMing
+    # (the GCP e2-micro host has 1 GB total).
     MAX_CONTENT_LENGTH=10 * 1024 * 1024,  # 10 MB
 )
 
-# Honor X-Forwarded-Proto / X-Forwarded-Host from Render's reverse proxy so
+# Honor X-Forwarded-Proto / X-Forwarded-Host from the reverse proxy in front of
+# the app (Caddy on the GCP host) so
 # url_for(..., _external=True) produces https URLs (OAuth redirect_uri must match exactly).
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
 
 # Scope CORS to known origins (was a wildcard). Set CORS_ORIGINS (comma-separated)
-# to the deployed domain, e.g. https://mockflow-ai.onrender.com.
+# to the deployed domain, e.g. https://mockflow.pranavmishra.dedyn.io.
 _default_origins = "http://localhost:5000,http://127.0.0.1:5000"
 _allowed_origins = [
     o.strip() for o in os.getenv('CORS_ORIGINS', _default_origins).split(',') if o.strip()

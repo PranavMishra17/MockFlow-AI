@@ -14,7 +14,7 @@ import os
 from typing import Any, Dict, List, Optional
 
 import psycopg
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, InvalidToken
 from dotenv import load_dotenv
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
@@ -272,8 +272,22 @@ class DB:
                 "openai_key": self._decrypt(row["openai_key_encrypted"]),
                 "deepgram_key": self._decrypt(row["deepgram_key_encrypted"]),
             }
+        except InvalidToken:
+            # The row exists but was encrypted with a DIFFERENT ENCRYPTION_KEY, so
+            # it can never be decrypted again. Fernet's InvalidToken carries no
+            # message, which is why this previously logged as a bare
+            # "Error fetching API keys:" with nothing after the colon — invisible
+            # in practice. Callers treat None as "no keys configured", so the user
+            # is prompted to re-enter them, which does resolve it.
+            logger.error(
+                "Stored API keys for user %s cannot be decrypted — they were "
+                "encrypted with a different ENCRYPTION_KEY and are unrecoverable. "
+                "The user must re-enter their keys in Settings.",
+                user_id,
+            )
+            return None
         except Exception as e:
-            logger.error(f"Error fetching API keys: {e}")
+            logger.error(f"Error fetching API keys: {e!r}")
             return None
 
     def save_interview(

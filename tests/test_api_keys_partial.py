@@ -48,3 +48,59 @@ def test_first_time_setup_requires_all_keys(auth_client, db_client, monkeypatch)
     body = resp.get_json()
     assert "missing" in body
     assert "deepgram_key" in body["missing"]
+
+
+# --------------------------------------------------------------------------
+# Undecryptable rows (ENCRYPTION_KEY rotated at some point in the past)
+# --------------------------------------------------------------------------
+
+def test_undecryptable_keys_log_an_actionable_message_not_an_empty_one(caplog):
+    """Found in production: 3 of 4 stored key rows could not be decrypted.
+
+    Fernet's InvalidToken carries no message, so `f"...: {e}"` produced a bare
+    "Error fetching API keys:" with nothing after the colon — a real, permanent
+    data problem that was effectively invisible in the logs.
+    """
+    import logging
+
+    from cryptography.fernet import Fernet
+
+    import db as db_module
+
+    client = db_module.DB.__new__(db_module.DB)
+    # A key that did NOT encrypt the stored blob.
+    client.cipher = Fernet(Fernet.generate_key())
+    blob = Fernet(Fernet.generate_key()).encrypt(b"wss://someones.livekit.cloud").decode()
+
+    client._fetchone = lambda *a, **k: {
+        "livekit_url_encrypted": blob,
+        "livekit_key_encrypted": blob,
+        "livekit_secret_encrypted": blob,
+        "openai_key_encrypted": blob,
+        "deepgram_key_encrypted": blob,
+    }
+
+    with caplog.at_level(logging.ERROR):
+        result = client.get_api_keys("user-123")
+
+    assert result is None, "callers must see 'no keys', prompting re-entry"
+    msg = " ".join(r.getMessage() for r in caplog.records)
+    assert "cannot be decrypted" in msg
+    assert "user-123" in msg
+    assert "re-enter" in msg.lower()
+    assert not msg.rstrip().endswith(":"), "must not log an empty reason"
+
+
+def test_missing_row_still_returns_none_without_logging_an_error(caplog):
+    """'No keys yet' is normal and must stay silent — otherwise the real
+    decryption failure above is lost in noise."""
+    import logging
+
+    import db as db_module
+
+    client = db_module.DB.__new__(db_module.DB)
+    client._fetchone = lambda *a, **k: None
+
+    with caplog.at_level(logging.ERROR):
+        assert client.get_api_keys("user-123") is None
+    assert [r for r in caplog.records if r.levelno >= logging.ERROR] == []
