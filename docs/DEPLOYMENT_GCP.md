@@ -58,8 +58,10 @@ Go to **https://console.cloud.google.com/projectcreate**
 
 ### 3. Find your PROJECT_ID ← this is the thing you asked about
 
-The project **ID** is not the name you typed. Google appends numbers to make it
-globally unique, so it usually looks like `mockflow-ai-473915`.
+The project **ID** is not necessarily the name you typed. IDs must be globally
+unique, so if your chosen name is already taken Google appends digits — you get
+`mockflow-ai-473915` rather than `mockflow-ai`. If the name was free, the ID is
+just the name. **Check rather than assume**, because every later command uses it.
 
 Three places to see it:
 
@@ -114,6 +116,19 @@ Sign in — this opens a browser:
 gcloud auth login
 ```
 
+> ### ⚠️ PowerShell users: quote every comma
+>
+> PowerShell turns an unquoted comma-separated argument into an **array** and
+> passes it to gcloud joined by a space. `--tags=http-server,https-server` arrives
+> as one tag called `http-server https-server`, and gcloud rejects it with a
+> confusing regex error. Anything containing a comma must be quoted:
+>
+> `--tags="http-server,https-server"` ✅ &nbsp;&nbsp; `--tags=http-server,https-server` ❌
+>
+> Every command below is already written correctly. This is also why the
+> `--network-interface=network-tier=STANDARD,subnet=default` form fails — the
+> guide uses separate top-level `--network-tier` and `--subnet` flags instead.
+
 Now point the CLI at your project. **Replace `<PROJECT_ID>` with the ID from Part
 A step 3:**
 
@@ -139,11 +154,15 @@ Paste this exactly. Every flag is load-bearing for staying free — see the tabl
 in Part J before changing any of them.
 
 ```bash
-gcloud compute instances create mockflow-ai --zone=us-central1-a --machine-type=e2-micro --image-family=debian-12 --image-project=debian-cloud --boot-disk-size=30GB --boot-disk-type=pd-standard --network-interface=network-tier=STANDARD,subnet=default --tags=http-server,https-server
+gcloud compute instances create mockflow-ai --zone=us-central1-a --machine-type=e2-micro --image-family=debian-12 --image-project=debian-cloud --boot-disk-size=30GB --boot-disk-type=pd-standard --network-tier=STANDARD --subnet=default --tags="http-server,https-server"
 ```
 
 Takes about 30 seconds. It prints a table — the `EXTERNAL_IP` column is your
 `<VM_IP>`.
+
+**Two warnings here are expected and harmless:** one about the disk being under
+200 GB (I/O performance, irrelevant at this scale), and one about the 30 GB disk
+being larger than the 10 GB image (Debian resizes its root partition itself).
 
 ### 2. Open the firewall
 
@@ -151,11 +170,11 @@ The default network usually has these; running them again is harmless and the
 error if they exist is safe to ignore.
 
 ```bash
-gcloud compute firewall-rules create allow-http --allow=tcp:80 --target-tags=http-server
+gcloud compute firewall-rules create allow-http --allow=tcp:80 --target-tags="http-server"
 ```
 
 ```bash
-gcloud compute firewall-rules create allow-https --allow=tcp:443 --target-tags=https-server
+gcloud compute firewall-rules create allow-https --allow=tcp:443 --target-tags="https-server"
 ```
 
 **Leave port 80 open.** The certificate system needs it, and closing it makes
