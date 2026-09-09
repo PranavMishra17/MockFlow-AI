@@ -262,6 +262,8 @@ Try, in order:
 
 1. **deSEC** — https://desec.io — free, non-profit, gives you `yourname.dedyn.io`.
    A more conventional DNS host than DuckDNS, with a proper records UI.
+   Set the record at **https://desec.io/domains** → your domain → add record:
+   type `A`, **subname** (see below), records `<VM_IP>`, TTL `3600`.
 2. **afraid.org FreeDNS** — https://freedns.afraid.org — free subdomains across
    many shared domains, so if one parent domain is rejected you can pick another.
    Note that on the free tier other people can also create names under the same
@@ -270,6 +272,26 @@ Try, in order:
    the first year, and removes this whole class of problem permanently.
 
 Re-run the D2 test with each candidate before building on it.
+
+## Use a SUBDOMAIN, so one free domain serves every project
+
+Do not dedicate the whole hostname to this app, and do not try to serve it under a
+path like `yourname.dedyn.io/mockflow`.
+
+**Use a subname.** Set the DNS record with subname `mockflow`, giving
+`mockflow.yourname.dedyn.io`, and your bare domain stays free for other projects
+(`blog.yourname.dedyn.io`, `api.yourname.dedyn.io`, …). Caddy routes by hostname,
+so each project is independent. `<DOMAIN>` in this guide then means the full
+subdomain.
+
+**Why not a path prefix:** the app has **122 root-absolute URLs** — 101 `href`/`src`
+attributes in templates and 21 `fetch()` calls — plus `url_for()` calls that
+generate root-relative paths. Serving under `/mockflow` breaks every one of them
+unless you rewrite them all and plumb `SCRIPT_NAME` through Flask. A subdomain
+costs zero code changes. Measured, not guessed.
+
+Subdomains of a valid registrable domain are fine for Google OAuth, so
+`mockflow.yourname.dedyn.io` passes the D2 test the same way the bare name would.
 
 ## Verify DNS resolves — required before Part H
 
