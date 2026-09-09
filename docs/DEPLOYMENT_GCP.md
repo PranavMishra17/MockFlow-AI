@@ -2,131 +2,223 @@
 
 A single always-on VM, no recurring charge, on your own domain.
 
-> **Do not tear down Fly until step 10.** If the box turns out to be too small,
+Written for someone who has **never used Google Cloud**. Every command that has a
+placeholder in it says exactly where to get that value.
+
+> **Do not tear down Fly until Part I.** If this box turns out to be too small,
 > you want somewhere to fall back to. The teardown is the last step on purpose.
 
 ---
 
-## Why this host
+## The three values you will need
 
-Of the free options actually checked in Sept 2026, GCP's `e2-micro` is the only
-mainstream **always-free VM with no idle-reclaim clause**. Oracle's Always Free
-A1 has better specs but reclaims instances whose 95th-percentile CPU **and**
-network **and** memory are all under 20% over 7 days — which an idle interview
-app trips on all three. Koyeb closed its free tier to new signups, Hugging Face
-now requires a paid plan for Docker Spaces, and Render's free tier sleeps.
+Fill these in as you go. Every `<PLACEHOLDER>` below is one of these.
 
-**The catch, stated plainly:** e2-micro has **1 GB of RAM**. The app idles at a
-measured ~263 MB, and each interview adds an `agent_worker.py` subprocess loading
-Silero VAD through onnxruntime — expected 300–400 MB, **not yet measured against
-a live interview**. So one concurrent interview should fit and two will not.
-`MAX_CONCURRENT_WORKERS=1` and a swap file are not optional here.
+| Placeholder | What it is | Where you get it |
+|---|---|---|
+| `<PROJECT_ID>` | Google Cloud project id — **not** the display name | Part A, step 3 |
+| `<DOMAIN>` | the domain you'll serve on, e.g. `mockflow.dev` | you already own it |
+| `<VM_IP>` | the server's public address | Part C, step 3 |
 
-The other constraint that rules out most free hosts: during a 20–40 minute
-interview the browser talks to **LiveKit Cloud**, not to this app — `interview.html`
-makes zero `fetch()` calls. Anything that sleeps on "no HTTP traffic" kills the
-agent mid-interview. A plain VM has no such behaviour, which is the point.
-
-### Free-tier rules you must not break
-
-| Rule | Why it matters |
-|---|---|
-| Region **must** be `us-west1`, `us-central1`, or `us-east1` | Anywhere else is billed at standard rates. |
-| Machine type **must** be `e2-micro` | Anything larger is billed. |
-| Network tier **must** be `STANDARD` | Premium tier bills egress from the first byte. |
-| Boot disk **must** be `pd-standard`, ≤30 GB | Balanced/SSD disks are billed. |
-| Keep the static IP **attached to a running instance** | A reserved IP that is unattached is billed. |
-
-Egress beyond the free allowance is billed, but this app's traffic is small —
-the audio goes through LiveKit, not through your VM.
+Keep them in a scratch note. You will paste each several times.
 
 ---
 
-## 0. Prerequisites
+## Why this host, and the one real risk
 
-- A Google Cloud account with **billing enabled** (required even for Always Free;
-  it is what proves you are not a bot). Set a **budget alert at $1** so any
-  mistake is loud and early.
-- `gcloud` CLI installed and authenticated: `gcloud auth login`
-- A domain you control.
-- Your existing `.env` — you will reuse two values from it, see step 5.
+Of the free options checked in Sept 2026, GCP's `e2-micro` is the only mainstream
+**always-free VM with no idle-reclaim clause**. (Oracle reclaims idle instances;
+Koyeb closed its free tier to new signups; Hugging Face now needs a paid plan for
+Docker Spaces; Render sleeps.)
+
+**The risk, stated up front:** e2-micro has **1 GB of RAM**. The app idles at a
+measured ~263 MB, and each interview adds a subprocess loading Silero VAD through
+onnxruntime — expected 300–400 MB, but **never measured against a live
+interview**. One concurrent interview should fit; two will not. Part H has you
+watch memory during a real interview specifically to find out.
+
+---
+
+# Part A — Google Cloud account and project (browser)
+
+### 1. Create the account
+
+Go to **https://console.cloud.google.com** and sign in with your Google account.
+
+If it's your first time it will offer a free trial with credit. Accept it. **You
+must add a card even for the Always Free tier** — it's anti-abuse, not a charge.
+Always Free resources keep working after the trial credit expires.
+
+### 2. Create a project
+
+Go to **https://console.cloud.google.com/projectcreate**
+
+- **Project name:** `mockflow-ai` (anything you like)
+- Click **CREATE**, wait ~10 seconds
+
+### 3. Find your PROJECT_ID ← this is the thing you asked about
+
+The project **ID** is not the name you typed. Google appends numbers to make it
+globally unique, so it usually looks like `mockflow-ai-473915`.
+
+Three places to see it:
+
+- **Easiest:** the project dropdown at the top of the console. Click it — the
+  table lists **Name** and **ID** side by side. Copy the **ID** column.
+- Or the dashboard at **https://console.cloud.google.com/home/dashboard** —
+  the "Project info" card shows **Project ID**.
+- Or, after Part B, run: `gcloud projects list`
+
+Write it down as `<PROJECT_ID>`.
+
+### 4. Set a budget alert (do not skip)
+
+This is your safety net against an accidental charge.
+
+Go to **https://console.cloud.google.com/billing** → click your billing account →
+**Budgets & alerts** in the left menu → **CREATE BUDGET**.
+
+- **Name:** `alert-1-dollar`
+- **Target amount:** `1` (USD)
+- Leave the default thresholds (50%, 90%, 100%)
+- **FINISH**
+
+You'll now get an email if anything ever starts costing money.
+
+### 5. Turn on Compute Engine
+
+Go to **https://console.cloud.google.com/compute/instances** and click
+**ENABLE** if prompted. First-time enablement takes a minute or two.
+
+---
+
+# Part B — Install the gcloud CLI (your Windows machine)
+
+Download and run the installer:
+**https://cloud.google.com/sdk/docs/install** → "Google Cloud CLI installer" for
+Windows.
+
+Accept the defaults, and leave **"Start Google Cloud SDK Shell"** and **"Run
+gcloud init"** ticked at the end.
+
+Then **open a new terminal** (the installer changes your PATH; an already-open
+one won't see it) and check:
 
 ```bash
-gcloud config set project YOUR_PROJECT_ID
+gcloud version
 ```
+
+Sign in — this opens a browser:
+
+```bash
+gcloud auth login
+```
+
+Now point the CLI at your project. **Replace `<PROJECT_ID>` with the ID from Part
+A step 3:**
+
+```bash
+gcloud config set project <PROJECT_ID>
+```
+
+Confirm it took:
+
+```bash
+gcloud config list
+```
+
+You should see your project id under `[core]`.
 
 ---
 
-## 1. Create the VM
+# Part C — Create the server
+
+### 1. Create the VM
+
+Paste this exactly. Every flag is load-bearing for staying free — see the table
+in Part J before changing any of them.
 
 ```bash
 gcloud compute instances create mockflow-ai --zone=us-central1-a --machine-type=e2-micro --image-family=debian-12 --image-project=debian-cloud --boot-disk-size=30GB --boot-disk-type=pd-standard --network-interface=network-tier=STANDARD,subnet=default --tags=http-server,https-server
 ```
 
-Every flag there is load-bearing for staying inside the free tier — see the table
-above before changing any of them.
+Takes about 30 seconds. It prints a table — the `EXTERNAL_IP` column is your
+`<VM_IP>`.
 
----
+### 2. Open the firewall
 
-## 2. Pin the IP so it survives a reboot
-
-An ephemeral IP changes when the instance stops, which would break your DNS.
-Promote it to static:
+The default network usually has these; running them again is harmless and the
+error if they exist is safe to ignore.
 
 ```bash
-gcloud compute instances describe mockflow-ai --zone=us-central1-a --format="get(networkInterfaces[0].accessConfigs[0].natIP)"
-```
-
-Take that address and reserve it:
-
-```bash
-gcloud compute addresses create mockflow-ip --region=us-central1 --network-tier=STANDARD --addresses=THE_IP_FROM_ABOVE
-```
-
-A reserved IP is free **while attached to a running instance**. If you later
-delete the VM, release the address too or it starts billing.
-
----
-
-## 3. Open the firewall
-
-The default VPC usually has these already; creating them again is harmless.
-
-```bash
-gcloud compute firewall-rules create allow-http --allow=tcp:80 --target-tags=http-server --description="ACME challenge + redirect to HTTPS"
+gcloud compute firewall-rules create allow-http --allow=tcp:80 --target-tags=http-server
 ```
 
 ```bash
 gcloud compute firewall-rules create allow-https --allow=tcp:443 --target-tags=https-server
 ```
 
-**Leave port 80 open.** Caddy needs it for the Let's Encrypt challenge, and
-closing it makes certificate renewal fail silently 90 days later.
+**Leave port 80 open.** The certificate system needs it, and closing it makes
+renewal fail silently in 90 days.
 
----
+### 3. Pin the IP so a reboot doesn't change it
 
-## 4. Point DNS at it
-
-At your DNS provider, create an **A record** for your domain (or a subdomain)
-pointing at the reserved IP. Verify before continuing — Caddy cannot issue a
-certificate until this resolves:
+Print the current address:
 
 ```bash
-nslookup your-domain.com
+gcloud compute instances describe mockflow-ai --zone=us-central1-a --format="get(networkInterfaces[0].accessConfigs[0].natIP)"
 ```
+
+That is your `<VM_IP>`. Now reserve it — **replace `<VM_IP>`**:
+
+```bash
+gcloud compute addresses create mockflow-ip --region=us-central1 --network-tier=STANDARD --addresses=<VM_IP>
+```
+
+A reserved IP is free **while attached to a running instance**. If you ever
+delete the VM, release this address too or it starts billing.
 
 ---
 
-## 5. Prepare the VM
+# Part D — Point your domain at it
 
-SSH in:
+At whatever company you bought the domain from (Namecheap, GoDaddy, Cloudflare,
+Google Domains…), find **DNS settings** and add:
+
+| Field | Value |
+|---|---|
+| Type | `A` |
+| Name / Host | `@` for the root domain, or e.g. `app` for `app.yourdomain.com` |
+| Value / Points to | `<VM_IP>` |
+| TTL | leave default |
+
+Wait a few minutes, then verify from your machine — **replace `<DOMAIN>`**:
+
+```bash
+nslookup <DOMAIN>
+```
+
+**It must print `<VM_IP>` before you continue.** The certificate cannot be issued
+until this resolves, and Part H will fail if you rush it.
+
+---
+
+# Part E — Set up the server
+
+Connect. The first run generates an SSH key and may ask for a passphrase — you
+can press Enter twice for none.
 
 ```bash
 gcloud compute ssh mockflow-ai --zone=us-central1-a
 ```
 
-**Swap first.** 1 GB of RAM is not enough to build this image — pip installing
-onnxruntime and the LiveKit stack will OOM without it.
+Your prompt changes to something like `pranav@mockflow-ai:~$`. **Everything in
+Parts E–H runs on the server, not your PC.**
+
+### 1. Swap file — required, not optional
+
+1 GB of RAM cannot build this image; pip installing onnxruntime will run out of
+memory without swap.
 
 ```bash
 sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
@@ -138,7 +230,15 @@ Make it survive reboots:
 echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 ```
 
-Install Docker:
+Confirm it's active:
+
+```bash
+swapon --show
+```
+
+You should see `/swapfile  file  2G`.
+
+### 2. Install Docker
 
 ```bash
 curl -fsSL https://get.docker.com | sudo sh
@@ -148,7 +248,13 @@ curl -fsSL https://get.docker.com | sudo sh
 sudo usermod -aG docker $USER && newgrp docker
 ```
 
-Get the code:
+Check it works without sudo:
+
+```bash
+docker ps
+```
+
+### 3. Get the code
 
 ```bash
 git clone https://github.com/PranavMishra17/MockFlow-AI.git ~/MockFlow-AI
@@ -156,15 +262,18 @@ git clone https://github.com/PranavMishra17/MockFlow-AI.git ~/MockFlow-AI
 
 ---
 
-## 6. Put the secrets on the box
+# Part F — Put the secrets on the server
 
-> ⚠️ **`ENCRYPTION_KEY` must be copied from your existing `.env`, not generated.**
-> This VM points at the same Neon database, which currently holds **4 users'
-> encrypted API keys**. A new Fernet key cannot decrypt them — those users lose
-> their saved LiveKit/OpenAI/Deepgram keys silently, with no error, just failing
-> interviews. Same for `SECRET_KEY` (a new one only logs everyone out).
+> ⚠️ **Copy `ENCRYPTION_KEY` from your existing `.env`. Do not generate a new one.**
+> This VM points at the same Neon database, which holds **4 users' encrypted API
+> keys**. A new key cannot decrypt them — those users would silently lose their
+> saved LiveKit/OpenAI/Deepgram keys, with no error, just failing interviews.
+> Same for `SECRET_KEY` (a new one only logs everyone out, which is survivable).
 
-Create the secrets file **outside the repo**, root-owned:
+**On your Windows machine**, open `E:\MockFlow-AI\.env` in an editor and keep it
+open — you're about to copy five values out of it.
+
+**Back on the server**, create the secrets file outside the repo:
 
 ```bash
 sudo mkdir -p /opt/mockflow && sudo touch /opt/mockflow/app.env && sudo chmod 600 /opt/mockflow/app.env
@@ -174,140 +283,188 @@ sudo mkdir -p /opt/mockflow && sudo touch /opt/mockflow/app.env && sudo chmod 60
 sudo nano /opt/mockflow/app.env
 ```
 
-Paste these five, copying every value from your local `.env`:
+Type this in, pasting each value from your local `.env`. **Replace `<DOMAIN>`:**
 
 ```
-DATABASE_URL=postgresql://...neon.tech/neondb?sslmode=require
-GOOGLE_CLIENT_ID=...apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=...
-SECRET_KEY=...
-ENCRYPTION_KEY=...
-CORS_ORIGINS=https://your-domain.com
+DATABASE_URL=<paste DATABASE_URL from .env>
+GOOGLE_CLIENT_ID=<paste GOOGLE_CLIENT_ID from .env>
+GOOGLE_CLIENT_SECRET=<paste GOOGLE_CLOUD_CLIENT_SECRET from .env>
+SECRET_KEY=<paste SECRET_KEY from .env>
+ENCRYPTION_KEY=<paste ENCRYPTION_KEY from .env>
+CORS_ORIGINS=https://<DOMAIN>
 ```
 
-Note your local `.env` has the client secret under `GOOGLE_CLOUD_CLIENT_SECRET`.
-The app accepts either name, but write it as `GOOGLE_CLIENT_SECRET` here.
+Note the third line: your `.env` stores the client secret under
+`GOOGLE_CLOUD_CLIENT_SECRET`, but write it here as `GOOGLE_CLIENT_SECRET`.
 
-Then tell Compose the domain:
+Save and exit nano: **Ctrl+O**, **Enter**, **Ctrl+X**.
+
+Then tell Docker Compose your domain — **replace `<DOMAIN>`**:
 
 ```bash
-cd ~/MockFlow-AI/deploy/gcp && echo "DOMAIN=your-domain.com" > .env
+cd ~/MockFlow-AI/deploy/gcp && echo "DOMAIN=<DOMAIN>" > .env
 ```
 
 ---
 
-## 7. Register the callback with Google
+# Part G — Register the callback with Google
 
-**Skip this and sign-in is broken on arrival.** In Google Cloud Console →
-Credentials → your OAuth client:
+**Skip this and sign-in is broken the moment the site comes up.**
 
-**Authorized redirect URIs** — the path is `/auth/google/callback`, not anything else:
+Go to **https://console.cloud.google.com/apis/credentials** and click your
+existing OAuth 2.0 Client ID (the same one the app already uses).
 
-```
-https://your-domain.com/auth/google/callback
-```
-
-**Authorized JavaScript origins:**
+Under **Authorized redirect URIs** → **ADD URI** — the path is
+`/auth/google/callback`, exactly:
 
 ```
-https://your-domain.com
+https://<DOMAIN>/auth/google/callback
 ```
+
+Under **Authorized JavaScript origins** → **ADD URI**:
+
+```
+https://<DOMAIN>
+```
+
+Click **SAVE**. Changes can take a few minutes to propagate.
 
 ---
 
-## 8. Build and start
+# Part H — Build, start, verify
 
-The first build takes **10–20 minutes** on an e2-micro and will lean on the swap
-file. That is expected; it is a one-off.
+Back on the server:
 
 ```bash
 cd ~/MockFlow-AI/deploy/gcp && docker compose up -d --build
 ```
 
-Watch it come up:
+**The first build takes 10–20 minutes** on this small machine and leans hard on
+the swap file. That's expected and only happens once. Watch it:
 
 ```bash
 docker compose logs -f
 ```
 
-`restart: always` plus Docker's own systemd unit means both containers come back
-after a reboot, so nothing else is needed for always-on.
+Press **Ctrl+C** to stop watching (that does not stop the containers).
 
----
+### Verify the site is up
 
-## 9. Verify
+From your own machine — **replace `<DOMAIN>`**:
 
 ```bash
-curl -fsS https://your-domain.com/health
+curl -fsS https://<DOMAIN>/health
 ```
 
 You want `{"database":"reachable","status":"healthy","workers":{...}}`.
 
-Then check headroom, because this is the number that decides whether e2-micro is
-viable at all:
+### Check memory headroom
+
+On the server:
 
 ```bash
 free -m
 ```
 
-**Then run a real interview.** Sign in, add keys in Settings, and do one intro
-track end to end. This is the only check that exercises the mic, VAD, TTS and the
-data channel — none of which any automated test covers. While it runs, from a
-second SSH session:
+### Then run a real interview — this is the actual test
+
+Open `https://<DOMAIN>` in a browser, sign in with Google, add your API keys in
+Settings, and do **one intro-track interview end to end**.
+
+This is the only check that exercises the microphone, voice detection,
+text-to-speech and the live data channel. No automated test covers any of it.
+
+While the interview runs, open a **second** terminal and watch memory:
 
 ```bash
-free -m
+gcloud compute ssh mockflow-ai --zone=us-central1-a --command="free -m"
 ```
 
-If `available` drops near zero or the interview audio breaks up, e2-micro is too
-small and you should fall back to Fly (which is still up — that is why step 10
-comes last).
+**If `available` drops near zero, or the audio breaks up, e2-micro is too small.**
+Fly is still running — go to Part J and pick a fallback instead of Part I.
 
 ---
 
-## 10. Only now, sunset Fly
+# Part I — Only now, sunset Fly
 
-Once a real interview has completed on the new host:
+Once a real interview has completed successfully on the new host:
 
 ```bash
 fly apps destroy mockflow-ai
 ```
 
-Then clean up the leftovers:
+Then clean up what points at dead hosts:
 
-- Delete the `RENDER_URL` and `APP_URL` repo variables, or repoint `APP_URL` at
-  the new domain so the keep-warm workflow and the post-deploy health smoke stop
-  pointing at dead hosts.
-- Remove the `FLY_API_TOKEN` repo secret.
-- Remove the old Fly and Render callback URLs from the Google OAuth client.
-- `.github/workflows/deploy.yml` deploys via `flyctl`; it will skip harmlessly
-  once the token is gone, but it is worth rewriting for the new host or deleting
-  the deploy job.
+- In GitHub → Settings → Secrets and variables → Actions: delete the
+  `FLY_API_TOKEN` secret, delete `RENDER_URL`, and set `APP_URL` to
+  `https://<DOMAIN>`.
+- In Google Cloud → Credentials → your OAuth client: remove the old
+  `*.fly.dev` and `*.onrender.com` redirect URIs.
+- `.github/workflows/deploy.yml` still deploys via `flyctl`. With the token gone
+  it skips harmlessly, but it's worth rewriting for this host or deleting the
+  deploy job.
 
 ---
 
-## Troubleshooting
+# Part J — Reference
 
-**Container restart-loops immediately.** Almost always a missing secret —
-`FLASK_ENV=production` makes `app.py` fail fast at boot, and gunicorn exits 3
-("worker failed to boot"). Check the env file first, not the logs:
+### Free-tier rules you must not break
+
+| Rule | Why |
+|---|---|
+| Region must be `us-west1`, `us-central1`, or `us-east1` | Anywhere else bills at standard rates |
+| Machine type must be `e2-micro` | Anything larger is billed |
+| Network tier must be `STANDARD` | Premium bills egress from the first byte |
+| Boot disk must be `pd-standard`, ≤30 GB | Balanced/SSD disks are billed |
+| Keep the static IP attached to a running instance | An unattached reserved IP is billed |
+
+### Everyday commands
+
+Restart the app after pulling new code:
+
+```bash
+cd ~/MockFlow-AI && git pull && cd deploy/gcp && docker compose up -d --build
+```
+
+See what's running / read logs:
+
+```bash
+cd ~/MockFlow-AI/deploy/gcp && docker compose ps && docker compose logs --tail=50
+```
+
+### Troubleshooting
+
+**Container restarts in a loop.** Almost always a missing secret —
+`FLASK_ENV=production` makes the app fail fast at boot and gunicorn exits 3
+("worker failed to boot"). Check which variables actually arrived:
 
 ```bash
 docker compose exec web env | cut -d= -f1 | sort
 ```
 
-**Certificate never issues.** Port 80 must be reachable and DNS must already
-resolve to this VM. `docker compose logs caddy` names the actual ACME failure.
+**Certificate never issues / site shows a TLS warning.** Port 80 must be open and
+DNS must already resolve to this VM. `docker compose logs caddy` names the real
+failure.
 
-**Google sign-in fails with `redirect_uri_mismatch`.** The registered URI does
-not match exactly. It must be `https://your-domain.com/auth/google/callback`.
+**Google sign-in fails with `redirect_uri_mismatch`.** The URI in Part G doesn't
+match exactly. It must be `https://<DOMAIN>/auth/google/callback` — not
+`/api/auth/callback`, not with a trailing slash.
 
-**Interview audio breaks up / "inference slower than realtime".** e2-micro is a
-shared-core burstable instance; sustained Silero VAD may exceed its baseline.
-There is no free fix — this is the risk the guide opens with.
+**Audio breaks up mid-interview.** e2-micro is a shared-core burstable instance
+and sustained voice detection may exceed its baseline CPU. There is no free fix;
+this is the risk the guide opens with.
 
-**Out of memory during build.** The swap file in step 5 is missing or too small.
-`swapon --show` to confirm it is active.
+**Build fails with "killed" or out-of-memory.** The swap file is missing.
+`swapon --show` — if it prints nothing, redo Part E step 1.
 
-**App killed mid-interview.** Check `dmesg | grep -i oom`. If the worker was OOM
-killed, e2-micro cannot host this workload.
+**App dies mid-interview.** Check `dmesg | grep -i oom`. If the worker was
+OOM-killed, e2-micro cannot host this workload.
+
+### If e2-micro doesn't work out
+
+In order of preference:
+
+1. **Cloudflare Tunnel on your own machine** — genuinely free, full CPU, custom
+   domain, no reclaim policy. Cost is leaving your PC on.
+2. **Fly with scale-to-zero + a keepalive ping** during interviews — bills close
+   to nothing, needs a small code change, ~20 minutes of work.
