@@ -17,7 +17,7 @@ Fill these in as you go. Every `<PLACEHOLDER>` below is one of these.
 | Placeholder | What it is | Where you get it |
 |---|---|---|
 | `<PROJECT_ID>` | Google Cloud project id — **not** the display name | Part A, step 3 |
-| `<DOMAIN>` | the domain you'll serve on, e.g. `mockflow.dev` | you already own it |
+| `<DOMAIN>` | the hostname you'll serve on | Part D — **a free DuckDNS subdomain is fine**, you do not need to buy a domain |
 | `<VM_IP>` | the server's public address | Part C, step 3 |
 
 Keep them in a scratch note. You will paste each several times.
@@ -199,10 +199,55 @@ delete the VM, release this address too or it starts billing.
 
 ---
 
-# Part D — Point your domain at it
+# Part D — Get a hostname and point it at the server
 
-At whatever company you bought the domain from (Namecheap, GoDaddy, Cloudflare,
-Google Domains…), find **DNS settings** and add:
+You need a **hostname**, not just the IP. This is not optional and not cosmetic:
+Google OAuth **refuses raw IP addresses** as redirect URIs (only `localhost` is
+exempt) and **requires HTTPS**. Without a hostname, sign-in cannot work at all.
+
+You do **not** have to buy one.
+
+## Option 1 — A free subdomain from DuckDNS (recommended)
+
+Free, permanent, no card, and it works with Let's Encrypt.
+
+### D1. Claim the subdomain
+
+1. Go to **https://www.duckdns.org** and sign in with Google/GitHub (no signup form).
+2. In the **domains** box type the name you want, e.g. `mockflow-ai`, and click
+   **add domain**.
+3. Your hostname is now `mockflow-ai.duckdns.org`. That is your `<DOMAIN>`.
+
+### D2. ⚠️ Test that Google accepts it — do this BEFORE any server work
+
+This is the one thing that could sink the whole approach, and it takes a minute
+to check. Google rejects some domains with *"must end with a public top-level
+domain"* or *"must use a domain that is a valid top private domain"*.
+
+Go to **https://console.cloud.google.com/apis/credentials** → your OAuth client →
+**Authorized redirect URIs** → **ADD URI**, and paste:
+
+```
+https://<DOMAIN>/auth/google/callback
+```
+
+- **It saves cleanly** → you're fine, continue. (You've now also completed Part G.)
+- **It refuses the domain** → stop and use Option 3 below instead. Don't build the
+  server around a hostname that can't authenticate.
+
+While you're here, add `https://<DOMAIN>` under **Authorized JavaScript origins**.
+
+### D3. Point it at the VM
+
+In the DuckDNS **current ip** box for your domain, paste `<VM_IP>` and click
+**update ip**.
+
+Your GCP address is *reserved* (Part C step 3), so it will not change — you do
+**not** need DuckDNS's update client or a cron job. Set it once and forget it.
+
+## Option 2 — A domain you already own
+
+At your registrar's **DNS settings**, add:
 
 | Field | Value |
 |---|---|
@@ -211,14 +256,30 @@ Google Domains…), find **DNS settings** and add:
 | Value / Points to | `<VM_IP>` |
 | TTL | leave default |
 
-Wait a few minutes, then verify from your machine — **replace `<DOMAIN>`**:
+## Option 3 — If Google rejected the DuckDNS name
+
+Try, in order:
+
+1. **deSEC** — https://desec.io — free, non-profit, gives you `yourname.dedyn.io`.
+   A more conventional DNS host than DuckDNS, with a proper records UI.
+2. **afraid.org FreeDNS** — https://freedns.afraid.org — free subdomains across
+   many shared domains, so if one parent domain is rejected you can pick another.
+   Note that on the free tier other people can also create names under the same
+   shared domain.
+3. **A cheap real domain** — a `.xyz` or `.top` is often a couple of dollars for
+   the first year, and removes this whole class of problem permanently.
+
+Re-run the D2 test with each candidate before building on it.
+
+## Verify DNS resolves — required before Part H
 
 ```bash
 nslookup <DOMAIN>
 ```
 
-**It must print `<VM_IP>` before you continue.** The certificate cannot be issued
-until this resolves, and Part H will fail if you rush it.
+**It must print `<VM_IP>` before you continue.** Caddy cannot obtain a
+certificate until the name resolves publicly to this server, and Part H will fail
+if you rush it. DNS changes usually take a few minutes; DuckDNS is near-instant.
 
 ---
 
@@ -329,6 +390,9 @@ cd ~/MockFlow-AI/deploy/gcp && echo "DOMAIN=<DOMAIN>" > .env
 # Part G — Register the callback with Google
 
 **Skip this and sign-in is broken the moment the site comes up.**
+
+> If you already added both URIs during the Part D2 acceptance test, this part is
+> done — skip to Part H.
 
 Go to **https://console.cloud.google.com/apis/credentials** and click your
 existing OAuth 2.0 Client ID (the same one the app already uses).
