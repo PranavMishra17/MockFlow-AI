@@ -1,4 +1,15 @@
-name: CI / Deploy
+name: CI
+
+# Lint + tests on every push and PR.
+#
+# There is deliberately NO deploy job. The app runs on a Google Cloud e2-micro
+# (docs/DEPLOYMENT_GCP.md) which pulls the repo itself, so a push does not deploy.
+# A job named "deploy" that cannot deploy is worse than none — the previous one
+# skipped silently on every run because FLY_API_TOKEN was never set, which read as
+# a green deploy for weeks while nothing had ever shipped.
+#
+# To release, on the VM:
+#   cd ~/MockFlow-AI && git pull && cd deploy/gcp && docker compose up -d --build
 
 on:
   push:
@@ -34,58 +45,31 @@ jobs:
           pip install -r requirements-dev.txt
       - name: Run tests
         # The suite is hermetic: conftest stubs the DB connection pool, so no
-        # live database is required. (A Postgres service container for real
-        # db-integration tests is the next step — see the testing plan.)
+        # live database is required.
         run: pytest -q --cov=. --cov-report=term-missing
 
-  deploy:
-    name: Deploy to Fly.io
+  live-canary:
+    name: Live site canary
     runs-on: ubuntu-latest
     needs: [lint, test]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    concurrency:
-      # Never let two deploys race for the single always-on machine.
-      group: fly-deploy-production
-      cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
-
-      # Guarded so this workflow stays green before the token exists. Add the
-      # secret with:  fly tokens create deploy -x 999999h
-      # then store it as the FLY_API_TOKEN repo secret.
-      - name: Check for deploy credentials
-        id: creds
+      - name: Check the deployed site is still up
+        # This does NOT verify this commit shipped — deployment is manual. It only
+        # reports whether the live host is currently serving, and /health pings
+        # Neon so it covers the database too. Informational: a failure here means
+        # the running site is unhealthy, not that this commit is bad.
+        continue-on-error: true
         run: |
-          if [ -n "${{ secrets.FLY_API_TOKEN }}" ]; then
-            echo "ready=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "ready=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::FLY_API_TOKEN is not set - skipping deploy. See docs/DEPLOYMENT.md section 4."
+          url="${{ vars.APP_URL }}"
+          if [ -z "$url" ]; then
+            echo "::notice::APP_URL variable not set; skipping canary."
+            exit 0
           fi
-
-      - uses: superfly/flyctl-actions/setup-flyctl@master
-        if: steps.creds.outputs.ready == 'true'
-
-      - name: Deploy
-        if: steps.creds.outputs.ready == 'true'
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        run: flyctl deploy --remote-only
-
-      - name: Post-deploy health smoke
-        if: steps.creds.outputs.ready == 'true' && vars.APP_URL != ''
-        # /health pings Neon, so a 200 here proves app + database, not just that
-        # the port is open. Retries because the machine may still be starting.
-        run: |
-          url="${{ vars.APP_URL }}/health"
-          echo "Polling $url ..."
-          for i in $(seq 1 20); do
-            code=$(curl -s -o /tmp/health.json -w "%{http_code}" --max-time 30 "$url" || echo 000)
-            echo "attempt $i -> HTTP $code"
-            if [ "$code" = "200" ]; then
-              echo "Healthy:"; cat /tmp/health.json; exit 0
-            fi
-            sleep 15
-          done
-          echo "::error::/health did not return 200 after deploy."
-          exit 1
+          echo "Checking $url/health ..."
+          code=$(curl -s -o /tmp/health.json -w "%{http_code}" --max-time 30 "$url/health" || echo 000)
+          echo "HTTP $code"
+          cat /tmp/health.json 2>/dev/null || true
+          if [ "$code" != "200" ]; then
+            echo "::warning::Live site returned HTTP $code — the deployed app may be down."
+          fi

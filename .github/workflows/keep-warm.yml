@@ -4,9 +4,9 @@ name: Keep Neon warm
 # seconds to the first query, and a project left completely idle for long enough
 # can be suspended. A no-op query on a schedule resets that inactivity timer.
 #
-# The web service itself no longer needs waking: fly.toml pins
-# min_machines_running = 1 with auto_stop_machines = false, so the app is always
-# resident. The health ping below is kept only as a cheap liveness canary.
+# The web service itself never needs waking: it runs as an always-on container on
+# a Google Cloud e2-micro (docs/DEPLOYMENT_GCP.md) with restart: always. The
+# health ping below is kept only as a cheap liveness canary.
 on:
   schedule:
     - cron: '0 12 1,15 * *'

@@ -2,6 +2,17 @@
 
 Deploying MockFlow-AI to **Fly.io** on a **custom domain**, always-on.
 
+> ## ⚠️ NOT the live setup — kept as an alternative
+>
+> MockFlow-AI runs on a **Google Cloud e2-micro**: see
+> **[`DEPLOYMENT_GCP.md`](DEPLOYMENT_GCP.md)**. The Fly app was destroyed on
+> 2026-09-09 after a real interview passed on GCP, because Fly has no free tier —
+> the always-on setting below bills 24/7 by design.
+>
+> This guide is still accurate and is the lower-effort path if you ever want a
+> managed host and don't mind paying. `fly.toml` was removed since it named a
+> destroyed app; recreate it from §4 here.
+
 > **Looking for the zero-cost option?** See
 > [`DEPLOYMENT_GCP.md`](DEPLOYMENT_GCP.md) — a Google Cloud `e2-micro`
 > (Always Free) VM, which has no recurring charge. Fly has no free tier: the
