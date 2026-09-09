@@ -1,64 +1,62 @@
 # MockFlow-AI — Fly.io app config.
 #
-# Goal: the site is ALWAYS up (no Render-style spin-down) on a custom domain.
+# NOTE: `fly launch` regenerates this file and strips comments. It kept every
+# functional setting last time, but re-check the values below after running it.
 #
-# Set the app name with `fly launch --no-deploy --name <your-app>`, or edit it
-# here. Full walkthrough + why Cloudflare Workers can't host this: docs/DEPLOYMENT.md
+# Full walkthrough + why Cloudflare Workers cannot host this: docs/DEPLOYMENT.md
 
-app = "mockflow-ai"
+app = 'mockflow-ai'
 
-# IMPORTANT: set this to the region your Neon project lives in. Every request
-# does at least one Postgres round-trip; a cross-continent hop is the single
-# easiest way to make the app feel slow. `fly platform regions` lists them.
-primary_region = "iad"
+# Must match the Neon project's region — every request does at least one Postgres
+# round-trip. Verified: Neon is us-east-1, which is what `iad` maps to.
+primary_region = 'iad'
 
 [build]
-  dockerfile = "Dockerfile"
+  dockerfile = 'Dockerfile'
 
 [env]
+  # FLASK_ENV=production makes app.py fail fast on a missing secret, so a boot
+  # crash loop here (gunicorn exit_code=3, "worker failed to boot") means a
+  # secret is unset — check `fly secrets list` before anything else.
+  FLASK_ENV = 'production'
+  # MEMORY cap, not a traffic cap: each interview spawns an agent_worker.py
+  # subprocess that loads Silero VAD (ONNX). Measured idle footprint of the web
+  # process is ~260 MB of the 2 GB below.
+  MAX_CONCURRENT_WORKERS = '3'
   # gunicorn binds 8080 in the Dockerfile CMD; keep these in agreement.
-  PORT = "8080"
-  FLASK_ENV = "production"
-  # Each interview spawns an agent_worker.py subprocess that loads Silero VAD
-  # (ONNX) and holds the LiveKit session for the whole interview, so this is a
-  # MEMORY cap, not a traffic cap. Raise it only alongside [[vm]] memory below,
-  # and measure with `fly ssh console -C "free -m"` during a live interview.
-  MAX_CONCURRENT_WORKERS = "3"
+  PORT = '8080'
 
 [http_service]
   internal_port = 8080
   force_https = true
-
-  # THE ALWAYS-ON SETTING. Render's free tier spun the service down between
-  # visits; this keeps one machine resident so there is no cold start.
-  auto_stop_machines = false
+  # ALWAYS-ON. This is what stops the Render-style spin-down — and it is also
+  # what makes the machine bill 24/7. See docs/DEPLOYMENT.md "Staying always-on"
+  # for the cost trade and why scale-to-zero is NOT safe for this app: the
+  # browser makes zero HTTP calls to this app during an interview (audio goes
+  # through LiveKit Cloud), so an auto-stop would kill the agent mid-interview.
+  auto_stop_machines = 'off'
   auto_start_machines = true
   min_machines_running = 1
-
-  # Do NOT raise max_machines_running above 1 without reading the
-  # "Why this app pins to one machine" section in docs/DEPLOYMENT.md —
-  # worker_manager keeps active interviews in an in-process dict, so a request
-  # load-balanced to a second machine cannot see the worker running on the first.
-  processes = ["app"]
+  # Do NOT raise max_machines_running: worker_manager keeps active interviews in
+  # an in-process dict, so a second machine cannot see the first's workers.
+  processes = ['app']
 
   [http_service.concurrency]
-    type = "requests"
-    soft_limit = 40
+    type = 'requests'
     hard_limit = 60
+    soft_limit = 40
 
   [[http_service.checks]]
-    interval = "30s"
-    timeout = "10s"
-    grace_period = "45s"
-    method = "GET"
-    path = "/health"
-    # /health pings Neon and returns 503 when the DB is unreachable, so this
-    # check covers app + database liveness rather than just "the port is open".
+    interval = '30s'
+    timeout = '10s'
+    grace_period = '45s'
+    method = 'GET'
+    path = '/health'
 
 [[vm]]
-  # Starting point, not a measured figure: the web process is small, but each
-  # concurrent interview adds an onnxruntime-loaded subprocess. Watch memory
-  # during a real interview before trusting MAX_CONCURRENT_WORKERS=3, and scale
-  # with `fly scale vm shared-cpu-2x --memory 2048`.
-  size = "shared-cpu-2x"
-  memory = "2gb"
+  # Measured: ~263 MB in use at idle out of 2048 MB. Sized for headroom on
+  # concurrent interviews (onnxruntime per worker), not for the web process.
+  # shared-cpu-2x is deliberate: on a low-CPU instance Silero VAD runs "inference
+  # slower than realtime" and the voice breaks up.
+  size = 'shared-cpu-2x'
+  memory = '2gb'
