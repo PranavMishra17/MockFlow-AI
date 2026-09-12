@@ -59,8 +59,30 @@ class HarnessSession:
     # -- driving ----------------------------------------------------------
 
     async def say(self, text: str):
-        """Speak as the candidate. Returns the RunResult for assertions."""
-        return await self.session.run(user_input=text)
+        """Speak as the candidate, through the same turn loop the room uses.
+
+        `session.run(user_input=)` cannot be used: it never calls
+        `on_user_turn_completed`, so the harness would test a turn loop the
+        room does not run. This mirrors the SDK's own end-of-turn sequence
+        (agent_activity.py, 1.3.6): build the user message, copy the chat
+        context, let the agent prepare the turn on the copy (that is where
+        the [FLOW MOVE] note lands), then generate the reply from that copy.
+        If the agent closes the interview it raises StopResponse and there is
+        no reply to wait for.
+        """
+        from livekit.agents import StopResponse, llm as lk_llm
+
+        msg = lk_llm.ChatMessage(role="user", content=[text])
+        turn_ctx = self.agent.chat_ctx.copy()
+        try:
+            await self.agent.prepare_turn(turn_ctx, msg)
+        except StopResponse:
+            await self.settle(timeout=15, quiet_for=0.5)
+            return None
+        handle = self.session._activity._generate_reply(user_message=msg, chat_ctx=turn_ctx)
+        await handle
+        await self.settle(timeout=15, quiet_for=0.3)
+        return handle
 
     async def settle(self, timeout: float = 30.0, quiet_for: float = 0.6) -> None:
         """Wait until the agent stops producing turns.
@@ -139,6 +161,7 @@ async def start_interview(
     llm,
     candidate_name: str = "Ada Lovelace",
     clock: Optional[FakeClock] = None,
+    assess=None,
 ) -> HarnessSession:
     """Build and start an interview with no room attached.
 
@@ -153,10 +176,13 @@ async def start_interview(
     transport = NullTransport()
     track_type = normalized['track']
 
+    # `assess` is the per-turn assessment call; tests pass a fake, the CLI
+    # leaves it None and gets the real one.
     agent = InterviewAgent(
         transport=transport,
         candidate_info={'name': candidate_name, 'role': normalized['role']},
         track_type=track_type,
+        assess=assess,
     )
 
     # No stt/tts/vad: this is the whole difference from production. `say()`
@@ -170,18 +196,10 @@ async def start_interview(
 
     handles = attach_handlers(session, state, transport)
 
-    # Every tool the model calls, including the ones it calls during `on_enter`
-    # before the candidate has said anything. Scraping RunResult instead would
-    # miss exactly those — which is most of what the generated-question tracks
-    # do at startup.
+    # There are no function tools any more (the turn loop is code; see
+    # interview_turn.py). The list stays so a scenario that still expects a
+    # tool fails loudly rather than silently passing.
     tool_calls: list = []
-
-    @session.on("function_tools_executed")
-    def _record_tools(event):
-        for call in event.function_calls:
-            name = getattr(call, 'name', None)
-            if name:
-                tool_calls.append(name)
 
     # capture_run makes `session.run()` available; no room means eval mode.
     await session.start(agent, capture_run=True)

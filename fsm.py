@@ -13,6 +13,8 @@ from datetime import datetime
 from typing import Callable, Optional, List, Any
 import logging
 
+from interview_coverage import CoverageLedger
+
 logger = logging.getLogger(__name__)
 
 
@@ -100,7 +102,16 @@ class InterviewState:
     pending_transition: Optional[InterviewStage] = None
     pending_transition_reason: Optional[str] = None
 
-    # Pending acknowledgement (queued when transition happens mid-user-speech)
+    # What the candidate has demonstrated so far, in the verdict's signal
+    # vocabulary. The turn loop (interview_turn.py) reads and writes this;
+    # stage progression is decided from it, not from question counts.
+    ledger: CoverageLedger = field(default_factory=CoverageLedger)
+    # The question Flow last asked, so "can you repeat that?" repeats it.
+    last_question: str = ""
+    # An opening question parked by a skip or the fallback timer, consumed by
+    # the next prepare_turn so it lands as a reply rather than an interjection.
+    pending_move: Any = None
+    closing_spoken: bool = False
 
     # Closing stage tracking
     closing_initiated: bool = False
@@ -950,6 +961,8 @@ class CodingInterviewState(InterviewState):
 
     # Track skipped problems
     skipped_problems: List[int] = field(default_factory=list)
+    # Problems the fallback timer closed for time; they count as resolved.
+    timed_out_problems: List[int] = field(default_factory=list)
 
     def get_active_stages(self) -> list:
         """

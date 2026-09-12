@@ -275,7 +275,7 @@ async def run_one(track: str, persona: Persona, out_dir: Path, client) -> dict:
 
     for turn in range(MAX_TURNS):
         stage = sess.stage
-        if stage == "closing" and any("luck" in h["text"].lower() for h in history[-2:] if h["who"] == "flow"):
+        if any(("take care" in h["text"].lower() or "luck" in h["text"].lower()) for h in history[-2:] if h["who"] == "flow" and h.get("stage") == "closing"):
             notes.append(f"closing delivered by Flow at turn {turn}")
             break
         reply = candidate_reply(client, persona, track, history, turn)

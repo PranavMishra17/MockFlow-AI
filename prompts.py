@@ -344,7 +344,36 @@ Use their name naturally. Maintain a warm, professional tone.
 
 # ==================== HELPER FUNCTIONS ====================
 
+# Lines that describe the retired tool protocol. Until the per-stage prompts
+# are rewritten (step 3b of the redesign) they are stripped at assembly time,
+# so no stage can tell the model to call a tool that no longer exists.
+_RETIRED_PROTOCOL_MARKERS = (
+    "assess_response", "ask_question", "transition_stage", "get_current_question",
+    "generate_interview_questions", "record_response", "evaluate_code_submission",
+    "STAR PROBING GUIDE", "Missing Situation:", "Missing Task:", "Missing Action:", "Missing Result:",
+    "TRANSITION:", "Need at least", "questions minimum", "question minimum", "then transition",
+    "CRITICAL RULES:", "RULES:", "Call ask_question", "call transition",
+)
+
+MOVE_PROTOCOL = """
+HOW EACH TURN WORKS
+After the candidate speaks you will see a bracketed [FLOW MOVE] message. It tells you what to acknowledge and the one question to ask. Follow it exactly: say the preface if there is one, acknowledge one specific from their answer in a few words, ask that one question, stop. Never read the note aloud, never mention stages, sections, frameworks or tools, and never ask a second question.
+"""
+
+
+def _scrub_retired_protocol(text: str) -> str:
+    kept = [ln for ln in text.split("\n") if not any(m in ln for m in _RETIRED_PROTOCOL_MARKERS)]
+    return "\n".join(kept)
+
+
 def build_stage_instructions(stage: InterviewStage) -> str:
+    """Complete instructions for a stage: the stage's own text, minus anything
+    about the retired tool protocol, plus how a turn works now."""
+    raw = _build_stage_instructions_raw(stage)
+    return _scrub_retired_protocol(raw).rstrip() + "\n" + MOVE_PROTOCOL
+
+
+def _build_stage_instructions_raw(stage: InterviewStage) -> str:
     """
     Build complete stage instructions by combining modular components.
 
