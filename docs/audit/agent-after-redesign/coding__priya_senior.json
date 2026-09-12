@@ -1,0 +1,394 @@
+{
+  "track": "coding",
+  "persona": "priya_senior",
+  "config": {
+    "track": "coding",
+    "role": "Senior Backend Engineer",
+    "level": "senior",
+    "user_id": "audit-user",
+    "preferred_language": "python",
+    "problem_count": "2"
+  },
+  "duration_s": 20.3,
+  "history": [
+    {
+      "who": "flow",
+      "text": "Hey, I'm Flow \u2014 we'll chat briefly, then you'll get two problems in the editor. Please start with a short introduction.",
+      "stage": "self_intro",
+      "t": 1.4,
+      "latency": null
+    },
+    {
+      "who": "flow",
+      "text": "It's in your editor: Two Sum. Read it through, then tell me how you'd approach it before you write anything.",
+      "stage": "coding_problem_1",
+      "t": 2.1,
+      "latency": null
+    },
+    {
+      "who": "system",
+      "text": "[coding_problem pushed: Two Sum]",
+      "stage": "coding_problem_1",
+      "t": 2.1
+    },
+    {
+      "who": "candidate",
+      "text": "For the Two Sum problem, my approach would be to utilize a hash map for efficient lookups. First, I would iterate through the array, and for each number, I would calculate the complement needed to reach the target. I would check if this complement already exists in the hash map. If it does, I can return the current index and the index of the stored complement. If it doesn't, I would store the current number and its index in the hash map for future reference. This approach ensures a time complexity of O(n), making it efficient for larger input sizes. Would you like me to start coding this?",
+      "stage": "coding_problem_1",
+      "t": 4.1
+    },
+    {
+      "who": "flow",
+      "text": "Got it. Go ahead and write it up in the editor, then submit when you're ready.",
+      "stage": "coding_problem_1",
+      "t": 6.4,
+      "latency": 2.3
+    },
+    {
+      "who": "system",
+      "text": "[code_submitted problem 0, 7 lines]\ndef two_sum(nums, target):\n    num_map = {}\n    for i, num in enumerate(nums):\n        complement = target - num\n        if complement in num_map:\n            return [num_map[complement], i]\n        num_map[num] = i",
+      "stage": "coding_problem_2",
+      "t": 7.9
+    },
+    {
+      "who": "flow",
+      "text": "Your solution is efficient and correctly finds the indices, but it doesn't handle edge cases like empty input.",
+      "stage": "coding_problem_1",
+      "t": 9.1,
+      "latency": null
+    },
+    {
+      "who": "flow",
+      "text": "Next one's in your editor: Valid Parentheses. Take a minute to read it, then talk me through your approach.",
+      "stage": "coding_problem_2",
+      "t": 9.1,
+      "latency": null
+    },
+    {
+      "who": "system",
+      "text": "[evaluation_result] {\"correctness\": \"pass\", \"approach_quality\": \"A\", \"edge_cases_handled\": [], \"edge_cases_missed\": [\"empty input\", \"input with negative numbers\", \"input with duplicates\"], \"time_complexity\": \"O(n)\", \"space_complexity\": \"O(n)\", \"code_quality_notes\": [\"good variable naming\", \"missing input validation\"], \"suggestions\": [\"Add handling for edge cases like empty input and validate input types.\"], \"brief_verbal_feedback\": \"Your solution is efficient and correctly finds the indices, but it doesn't handle edge cases like empty input.\"}",
+      "stage": "coding_problem_2",
+      "t": 9.1
+    },
+    {
+      "who": "system",
+      "text": "[coding_problem pushed: Valid Parentheses]",
+      "stage": "coding_problem_2",
+      "t": 9.1
+    },
+    {
+      "who": "candidate",
+      "text": "To solve the Valid Parentheses problem, I'd use a stack data structure. As I iterate through the characters in the string, I'd push opening brackets onto the stack. For each closing bracket, I'd check if it matches the top of the stack. If it does, I'd pop the stack; if not, I return False immediately. At the end, if the stack is empty, it means all brackets were closed properly, so I'd return True; otherwise, I'd return False. This approach runs in O(n) time and uses O(n) space for the stack. Would you like me to code this now?",
+      "stage": "coding_problem_2",
+      "t": 10.9
+    },
+    {
+      "who": "flow",
+      "text": "That sounds solid. Go ahead and implement it in the editor, then submit when you're ready.",
+      "stage": "coding_problem_2",
+      "t": 13.2,
+      "latency": 2.3
+    },
+    {
+      "who": "system",
+      "text": "[code_submitted problem 1, 11 lines]\ndef is_valid(s):\n    stack = []\n    mapping = {')': '(', '}': '{', ']': '['}\n    \n    for char in s:\n        if char in mapping.values():\n            stack.append(char)\n        elif char in mapping.keys():\n            if stack == [] or mapping[char] != stack.pop():\n                return False\n    return stack == []",
+      "stage": "closing",
+      "t": 14.7
+    },
+    {
+      "who": "flow",
+      "text": "Your solution handles the main cases well and efficiently checks for valid parentheses.",
+      "stage": "coding_problem_2",
+      "t": 15.8,
+      "latency": null
+    },
+    {
+      "who": "flow",
+      "text": "Thanks, Priya. Your written feedback is on your dashboard in a minute. That's the end of the interview \u2014 take care.",
+      "stage": "closing",
+      "t": 15.8,
+      "latency": null
+    },
+    {
+      "who": "system",
+      "text": "[evaluation_result] {\"correctness\": \"pass\", \"approach_quality\": \"A\", \"edge_cases_handled\": [\"empty string\", \"balanced parentheses\", \"unbalanced parentheses\"], \"edge_cases_missed\": [], \"time_complexity\": \"O(n)\", \"space_complexity\": \"O(n)\", \"code_quality_notes\": [\"good variable naming\", \"clear logic\"], \"suggestions\": [\"Consider adding type hints for better readability.\"], \"brief_verbal_feedback\": \"Your solution handles the main cases well and efficiently checks for valid parentheses.\"}",
+      "stage": "closing",
+      "t": 15.8
+    }
+  ],
+  "stages_visited": [],
+  "final_stage": "closing",
+  "tool_calls": [],
+  "question_bank": [
+    {
+      "slug": "two-sum",
+      "title": "Two Sum",
+      "difficulty": "easy",
+      "time_limit_minutes": 15,
+      "description": "Given an array of integers `nums` and an integer `target`, return the indices of the two numbers that add up to `target`. Exactly one solution exists and you may not use the same element twice. Return the indices in increasing order.",
+      "examples": [
+        {
+          "input": "nums = [2,7,11,15], target = 9",
+          "output": "[0,1]",
+          "explanation": "2 + 7 = 9"
+        },
+        {
+          "input": "nums = [3,2,4], target = 6",
+          "output": "[1,2]"
+        }
+      ],
+      "constraints": [
+        "2 <= len(nums) <= 10^4",
+        "Exactly one valid answer exists"
+      ],
+      "hints": [
+        "For each number, what complement would complete the pair?",
+        "A hash map of value->index gives O(n)."
+      ],
+      "entrypoint": "two_sum",
+      "starter_code": {
+        "python": "def two_sum(nums, target):\n    # return [i, j] with i < j\n    pass\n"
+      },
+      "test_cases": [
+        {
+          "args": [
+            [
+              2,
+              7,
+              11,
+              15
+            ],
+            9
+          ],
+          "expected": [
+            0,
+            1
+          ]
+        },
+        {
+          "args": [
+            [
+              3,
+              2,
+              4
+            ],
+            6
+          ],
+          "expected": [
+            1,
+            2
+          ]
+        },
+        {
+          "args": [
+            [
+              3,
+              3
+            ],
+            6
+          ],
+          "expected": [
+            0,
+            1
+          ]
+        },
+        {
+          "args": [
+            [
+              -1,
+              -2,
+              -3,
+              -4,
+              -5
+            ],
+            -8
+          ],
+          "expected": [
+            2,
+            4
+          ]
+        }
+      ],
+      "reference_solution": {
+        "python": "def two_sum(nums, target):\n    seen = {}\n    for i, n in enumerate(nums):\n        c = target - n\n        if c in seen:\n            return [seen[c], i]\n        seen[n] = i\n    return []\n"
+      }
+    },
+    {
+      "slug": "valid-parentheses",
+      "title": "Valid Parentheses",
+      "difficulty": "easy",
+      "time_limit_minutes": 15,
+      "description": "Given a string `s` of just '()[]{}' characters, return True if every bracket is closed by the same type in the correct order, else False.",
+      "examples": [
+        {
+          "input": "s = \"()[]{}\"",
+          "output": "True"
+        },
+        {
+          "input": "s = \"([)]\"",
+          "output": "False"
+        }
+      ],
+      "constraints": [
+        "0 <= len(s) <= 10^4",
+        "s contains only bracket characters"
+      ],
+      "hints": [
+        "A stack matches the most recent open bracket.",
+        "Empty string is valid."
+      ],
+      "entrypoint": "is_valid",
+      "starter_code": {
+        "python": "def is_valid(s):\n    pass\n"
+      },
+      "test_cases": [
+        {
+          "args": [
+            "()"
+          ],
+          "expected": true
+        },
+        {
+          "args": [
+            "()[]{}"
+          ],
+          "expected": true
+        },
+        {
+          "args": [
+            "(]"
+          ],
+          "expected": false
+        },
+        {
+          "args": [
+            "([)]"
+          ],
+          "expected": false
+        },
+        {
+          "args": [
+            "{[]}"
+          ],
+          "expected": true
+        },
+        {
+          "args": [
+            ""
+          ],
+          "expected": true
+        }
+      ],
+      "reference_solution": {
+        "python": "def is_valid(s):\n    pairs = {')': '(', ']': '[', '}': '{'}\n    stack = []\n    for ch in s:\n        if ch in '([{':\n            stack.append(ch)\n        else:\n            if not stack or stack.pop() != pairs[ch]:\n                return False\n    return not stack\n"
+      }
+    }
+  ],
+  "stalls": [],
+  "notes": [
+    "closing delivered by Flow at turn 0"
+  ],
+  "verdict": {
+    "overall": {
+      "confidence": "high",
+      "headline": "Priya demonstrates strong problem-solving and coding skills but needs to improve testing for edge cases.",
+      "recommendation": "lean_hire",
+      "level_read": "mid"
+    },
+    "signals": [
+      {
+        "name": "Problem-solving",
+        "reasoning": "Priya clearly articulated her approach for both problems, including the use of hash maps and stacks, and explained the time complexity.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "For the Two Sum problem, my approach would be to utilize a hash map for efficient lookups.",
+          "To solve the Valid Parentheses problem, I'd use a stack data structure."
+        ],
+        "to_raise": "Consider alternative approaches and discuss trade-offs."
+      },
+      {
+        "name": "Coding",
+        "reasoning": "Priya translated her plans into code efficiently and correctly implemented the solutions.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "Would you like me to start coding this?",
+          "Would you like me to code this now?"
+        ],
+        "to_raise": "Ensure code handles all edge cases before submission."
+      },
+      {
+        "name": "Testing & verification",
+        "reasoning": "Priya's solution for Two Sum did not handle edge cases like empty input, indicating a gap in testing.",
+        "band": "borderline",
+        "scope_met": "new_grad",
+        "evidence": [
+          "Your solution is efficient and correctly finds the indices, but it doesn't handle edge cases like empty input."
+        ],
+        "to_raise": "Proactively test and verify edge cases without prompting."
+      },
+      {
+        "name": "Response to hints",
+        "reasoning": "There was no evidence of Priya responding to hints as the interviewer did not provide any during the session.",
+        "band": "cannot_determine",
+        "scope_met": "intern",
+        "evidence": [],
+        "to_raise": "N/A"
+      },
+      {
+        "name": "Communication & structure",
+        "reasoning": "Priya communicated her approach clearly and concisely, making it easy to follow her thought process.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "This approach ensures a time complexity of O(n), making it efficient for larger input sizes.",
+          "This approach runs in O(n) time and uses O(n) space for the stack."
+        ],
+        "to_raise": "Provide more detailed explanations of edge case handling."
+      }
+    ],
+    "differentiators": [
+      "To be a strong hire, Priya should consistently test for edge cases and discuss trade-offs between different approaches."
+    ],
+    "delivery": {
+      "pace_available": false,
+      "wpm": null,
+      "wpm_band": "unknown",
+      "wpm_target": "130-160",
+      "filler_total": 3,
+      "filler_per_100w": 1.45,
+      "filler_per_min": null,
+      "filler_band": "good",
+      "filler_target": "<=3.3/100 words",
+      "word_count": 207,
+      "sentence_count": 14,
+      "filler_breakdown": {
+        "like": 2,
+        "so": 1
+      },
+      "top_crutch_word": {
+        "word": "like",
+        "count": 2
+      },
+      "talk_ratio": 0.59,
+      "longest_monologue_s": null
+    },
+    "gap_to_next": {
+      "signal": "Testing & verification",
+      "from_band": "borderline",
+      "to_band": "solid",
+      "move": "Proactively test and verify edge cases without prompting."
+    },
+    "great_answers": 0,
+    "context": {
+      "track": "coding",
+      "role": "swe",
+      "seniority": "mid",
+      "archetype": "big_tech"
+    }
+  },
+  "flags": [
+    "reply latency: median 2.3s, max 2.3s (text-only; TTS adds more)"
+  ]
+}

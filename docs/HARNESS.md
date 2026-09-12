@@ -31,6 +31,13 @@ hardware:
 | Silero VAD | none |
 | `RoomTransport` (data channel) | `NullTransport` (a list you assert on) |
 | `datetime.now` | `FakeClock`, advanced by the scenario |
+| the per-turn assessment call | the real one, or a fake via `start_interview(assess=...)` |
+
+`HarnessSession.say()` does not use `session.run(user_input=)`: that path
+never calls `on_user_turn_completed`, so it would test a turn loop the room
+does not run. It mirrors the SDK's own end-of-turn sequence instead — copy the
+chat context, `agent.prepare_turn(copy, msg)`, generate from the copy — which
+is pinned by `tests/test_harness.py`.
 
 That substitution list is the whole difference. If a test here passes, it
 passed against the code that ships.
@@ -58,7 +65,7 @@ not a reason to add one.
 
 `config` keys must be in `agent_mode.CONFIG_FIELDS` — a test enforces this, so
 a typo cannot quietly test a default. Expectations available today: `stage`,
-`tool_called`, `emitted`, `user_turns`, `agent_said`.
+`emitted`, `user_turns`, `agent_said`. (`tool_called` still parses but there are no tools any more — the turn loop is code; see RUNTIME_CONTRACT.md §0.)
 
 ## What this does NOT catch
 

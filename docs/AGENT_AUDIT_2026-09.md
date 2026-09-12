@@ -150,3 +150,91 @@ Barge-in and interruption handling; VAD/endpointing on real pauses (a rambler's 
 7. Coding: gate `ready_for_problem` on stage; make submission-vs-tool evaluation one path; do not close with a problem open; decide on Piston in prod (grading honesty).
 8. Voice hygiene: first name only, one question per turn, no markdown, no FSM vocabulary, a single closing utterance, no promises the product cannot keep (F11–F14, F16, F18).
 9. Decide what "enough interview" means per level — a floor on substantive answers, not on questions asked (F17, F4).
+
+---
+
+## Round 2 — after the redesign (2026-09-12, same day)
+
+The plan that came out of this ledger was executed the same day: a code-owned
+turn loop (`interview_turn.py`, `interview_coverage.py`; `docs/RUNTIME_CONTRACT.md`
+§0), a one-line greeting with the walkthrough moved to the pre-join panel, a
+prompt rewrite with a linter, a sentinel closing, and the coding fixes. The
+same rig, same five personas, same four tracks were run again:
+[`docs/audit/agent-after-redesign/`](audit/agent-after-redesign/INDEX.md).
+
+### The numbers (20 runs each, identical personas)
+
+| measure | before | after |
+|---|---|---|
+| times the simulated user had to press Skip (F4) | 8 | **0** |
+| silent turns — candidate spoke, Flow said nothing (F1) | 18 | **0** |
+| Flow turns asking two questions (F13) | 29 | 3 |
+| Flow turns with a praise adjective (F10) | 92 | **0** |
+| Flow turns using the candidate's full name (F11) | 44 | **0** |
+| Flow turns with FSM vocabulary (F12) | 27 | 2 (both false positives: the candidate's own "transition"/"stage" quoted back) |
+| text-only reply latency p50 / p95 (F15) | 2.2 s / 6.0 s | 2.5 s / 2.8 s |
+
+The p50 rose slightly because every turn now includes the structured
+assessment; the p95 fell by more than half because the tool-chain spikes are
+gone. In the room the assessment is primed from the interim transcript while
+the candidate is still talking, so most of that 2.5 s is not on the critical
+path (live probe: no timeouts logged).
+
+### Finding by finding
+
+| # | status | evidence |
+|---|---|---|
+| F1 silent turns | **fixed** | 0/20; `prepare_turn` cannot raise past StopResponse; `max_tool_steps=1`; no tools |
+| F2 stale acknowledgement | **fixed** | no `pending_acknowledgement` exists; the first answer of every stage gets a specific pickup and the next question in one reply (`behavioral/priya_senior`: "You organized workshops… Tell me about a time…") |
+| F3 wasted "ready?" exchange | **fixed** | transitions arrive with a question; zero "let's move into" lines |
+| F4 no self-transition | **fixed** | 0 stalls; progression is code (coverage / overtime / terse streak / cap) |
+| F5 skipped stages, `[TOPIC_2]` | **fixed** | every run reached closing through its stages; prompt lint fails on any unreplaced placeholder |
+| F6 non-deterministic greeting | **fixed** | one fixed line per track, spoken by code; tested |
+| F7 template probes | **fixed** | probes come from the bank's `follow_up_probes` or the missing STAR element; the "Missing Situation/Task/Result" lines are deleted |
+| F8 no adaptation | **improved** | terse → narrow question about the one thing said (`behavioral/ken_terse`); "I don't know" → "Fair — that's better than guessing" + scaffold (`technical_voice/marcus_junior`); rambler pinning exists but the LLM persona answered its questions, so it was not exercised — needs a real rambler |
+| F9 candidate questions | **fixed** | "repeat" repeats the whole spoken question; "how am I doing" and company questions get fixed honest lines; no invented employer |
+| F10 unconditional praise | **fixed** | 0 praise-adjective turns in 20 runs |
+| F11 full name every turn | **fixed** | 0; first name appears once, in the closing |
+| F12 FSM vocabulary | **fixed** | 2 false positives only |
+| F13 two questions | **improved** | 29 → 3; the remaining three are bank questions that are themselves two questions (generator prompt; see follow-ups) |
+| F14 fragmented / absent closing | **fixed** | one code-spoken utterance quoting the candidate's own strongest line, ending in the sentinel; finalization keys on the sentinel only |
+| F15 latency | **improved** | p95 6.0 → 2.8 s text-only |
+| F16 false promises | **fixed** | "we'll be in touch via email" deleted; linter bans it |
+| F17 four-question interviews | **fixed** | two-turn floor per stage; regression asserts ≥ 5 exchanges |
+| F18 double greeting | **fixed** | the greeting is not generated |
+| coding: Ready in any stage | **fixed** | gated: before problems → start problem 1; during → re-push; else ignored |
+| coding: double evaluation | **fixed** | one path; test asserts one `evaluation_result` per submission |
+| coding: closes with a problem open | **fixed** | closing only after every active problem is submitted, skipped or timed out |
+| coding: grader soft | **improved** | contract violations fail and are named ("you're returning the values instead of the indices"); still LLM-only in prod, and the editor now says so |
+| coding: 429 → stuck editor | **fixed** | retry with backoff, then `evaluation_error` releases the editor |
+
+### What is still true, for the next round
+
+- **Rhythm is regular.** Two exchanges per stage, pickup + question, every
+  time. It is correct and it is a little metronomic. The opener-variety rule
+  helps; a real fix is letting the move chooser occasionally spend a third
+  turn on a rich answer and a single turn on a thin one — the ledger has the
+  signal for it.
+- **Some bank questions are two questions.** `QUESTION_GENERATION` should be
+  told one question per item, and the technical generator should stop
+  pairing "explain X" with "and discuss Y".
+- **The assessor mis-tags occasionally** ("thanks for indulging me" read as
+  another company question). The no-repeat-preface guard hides the visible
+  symptom; a cheaper fix is to require the question mark before tagging.
+- **Interviews are shorter** (6–12 exchanges vs 12–16), because the old
+  length was padding. Whether the floors should rise for senior candidates is
+  a product call; the rig makes it a one-line change to test.
+- **Voice-only behaviour is still unverified by machine**: barge-in, the
+  timer-forced move landing mid-sentence, TTS pacing of the closing line.
+  `tests/e2e/caption_probe.py` proved the audio path runs the new loop with
+  no assessment timeouts; a human run per track on prod is the remaining
+  check.
+
+### How to keep it this way
+
+`python -m pytest -m level_b tests/e2e/test_agent_audit.py -x` runs the 20
+interviews and asserts every row of the numbers table (140 checks). Run it
+before merging anything that touches `prompts.py`, `interview_turn.py` or
+`interview_runtime.py`. `tests/test_prompt_lint.py`, `tests/test_interview_turn.py`,
+`tests/test_prepare_turn.py`, `tests/test_coding_flow.py` and
+`tests/test_closing_and_forced_moves.py` run on every commit without a key.

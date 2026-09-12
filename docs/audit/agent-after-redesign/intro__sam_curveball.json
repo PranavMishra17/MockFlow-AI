@@ -1,0 +1,235 @@
+{
+  "track": "intro",
+  "persona": "sam_curveball",
+  "config": {
+    "track": "intro",
+    "role": "Backend Engineer",
+    "level": "mid",
+    "user_id": "audit-user"
+  },
+  "duration_s": 31.9,
+  "history": [
+    {
+      "who": "flow",
+      "text": "Hey, I'm Flow \u2014 I'll be taking your interview today. Please start with a short introduction.",
+      "stage": "self_intro",
+      "t": 1.2,
+      "latency": null
+    },
+    {
+      "who": "candidate",
+      "text": "Hey Flow, nice to meet you! I\u2019m Sam Ortiz. I\u2019ve spent the last six years working as a backend engineer, primarily with Python and Django, and I\u2019ve dabbled a bit in Rust. I\u2019ve been with a couple of mid-size SaaS companies where I focused on building scalable and efficient systems. I enjoy problem-solving and love collaborating on challenging projects. How about you? What\u2019s your role like here?",
+      "stage": "self_intro",
+      "t": 2.4
+    },
+    {
+      "who": "flow",
+      "text": "Got it. You mentioned enjoying problem-solving and collaboration. What motivated you to pursue this backend engineering role at this time?",
+      "stage": "self_intro",
+      "t": 4.7,
+      "latency": 2.4
+    },
+    {
+      "who": "candidate",
+      "text": "Could you repeat the last part of that question? I didn't catch it all.",
+      "stage": "self_intro",
+      "t": 5.4
+    },
+    {
+      "who": "flow",
+      "text": "Sure. You mentioned enjoying collaboration on challenging projects. What motivated you to pursue this backend engineering role at this time?",
+      "stage": "self_intro",
+      "t": 7.6,
+      "latency": 2.2
+    },
+    {
+      "who": "candidate",
+      "text": "Ah, got it! I\u2019m drawn to this backend engineering role because I\u2019m looking for new challenges and opportunities to grow. Plus, I\u2019m excited about the projects your team is working on, especially the focus on scalability and efficiency. I see a chance to leverage my experience while learning from a new environment. What kind of challenges is your team currently facing?",
+      "stage": "self_intro",
+      "t": 8.7
+    },
+    {
+      "who": "flow",
+      "text": "You\u2019re looking for new challenges and a chance to grow. Can you share a specific project you drove personally, and what decision you made that significantly impacted its outcome?",
+      "stage": "past_experience",
+      "t": 11.4,
+      "latency": 2.7
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> past_experience]",
+      "stage": "past_experience",
+      "t": 11.4
+    },
+    {
+      "who": "candidate",
+      "text": "Absolutely! At my last job, I led a project to redesign our user authentication system. Initially, we were considering a simple token-based approach, but I pushed for implementing OAuth 2.0. I believed it would provide better security and scalability as our user base grew. The decision paid off; we reduced security incidents significantly and improved user experience. Do you think that kind of decision-making is common in your team?",
+      "stage": "past_experience",
+      "t": 12.5
+    },
+    {
+      "who": "flow",
+      "text": "You led a project to redesign your user authentication system. What were some of the specific challenges you faced during the implementation of OAuth 2.0?",
+      "stage": "past_experience",
+      "t": 15.1,
+      "latency": 2.6
+    },
+    {
+      "who": "candidate",
+      "text": "One of the main challenges was educating the team about OAuth 2.0, as not everyone was familiar with its nuances. Integrating the new flows into our existing architecture also required careful planning to avoid disruptions. We had to ensure that backward compatibility was maintained for users still on older versions. It definitely tested our adaptability. Have you encountered similar integration challenges on your team?",
+      "stage": "past_experience",
+      "t": 16.1
+    },
+    {
+      "who": "flow",
+      "text": "You faced challenges in educating the team about OAuth 2.0. In your day-to-day work, what aspects of backend engineering do you want more of than you currently have?",
+      "stage": "company_fit",
+      "t": 18.6,
+      "latency": 2.5
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> company_fit]",
+      "stage": "company_fit",
+      "t": 18.6
+    },
+    {
+      "who": "candidate",
+      "text": "I'm really eager for more opportunities to work on system architecture and design. In my current role, I focus a lot on implementation, but I\u2019d love to get more involved in shaping the bigger picture\u2014deciding how different components interact and ensuring they're scalable. What\u2019s your team\u2019s approach to system architecture? Do you encourage input from engineers at all levels?",
+      "stage": "company_fit",
+      "t": 19.7
+    },
+    {
+      "who": "flow",
+      "text": "There's no real company behind this mock, so I can't speak for one \u2014 but that's a good question to ask in a real one. You\u2019re eager for more opportunities in system architecture. What specific architectural decision have you found most interesting to make?",
+      "stage": "company_fit",
+      "t": 22.5,
+      "latency": 2.8
+    },
+    {
+      "who": "candidate",
+      "text": "One of the most interesting architectural decisions I made was choosing between microservices and a monolithic architecture for a new feature. We were at a crossroads, and I advocated for microservices because it allowed for more agility and independent deployment. The decision involved a lot of trade-offs, including increased complexity, but it ultimately improved our deployment speed and reduced downtime. How do you find the balance between architectural complexity and development speed in your projects?",
+      "stage": "company_fit",
+      "t": 23.7
+    },
+    {
+      "who": "flow",
+      "text": "Thanks, Sam. The part about \"I advocated for microservices because it allowed for more agility and independent\u2026\" is the kind of specific that lands. Your written feedback is on your dashboard in a minute. That's the end of the interview \u2014 take care.",
+      "stage": "closing",
+      "t": 26.1,
+      "latency": 2.5
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> closing]",
+      "stage": "closing",
+      "t": 26.1
+    }
+  ],
+  "stages_visited": [
+    "past_experience",
+    "company_fit",
+    "closing"
+  ],
+  "final_stage": "closing",
+  "tool_calls": [],
+  "question_bank": [],
+  "stalls": [],
+  "notes": [
+    "closing delivered by Flow at turn 7"
+  ],
+  "verdict": {
+    "overall": {
+      "confidence": "high",
+      "headline": "Sam shows solid technical reasoning but lacks depth in company-specific motivation.",
+      "recommendation": "on_fence",
+      "level_read": "new_grad"
+    },
+    "signals": [
+      {
+        "name": "Motivation & authenticity",
+        "reasoning": "Sam expresses a desire for new challenges and growth, but the motivation is somewhat generic and lacks specific alignment with the company.",
+        "band": "borderline",
+        "scope_met": "new_grad",
+        "evidence": [
+          "I\u2019m drawn to this backend engineering role because I\u2019m looking for new challenges and opportunities to grow."
+        ],
+        "to_raise": "Provide specific reasons why this company and role are uniquely appealing."
+      },
+      {
+        "name": "Communication & structure",
+        "reasoning": "Sam communicates clearly and provides structured responses, effectively using examples to illustrate points.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "At my last job, I led a project to redesign our user authentication system.",
+          "One of the most interesting architectural decisions I made was choosing between microservices and a monolithic architecture for a new feature."
+        ],
+        "to_raise": "Include more quantifiable outcomes to strengthen the impact of examples."
+      },
+      {
+        "name": "Role / company fit",
+        "reasoning": "Sam shows an understanding of backend engineering but lacks specific insights into the company or role beyond general backend responsibilities.",
+        "band": "borderline",
+        "scope_met": "new_grad",
+        "evidence": [
+          "I\u2019m excited about the projects your team is working on, especially the focus on scalability and efficiency."
+        ],
+        "to_raise": "Research and mention specific company projects or values that align with personal goals."
+      },
+      {
+        "name": "Self-awareness",
+        "reasoning": "Sam demonstrates self-awareness by acknowledging the need for more involvement in system architecture and design.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "I'm really eager for more opportunities to work on system architecture and design."
+        ],
+        "to_raise": "Discuss specific strategies or steps being taken to gain more experience in desired areas."
+      }
+    ],
+    "differentiators": [
+      "Sam could become a strong hire by aligning personal growth goals with specific company projects and values."
+    ],
+    "delivery": {
+      "pace_available": false,
+      "wpm": null,
+      "wpm_band": "unknown",
+      "wpm_target": "130-160",
+      "filler_total": 3,
+      "filler_per_100w": 0.73,
+      "filler_per_min": null,
+      "filler_band": "good",
+      "filler_target": "<=3.3/100 words",
+      "word_count": 409,
+      "sentence_count": 35,
+      "filler_breakdown": {
+        "like": 1,
+        "kind of": 2
+      },
+      "top_crutch_word": {
+        "word": "kind of",
+        "count": 2
+      },
+      "talk_ratio": 0.65,
+      "longest_monologue_s": null
+    },
+    "gap_to_next": {
+      "signal": "Motivation & authenticity",
+      "from_band": "borderline",
+      "to_band": "solid",
+      "move": "Provide specific reasons why this company and role are uniquely appealing."
+    },
+    "great_answers": 0,
+    "context": {
+      "track": "intro",
+      "role": "swe",
+      "seniority": "mid",
+      "archetype": "big_tech"
+    }
+  },
+  "flags": [
+    "reply latency: median 2.5s, max 2.8s (text-only; TTS adds more)",
+    "1 candidate question(s) answered with an immediate counter-question"
+  ]
+}

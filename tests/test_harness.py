@@ -116,3 +116,13 @@ def test_the_harness_composes_the_production_runtime():
                  'handle_command', 'collect_interview_data', 'InterviewAgent'):
         assert f'{name},' in src or f'{name}(' in src, f'{name} not used'
     assert 'from interview_runtime import' in src
+
+
+def test_sdk_generate_reply_signature():
+    """HarnessSession.say mirrors the SDK's end-of-turn path through a private
+    method. Pin its shape so an SDK bump that changes it fails here, not in a
+    live interview."""
+    import inspect
+    from livekit.agents.voice.agent_activity import AgentActivity
+    params = inspect.signature(AgentActivity._generate_reply).parameters
+    assert 'user_message' in params and 'chat_ctx' in params

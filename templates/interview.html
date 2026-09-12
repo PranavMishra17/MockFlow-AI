@@ -48,6 +48,10 @@
                 <span class="connect-status-msg" id="connectStatusMsg">Connecting to your interviewer…</span>
             </div>
             <div class="connect-status-sub" id="connectStatusSub"></div>
+            <!-- The briefing. Flow's greeting is one line; what the interview
+                 is, what Skip does and where feedback appears are read here,
+                 while the interviewer spins up. -->
+            <div class="connect-briefing" id="connectBriefing" hidden></div>
             <div class="connect-status-timer" id="connectStatusTimer">0:00</div>
             <button type="button" class="connect-status-retry-btn" id="connectStatusRetryBtn">Retry connection</button>
         </div>
@@ -121,8 +125,12 @@
                 </div>
                 <div id="evalStatusStrip" style="display:none;align-items:center;gap:10px;padding:10px 14px;margin-top:8px;border-radius:var(--radius-sm);background:var(--bg-soft);border:1px solid var(--bg-soft);">
                     <span class="eval-spinner"></span>
-                    <span style="font-size:0.8125rem;color:var(--text-muted);">Evaluating your solution — agent will respond shortly...</span>
+                    <span style="font-size:0.8125rem;color:var(--text-muted);">Evaluating your solution — Flow will respond shortly...</span>
                 </div>
+                <!-- What the last evaluation was based on. Without a code runner the
+                     verdict on correctness is an AI's reading of the code, and the
+                     candidate should know that. -->
+                <div id="evalProvenance" style="display:none;padding:6px 14px;margin-top:6px;font-size:0.75rem;color:var(--text-muted);"></div>
             </div>
 
             <div class="candidate-side">
@@ -385,7 +393,7 @@
             document.getElementById('candidateLevel').textContent = formatLevel(candidate.level);
 
             var state = {
-                currentStage: (trackParam === 'intro' ? 'welcome' : 'greeting'),
+                currentStage: 'self_intro',
                 isMuted: false,
                 isConnected: false,
                 isVideoOn: true,
@@ -440,33 +448,34 @@
             };
             
             // Track-specific stage definitions
+            // Track-specific stage definitions. There is no welcome/greeting
+            // stage any more: Flow says one line and the interview starts in
+            // self_intro (see prompts.GREETING_LINES). `minutes` is the rough
+            // budget shown in the briefing, mirroring fsm.*_STAGE_TIME_LIMITS.
             var TRACK_STAGES = {
                 intro: [
-                    { key: 'welcome', label: 'Welcome' },
-                    { key: 'self_intro', label: 'Introduction' },
-                    { key: 'past_experience', label: 'Experience' },
-                    { key: 'company_fit', label: 'Company Fit' },
-                    { key: 'closing', label: 'Closing' }
+                    { key: 'self_intro', label: 'Introduction', minutes: 2 },
+                    { key: 'past_experience', label: 'Experience', minutes: 4 },
+                    { key: 'company_fit', label: 'Company Fit', minutes: 4 },
+                    { key: 'closing', label: 'Closing', minutes: 1 }
                 ],
                 behavioral: [
-                    { key: 'greeting', label: 'Welcome' },
-                    { key: 'self_intro', label: 'Introduction' },
-                    { key: 'behavioral_q1', label: 'Questions' },
-                    { key: 'closing', label: 'Closing' }
+                    { key: 'self_intro', label: 'Introduction', minutes: 2 },
+                    { key: 'behavioral_q1', label: 'Questions', minutes: 15, detail: 'up to three, five minutes each' },
+                    { key: 'closing', label: 'Closing', minutes: 1 }
                 ],
                 technical_voice: [
-                    { key: 'greeting', label: 'Welcome' },
-                    { key: 'self_intro', label: 'Introduction' },
-                    { key: 'experience_discussion', label: 'Experience' },
-                    { key: 'technical_concepts_1', label: 'Concepts' },
-                    { key: 'closing', label: 'Closing' }
+                    { key: 'self_intro', label: 'Introduction', minutes: 2 },
+                    { key: 'experience_discussion', label: 'Experience', minutes: 3 },
+                    { key: 'technical_concepts_1', label: 'Concepts', minutes: 12, detail: 'one topic at a time, about four minutes each' },
+                    { key: 'closing', label: 'Closing', minutes: 1 }
                 ],
                 coding: [
-                    { key: 'greeting', label: 'Welcome' },
-                    { key: 'warm_up', label: 'Warm Up' },
-                    { key: 'coding_problem_1', label: 'Problem 1' },
-                    { key: 'coding_problem_2', label: 'Problem 2' },
-                    { key: 'closing', label: 'Closing' }
+                    { key: 'self_intro', label: 'Introduction', minutes: 2 },
+                    { key: 'warm_up', label: 'Warm Up', minutes: 5 },
+                    { key: 'coding_problem_1', label: 'Problem 1', minutes: 15 },
+                    { key: 'coding_problem_2', label: 'Problem 2', minutes: 15 },
+                    { key: 'closing', label: 'Closing', minutes: 1 }
                 ]
             };
 
@@ -633,6 +642,32 @@
                 if (connectHardTimeout) { clearTimeout(connectHardTimeout); connectHardTimeout = null; }
             }
 
+            // What used to be the spoken walkthrough ("we'll go through a few
+            // stages…"). Rendered into the connect panel, which the candidate is
+            // already looking at for 5–30 s while the interviewer spins up.
+            function renderBriefing() {
+                var el = document.getElementById('connectBriefing');
+                if (!el) return;
+                var total = trackStageList.reduce(function (n, s) { return n + (s.minutes || 0); }, 0);
+                var items = trackStageList.map(function (s) {
+                    var mins = s.minutes ? ' <span class="briefing-min">~' + s.minutes + ' min</span>' : '';
+                    var detail = s.detail ? ' <span class="briefing-detail">' + s.detail + '</span>' : '';
+                    return '<li>' + s.label + mins + detail + '</li>';
+                }).join('');
+                el.innerHTML =
+                    '<div class="briefing-title">What to expect · about ' + total + ' minutes</div>' +
+                    '<ol class="briefing-stages">' + items + '</ol>' +
+                    '<ul class="briefing-notes">' +
+                        '<li>Flow opens with one line, then it is your introduction. One question at a time after that.</li>' +
+                        (trackParam === 'coding'
+                            ? '<li>Problems appear in the editor. Submit when ready; you get up to three attempts each.</li>'
+                            : '<li><strong>Skip stages</strong> moves you to the next topic. Flow will not come back to what you skipped.</li>') +
+                        '<li>There is no real company behind this mock, so Flow will not answer questions about the team or the role.</li>' +
+                        '<li>Flow does not score you in the room. Your written verdict is on your dashboard right after the call.</li>' +
+                    '</ul>';
+                el.hidden = false;
+            }
+
             function startConnectPanel() {
                 var panel = document.getElementById('connectStatusPanel');
                 var msg = document.getElementById('connectStatusMsg');
@@ -645,6 +680,7 @@
                 panel.classList.add('visible');
                 msg.textContent = 'Connecting to your interviewer…';
                 sub.textContent = '';
+                renderBriefing();
 
                 var startedAt = Date.now();
                 timerEl.textContent = '0:00';
@@ -754,7 +790,7 @@
                 // Show/hide skip intro button based on stage
                 var skipIntroArea = document.getElementById('skipIntroArea');
                 if (skipIntroArea) {
-                    var introStages = ['greeting', 'welcome', 'self_intro'];
+                    var introStages = ['self_intro'];
                     skipIntroArea.style.display = introStages.includes(newStage) ? 'block' : 'none';
                 }
 
@@ -939,6 +975,17 @@
                     if (btn) { btn.disabled = false; btn.textContent = 'Submit'; btn.classList.remove('evaluating'); }
                     if (strip) { strip.style.display = 'none'; }
                 }
+            }
+
+            function showEvalProvenance(data) {
+                var el = document.getElementById('evalProvenance');
+                if (!el) return;
+                if (data.executed) {
+                    el.textContent = 'Checked by running your code: ' + (data.objective_tests || 'tests executed') + '.';
+                } else {
+                    el.textContent = 'Not executed — reviewed by AI only. Correctness is an assessment, not a test result.';
+                }
+                el.style.display = 'block';
             }
 
             function handleCodeSubmit(isAutoSubmit) {
@@ -1760,7 +1807,15 @@
                     if (data.type === 'evaluation_result') {
                         updateAttemptCounter(data.attempt || 1, data.max_attempts || 3);
                         setSubmitEvaluating(false);
+                        showEvalProvenance(data);
                         console.log('[CODE] Evaluation received:', data.evaluation);
+                    }
+                    if (data.type === 'evaluation_error') {
+                        // The evaluator failed after retries. Release the editor
+                        // instead of leaving it on "Evaluating..." forever.
+                        setSubmitEvaluating(false);
+                        updateStatus(data.message || 'Evaluation failed - please submit again.', 'error');
+                        console.error('[CODE] Evaluation error:', data);
                     }
                     if (data.type === 'max_attempts_reached') {
                         clearInterval(problemTimerInterval);

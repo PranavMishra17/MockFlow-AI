@@ -1,0 +1,227 @@
+{
+  "track": "intro",
+  "persona": "ken_terse",
+  "config": {
+    "track": "intro",
+    "role": "Software Engineer",
+    "level": "mid",
+    "user_id": "audit-user"
+  },
+  "duration_s": 28.3,
+  "history": [
+    {
+      "who": "flow",
+      "text": "Hey, I'm Flow \u2014 I'll be taking your interview today. Please start with a short introduction.",
+      "stage": "self_intro",
+      "t": 1.2,
+      "latency": null
+    },
+    {
+      "who": "candidate",
+      "text": "Hi, I\u2019m Ken. I\u2019ve been a backend developer for five years.",
+      "stage": "self_intro",
+      "t": 1.9
+    },
+    {
+      "who": "flow",
+      "text": "Got it. Five years as a backend developer is solid. What motivates you to pursue this software engineering role now?",
+      "stage": "self_intro",
+      "t": 4.6,
+      "latency": 2.7
+    },
+    {
+      "who": "candidate",
+      "text": "Not much, really. Just exploring options.",
+      "stage": "self_intro",
+      "t": 5.3
+    },
+    {
+      "who": "flow",
+      "text": "Okay. Exploring options can be a good strategy. Can you share a piece of work you personally drove and a key decision you made during that process?",
+      "stage": "past_experience",
+      "t": 7.7,
+      "latency": 2.4
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> past_experience]",
+      "stage": "past_experience",
+      "t": 7.7
+    },
+    {
+      "who": "candidate",
+      "text": "I built a claims batch pipeline. Made decisions on data processing efficiency.",
+      "stage": "past_experience",
+      "t": 8.4
+    },
+    {
+      "who": "flow",
+      "text": "Okay. You built a claims batch pipeline. What specific actions did you take to improve data processing efficiency?",
+      "stage": "past_experience",
+      "t": 11.0,
+      "latency": 2.6
+    },
+    {
+      "who": "candidate",
+      "text": "Optimized queries, reduced redundant computations.",
+      "stage": "past_experience",
+      "t": 11.7
+    },
+    {
+      "who": "flow",
+      "text": "Okay. You mentioned optimizing queries. What was the impact of that optimization on performance metrics?",
+      "stage": "past_experience",
+      "t": 14.1,
+      "latency": 2.4
+    },
+    {
+      "who": "candidate",
+      "text": "It cut processing time by about twenty percent.",
+      "stage": "past_experience",
+      "t": 14.7
+    },
+    {
+      "who": "flow",
+      "text": "Okay. It cut processing time by about twenty percent. In this role, what aspect of day-to-day work are you looking to experience more of compared to your current position?",
+      "stage": "company_fit",
+      "t": 17.4,
+      "latency": 2.7
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> company_fit]",
+      "stage": "company_fit",
+      "t": 17.4
+    },
+    {
+      "who": "candidate",
+      "text": "Not sure. Just want to see what's different.",
+      "stage": "company_fit",
+      "t": 18.1
+    },
+    {
+      "who": "flow",
+      "text": "Fair \u2014 that's better than guessing. You want to see what's different. Start with what the task was, and just take it one step at a time.",
+      "stage": "company_fit",
+      "t": 20.7,
+      "latency": 2.5
+    },
+    {
+      "who": "candidate",
+      "text": "Yeah, that makes sense. Just figuring things out.",
+      "stage": "company_fit",
+      "t": 21.2
+    },
+    {
+      "who": "flow",
+      "text": "Thanks, Ken. The part about \"Optimized queries, reduced redundant computations\" is the kind of specific that lands. Your written feedback is on your dashboard in a minute. That's the end of the interview \u2014 take care.",
+      "stage": "closing",
+      "t": 23.2,
+      "latency": 2.1
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> closing]",
+      "stage": "closing",
+      "t": 23.2
+    }
+  ],
+  "stages_visited": [
+    "past_experience",
+    "company_fit",
+    "closing"
+  ],
+  "final_stage": "closing",
+  "tool_calls": [],
+  "question_bank": [],
+  "stalls": [],
+  "notes": [
+    "closing delivered by Flow at turn 7"
+  ],
+  "verdict": {
+    "overall": {
+      "confidence": "high",
+      "headline": "Ken lacks motivation and clarity on role fit, but communicates clearly.",
+      "recommendation": "lean_no_hire",
+      "level_read": "intern"
+    },
+    "signals": [
+      {
+        "name": "Motivation & authenticity",
+        "reasoning": "Ken's motivation for pursuing the role is unclear and lacks specificity. His response 'Not much, really. Just exploring options.' indicates a lack of genuine interest or self-knowledge about why he wants this role.",
+        "band": "poor",
+        "scope_met": "intern",
+        "evidence": [
+          "Not much, really. Just exploring options."
+        ],
+        "to_raise": "Provide a specific reason for pursuing this role."
+      },
+      {
+        "name": "Communication & structure",
+        "reasoning": "Ken communicates his past work clearly and concisely, as seen in his response about optimizing queries and reducing redundant computations.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "Optimized queries, reduced redundant computations."
+        ],
+        "to_raise": "Provide more detailed explanations of past work impacts."
+      },
+      {
+        "name": "Role / company fit",
+        "reasoning": "Ken does not demonstrate a clear understanding of what he is looking for in the role, as indicated by his response 'Not sure. Just want to see what's different.'",
+        "band": "poor",
+        "scope_met": "intern",
+        "evidence": [
+          "Not sure. Just want to see what's different."
+        ],
+        "to_raise": "Research the company and role to articulate what you seek."
+      },
+      {
+        "name": "Self-awareness",
+        "reasoning": "Ken shows some self-awareness by acknowledging he is 'just figuring things out,' but lacks depth in reflecting on his gaps or how to address them.",
+        "band": "borderline",
+        "scope_met": "new_grad",
+        "evidence": [
+          "Yeah, that makes sense. Just figuring things out."
+        ],
+        "to_raise": "Identify specific areas for improvement and steps to address them."
+      }
+    ],
+    "differentiators": [
+      "Ken would be a strong hire if he demonstrated clear motivation and understanding of the role and company."
+    ],
+    "delivery": {
+      "pace_available": false,
+      "wpm": null,
+      "wpm_band": "unknown",
+      "wpm_target": "130-160",
+      "filler_total": 0,
+      "filler_per_100w": 0.0,
+      "filler_per_min": null,
+      "filler_band": "good",
+      "filler_target": "<=3.3/100 words",
+      "word_count": 58,
+      "sentence_count": 12,
+      "filler_breakdown": {},
+      "top_crutch_word": null,
+      "talk_ratio": 0.24,
+      "longest_monologue_s": null
+    },
+    "gap_to_next": {
+      "signal": "Motivation & authenticity",
+      "from_band": "poor",
+      "to_band": "borderline",
+      "move": "Provide a specific reason for pursuing this role."
+    },
+    "great_answers": 0,
+    "context": {
+      "track": "intro",
+      "role": "swe",
+      "seniority": "mid",
+      "archetype": "big_tech"
+    }
+  },
+  "flags": [
+    "reply latency: median 2.5s, max 2.7s (text-only; TTS adds more)"
+  ]
+}

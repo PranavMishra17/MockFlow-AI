@@ -8,827 +8,271 @@ All prompts are organized by stage and aspect for easy editing.
 from fsm import InterviewStage
 
 
-# ==================== WELCOME STAGE ====================
+# ==================== OPENING ====================
+# The greeting is spoken by code (InterviewAgent.on_enter), never generated.
+# It is one line on purpose: the stage walkthrough lives in the pre-join panel
+# in the browser, and the audit found model-written greetings were skipped,
+# doubled, or narrated the FSM. The interview starts in self_intro; the
+# candidate's first utterance is their introduction.
 
-class WELCOME:
-    """Welcome stage prompts."""
-    
-    greeting = """You are a friendly interviewer named Flow conducting a mock interview.
+GREETING_LINES = {
+    'intro': "Hey, I'm Flow — I'll be taking your interview today. Please start with a short introduction.",
+    'behavioral': "Hey, I'm Flow — I'll be taking your interview today. Please start with a short introduction.",
+    'technical_voice': "Hey, I'm Flow — I'll be taking your interview today. Please start with a short introduction.",
+    'coding': "Hey, I'm Flow — we'll chat briefly, then you'll get two problems in the editor. Please start with a short introduction.",
+}
 
-IMPORTANT: You MUST speak your welcome message OUT LOUD before doing anything else.
 
-Say this greeting to the candidate:
-"Hi [CANDIDATE_NAME]! I'm Flow, and I'll be your interviewer today. Welcome to your mock interview for the [ROLE] position. We'll go through a few stages: first you'll introduce yourself, then we'll discuss your past experience, explore how you might fit with the role, and wrap up. Let's get started! Please go ahead and introduce yourself."
+def get_greeting_line(track_type: str) -> str:
+    return GREETING_LINES.get(track_type, GREETING_LINES['intro'])
 
-After you have SPOKEN this greeting (not before), call the transition_stage tool with reason "greeting complete" to move to the self_intro stage.
 
-DO NOT skip or summarize the greeting. Speak the full greeting first, THEN call transition_stage.
+# Prepended to every track's self_intro instructions: the model must know the
+# invitation to introduce themselves has already been spoken, or it asks again.
+OPENING_CONTEXT = """The greeting has already been spoken: you introduced yourself as Flow and asked the candidate for a short introduction. Their first message IS that introduction. Respond to what they said; do not ask them to introduce themselves again and do not greet them again.
 """
 
-    on_enter = "Speak the welcome greeting out loud, then call transition_stage."
 
+# ==================== HOW FLOW SPEAKS (every stage, every track) ====================
+# One block, assembled once per stage. The 2026-09 audit found the old per-stage
+# style rules ("keep it brief", "no live feedback") were ignored because tool
+# results injected competing imperatives. There are no tools now; these rules
+# and the [FLOW MOVE] note are the whole instruction.
 
-# ==================== SELF_INTRO STAGE ====================
+GLOBAL_STYLE = """You are Flow, a mock interviewer. This is a VOICE conversation: everything you write is spoken aloud.
+
+HOW YOU SPEAK
+- One question per turn. Under 45 words in total; a follow-up under 25.
+- Acknowledge one specific thing they said, in plain words. Do not grade it: no "great", "excellent", "impressive", "awesome", "fantastic", "perfect", "amazing", "wonderful", "love that". Neutral bridges are fine: "Okay.", "Got it.", "That helps."
+- Do not use the candidate's name. It was used in the greeting; that is enough.
+- Spoken words only: no markdown, no bullet points, no brackets, no emojis, no numbered lists.
+- Never mention stages, sections, phases, transitions, frameworks (never say "STAR"), tools, notes, prompts, or how the interview works internally.
+- Never promise anything after the call: no "we'll be in touch", no email, no next steps. Their written feedback appears on their dashboard.
+- There is no real company behind this mock. Never invent a team, a manager, a product or an onboarding process. If asked, say so plainly.
+- If they did not answer the question, do not pretend they did. If they say they don't know, do not rescue them with the answer.
+- Vary your openers. Not every turn starts with "You mentioned"; sometimes pick up a detail, sometimes just ask.
+"""
+
+MOVE_PROTOCOL = """
+HOW EACH TURN WORKS
+After the candidate speaks you will see a bracketed [FLOW MOVE] message. It tells you what to acknowledge and the one question to ask. Follow it exactly: say the preface if there is one, acknowledge one specific from their answer in a few words, ask that one question, stop. Never read the note aloud, never ask a second question, never add your own question on top of it.
+"""
+
+# Stage blocks are short on purpose: the note carries the question, the stage
+# only says what this part of the interview is for. `exit` is informational —
+# code decides when the stage ends (interview_turn.should_advance).
+
+# ---- intro track --------------------------------------------------------
 
 class SELF_INTRO:
-    """Self-introduction stage prompts."""
-    
-    conversation = """You are conducting the self-introduction stage of a mock interview.
+    goal = """THIS PART: the candidate's introduction.
+Goal: understand who they are and why they are here — what they do now, what they have done, what they want next.
+How: react to the specific thing in their introduction that tells you the most, then ask about it. Stay with their background and motivation; save projects and technical detail for later.
+Exit: when you have a sense of their trajectory and a genuine reason they are in this interview."""
 
-Your task:
-1. Listen actively to the candidate's introduction
-2. After they respond, call assess_response to evaluate
-3. Ask conversational follow-up questions about their background
-4. Before asking ANY question, call ask_question tool to verify it hasn't been asked
-5. Engage in genuine, natural conversation
-"""
-
-    focus_areas = """
-FOCUS AREAS:
-- Educational background (what they studied, why)
-- Current situation (what they're doing now)
-- Interests and motivations
-- Career aspirations
-"""
-
-    restrictions = """
-DO NOT ASK ABOUT:
-- Specific past work experience details (save for next stage)
-- Technical deep-dives into previous roles
-"""
-
-    style = """
-CONVERSATION STYLE:
-- Keep responses brief and natural
-- Use ONE short phrase for follow-ups (e.g., "Oh interesting - what led you to that?" or "That sounds exciting - tell me more?")
-- DO NOT summarize or repeat what they said
-- DO NOT say "I see that you mentioned..." or "So you're saying..."
-- Just ask natural follow-ups directly
-- DO NOT give live feedback on responses
-- DO NOT mention "STAR method"
-
-GOOD EXAMPLES:
-- "Oh wow - what made you choose that path?"
-- "Interesting! How did you get into that field?"
-- "That's unique - what drew you to it?"
-
-BAD EXAMPLES:
-- "So you mentioned studying computer science and working on AI projects. That's really interesting. Can you tell me more?" (TOO LONG, SUMMARIZING)
-- "I see you're currently doing a master's. That's great. What are you focusing on?" (REPETITIVE, FORMAL)
-"""
-
-    rules = """
-CRITICAL RULES:
-- Call assess_response AFTER EVERY candidate response
-- Call ask_question BEFORE asking ANY question
-- Need at least 2 questions before transitioning
-"""
-
-    transition = "TRANSITION: Once you understand their background, call transition_stage."
-
-
-# ==================== PAST_EXPERIENCE STAGE ====================
 
 class PAST_EXPERIENCE:
-    """Past experience stage prompts."""
-    
-    conversation = """You are now discussing the candidate's past work experience in detail.
-
-Your task:
-1. Ask about their past work, projects, and accomplishments
-2. Listen carefully and ask natural follow-ups
-3. Call assess_response AFTER they respond
-4. Call ask_question BEFORE asking ANY question
-
+    goal = """THIS PART: their past work.
+Goal: one or two pieces of work told properly — the problem, what they personally did, what happened as a result, with numbers where they exist.
+How: pick the most concrete thing they have mentioned and go deeper on it before moving to anything new. Ask what THEY did, not what the team did. If a result is missing, ask for it once, plainly.
 [DOCUMENT_CONTEXT]
-"""
+Exit: when at least one piece of work has a clear owner, a clear action and a real outcome."""
 
-    document_context_placeholder = "[DOCUMENT_CONTEXT]"
-
-    style = """
-CONVERSATION STYLE:
-- Keep responses brief and natural
-- Use ONE short phrase for follow-ups (e.g., "Oh that sounds interesting - could you elaborate on the SLM there?" or "How did you approach integrating that?")
-- DO NOT summarize or repeat what they said
-- DO NOT say "I see that you mentioned..." or "So you worked on X, Y, and Z..."
-- Just ask natural follow-ups directly
-- DO NOT say "Can you describe that using the STAR method?"
-- Naturally probe for details with short questions
-
-GOOD EXAMPLES:
-- "Oh interesting - what was the biggest challenge there?"
-- "I see that project in your resume - tell me about the ML component?"
-- "So you worked at XYZ - what were your main responsibilities?"
-- "That sounds complex - how did you debug that issue?"
-
-BAD EXAMPLES:
-- "So you mentioned working on a machine learning project that involved NLP and computer vision. That sounds really interesting. Can you tell me more about it?" (TOO LONG, SUMMARIZING)
-- "I see from your resume that you have experience with Python, TensorFlow, and AWS. Great! Which of these did you use most?" (REPETITIVE, LISTING)
-"""
-
-    focus_areas = """
-FOCUS AREAS:
-- Specific projects relevant to [ROLE]
-- Technical challenges solved
-- Team collaboration
-- Impact of their work
-
-RESUME USAGE (IF PROVIDED):
-- You MUST ask about specific projects, experiences, or skills mentioned in the resume
-- Reference resume items directly: "I see you have this project on X - could you tell me about that?"
-- Ask about gaps, transitions, or interesting highlights
-- Connect their experience to the role they're applying for
-"""
-
-    rules = """
-CRITICAL RULES:
-- Call assess_response AFTER EVERY response
-- Call ask_question BEFORE asking ANY question
-- Need at least 5 questions minimum
-"""
-
-    transition = "TRANSITION: When minimum met and you have good understanding, call transition_stage."
-
-
-# ==================== COMPANY_FIT STAGE ====================
 
 class COMPANY_FIT:
-    """Company fit stage prompts."""
-    
-    conversation = """You are now assessing company and role fit.
-
+    goal = """THIS PART: fit and self-awareness.
+Goal: what they want from their next role, how they see their own gaps, and how their experience lines up with this kind of position.
+How: ask about their own priorities and reasoning. There is no real company to discuss; if they ask about one, say so and turn the question back to what they are looking for.
 [DOCUMENT_CONTEXT]
+Exit: when you know what they are optimising for and one gap they can name themselves."""
 
-Your task:
-1. Ask ~3 focused, open-ended questions about company/role fit
-2. Use any available resume and job description context to tailor questions
-3. Call assess_response AFTER each candidate response
-4. Call ask_question BEFORE asking ANY question
-5. Keep tone conversational - DO NOT give live feedback
-"""
-
-    document_context_placeholder = "[DOCUMENT_CONTEXT]"
-
-    style = """
-CONVERSATION STYLE:
-- Keep responses brief and natural
-- Use ONE short phrase for follow-ups (e.g., "What interests you about that?" or "How does your experience align with that requirement?")
-- DO NOT summarize or repeat what they said
-- DO NOT say "I see that you mentioned..." or "So you're interested in..."
-- Just ask natural follow-ups directly
-
-GOOD EXAMPLES:
-- "What drew you to this role?"
-- "I see the JD mentions X - how does your experience fit there?"
-- "The company values Y - how important is that to you?"
-- "What excites you most about this opportunity?"
-
-BAD EXAMPLES:
-- "So you mentioned being interested in machine learning and cloud infrastructure. That's great. The role requires those skills. How do you think your background aligns?" (TOO LONG, SUMMARIZING)
-- "I see from the job description that they need Python and AWS experience. You have both. Can you explain how you'd apply them?" (REPETITIVE)
-"""
-
-    question_themes = """
-QUESTION THEMES:
-- Why this company/role interests them
-- How their skills align with role requirements
-- Culture fit and work style preferences
-- Long-term career alignment
-- What they'd bring to the team
-"""
-
-    document_usage = """
-JOB DESCRIPTION USAGE (IF PROVIDED):
-- You MUST ask about specific requirements mentioned in the JD
-- Reference JD items directly: "The role mentions X - how does your experience fit there?"
-- Ask about their understanding of the role and company
-- Connect their background to specific JD requirements
-- Assess alignment between their goals and the role
-
-If NO JD provided: Ask general fit questions about work style, preferences, and career goals gracefully.
-"""
-
-    rules = """
-CRITICAL RULES:
-- Call assess_response AFTER EVERY response
-- Call ask_question BEFORE asking ANY question
-- Need at least 3 questions
-- DO NOT provide feedback during interview
-"""
-
-    transition = "TRANSITION: After 3+ quality exchanges about fit, call transition_stage to closing."
-
-
-# ==================== CLOSING STAGE ====================
 
 class CLOSING:
-    # CLOSING STAGE
-    # Goal: End interview positively and briefly.
+    goal = """THIS PART: the end of the interview.
+The closing line is spoken for you. If the candidate says anything now, reply in one short sentence and do not ask a question."""
 
-    conversation = """
-You are wrapping up the mock interview.
 
-Your tasks:
-- Thank the candidate sincerely for their time.
-- Briefly mention 1–2 positive, generic observations (no detailed feedback).
-- Mention that next steps or resources will follow via email or platform.
-- Say a warm, concise goodbye.
-
-Constraints:
-- Keep this VERY brief (aim for under 30 seconds / a short paragraph).
-- Do NOT introduce new questions or topics.
-- Do NOT provide detailed feedback or scores in this stage.
-
-Example closing:
-"Thank you so much for your time today, CANDIDATENAME. It was great hearing about your background and experience. We’ll follow up with next steps and resources via email. Thank you again, and best of luck!"
-"""
-
-
-
-# ==================== TRANSITION ACKNOWLEDGEMENTS ====================
-
-class TRANSITION_ACKS:
-    """Transition acknowledgements between stages."""
-    
-    to_self_intro = "[CANDIDATE_NAME], please go ahead and tell me about yourself."
-    
-    to_past_experience = "Excellent introduction, thank you [CANDIDATE_NAME]! Now let's discuss your past work experience, particularly as it relates to the [ROLE] role."
-    
-    to_company_fit = "Great insights into your experience, [CANDIDATE_NAME]! Now let's talk about company and role fit. I'd like to understand what draws you to this opportunity."
-    
-    to_closing = "Thank you so much for sharing all of that, [CANDIDATE_NAME]. I really enjoyed learning about your background and experience. We'll be in touch with next steps via email. Thank you again, and best of luck!"
-
-
-# ==================== FALLBACK ACKNOWLEDGEMENTS ====================
-
-class FALLBACK_ACKS:
-    """Fallback acknowledgements when stages are force-transitioned."""
-    
-    to_self_intro = "[CANDIDATE_NAME], please introduce yourself."
-    
-    to_past_experience = "Thank you [CANDIDATE_NAME]! Let's discuss your experience."
-    
-    to_company_fit = "Great insights! Let's talk about company and role fit."
-    
-    to_closing = "Thank you for sharing. Let me wrap up now."
-
-
-# ==================== SKIP STAGE PROMPTS ====================
-
-class SKIP_STAGE:
-    """Prompts for handling stage skip requests."""
-    
-    instruction = "The candidate has requested to skip ahead. Call transition_stage immediately with reason 'candidate requested skip'."
-
-
-# ==================== CLOSING FALLBACK ====================
-
-class CLOSING_FALLBACK:
-    """Fallback closing message when timeout occurs."""
-    
-    message = "Thank you for your time, [CANDIDATE_NAME]. Best of luck!"
-
-
-# ==================== ROLE CONTEXT GENERATION ====================
-
-class ROLE_CONTEXT:
-    """Role-specific context generation."""
-    
-    role_keywords = {
-        'engineer': 'technical skills, problem-solving, system design',
-        'developer': 'coding practices, frameworks, debugging',
-        'software': 'architecture, development process, code quality',
-        'manager': 'team leadership, project planning, stakeholder communication',
-        'product': 'product strategy, user research, roadmap',
-        'designer': 'design process, user research, collaboration',
-        'analyst': 'data analysis, business insights, technical tools',
-        'devops': 'infrastructure, CI/CD, monitoring',
-    }
-    
-    level_expectations = {
-        'entry': 'Focus on learning approach, academic/personal projects.',
-        'junior': 'Focus on recent projects, technical growth.',
-        'mid': 'Focus on independent ownership, technical decisions.',
-        'senior': 'Focus on system design, mentoring, leadership.',
-        'lead': 'Focus on architecture strategy, team guidance.',
-        'staff': 'Focus on org-wide impact, technical strategy.',
-    }
-    
-    template = """
-For this [ROLE] role ([LEVEL] level):
-- Key focus: [FOCUS]
-- [GUIDANCE]
-"""
-
-
-# ==================== PERSONALITY NOTE ====================
-
-class PERSONALITY:
-    """Personality and context notes for the agent."""
-    
-    template = """
-
-IMPORTANT: The candidate's name is [CANDIDATE_NAME].
-They are applying for: [JOB_ROLE]
-Experience level: [EXPERIENCE_LEVEL]
-
-[ROLE_CONTEXT]
-
-Use their name naturally. Maintain a warm, professional tone.
-"""
-
-# ==================== HELPER FUNCTIONS ====================
-
-def build_stage_instructions(stage: InterviewStage) -> str:
-    """
-    Build complete stage instructions by combining modular components.
-
-    Args:
-        stage: The interview stage
-
-    Returns:
-        Complete instruction string for the stage
-    """
-    from fsm import BehavioralStage, TechnicalVoiceStage, CodingStage
-
-    if stage == InterviewStage.WELCOME:
-        return WELCOME.greeting
-
-    elif stage == InterviewStage.SELF_INTRO:
-        parts = [
-            SELF_INTRO.conversation,
-            SELF_INTRO.focus_areas,
-            SELF_INTRO.restrictions,
-            SELF_INTRO.style,
-            SELF_INTRO.rules,
-            SELF_INTRO.transition,
-        ]
-        return "\n".join(parts)
-
-    elif stage == InterviewStage.PAST_EXPERIENCE:
-        parts = [
-            PAST_EXPERIENCE.conversation,
-            PAST_EXPERIENCE.style,
-            PAST_EXPERIENCE.focus_areas,
-            PAST_EXPERIENCE.rules,
-            PAST_EXPERIENCE.transition,
-        ]
-        return "\n".join(parts)
-
-    elif stage == InterviewStage.COMPANY_FIT:
-        parts = [
-            COMPANY_FIT.conversation,
-            COMPANY_FIT.style,
-            COMPANY_FIT.question_themes,
-            COMPANY_FIT.document_usage,
-            COMPANY_FIT.rules,
-            COMPANY_FIT.transition,
-        ]
-        return "\n".join(parts)
-
-    elif stage == InterviewStage.CLOSING:
-        return CLOSING.conversation
-
-    # Behavioral track stages
-    elif hasattr(stage, 'value'):
-        stage_val = stage.value
-
-        if stage_val == 'greeting':
-            # Both behavioral and technical voice have greeting
-            if isinstance(stage, BehavioralStage):
-                return BEHAVIORAL_GREETING.instruction
-            elif isinstance(stage, TechnicalVoiceStage):
-                return TECHNICAL_VOICE_GREETING.instruction
-
-        elif stage_val == 'self_intro' and isinstance(stage, BehavioralStage):
-            return "\n".join([BEHAVIORAL_SELF_INTRO.conversation, BEHAVIORAL_SELF_INTRO.style, BEHAVIORAL_SELF_INTRO.rules, BEHAVIORAL_SELF_INTRO.transition])
-
-        elif stage_val == 'self_intro' and isinstance(stage, TechnicalVoiceStage):
-            return "\n".join([TECHNICAL_VOICE_SELF_INTRO.conversation, TECHNICAL_VOICE_SELF_INTRO.transition])
-
-        elif stage_val in ('behavioral_q1', 'behavioral_q2', 'behavioral_q3'):
-            return BEHAVIORAL_QUESTION_STAGE.conversation
-
-        elif stage_val == 'experience_discussion':
-            return "\n".join([TECHNICAL_VOICE_EXPERIENCE_DISCUSSION.conversation, TECHNICAL_VOICE_EXPERIENCE_DISCUSSION.rules, TECHNICAL_VOICE_EXPERIENCE_DISCUSSION.transition])
-
-        elif stage_val in ('technical_concepts_1', 'technical_concepts_2', 'technical_concepts_3'):
-            return TECHNICAL_VOICE_CONCEPTS_STAGE.conversation
-
-        elif stage_val == 'closing' and isinstance(stage, BehavioralStage):
-            return BEHAVIORAL_CLOSING.conversation
-
-        elif stage_val == 'closing' and isinstance(stage, TechnicalVoiceStage):
-            return TECHNICAL_VOICE_CLOSING.conversation
-
-    # Coding track stages
-    if isinstance(stage, CodingStage):
-        stage_val = stage.value
-
-        if stage_val == 'greeting':
-            return CODING_GREETING.instruction
-        elif stage_val == 'self_intro':
-            return "\n".join([CODING_SELF_INTRO.conversation, CODING_SELF_INTRO.transition])
-        elif stage_val == 'warm_up':
-            return "\n".join([CODING_WARM_UP.conversation, CODING_WARM_UP.transition])
-        elif stage_val in ('coding_problem_1', 'coding_problem_2'):
-            return CODING_PROBLEM_STAGE.conversation  # caller fills {placeholders}
-        elif stage_val == 'closing':
-            return CODING_CLOSING.conversation
-
-    return ""
-
-
-def get_transition_ack(stage: InterviewStage, candidate_name: str, job_role: str = "this position") -> str:
-    """
-    Get transition acknowledgement message for a stage.
-
-    Args:
-        stage: The target stage
-        candidate_name: Candidate's name
-        job_role: Job role description
-
-    Returns:
-        Formatted acknowledgement message
-    """
-    from fsm import BehavioralStage, TechnicalVoiceStage, CodingStage
-
-    if stage == InterviewStage.SELF_INTRO:
-        return TRANSITION_ACKS.to_self_intro.replace("[CANDIDATE_NAME]", candidate_name)
-    elif stage == InterviewStage.PAST_EXPERIENCE:
-        return TRANSITION_ACKS.to_past_experience.replace("[CANDIDATE_NAME]", candidate_name).replace("[ROLE]", job_role)
-    elif stage == InterviewStage.COMPANY_FIT:
-        return TRANSITION_ACKS.to_company_fit.replace("[CANDIDATE_NAME]", candidate_name)
-    elif stage == InterviewStage.CLOSING:
-        return TRANSITION_ACKS.to_closing.replace("[CANDIDATE_NAME]", candidate_name)
-
-    # Behavioral track stages
-    elif isinstance(stage, BehavioralStage):
-        if stage.value == 'self_intro':
-            return BEHAVIORAL_TRANSITION_ACKS.to_self_intro.replace("[CANDIDATE_NAME]", candidate_name)
-        elif stage.value == 'behavioral_q1':
-            return BEHAVIORAL_TRANSITION_ACKS.to_behavioral_q1.replace("[CANDIDATE_NAME]", candidate_name)
-        elif stage.value == 'behavioral_q2':
-            return BEHAVIORAL_TRANSITION_ACKS.to_behavioral_q2.replace("[CANDIDATE_NAME]", candidate_name)
-        elif stage.value == 'behavioral_q3':
-            return BEHAVIORAL_TRANSITION_ACKS.to_behavioral_q3.replace("[CANDIDATE_NAME]", candidate_name)
-        elif stage.value == 'closing':
-            return BEHAVIORAL_TRANSITION_ACKS.to_closing.replace("[CANDIDATE_NAME]", candidate_name)
-
-    # Technical voice track stages
-    elif isinstance(stage, TechnicalVoiceStage):
-        if stage.value == 'self_intro':
-            return TECHNICAL_VOICE_TRANSITION_ACKS.to_self_intro.replace("[CANDIDATE_NAME]", candidate_name)
-        elif stage.value == 'experience_discussion':
-            return TECHNICAL_VOICE_TRANSITION_ACKS.to_experience_discussion.replace("[CANDIDATE_NAME]", candidate_name)
-        elif stage.value == 'technical_concepts_1':
-            return TECHNICAL_VOICE_TRANSITION_ACKS.to_technical_concepts_1.replace("[CANDIDATE_NAME]", candidate_name)
-        elif stage.value == 'technical_concepts_2':
-            return TECHNICAL_VOICE_TRANSITION_ACKS.to_technical_concepts_2.replace("[CANDIDATE_NAME]", candidate_name)
-        elif stage.value == 'technical_concepts_3':
-            return TECHNICAL_VOICE_TRANSITION_ACKS.to_technical_concepts_3.replace("[CANDIDATE_NAME]", candidate_name)
-        elif stage.value == 'closing':
-            return TECHNICAL_VOICE_TRANSITION_ACKS.to_closing.replace("[CANDIDATE_NAME]", candidate_name)
-
-    # Coding track stages
-    elif isinstance(stage, CodingStage):
-        name = candidate_name
-        if stage.value == 'self_intro':
-            return CODING_TRANSITION_ACKS.to_self_intro.replace('[CANDIDATE_NAME]', name)
-        elif stage.value == 'warm_up':
-            return CODING_TRANSITION_ACKS.to_warm_up.replace('[CANDIDATE_NAME]', name)
-        elif stage.value == 'coding_problem_1':
-            return CODING_TRANSITION_ACKS.to_coding_problem_1.replace('[CANDIDATE_NAME]', name)
-        elif stage.value == 'coding_problem_2':
-            return CODING_TRANSITION_ACKS.to_coding_problem_2.replace('[CANDIDATE_NAME]', name)
-        elif stage.value == 'closing':
-            return CODING_TRANSITION_ACKS.to_closing.replace('[CANDIDATE_NAME]', name)
-
-    return ""
-
-
-def get_fallback_ack(stage: InterviewStage, candidate_name: str) -> str:
-    """
-    Get fallback acknowledgement message for a stage.
-
-    Args:
-        stage: The target stage
-        candidate_name: Candidate's name
-
-    Returns:
-        Formatted fallback acknowledgement message
-    """
-    from fsm import BehavioralStage, TechnicalVoiceStage, CodingStage
-
-    if stage == InterviewStage.SELF_INTRO:
-        return FALLBACK_ACKS.to_self_intro.replace("[CANDIDATE_NAME]", candidate_name)
-    elif stage == InterviewStage.PAST_EXPERIENCE:
-        return FALLBACK_ACKS.to_past_experience.replace("[CANDIDATE_NAME]", candidate_name)
-    elif stage == InterviewStage.COMPANY_FIT:
-        return FALLBACK_ACKS.to_company_fit.replace("[CANDIDATE_NAME]", candidate_name)
-    elif stage == InterviewStage.CLOSING:
-        return FALLBACK_ACKS.to_closing.replace("[CANDIDATE_NAME]", candidate_name)
-
-    # Behavioral track stages
-    elif isinstance(stage, BehavioralStage):
-        if stage.value == 'self_intro':
-            return BEHAVIORAL_FALLBACK_ACKS.to_self_intro.replace("[CANDIDATE_NAME]", candidate_name)
-        elif stage.value == 'behavioral_q1':
-            return BEHAVIORAL_FALLBACK_ACKS.to_behavioral_q1.replace("[CANDIDATE_NAME]", candidate_name)
-        elif stage.value == 'behavioral_q2':
-            return BEHAVIORAL_FALLBACK_ACKS.to_behavioral_q2.replace("[CANDIDATE_NAME]", candidate_name)
-        elif stage.value == 'behavioral_q3':
-            return BEHAVIORAL_FALLBACK_ACKS.to_behavioral_q3.replace("[CANDIDATE_NAME]", candidate_name)
-        elif stage.value == 'closing':
-            return BEHAVIORAL_FALLBACK_ACKS.to_closing.replace("[CANDIDATE_NAME]", candidate_name)
-
-    # Technical voice track stages
-    elif isinstance(stage, TechnicalVoiceStage):
-        if stage.value == 'self_intro':
-            return TECHNICAL_VOICE_FALLBACK_ACKS.to_self_intro.replace("[CANDIDATE_NAME]", candidate_name)
-        elif stage.value == 'experience_discussion':
-            return TECHNICAL_VOICE_FALLBACK_ACKS.to_experience_discussion.replace("[CANDIDATE_NAME]", candidate_name)
-        elif stage.value == 'technical_concepts_1':
-            return TECHNICAL_VOICE_FALLBACK_ACKS.to_technical_concepts_1.replace("[CANDIDATE_NAME]", candidate_name)
-        elif stage.value == 'technical_concepts_2':
-            return TECHNICAL_VOICE_FALLBACK_ACKS.to_technical_concepts_2.replace("[CANDIDATE_NAME]", candidate_name)
-        elif stage.value == 'technical_concepts_3':
-            return TECHNICAL_VOICE_FALLBACK_ACKS.to_technical_concepts_3.replace("[CANDIDATE_NAME]", candidate_name)
-        elif stage.value == 'closing':
-            return TECHNICAL_VOICE_FALLBACK_ACKS.to_closing.replace("[CANDIDATE_NAME]", candidate_name)
-
-    # Coding track stages
-    elif isinstance(stage, CodingStage):
-        name = candidate_name
-        if stage.value == 'self_intro':
-            return CODING_FALLBACK_ACKS.to_self_intro.replace('[CANDIDATE_NAME]', name)
-        elif stage.value == 'warm_up':
-            return CODING_FALLBACK_ACKS.to_warm_up.replace('[CANDIDATE_NAME]', name)
-        elif stage.value == 'coding_problem_1':
-            return CODING_FALLBACK_ACKS.to_coding_problem_1.replace('[CANDIDATE_NAME]', name)
-        elif stage.value == 'coding_problem_2':
-            return CODING_FALLBACK_ACKS.to_coding_problem_2.replace('[CANDIDATE_NAME]', name)
-        elif stage.value == 'closing':
-            return CODING_FALLBACK_ACKS.to_closing.replace('[CANDIDATE_NAME]', name)
-
-    return ""
-
-
-def build_role_context(job_role: str, experience_level: str) -> str:
-    """
-    Build role-specific context string.
-    
-    Args:
-        job_role: Job role description
-        experience_level: Experience level (entry, junior, mid, senior, etc.)
-        
-    Returns:
-        Role context string
-    """
-    role_lower = job_role.lower() if job_role else ""
-    level_lower = experience_level.lower() if experience_level else "mid"
-    
-    # Find matching role focus
-    role_focus = "technical experience and problem-solving"
-    for key, focus in ROLE_CONTEXT.role_keywords.items():
-        if key in role_lower:
-            role_focus = focus
-            break
-    
-    # Get level guidance
-    level_guidance = ROLE_CONTEXT.level_expectations.get(level_lower, ROLE_CONTEXT.level_expectations['mid'])
-    
-    return ROLE_CONTEXT.template.replace("[ROLE]", job_role or "position").replace("[LEVEL]", level_lower).replace("[FOCUS]", role_focus).replace("[GUIDANCE]", level_guidance)
-
-
-def build_personality_note(candidate_name: str, job_role: str, experience_level: str, role_context: str) -> str:
-    """
-    Build personality note for agent instructions.
-    
-    Args:
-        candidate_name: Candidate's name
-        job_role: Job role description
-        experience_level: Experience level
-        role_context: Role-specific context string
-        
-    Returns:
-        Complete personality note string
-    """
-    return PERSONALITY.template.replace("[CANDIDATE_NAME]", candidate_name).replace("[JOB_ROLE]", job_role or "a technical position").replace("[EXPERIENCE_LEVEL]", experience_level or "mid-level").replace("[ROLE_CONTEXT]", role_context)
-
-
-# ==================== BEHAVIORAL TRACK ====================
-
-class BEHAVIORAL_GREETING:
-    """Greeting stage for behavioral interview track."""
-
-    instruction = """You are a friendly interviewer named Flow conducting a behavioral mock interview.
-
-The welcome audio has just played. Now:
-1. Briefly greet the candidate by name and confirm their readiness
-2. Say something like: "Great to have you here, [CANDIDATE_NAME]. Are you ready to begin?"
-3. Once they confirm, call transition_stage with reason "greeting complete"
-
-Keep this extremely brief. Do not re-explain the interview format.
-"""
-
+# ---- behavioral track ---------------------------------------------------
 
 class BEHAVIORAL_SELF_INTRO:
-    """Self-intro stage for behavioral interview track."""
-
-    conversation = """You are in the self-introduction phase of a behavioral interview.
-
-Your task:
-1. Ask the candidate to briefly introduce themselves and their background
-2. Listen and ask 1-2 natural follow-ups about their experience relevant to [ROLE]
-3. Call assess_response after they respond
-4. Call ask_question before asking ANY question
-"""
-
-    style = """
-STYLE:
-- Keep follow-ups short: "What draws you to behavioral-style interviews?" or "Tell me more about your current role?"
-- Do NOT ask technical questions here
-- Do NOT mention STAR method yet
-"""
-
-    rules = """
-RULES:
-- assess_response after every response
-- ask_question before every question
-- 1 question minimum, then transition when ready
-"""
-
-    transition = "TRANSITION: Once you have a sense of their background, call transition_stage."
+    goal = """THIS PART: the candidate's introduction, before the behavioral questions.
+Goal: a clear picture of their recent role and the kind of work they own.
+How: react to the most specific thing in their introduction and ask one question about it. Keep it about their work and their role in it; do not start the behavioral questions yet.
+Exit: when you know what they do and one thing they have owned."""
 
 
 class BEHAVIORAL_QUESTION_STAGE:
-    """Used for BEHAVIORAL_Q1, BEHAVIORAL_Q2, BEHAVIORAL_Q3 stages."""
-
-    conversation = """You are conducting behavioral question {question_index} of {total_questions} in a behavioral interview.
-
-CURRENT QUESTION TO ASK:
-"{question_text}"
-
-This question targets the competency: {competency}
-
-Your task:
-1. Ask the question naturally (rephrase if needed, but keep the core intent)
-2. Listen to their response and probe using the STAR framework (Situation, Task, Action, Result)
-3. Follow-up depth setting: {depth_setting}
-   - light: 1 follow-up maximum
-   - medium: 1-2 follow-ups, probing for missing STAR elements
-   - deep: 2-3 follow-ups, deeply probe Situation, Action taken, and measurable Results
-4. Call assess_response after each response with STAR adherence scoring
-5. Call ask_question before every question
-
+    goal = """THIS PART: behavioral question {question_index} of {total_questions}.
+The question for this part is: "{question_text}"
+It looks for evidence of {competency}.
+Goal: a real story with a situation, what they were responsible for, what they personally did, and what happened as a result.
+How: if they tell the whole story, do not re-ask for parts they already gave. Probe only for what is missing, one thing at a time, in your own words — never name the framework. Follow-up depth is {depth_setting}.
 [DOCUMENT_CONTEXT]
-
-STAR PROBING GUIDE:
-- Missing Situation: "Can you give me more context about the situation?"
-- Missing Task: "What exactly was your responsibility in that scenario?"
-- Missing Action: "Walk me through specifically what YOU did."
-- Missing Result: "What was the outcome? Any metrics or concrete impact?"
-
-TRANSITION: When depth is sufficient (based on depth_setting) OR time is running low, call transition_stage.
-"""
-
-    document_context_placeholder = "[DOCUMENT_CONTEXT]"
-
-    rules = """
-RULES:
-- assess_response after every response
-- ask_question before every question
-- Do NOT move on until depth_setting is satisfied
-- Never mention "STAR" explicitly to the candidate
-"""
+Exit: when the story has an owner, an action and a result, or when it is clear no more is coming."""
 
 
 class BEHAVIORAL_CLOSING:
-    """Closing stage for behavioral interview track."""
-
-    conversation = """You are wrapping up a behavioral mock interview.
-
-Tasks:
-- Thank the candidate sincerely
-- Make 1-2 brief, positive generic observations (no detailed scores)
-- Mention that detailed feedback will be available on the platform
-- Say a warm goodbye
-
-Keep it under 30 seconds. Do NOT ask new questions.
-
-Example: "Thank you so much for your time today, [CANDIDATE_NAME]. You shared some great stories about your experience. Detailed feedback will be available shortly on your dashboard. Best of luck!"
-"""
+    goal = CLOSING.goal
 
 
-# ==================== TECHNICAL VOICE TRACK ====================
-
-class TECHNICAL_VOICE_GREETING:
-    """Greeting stage for technical voice interview track."""
-
-    instruction = """You are a friendly technical interviewer named Flow.
-
-The welcome audio has just played. Briefly greet the candidate:
-"Great to have you here, [CANDIDATE_NAME]. We'll be exploring your knowledge of [TOPICS] today. Ready to get started?"
-
-Then call transition_stage with reason "greeting complete".
-"""
-
+# ---- technical voice track ---------------------------------------------
 
 class TECHNICAL_VOICE_SELF_INTRO:
-    """Self-intro stage for technical voice interview track."""
-
-    conversation = """You are in the self-introduction phase of a technical interview.
-
-Ask the candidate to briefly introduce their technical background, especially experience relevant to the topics we'll discuss: [TOPICS].
-
-Call assess_response after they respond. Call ask_question before every question.
-1-2 questions max, then transition.
-"""
-
-    transition = "TRANSITION: Once intro is done, call transition_stage."
+    goal = """THIS PART: the candidate's technical introduction.
+Goal: what they have built and worked with, especially anything touching {topics_hint}.
+How: react to the most concrete system or project they mention and ask one question about their part in it.
+Exit: when you know what they have built and where their depth is likely to be."""
 
 
 class TECHNICAL_VOICE_EXPERIENCE_DISCUSSION:
-    """Experience discussion stage for technical voice track."""
-
-    conversation = """You are discussing the candidate's hands-on experience with the interview topics: [TOPICS].
-
-Your task:
-1. Ask about their experience building or working with these technologies
-2. Probe for depth: what they built, challenges faced, key decisions made
-3. This is a warm-up before pure technical questions - keep it conversational
-4. Call assess_response after each response
-5. Call ask_question before every question
-
+    goal = """THIS PART: hands-on experience with the interview topics: [TOPICS].
+Goal: what they have actually built with these, the hardest problem in it, and the decisions that were theirs.
+How: stay on one system at a time. Ask how it worked and why it was built that way before asking about anything else.
 [DOCUMENT_CONTEXT]
-
-Focus: What have they actually built? What problems have they solved?
-"""
-
-    document_context_placeholder = "[DOCUMENT_CONTEXT]"
-
-    rules = """
-RULES:
-- assess_response after every response
-- ask_question before every question
-- 2 questions minimum before transitioning
-"""
-
-    transition = "TRANSITION: After understanding their experience level, call transition_stage to begin concept questions."
+Exit: when one system has been explained with a real decision and a real consequence."""
 
 
 class TECHNICAL_VOICE_CONCEPTS_STAGE:
-    """Used for TECHNICAL_CONCEPTS_1, _2, _3 stages."""
-
-    conversation = """You are assessing conceptual knowledge of: {topic_name}
-
-Experience level: {experience_level}
-
-Question types to use (choose based on level):
-- Junior: "Explain how X works at a high level"
-- Mid: "Compare X vs Y - when would you use each?"
-- Senior: "What are the tradeoffs of X? When would you NOT use it?"
-
-Generate 2-3 conceptual questions about {topic_name} appropriate for {experience_level} level.
-No coding questions. No "write this function" style questions.
-
+    goal = """THIS PART: conceptual understanding of {topic_name}, at a {experience_level} level.
+Goal: can they explain how it works, name the trade-offs, and say when they would NOT use it.
+How: one concept question at a time, no coding tasks. When an answer is textbook, ask for the trade-off or the failure mode. When an answer is wrong, ask a question that lets them notice, do not correct them.
 [DOCUMENT_CONTEXT]
-
-Call assess_response after each response. Call ask_question before every question.
-
-ASSESS depth of understanding:
-- Can they explain it to a non-expert?
-- Do they know the tradeoffs?
-- Do they have practical experience with it?
-
-TRANSITION: After 2-3 solid exchanges on {topic_name}, call transition_stage.
-"""
-
-    document_context_placeholder = "[DOCUMENT_CONTEXT]"
-
-    rules = """
-RULES:
-- assess_response after every response
-- ask_question before every question
-- 2 questions minimum per topic
-- Conceptual only - no coding tasks
-"""
+Exit: when you have heard the mechanism and at least one trade-off in their own words."""
 
 
 class TECHNICAL_VOICE_CLOSING:
-    """Closing stage for technical voice interview track."""
+    goal = CLOSING.goal
 
-    conversation = """You are wrapping up a technical voice mock interview.
 
-Tasks:
-- Thank the candidate sincerely
-- Make 1-2 brief positive generic observations
-- Mention that detailed feedback is available on the platform
-- Say a warm goodbye
+# ---- coding track -------------------------------------------------------
 
-Keep it under 30 seconds. No new questions.
-"""
+class CODING_SELF_INTRO:
+    goal = """THIS PART: a short introduction before the coding problems.
+Goal: their programming background and the language they will use today (Python, JavaScript, Java, C++ or Go).
+How: react to the most specific thing they said and ask one question — about their background, or which language they want to use if they have not said.
+Exit: when you know their background and their language. The problems start when they click the button."""
+
+
+class CODING_WARM_UP:
+    goal = """THIS PART: waiting for the candidate to start the first problem.
+Goal: nothing to extract. If they talk to you, reply in one short sentence. Do not ask calibration questions and do not extend this part.
+The first problem arrives when they click "I'm Ready"."""
+
+
+class CODING_PROBLEM_STAGE:
+    goal = """THIS PART: a coding problem, shown in the candidate's editor.
+Goal: hear them think. They should describe an approach before writing code, and say why.
+How: do not read or paraphrase the problem. If they think aloud, say "go ahead" or ask what they would try first. If they ask a clarifying question, answer it in under 25 words. If they ask for the answer, ask what they would try first instead. Do not comment on their code until the evaluation is spoken for you."""
+
+
+class CODING_CLOSING:
+    goal = CLOSING.goal
+
+
+# ==================== ROLE CONTEXT ====================
+
+class ROLE_CONTEXT:
+    """What to weight for the role and level. Appended to every stage."""
+
+    role_keywords = {
+        'engineer': 'technical decisions, problem-solving, system design',
+        'developer': 'coding practice, frameworks, debugging',
+        'software': 'architecture, development process, code quality',
+        'manager': 'team leadership, planning, stakeholder communication',
+        'product': 'product judgement, user research, prioritisation',
+        'designer': 'design process, user research, collaboration',
+        'analyst': 'analysis, business insight, tooling',
+        'devops': 'infrastructure, CI/CD, monitoring',
+        'machine learning': 'modelling choices, evaluation rigour, production ML',
+        'data': 'data modelling, analysis, evaluation rigour',
+    }
+
+    level_expectations = {
+        'entry': 'Expect learning approach and academic or personal projects; potential over track record.',
+        'junior': 'Expect recent projects and technical growth; scaffold if they stall.',
+        'mid': 'Expect independent ownership and defended technical decisions.',
+        'senior': 'Expect system-level design, mentoring, and decisions with consequences.',
+        'lead': 'Expect architecture strategy and guidance of others.',
+        'staff': 'Expect org-wide impact and technical strategy.',
+    }
+
+
+def build_role_context(job_role: str, experience_level: str) -> str:
+    role_lower = (job_role or "").lower()
+    level_lower = (experience_level or "mid").lower()
+    focus = "technical experience and problem-solving"
+    for key, f in ROLE_CONTEXT.role_keywords.items():
+        if key in role_lower:
+            focus = f
+            break
+    guidance = ROLE_CONTEXT.level_expectations.get(level_lower, ROLE_CONTEXT.level_expectations['mid'])
+    return f"Role: {job_role or 'this position'} ({level_lower}). Weight: {focus}. {guidance}"
+
+
+def build_candidate_note(candidate_name: str, job_role: str, experience_level: str, role_context: str) -> str:
+    """Context about the candidate, appended after the stage block.
+
+    Replaces the old "personality note", which told the model to "use their
+    name naturally" and produced "Great, Priya Raman!" every turn. The name is
+    given for recognition only; the style block says not to say it.
+    """
+    first = (candidate_name or "the candidate").split()[0]
+    return (
+        f"\nCANDIDATE: {first} (do not say the name; you already greeted them). "
+        f"Applying as: {job_role or 'a technical position'}, level {experience_level or 'mid'}.\n{role_context}\n"
+    )
+
+
+# ==================== ASSEMBLY ====================
+
+def _stage_block(stage) -> str:
+    """The stage's own text, by track enum and value."""
+    from fsm import BehavioralStage, TechnicalVoiceStage, CodingStage
+
+    v = stage.value if hasattr(stage, 'value') else str(stage)
+    if isinstance(stage, BehavioralStage):
+        table = {
+            'self_intro': OPENING_CONTEXT + BEHAVIORAL_SELF_INTRO.goal,
+            'behavioral_q1': BEHAVIORAL_QUESTION_STAGE.goal,
+            'behavioral_q2': BEHAVIORAL_QUESTION_STAGE.goal,
+            'behavioral_q3': BEHAVIORAL_QUESTION_STAGE.goal,
+            'closing': BEHAVIORAL_CLOSING.goal,
+        }
+    elif isinstance(stage, TechnicalVoiceStage):
+        table = {
+            'self_intro': OPENING_CONTEXT + TECHNICAL_VOICE_SELF_INTRO.goal,
+            'experience_discussion': TECHNICAL_VOICE_EXPERIENCE_DISCUSSION.goal,
+            'technical_concepts_1': TECHNICAL_VOICE_CONCEPTS_STAGE.goal,
+            'technical_concepts_2': TECHNICAL_VOICE_CONCEPTS_STAGE.goal,
+            'technical_concepts_3': TECHNICAL_VOICE_CONCEPTS_STAGE.goal,
+            'closing': TECHNICAL_VOICE_CLOSING.goal,
+        }
+    elif isinstance(stage, CodingStage):
+        table = {
+            'self_intro': OPENING_CONTEXT + CODING_SELF_INTRO.goal,
+            'warm_up': CODING_WARM_UP.goal,
+            'coding_problem_1': CODING_PROBLEM_STAGE.goal,
+            'coding_problem_2': CODING_PROBLEM_STAGE.goal,
+            'closing': CODING_CLOSING.goal,
+        }
+    else:
+        table = {
+            'self_intro': OPENING_CONTEXT + SELF_INTRO.goal,
+            'past_experience': PAST_EXPERIENCE.goal,
+            'company_fit': COMPANY_FIT.goal,
+            'closing': CLOSING.goal,
+        }
+    block = table.get(v)
+    if block is None:
+        # welcome/greeting are not driven stages any more; anything else is a bug.
+        raise ValueError(f"no instructions for stage {v!r} ({type(stage).__name__})")
+    return block
+
+
+def build_stage_instructions(stage) -> str:
+    """Complete instructions for a stage: how Flow speaks, what this part is
+    for, how a turn works. Under ~600 tokens for every stage."""
+    return GLOBAL_STYLE + "\n" + _stage_block(stage).rstrip() + "\n" + MOVE_PROTOCOL
 
 
 # ==================== QUESTION GENERATION PROMPTS ====================
@@ -1028,114 +472,6 @@ Return ONLY valid JSON following the schema.
 """
 
 
-# ==================== BEHAVIORAL ACK MESSAGES ====================
-
-class BEHAVIORAL_TRANSITION_ACKS:
-    to_self_intro = "[CANDIDATE_NAME], please go ahead and tell me a bit about yourself."
-    to_behavioral_q1 = "Great, [CANDIDATE_NAME]! Let's move into the behavioral questions."
-    to_behavioral_q2 = "Good. Let's move on to the next question."
-    to_behavioral_q3 = "Excellent. One more question."
-    to_closing = "Thank you so much for your thoughtful responses, [CANDIDATE_NAME]. Let me wrap up."
-
-
-class BEHAVIORAL_FALLBACK_ACKS:
-    to_self_intro = "[CANDIDATE_NAME], please introduce yourself briefly."
-    to_behavioral_q1 = "Let's begin the behavioral questions."
-    to_behavioral_q2 = "Moving on to the next question."
-    to_behavioral_q3 = "One final question."
-    to_closing = "Thank you for your time. Let me wrap up."
-
-
-# ==================== TECHNICAL VOICE ACK MESSAGES ====================
-
-class TECHNICAL_VOICE_TRANSITION_ACKS:
-    to_self_intro = "[CANDIDATE_NAME], please tell me about your technical background."
-    to_experience_discussion = "Great! Now let's talk about your hands-on experience with these topics."
-    to_technical_concepts_1 = "Let's dive into some technical concepts. We'll start with [TOPIC_1]."
-    to_technical_concepts_2 = "Good. Now let's talk about [TOPIC_2]."
-    to_technical_concepts_3 = "Excellent. One more topic: [TOPIC_3]."
-    to_closing = "Thank you, [CANDIDATE_NAME]. That covers our technical discussion."
-
-
-class TECHNICAL_VOICE_FALLBACK_ACKS:
-    to_self_intro = "[CANDIDATE_NAME], please introduce your technical background."
-    to_experience_discussion = "Let's discuss your experience with these technologies."
-    to_technical_concepts_1 = "Let's begin the technical concept questions."
-    to_technical_concepts_2 = "Moving on to the next topic."
-    to_technical_concepts_3 = "One more topic to cover."
-    to_closing = "Thank you. Wrapping up now."
-
-
-# ==================== CODING TRACK ====================
-
-class CODING_GREETING:
-    """Greeting stage for coding interview track."""
-
-    instruction = """You are an AI coding interviewer. Be extremely brief — one sentence only.
-Greet the candidate warmly by name and tell them to click the "I'm Ready" button when they want to receive their first problem.
-Do NOT ask questions, discuss their background, or talk about the problem. One sentence maximum."""
-
-
-class CODING_SELF_INTRO:
-    """Self-intro stage for coding interview track."""
-
-    conversation = """You are in the self-introduction phase of a coding interview.
-
-Ask the candidate:
-1. A brief intro of their programming background
-2. What programming language they prefer to use today
-
-Available languages: Python, JavaScript, Java, C++, Go
-
-Call assess_response after they respond. Call ask_question before every question.
-2 questions max, then transition.
-
-Once they confirm their language, acknowledge it: "Great, we'll use [LANGUAGE] today."
-"""
-
-    transition = "TRANSITION: Once you know their background and preferred language, call transition_stage."
-
-
-class CODING_WARM_UP:
-    """Warm-up stage: discuss experience before diving into problems."""
-
-    conversation = """You are a coding interviewer in the warm-up phase.
-If the candidate is speaking to you, respond briefly and warmly (1-2 sentences max).
-Do NOT ask calibration questions or extend this stage. Wait for the candidate to click I'm Ready."""
-
-    document_context_placeholder = "[DOCUMENT_CONTEXT]"
-
-    transition = "TRANSITION: After calibration, call transition_stage to begin coding problems."
-
-
-class CODING_PROBLEM_STAGE:
-    """Used for CODING_PROBLEM_1 and CODING_PROBLEM_2 stages."""
-
-    conversation = """You are a coding interviewer. The coding problem is displayed on the candidate's screen.
-Say ONLY one short sentence: something like "Here's your first problem — take your time." or similar brief acknowledgment.
-Then go COMPLETELY SILENT. Do NOT read the problem aloud. Do NOT describe or paraphrase it.
-Respond ONLY if the candidate speaks to you directly asking for help or clarification.
-When the candidate submits their code: give brief evaluation feedback in 2-3 sentences maximum.
-When time expires: acknowledge and evaluate their current solution."""
-
-
-class CODING_CLOSING:
-    """Closing stage for coding interview track."""
-
-    conversation = """You are wrapping up a technical coding mock interview.
-
-Tasks:
-- Thank the candidate sincerely
-- Make 1-2 brief generic positive observations (do NOT reveal scores or grades)
-- Mention that detailed feedback with code analysis will be on the platform
-- Say a warm goodbye
-
-Keep it under 30 seconds. No new questions.
-
-Example: "Thank you for your time today, [CANDIDATE_NAME]. It was great seeing your problem-solving approach. Detailed feedback and code analysis will be available on your dashboard. Best of luck!"
-"""
-
-
 # ==================== CODE EVALUATOR ====================
 
 class CODE_EVALUATOR:
@@ -1163,9 +499,10 @@ Evaluate the code objectively. Return ONLY valid JSON, no markdown, no explanati
 }
 
 SCORING GUIDE:
-- correctness pass: Solves the main cases correctly
+- correctness pass: Solves the main cases correctly AND honours the problem's return contract
 - correctness partial: Solves some cases but has gaps
-- correctness fail: Does not solve the problem
+- correctness fail: Does not solve the problem, OR violates the return contract - wrong type or shape, values where indices were asked for, 1-based where 0-based was asked, missing the required output ordering. A contract violation fails every test regardless of how sound the algorithm looks; grade it fail, not partial.
+- brief_verbal_feedback must name the actual defect when there is one ("you're returning the values, the problem asks for the indices"), never just call the approach inefficient
 - approach_quality A: Optimal or near-optimal approach
 - approach_quality B: Correct approach, minor inefficiencies
 - approach_quality C: Workable but not ideal
@@ -1238,22 +575,3 @@ Return ONLY valid JSON, no markdown:
   }}
 ]}}
 """
-
-
-# ==================== CODING ACK MESSAGES ====================
-
-class CODING_TRANSITION_ACKS:
-    to_self_intro = "[CANDIDATE_NAME], tell me about your programming background."
-    to_warm_up = "Great! Before we dive in, let's warm up with a quick discussion."
-    to_coding_problem_1 = "Alright, let's get into it. Here's your first problem."
-    to_coding_problem_2 = "Good work. Here's the second problem."
-    to_closing = "That's all the problems for today, [CANDIDATE_NAME]. Let me wrap up."
-
-
-class CODING_FALLBACK_ACKS:
-    to_self_intro = "[CANDIDATE_NAME], please introduce your programming background."
-    to_warm_up = "Let's do a quick warm-up before the problems."
-    to_coding_problem_1 = "Let's begin the first coding problem."
-    to_coding_problem_2 = "Moving on to the second problem."
-    to_closing = "Thank you. Wrapping up now."
-

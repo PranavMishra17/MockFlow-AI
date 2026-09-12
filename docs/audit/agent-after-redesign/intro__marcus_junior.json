@@ -1,0 +1,268 @@
+{
+  "track": "intro",
+  "persona": "marcus_junior",
+  "config": {
+    "track": "intro",
+    "role": "Software Engineer",
+    "level": "junior",
+    "user_id": "audit-user"
+  },
+  "duration_s": 35.3,
+  "history": [
+    {
+      "who": "flow",
+      "text": "Hey, I'm Flow \u2014 I'll be taking your interview today. Please start with a short introduction.",
+      "stage": "self_intro",
+      "t": 1.1,
+      "latency": null
+    },
+    {
+      "who": "candidate",
+      "text": "Um, hi Flow, I'm Marcus. I, uh, recently graduated with a degree in Computer Science. I did a, um, 10-week internship at a small startup where I, like, built a React dashboard. I also worked on a couple of class projects, one was a Flask todo app and another was a group project on a chess engine in Python. So, um, yeah, that's me.",
+      "stage": "self_intro",
+      "t": 2.0
+    },
+    {
+      "who": "flow",
+      "text": "Got it. You recently graduated in Computer Science and interned at a startup. What made you pursue a Software Engineer role right now?",
+      "stage": "self_intro",
+      "t": 4.4,
+      "latency": 2.4
+    },
+    {
+      "who": "candidate",
+      "text": "Um, I guess I really enjoy, like, solving problems and building things. During my internship, I really liked working on the React dashboard and, um, collaborating with my team. So, I thought a Software Engineer role would be, you know, a great way to keep doing that and, um, learn more in a professional setting.",
+      "stage": "self_intro",
+      "t": 5.3
+    },
+    {
+      "who": "flow",
+      "text": "Okay. You enjoy solving problems and building things. What specific skills or knowledge do you hope to gain in this Software Engineer role?",
+      "stage": "self_intro",
+      "t": 7.5,
+      "latency": 2.2
+    },
+    {
+      "who": "candidate",
+      "text": "Um, I\u2019m kind of hoping to, like, learn more about, um, software development best practices and, you know, improve my coding skills, especially in JavaScript and, like, other technologies. I also want to, um, get better at working in a team and, um, understanding how projects are managed in a, like, real-world environment.",
+      "stage": "self_intro",
+      "t": 8.3
+    },
+    {
+      "who": "flow",
+      "text": "You want to improve your coding skills and teamwork. Can you share a specific decision you made during your internship or projects that had a significant impact on the outcome?",
+      "stage": "past_experience",
+      "t": 10.7,
+      "latency": 2.4
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> past_experience]",
+      "stage": "past_experience",
+      "t": 10.7
+    },
+    {
+      "who": "candidate",
+      "text": "Um, during my internship, there was this point where we, like, had to decide on how to implement a feature for the React dashboard. I suggested using a certain state management library because, um, I thought it would make things easier to manage. I guess it ended up helping the team, like, organize the code better and made it, you know, more maintainable. So, I felt good about that decision.",
+      "stage": "past_experience",
+      "t": 11.7
+    },
+    {
+      "who": "flow",
+      "text": "Okay, you suggested a state management library for the dashboard. What was the problem you aimed to solve, and what specific results did your decision achieve?",
+      "stage": "past_experience",
+      "t": 14.1,
+      "latency": 2.4
+    },
+    {
+      "who": "candidate",
+      "text": "Um, right, so the problem we were facing was, like, managing the state across different components, which was, um, getting pretty complicated. By suggesting that library, I think it helped streamline the data flow, so, um, it made the code cleaner. I don\u2019t have specific metrics, but, um, I definitely noticed it was easier for us to, like, add features later on without breaking things.",
+      "stage": "past_experience",
+      "t": 15.0
+    },
+    {
+      "who": "flow",
+      "text": "You noticed it was easier to add features later on. Can you describe a challenge you faced while implementing that state management solution and how you personally addressed it?",
+      "stage": "past_experience",
+      "t": 17.6,
+      "latency": 2.6
+    },
+    {
+      "who": "candidate",
+      "text": "Um, yeah, there were some challenges, like getting everyone on the same page with how to use the library since, um, some team members weren\u2019t familiar with it. I, uh, tried to help by, like, setting up a quick demo to show how it worked and, um, sharing some examples. I think that really helped the team feel more comfortable using it.",
+      "stage": "past_experience",
+      "t": 18.4
+    },
+    {
+      "who": "flow",
+      "text": "You set up a demo to help your team. In this Software Engineer role, what do you want more of in your day-to-day compared to your current experience?",
+      "stage": "company_fit",
+      "t": 21.0,
+      "latency": 2.5
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> company_fit]",
+      "stage": "company_fit",
+      "t": 21.0
+    },
+    {
+      "who": "candidate",
+      "text": "Um, I guess I really want more opportunities to, like, collaborate with others and, um, work on varied projects. I think having regular team meetings would help, you know, share ideas and get feedback. I also want to, like, have more chances to learn about different technologies and, um, contribute to real-world problems.",
+      "stage": "company_fit",
+      "t": 21.8
+    },
+    {
+      "who": "flow",
+      "text": "Okay, you want more opportunities to collaborate and work on varied projects. What specific skills or knowledge do you feel you still need to develop to excel in this role?",
+      "stage": "company_fit",
+      "t": 24.5,
+      "latency": 2.7
+    },
+    {
+      "who": "candidate",
+      "text": "Um, I think I really need to, like, improve my understanding of, um, software design patterns and best practices. Also, I, um, want to get better at, like, some front-end frameworks beyond React, maybe even dive deeper into, like, backend technologies. I guess just gaining more experience overall would really help me excel.",
+      "stage": "company_fit",
+      "t": 25.3
+    },
+    {
+      "who": "flow",
+      "text": "You want to improve your understanding of software design patterns. In your day-to-day, what kind of tasks or projects would you like to work on more often than you currently do?",
+      "stage": "company_fit",
+      "t": 28.0,
+      "latency": 2.7
+    },
+    {
+      "who": "candidate",
+      "text": "Um, I think I\u2019d like to work more on, like, building full-stack applications, you know? Like, getting involved in both the front-end and back-end parts. I also, um, wouldn't mind tackling some, like, code reviews or optimizing existing code, just to, you know, learn from feedback and improve my skills.",
+      "stage": "company_fit",
+      "t": 28.8
+    },
+    {
+      "who": "flow",
+      "text": "Thanks, Marcus. The part about \"I also want to, like, have more chances to learn about different technologies\" is the kind of specific that lands. Your written feedback is on your dashboard in a minute. That's the end of the interview \u2014 take care.",
+      "stage": "closing",
+      "t": 30.9,
+      "latency": 2.1
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> closing]",
+      "stage": "closing",
+      "t": 30.9
+    }
+  ],
+  "stages_visited": [
+    "past_experience",
+    "company_fit",
+    "closing"
+  ],
+  "final_stage": "closing",
+  "tool_calls": [],
+  "question_bank": [],
+  "stalls": [],
+  "notes": [
+    "closing delivered by Flow at turn 9"
+  ],
+  "verdict": {
+    "overall": {
+      "confidence": "medium",
+      "headline": "Marcus shows potential but needs clearer articulation and deeper understanding of the role.",
+      "recommendation": "lean_no_hire",
+      "level_read": "intern"
+    },
+    "signals": [
+      {
+        "name": "Motivation & authenticity",
+        "reasoning": "Marcus expresses a genuine interest in problem-solving and building things, but his responses lack specificity and depth about why this role and company are particularly appealing to him.",
+        "band": "borderline",
+        "scope_met": "intern",
+        "evidence": [
+          "I guess I really enjoy, like, solving problems and building things.",
+          "I thought a Software Engineer role would be, you know, a great way to keep doing that and, um, learn more in a professional setting."
+        ],
+        "to_raise": "Provide specific reasons for choosing this company and role."
+      },
+      {
+        "name": "Communication & structure",
+        "reasoning": "Marcus's communication is filled with filler words and lacks structure, making it difficult to follow his points clearly.",
+        "band": "poor",
+        "scope_met": "intern",
+        "evidence": [
+          "Um, I guess I really enjoy, like, solving problems and building things.",
+          "Um, I think I\u2019d like to work more on, like, building full-stack applications, you know?"
+        ],
+        "to_raise": "Practice delivering concise and structured responses."
+      },
+      {
+        "name": "Role / company fit",
+        "reasoning": "Marcus has a basic understanding of the role but does not demonstrate a concrete grasp of the specific expectations or culture of the company.",
+        "band": "borderline",
+        "scope_met": "intern",
+        "evidence": [
+          "I also want to, like, have more chances to learn about different technologies and, um, contribute to real-world problems.",
+          "I think having regular team meetings would help, you know, share ideas and get feedback."
+        ],
+        "to_raise": "Research and articulate how the company's specific projects and culture align with his goals."
+      },
+      {
+        "name": "Self-awareness",
+        "reasoning": "Marcus shows some self-awareness by acknowledging areas for improvement, but his reflections are somewhat generic and lack a clear plan for addressing these gaps.",
+        "band": "borderline",
+        "scope_met": "intern",
+        "evidence": [
+          "I think I really need to, like, improve my understanding of, um, software design patterns and best practices.",
+          "I guess just gaining more experience overall would really help me excel."
+        ],
+        "to_raise": "Identify specific steps or resources he plans to use to address his skill gaps."
+      }
+    ],
+    "differentiators": [
+      "Marcus could become a strong hire by developing clearer communication skills and demonstrating a deeper understanding of the company's specific needs and how he can meet them."
+    ],
+    "delivery": {
+      "pace_available": false,
+      "wpm": null,
+      "wpm_band": "unknown",
+      "wpm_target": "130-160",
+      "filler_total": 62,
+      "filler_per_100w": 11.81,
+      "filler_per_min": null,
+      "filler_band": "high",
+      "filler_target": "<=3.3/100 words",
+      "word_count": 525,
+      "sentence_count": 29,
+      "filler_breakdown": {
+        "um": 27,
+        "uh": 2,
+        "like": 20,
+        "so": 5,
+        "right": 1,
+        "you know": 6,
+        "kind of": 1
+      },
+      "top_crutch_word": {
+        "word": "um",
+        "count": 27
+      },
+      "talk_ratio": 0.65,
+      "longest_monologue_s": null
+    },
+    "gap_to_next": {
+      "signal": "Communication & structure",
+      "from_band": "poor",
+      "to_band": "borderline",
+      "move": "Practice delivering concise and structured responses."
+    },
+    "great_answers": 0,
+    "context": {
+      "track": "intro",
+      "role": "swe",
+      "seniority": "new_grad",
+      "archetype": "big_tech"
+    }
+  },
+  "flags": [
+    "reply latency: median 2.4s, max 2.7s (text-only; TTS adds more)"
+  ]
+}

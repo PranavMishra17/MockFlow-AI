@@ -32,18 +32,16 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Annotated, Any, Awaitable, Callable, Mapping, Optional, Protocol
-
-from pydantic import Field
+from typing import Any, Awaitable, Callable, Mapping, Optional, Protocol
 
 from livekit.agents import (
     NOT_GIVEN,
     AgentSession,
     Agent,
-    RunContext,
-    function_tool,
+    StopResponse,
 )
 
 from fsm import (InterviewState, InterviewStage, STAGE_TIME_LIMITS,
@@ -51,16 +49,31 @@ from fsm import (InterviewState, InterviewStage, STAGE_TIME_LIMITS,
                   TechnicalVoiceStage, TechnicalVoiceInterviewState,
                   CodingStage, CodingInterviewState)
 from tracks import get_track_config
-from audio_cache import get_welcome_audio_bytes, get_welcome_script
 from prompts import (
     build_stage_instructions,
-    get_transition_ack,
-    get_fallback_ack,
     build_role_context,
-    build_personality_note,
-    WELCOME,
-    SKIP_STAGE,
-    CLOSING_FALLBACK,
+    build_candidate_note,
+    get_greeting_line,
+)
+from interview_turn import (
+    AssessFn,
+    AssessInput,
+    CLOSING_SENTINEL,
+    MOVE_HEADER,
+    Move,
+    SAFE_NOTE,
+    TurnAssessor,
+    TurnInputs,
+    _first_evidence,
+    assess_turn_openai,
+    bank_probes,
+    build_closing_utterance,
+    choose_move,
+    first_move_for_stage,
+    render_move_note,
+    should_advance,
+    stage_required_signals,
+    star_applies,
 )
 
 logger = logging.getLogger("interview-runtime")
@@ -376,127 +389,260 @@ async def ensure_questions_generated(state: InterviewState) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Stage navigation helpers shared by every path that changes the stage
+# ---------------------------------------------------------------------------
+
+def next_stage_for(state: InterviewState):
+    """The stage after the current one on this track, or None at the end."""
+    track_type = getattr(state, 'track_type', 'intro')
+    if track_type == 'behavioral' and hasattr(state, 'get_next_behavioral_stage'):
+        return state.get_next_behavioral_stage()
+    if track_type == 'technical_voice' and hasattr(state, 'get_next_technical_voice_stage'):
+        return state.get_next_technical_voice_stage()
+    if track_type == 'coding' and hasattr(state, 'get_next_coding_stage'):
+        return state.get_next_coding_stage()
+    return state.get_next_stage()
+
+
+def bank_item_for(state: InterviewState, stage) -> Optional[dict]:
+    """This stage's entry in the pre-generated bank, whatever the track's shape.
+
+    behavioral: {main_question, competency, follow_up_probes}
+    technical_voice: {topic, questions}
+    coding: the problem dict
+    intro: nothing (no bank)
+    """
+    track_type = getattr(state, 'track_type', 'intro')
+    stage_val = stage.value if hasattr(stage, 'value') else str(stage)
+    try:
+        if track_type == 'behavioral' and stage_val.startswith('behavioral_q'):
+            idx = int(stage_val[-1]) - 1
+            qs = getattr(state, 'generated_questions', []) or []
+            return qs[idx] if idx < len(qs) else None
+        if track_type == 'technical_voice' and stage_val.startswith('technical_concepts_'):
+            idx = int(stage_val.split('_')[-1]) - 1
+            qs = getattr(state, 'generated_questions', []) or []
+            return qs[idx] if idx < len(qs) else None
+        if track_type == 'coding' and stage_val.startswith('coding_problem_'):
+            idx = int(stage_val.split('_')[-1]) - 1
+            ps = getattr(state, 'generated_problems', []) or []
+            return ps[idx] if idx < len(ps) else None
+    except (ValueError, IndexError):
+        return None
+    return None
+
+
+async def push_coding_problem(state: InterviewState, transport: "Transport", idx: int) -> bool:
+    """Send problem `idx` to the editor. Returns False if there is no such problem."""
+    problems = getattr(state, 'generated_problems', []) or []
+    if idx >= len(problems):
+        return False
+    problem = problems[idx]
+    attempts_done = state.get_attempts_for_problem(idx) if hasattr(state, 'get_attempts_for_problem') else 0
+    try:
+        await transport.emit({
+            'type': 'coding_problem',
+            'problem': problem,
+            'problem_index': idx,
+            'attempt_number': attempts_done + 1,
+            'max_attempts': 3,
+            'time_limit_minutes': problem.get('time_limit_minutes', 15),
+        }, reliable=True)
+        logger.info(f"[CODING] Pushed problem {idx} to the editor: {problem.get('title', '?')}")
+    except Exception as e:
+        logger.warning(f"[CODING] Failed to push problem {idx}: {e}")
+    return True
+
+
+async def advance_to(state: InterviewState, agent: "InterviewAgent", transport: "Transport", next_stage,
+                     *, forced: bool = False, skipped: bool = False) -> None:
+    """The one way the stage changes.
+
+    Model-driven progression, the skip button and the wall-clock timer all
+    used to carry their own copy of this sequence, and each copy drifted
+    (skips left question pointers behind; the timer never pushed a coding
+    problem). Now they call this. It changes state and instructions and tells
+    the UI; it never speaks. Whoever advanced decides how the next utterance
+    is produced.
+    """
+    current = state.stage
+    state.transition_to(next_stage, forced=forced, skipped=skipped)
+    sync_stage_pointers(state, next_stage)
+    state.ledger.reset_stage_counters()
+    try:
+        await agent.update_instructions(agent._get_stage_instructions(state, next_stage))
+    except Exception as e:
+        logger.error(f"[STAGE] Instruction update failed entering {next_stage.value}: {e}")
+    try:
+        await transport.emit({"type": "stage_change", "stage": next_stage.value})
+    except Exception as e:
+        logger.error(f"[UI] Failed to emit stage change: {e}")
+    stage_val = next_stage.value
+    if getattr(state, 'track_type', 'intro') == 'coding' and stage_val.startswith('coding_problem_'):
+        await push_coding_problem(state, transport, getattr(state, 'current_problem_index', 0))
+    if stage_val == 'closing':
+        state.closing_initiated = True
+    logger.info(f"[STAGE] {current.value} -> {stage_val} (forced={forced}, skipped={skipped})")
+
+
+# ---------------------------------------------------------------------------
 # The agent
 # ---------------------------------------------------------------------------
 
 class InterviewAgent(Agent):
-    """Mock interview agent with FSM-based stage management."""
+    """Flow. The FSM is driven by code; the model talks.
 
-    def __init__(self, transport=None, candidate_info=None, track_type='intro'):
-        """Initialize agent with track-aware greeting."""
+    There are no function tools. The 2026-09 audit traced the worst of Flow's
+    behaviour to the tool protocol: the SDK's tool-step cap turned a long
+    chain into a silent turn, and a queued acknowledgement was spoken a turn
+    late. Per candidate turn, `prepare_turn` assesses the answer, updates the
+    coverage ledger, decides the stage, picks one Move and hands the model a
+    short note. See interview_turn.py.
+    """
+
+    def __init__(self, transport=None, candidate_info=None, track_type='intro', assess: Optional[AssessFn] = None):
+        """Start in self_intro. The greeting is one fixed line spoken by code in
+        `on_enter`, so the model's first instructions are the first stage's and
+        the first thing it does is respond to the candidate's introduction.
+        `on_enter` swaps in the fully-resolved instructions once state is bound."""
         self.candidate_info = candidate_info or {}
         self.candidate_name = self.candidate_info.get('name', 'Candidate')
         self.candidate_role = self.candidate_info.get('role', 'this position')
         self.track_type = track_type
+        self._assessor = TurnAssessor(assess or assess_turn_openai)
 
-        if track_type == 'intro':
-            personalized_greeting = WELCOME.greeting.replace(
-                "[CANDIDATE_NAME]", self.candidate_name
-            ).replace("[ROLE]", self.candidate_role)
-            super().__init__(instructions=personalized_greeting)
-        else:
-            # New tracks: brief greeting, questions generated in on_enter
-            from prompts import build_stage_instructions
-            from fsm import BehavioralStage, TechnicalVoiceStage
-            if track_type == 'behavioral':
-                initial_stage = BehavioralStage.GREETING
-            elif track_type == 'coding':
-                initial_stage = CodingStage.GREETING
-            else:
-                initial_stage = TechnicalVoiceStage.GREETING
-            greeting_instructions = build_stage_instructions(initial_stage)
-            greeting_instructions = greeting_instructions.replace('[CANDIDATE_NAME]', self.candidate_name).replace('[ROLE]', self.candidate_role)
-            super().__init__(instructions=greeting_instructions)
+        from fsm import BehavioralStage, TechnicalVoiceStage
+        first_stage = {
+            'behavioral': BehavioralStage.SELF_INTRO,
+            'technical_voice': TechnicalVoiceStage.SELF_INTRO,
+            'coding': CodingStage.SELF_INTRO,
+        }.get(track_type, InterviewStage.SELF_INTRO)
+        instructions = build_stage_instructions(first_stage)
+        instructions = instructions.replace('[CANDIDATE_NAME]', self.candidate_name).replace('[ROLE]', self.candidate_role)
+        super().__init__(instructions=instructions)
         self.transport = transport if transport is not None else NullTransport()
 
-    @function_tool
-    async def transition_stage(
-        self,
-        ctx: RunContext[InterviewState],
-        reason: Annotated[str, Field(description="Brief reason for stage transition")]
-    ) -> str:
-        """Explicit stage transition called by LLM when ready to move forward."""
+    @property
+    def first_name(self) -> str:
+        return (self.candidate_name or 'there').split()[0]
+
+    # -- the turn ---------------------------------------------------------
+
+    async def on_user_turn_completed(self, turn_ctx, new_message) -> None:
+        await self.prepare_turn(turn_ctx, new_message)
+
+    async def prepare_turn(self, turn_ctx, new_message) -> Move:
+        """Decide this turn and leave one `[FLOW MOVE]` note in `turn_ctx`.
+
+        Called by the SDK on the audio path (`on_user_turn_completed`) and by
+        the harness directly, on a copy of the chat context in both cases.
+        Must never raise anything but StopResponse: the SDK swallows other
+        exceptions and skips the reply, which is the silent turn all over again.
+        """
+        state = self.session.userdata
+        text = (getattr(new_message, 'text_content', None) or '').strip()
+        stage_val = state.stage.value
+        if state.closing_spoken:
+            # The interview is over and the room is about to close. Anything
+            # said now is a goodbye; answering it restarts the interview.
+            try:
+                self._chat_ctx.insert(new_message)
+                self.session._conversation_item_added(new_message)
+            except Exception:
+                pass
+            raise StopResponse()
         try:
-            current_stage = ctx.userdata.stage
-            track_type = getattr(ctx.userdata, 'track_type', 'intro')
+            late = self._assessor.take_late()
+            if late is not None:
+                state.ledger.merge(late[0], late[1])
 
-            # Get next stage based on track
-            if track_type == 'behavioral' and hasattr(ctx.userdata, 'get_next_behavioral_stage'):
-                next_stage = ctx.userdata.get_next_behavioral_stage()
-            elif track_type == 'technical_voice' and hasattr(ctx.userdata, 'get_next_technical_voice_stage'):
-                next_stage = ctx.userdata.get_next_technical_voice_stage()
-            elif track_type == 'coding' and hasattr(ctx.userdata, 'get_next_coding_stage'):
-                next_stage = ctx.userdata.get_next_coding_stage()
+            inputs = self._turn_inputs(state)
+            assessment = await self._assessor.finish(AssessInput(
+                track=state.track_type, stage=stage_val,
+                required_signals=stage_required_signals(state.track_type, stage_val, inputs.bank_item),
+                last_question=state.last_question, answer=text,
+                star_relevant=star_applies(state.track_type, stage_val),
+                bank_probes=bank_probes(inputs.bank_item),
+            ))
+            state.ledger.merge(assessment, stage_val)
+
+            reason = should_advance(inputs, state.ledger, assessment)
+            pending = state.pending_move
+            state.pending_move = None
+
+            if reason and (inputs.next_stage in (None, 'closing')):
+                await self._close(state, new_message)
+                raise StopResponse()
+
+            if reason:
+                move = choose_move(inputs, state.ledger, assessment, advance_reason=reason)
+                await advance_to(state, self, self.transport, self._stage_by_value(state, inputs.next_stage))
+            elif pending is not None:
+                # A forced/skipped transition already happened; its opening
+                # question was parked for this reply so it lands with the
+                # candidate's next words rather than as a cold interjection.
+                move = pending
+                move.ack_hint = move.ack_hint or _first_evidence(assessment)
             else:
-                next_stage = ctx.userdata.get_next_stage()
+                move = choose_move(inputs, state.ledger, assessment)
 
-            if not next_stage:
-                return f"Cannot transition from {current_stage.value} - interview complete"
-
-            time_in_stage = ctx.userdata.time_in_current_stage()
-
-            # Minimum time gates — relaxed for new tracks (greeting is brief)
-            if track_type == 'intro':
-                MIN_TIMES = {
-                    InterviewStage.WELCOME: 0,
-                    InterviewStage.SELF_INTRO: 30,
-                    InterviewStage.PAST_EXPERIENCE: 45,
-                    InterviewStage.COMPANY_FIT: 30,
-                }
-                min_time = MIN_TIMES.get(current_stage, 0)
-            else:
-                min_time = 0  # New tracks: agent decides when ready
-
-            if min_time > 0 and time_in_stage < min_time:
-                return (
-                    f"Please spend more time in this stage. "
-                    f"Current: {time_in_stage:.0f}s, Minimum: {min_time}s"
-                )
-
-            ctx.userdata.transition_to(next_stage, forced=False, skipped=False)
-
-            sync_stage_pointers(ctx.userdata, next_stage)
-
-            stage_instructions = self._get_stage_instructions(ctx.userdata, next_stage)
-            await self.update_instructions(stage_instructions)
-
-            logger.info(
-                f"[AGENT] Stage transition: {current_stage.value} -> {next_stage.value} "
-                f"(reason: {reason}, time_in_stage: {time_in_stage:.1f}s)"
-            )
-
-            await self._emit_stage_change(next_stage)
-
-            acknowledgement = get_transition_ack(
-                next_stage,
-                self.candidate_name,
-                ctx.userdata.job_role or 'this position'
-            )
-
-            # Detect closing for any track
-            is_closing = (next_stage.value == 'closing')
-
-            if is_closing:
-                ctx.userdata.closing_initiated = True
-                return (
-                    f"Stage transitioned to closing. "
-                    f"You MUST now deliver your closing remarks. Say: '{acknowledgement}' "
-                    f"Do NOT ask any more questions."
-                )
-            else:
-                if acknowledgement:
-                    ctx.userdata.pending_acknowledgement = acknowledgement
-                    ctx.userdata.pending_ack_stage = next_stage.value
-                    logger.info(f"[AGENT] Queued transition acknowledgement for {next_stage.value}")
-
-                return (
-                    f"Stage transitioned to {next_stage.value}. "
-                    f"Start your next response by acknowledging the stage change."
-                )
-
+            # The same honest line twice in a row reads as a glitch; the
+            # assessor occasionally re-tags a thank-you as another question.
+            if move.preface and move.preface == getattr(state, 'last_preface', ''):
+                move.preface = ''
+            state.last_preface = move.preface
+            if move.question:
+                state.last_question = move.question
+                state.questions_asked.append(move.question)
+            note = render_move_note(move)
+            logger.info(f"[TURN] stage={state.stage.value} move={move.kind} reason={move.reason} advance={reason}")
+        except StopResponse:
+            raise
         except Exception as e:
-            logger.error(f"[AGENT] Transition error: {e}", exc_info=True)
-            return f"Error during transition: {str(e)}"
+            logger.error(f"[TURN] prepare_turn failed, using the safe note: {e}", exc_info=True)
+            note = SAFE_NOTE
+            move = Move(kind='focus', focus='what they just said', reason='safe_note')
+        turn_ctx.add_message(role='assistant', content=note)
+        return move
+
+    def _turn_inputs(self, state: InterviewState) -> TurnInputs:
+        stage_val = state.stage.value
+        nxt = next_stage_for(state)
+        return TurnInputs(
+            track=state.track_type, stage=stage_val,
+            depth=getattr(state, 'depth_setting', 'medium') or 'medium',
+            time_status=state.get_time_status(),
+            bank_item=bank_item_for(state, state.stage),
+            next_bank_item=bank_item_for(state, nxt) if nxt else None,
+            next_stage=nxt.value if nxt else None,
+            last_question=state.last_question,
+            questions_asked=list(state.questions_asked),
+            experience_level=state.experience_level or 'mid',
+        )
+
+    @staticmethod
+    def _stage_by_value(state: InterviewState, value: str):
+        stage = state.get_stage_by_name(value)
+        if stage is None:
+            raise ValueError(f"no stage {value!r} on this track")
+        return stage
+
+    async def _close(self, state: InterviewState, new_message) -> None:
+        """End the interview: one scripted utterance spoken by code, no model turn."""
+        closing = state.get_stage_by_name('closing')
+        if closing is not None and state.stage != closing:
+            await advance_to(state, self, self.transport, closing)
+        # Keep the candidate's last words in the transcript even though no
+        # reply is generated for them (mirrors what the SDK does on a reply).
+        try:
+            self._chat_ctx.insert(new_message)
+            self.session._conversation_item_added(new_message)
+        except Exception as e:
+            logger.debug(f"[CLOSE] could not record final user turn: {e}")
+        utterance = build_closing_utterance(state.ledger, self.first_name, state.track_type)
+        state.closing_spoken = True
+        self.session.say(utterance, allow_interruptions=False)
+        logger.info("[CLOSE] closing utterance scheduled")
 
     def _get_stage_instructions(self, state: InterviewState, stage) -> str:
         """Build personalized stage instructions with track-aware document context."""
@@ -550,18 +696,20 @@ class InterviewAgent(Agent):
         else:
             base_instructions = base_instructions.replace(placeholder, "")
 
+        base_instructions = base_instructions.replace('{topics_hint}', topics_str)
+
         role_context = build_role_context(
             state.job_role or "this position",
             state.experience_level or "mid"
         )
-        personality_note = build_personality_note(
+        candidate_note = build_candidate_note(
             self.candidate_name,
             state.job_role or "a technical position",
-            state.experience_level or "mid-level",
+            state.experience_level or "mid",
             role_context
         )
 
-        return base_instructions + personality_note
+        return base_instructions + candidate_note
 
     async def _emit_stage_change(self, new_stage: InterviewStage):
         """Emit stage change event to the UI."""
@@ -574,414 +722,60 @@ class InterviewAgent(Agent):
         except Exception as e:
             logger.error(f"[UI] Failed to emit stage change: {e}")
 
-    @function_tool
-    async def ask_question(
-        self,
-        ctx: RunContext[InterviewState],
-        question: Annotated[str, Field(description="The exact question you want to ask")]
-    ) -> str:
-        """Validate and track questions before asking to prevent repetition."""
+    # -- priming the assessment from interim transcripts ----------------------
+
+    def _on_user_transcribed(self, event) -> None:
+        """Start assessing while the candidate is still talking.
+
+        The assessment call takes ~1.8 s warm; the endpointing delay is 0.8 s+.
+        Starting on the last interim usually means the answer is already read
+        by the time the turn ends. On the final we re-prime only if the text
+        moved a lot, so the in-flight call is reused, not thrown away.
+        """
         try:
-            current_stage = ctx.userdata.stage.value
-            stage_questions = ctx.userdata.questions_per_stage.get(current_stage, 0)
-            # Track-aware, via the state's own override. Reading the intro
-            # STAGE_MIN_QUESTIONS directly reported a default of 2 for every
-            # stage it did not know — including coding_problem_1 and greeting,
-            # whose real minimum is 0 — so the model was told to keep asking
-            # while `assess_response`, which does go through get_question_status,
-            # told it the opposite in the same turn.
-            minimum = ctx.userdata.get_question_status()['minimum']
-
-            pending_ack = None
-            should_clear_ack = False
-
-            if ctx.userdata.pending_acknowledgement and not ctx.userdata.transition_acknowledged:
-                pending_ack = ctx.userdata.pending_acknowledgement
-                pending_stage = ctx.userdata.pending_ack_stage
-
-                if current_stage == pending_stage:
-                    should_clear_ack = True
-
-            time_status = ctx.userdata.get_time_status()
-            time_remaining_pct = time_status['remaining_pct']
-            remaining_sec = time_status['remaining_seconds']
-
-            normalized = question.lower().strip().rstrip('?.,!')
-
-            for asked in ctx.userdata.questions_asked:
-                asked_normalized = asked.lower().strip().rstrip('?.,!')
-                if normalized == asked_normalized or normalized in asked_normalized or asked_normalized in normalized:
-                    return f"You already asked a similar question: '{asked}'. Please ask something different."
-
-            ctx.userdata.questions_asked.append(question)
-            ctx.userdata.questions_per_stage[current_stage] = stage_questions + 1
-            new_count = stage_questions + 1
-
-            logger.info(f"[AGENT] Approved question #{len(ctx.userdata.questions_asked)} ({new_count}/{minimum} in {current_stage})")
-
-            response = f"Question approved ({new_count}/{minimum}). Time: {time_remaining_pct:.0f}% ({remaining_sec:.0f}s). "
-
-            if new_count >= minimum:
-                if time_remaining_pct <= 25:
-                    response += "MINIMUM MET + TIME LOW. Transition soon. "
-                else:
-                    response += "Minimum met. May transition when ready. "
-            else:
-                response += f"Need {minimum - new_count} more. "
-
-            response += f"Now ask: '{question}'"
-
-            if pending_ack:
-                response = f"STAGE TRANSITION - First say: \"{pending_ack}\" Then ask your question.\n\n{response}"
-                if should_clear_ack:
-                    ctx.userdata.transition_acknowledged = True
-                    ctx.userdata.pending_acknowledgement = None
-                    ctx.userdata.pending_ack_stage = None
-
-            return response
-
+            state = self.session.userdata
+            text = (getattr(event, 'transcript', '') or '').strip()
+            if not text:
+                return
+            stage_val = state.stage.value
+            bank = bank_item_for(state, state.stage)
+            self._assessor.prime(AssessInput(
+                track=state.track_type, stage=stage_val,
+                required_signals=stage_required_signals(state.track_type, stage_val, bank),
+                last_question=state.last_question, answer=text,
+                star_relevant=star_applies(state.track_type, stage_val),
+                bank_probes=bank_probes(bank),
+            ))
         except Exception as e:
-            logger.error(f"[AGENT] Question validation error: {e}", exc_info=True)
-            return "Error validating question. Please try again."
+            logger.debug(f"[TURN] prime failed (non-fatal): {e}")
 
-    @function_tool
-    async def assess_response(
-        self,
-        ctx: RunContext[InterviewState],
-        depth_score: Annotated[int, Field(description="Response depth: 1=vague, 2=surface, 3=adequate, 4=detailed, 5=comprehensive")],
-        key_points_covered: Annotated[list[str], Field(description="Key points mentioned")]
-    ) -> str:
-        """Assess response quality and provide guidance."""
-        try:
-            current_stage = ctx.userdata.stage
-
-            response_summary = f"Depth: {depth_score}/5. Points: {', '.join(key_points_covered)}"
-            ctx.userdata.experience_responses.append(response_summary)
-
-            pending_ack = None
-            if ctx.userdata.pending_acknowledgement and not ctx.userdata.transition_acknowledged:
-                pending_ack = ctx.userdata.pending_acknowledgement
-
-            q_status = ctx.userdata.get_question_status()
-            time_status = ctx.userdata.get_time_status()
-
-            time_remaining_pct = time_status['remaining_pct']
-            remaining_sec = time_status['remaining_seconds']
-            met_minimum = q_status['met_minimum']
-
-            logger.info(
-                f"[AGENT] Response assessment - Stage: {current_stage.value}, "
-                f"Depth: {depth_score}/5, Questions: {q_status['asked']}/{q_status['minimum']}"
-            )
-
-            status_line = f"[STATUS] Q: {q_status['asked']}/{q_status['minimum']} | Time: {time_remaining_pct:.0f}% ({remaining_sec:.0f}s)"
-
-            if time_remaining_pct <= 10:
-                guidance = f"{status_line}\nTIME CRITICAL: Transition NOW."
-            elif met_minimum and time_remaining_pct <= 25:
-                guidance = f"{status_line}\nMinimum met + time low. TRANSITION NOW."
-            elif met_minimum and depth_score >= 3:
-                guidance = f"{status_line}\nGood response + minimum met. Consider transitioning."
-            elif depth_score >= 4:
-                guidance = f"{status_line}\nExcellent response (depth {depth_score}/5)."
-            elif depth_score <= 2 and not met_minimum:
-                guidance = f"{status_line}\nBrief response. Ask follow-up for more context."
-            else:
-                guidance = f"{status_line}\nContinue with next question."
-
-            if pending_ack:
-                guidance = f"STAGE CHANGE: First say: \"{pending_ack}\" Then proceed.\n\n{guidance}"
-
-            return guidance
-
-        except Exception as e:
-            logger.error(f"[AGENT] Response assessment error: {e}", exc_info=True)
-            return "Error assessing response. Continue naturally."
-
-    @function_tool
-    async def generate_interview_questions(
-        self,
-        ctx: RunContext[InterviewState],
-        count: Annotated[int, Field(description="Number of main questions to generate (2 for light, 3 for medium/deep)")]
-    ) -> str:
-        """Generate interview questions via LLM based on track, framework, and candidate context. Call this ONCE at the start of the interview."""
-        # The runtime already builds the bank before the interview starts, so
-        # this is normally a no-op that tells the model to get on with it. It
-        # stays callable because the prompts still advertise it, and because a
-        # generation that failed at startup deserves a second chance.
-        if _has_questions(ctx.userdata):
-            return "Questions are already prepared. Call get_current_question, or transition_stage when ready."
-        return await generate_questions_for(ctx.userdata, count=count)
-
-    @function_tool
-    async def get_current_question(
-        self,
-        ctx: RunContext[InterviewState]
-    ) -> str:
-        """Get the main question for the current stage. Call this when entering a new question stage."""
-        try:
-            track_type = getattr(ctx.userdata, 'track_type', 'intro')
-            stage_val = ctx.userdata.stage.value if hasattr(ctx.userdata.stage, 'value') else ''
-
-            if track_type == 'behavioral' and stage_val.startswith('behavioral_q'):
-                idx = getattr(ctx.userdata, 'current_question_index', 0)
-                questions = getattr(ctx.userdata, 'generated_questions', [])
-                if not questions:
-                    return "No questions generated yet. Ask a general behavioral question based on the framework."
-                if idx >= len(questions):
-                    return "All questions covered. Transition to closing."
-                q = questions[idx]
-                return (
-                    f"Main question: \"{q.get('main_question', 'Tell me about a relevant experience.')}\"\n"
-                    f"Competency: {q.get('competency', 'General')}\n"
-                    f"Follow-up probes if needed: {q.get('follow_up_probes', [])}"
-                )
-
-            elif track_type == 'technical_voice' and 'technical_concepts' in stage_val:
-                # technical_concepts_1 -> index 0, etc.
-                try:
-                    idx = int(stage_val.split('_')[-1]) - 1
-                except (ValueError, IndexError):
-                    idx = 0
-                all_q = getattr(ctx.userdata, 'generated_questions', [])
-                if not all_q or idx >= len(all_q):
-                    return "No questions available for this topic. Ask general conceptual questions."
-                topic_data = all_q[idx]
-                topic = topic_data.get('topic', 'this topic')
-                questions = topic_data.get('questions', [])
-                return (
-                    f"Topic: {topic}\n"
-                    f"Questions to ask: {questions}\n"
-                    f"Ask them one at a time, adapting based on responses."
-                )
-            elif track_type == 'coding' and stage_val.startswith('coding_problem_'):
-                idx = getattr(ctx.userdata, 'current_problem_index', 0)
-                problems = getattr(ctx.userdata, 'generated_problems', [])
-                if not problems or idx >= len(problems):
-                    return "No problems generated yet. Generate problems first with generate_interview_questions."
-                problem = problems[idx]
-                attempts_done = ctx.userdata.get_attempts_for_problem(idx) if hasattr(ctx.userdata, 'get_attempts_for_problem') else 0
-                max_attempts = 3
-
-                # Emit problem to frontend via data channel
-                try:
-                    asyncio.create_task(self.transport.emit({
-                        'type': 'coding_problem',
-                        'problem': problem,
-                        'problem_index': idx,
-                        'attempt_number': attempts_done + 1,
-                        'max_attempts': max_attempts,
-                        'time_limit_minutes': problem.get('time_limit_minutes', 15),
-                    }))
-                    logger.info(f"[AGENT] Emitted coding problem {idx} to frontend")
-                except Exception as emit_err:
-                    logger.warning(f"[AGENT] Failed to emit problem to UI: {emit_err}")
-
-                examples_str = '\n'.join([
-                    f"  Input: {ex.get('input', '')} -> Output: {ex.get('output', '')}"
-                    for ex in problem.get('examples', [])[:2]
-                ])
-                return (
-                    f"Problem {idx + 1}: {problem.get('title', 'Untitled')}\n"
-                    f"Description: {problem.get('description', '')}\n"
-                    f"Examples:\n{examples_str}\n"
-                    f"Constraints: {', '.join(problem.get('constraints', []))}\n"
-                    f"Time limit: {problem.get('time_limit_minutes', 15)} minutes\n"
-                    f"Attempt: {attempts_done + 1} of {max_attempts}\n"
-                    f"Problem has been sent to the candidate's editor."
-                )
-            else:
-                return "get_current_question is only for behavioral_q, technical_concepts, and coding_problem stages."
-        except Exception as e:
-            logger.error(f"[AGENT] get_current_question error: {e}", exc_info=True)
-            return "Error getting question. Proceed with a general question."
-
-    @function_tool
-    async def record_response(
-        self,
-        ctx: RunContext[InterviewState],
-        response_summary: Annotated[str, Field(description="Brief summary of candidate's key points")]
-    ) -> str:
-        """Record key points from candidate's response."""
-        try:
-            ctx.userdata.experience_responses.append(response_summary)
-            logger.info(f"[AGENT] Recorded response: {response_summary[:100]}...")
-            return "Response recorded. Continue naturally."
-        except Exception as e:
-            logger.error(f"[AGENT] Record response error: {e}", exc_info=True)
-            return "Error recording response"
-
-    @function_tool
-    async def evaluate_code_submission(
-        self,
-        ctx: RunContext[InterviewState],
-        problem_index: Annotated[int, Field(description="0-based index of the problem being evaluated")],
-        code: Annotated[str, Field(description="The candidate's submitted code")],
-        language: Annotated[str, Field(description="Programming language used")]
-    ) -> str:
-        """Evaluate submitted code using a separate LLM call. Call when code is submitted or timer expires."""
-        try:
-            from prompts import CODE_EVALUATOR
-            import json as _json
-
-            problems = getattr(ctx.userdata, 'generated_problems', [])
-            if not problems or problem_index >= len(problems):
-                return "No problem found for this index. Proceed naturally."
-
-            problem = problems[problem_index]
-
-            user_prompt = CODE_EVALUATOR.user_template.format(
-                problem_title=problem.get('title', 'Coding Problem'),
-                problem_description=problem.get('description', ''),
-                problem_examples=str(problem.get('examples', [])),
-                problem_constraints=', '.join(problem.get('constraints', [])),
-                language=language,
-                code=code,
-            )
-
-            # Ground the evaluation in OBJECTIVE test results when the problem
-            # ships test cases and hosted execution (Piston) is enabled. The LLM
-            # then judges approach/quality on top of real pass/fail.
-            objective_summary = None
-            try:
-                from coding.piston_runner import PISTON_ENABLED, run_via_piston
-                test_cases = problem.get('test_cases')
-                entrypoint = problem.get('entrypoint')
-                if PISTON_ENABLED and test_cases and entrypoint and language.lower().startswith('py'):
-                    # Off the event loop: run_via_piston is a blocking urlopen
-                    # with a 12s timeout, and this runs mid-interview. Left on
-                    # the loop it freezes STT, TTS and VAD for its duration.
-                    run = await asyncio.to_thread(
-                        run_via_piston, code, entrypoint, test_cases, language='python')
-                    if run.get('error') is None:
-                        objective_summary = f"{run['passed']}/{run['total']} hidden test cases passed"
-                        user_prompt += (
-                            f"\n\nOBJECTIVE TEST RESULTS (ground truth — weight correctness on this): "
-                            f"{objective_summary}."
-                        )
-                    else:
-                        logger.info(f"[CODE] Piston run skipped/failed: {run.get('error')}")
-            except Exception as exec_err:
-                logger.warning(f"[CODE] Objective execution error (continuing with LLM-only): {exec_err}")
-
-            # AsyncOpenAI, not OpenAI: the blocking client stalled the audio
-            # pipeline for the length of the completion.
-            import openai as _openai
-            client = _openai.AsyncOpenAI(api_key=_openai_api_key())
-            response = await client.chat.completions.create(
-                model='gpt-4o-mini',
-                messages=[
-                    {'role': 'system', 'content': CODE_EVALUATOR.system},
-                    {'role': 'user', 'content': user_prompt}
-                ],
-                temperature=0.3,
-                max_tokens=600,
-            )
-
-            raw = response.choices[0].message.content.strip()
-            evaluation = _json.loads(raw)
-
-            # Record submission in state
-            attempt_num = 1
-            if hasattr(ctx.userdata, 'record_submission'):
-                attempt_num = ctx.userdata.record_submission(problem_index, code, language, evaluation)
-
-            # Emit evaluation result to frontend. max_attempts is bound before
-            # the try because the code after this block reads it; inside the
-            # try it was one raised import away from being unbound.
-            max_attempts = 3
-            try:
-                await self.transport.emit({
-                    'type': 'evaluation_result',
-                    'evaluation': evaluation,
-                    'attempt': attempt_num,
-                    'max_attempts': max_attempts,
-                    'problem_index': problem_index,
-                    'objective_tests': objective_summary,
-                })
-            except Exception as emit_err:
-                logger.warning(f"[AGENT] Failed to emit evaluation to UI: {emit_err}")
-
-            # Persist the submission. Not "fire and forget" as the old comment
-            # claimed and not HTTP — it is a synchronous psycopg write, so it
-            # goes to a thread rather than blocking the interview on the pool.
-            try:
-                from supabase_client import supabase_client
-                user_id = getattr(ctx.userdata, '_user_id', None)
-                interview_id = getattr(ctx.userdata, '_interview_id', None)
-                if user_id and interview_id:
-                    await asyncio.to_thread(
-                        supabase_client.save_coding_submission,
-                        user_id=user_id,
-                        interview_id=interview_id,
-                        problem_title=problem.get('title', 'Coding Problem'),
-                        problem_description=problem.get('description', ''),
-                        language=language,
-                        code_submitted=code,
-                        attempt_number=attempt_num,
-                        evaluation_result=evaluation,
-                    )
-            except Exception as db_err:
-                logger.warning(f"[AGENT] Failed to save submission to DB: {db_err}")
-
-            verbal_feedback = evaluation.get('brief_verbal_feedback', 'Interesting approach. Let me share some observations.')
-            if objective_summary:
-                verbal_feedback = f"{verbal_feedback} ({objective_summary})"
-            logger.info(f"[AGENT] Code evaluated: correctness={evaluation.get('correctness')}, approach={evaluation.get('approach_quality')}, tests={objective_summary}")
-
-            attempts_remaining = max_attempts - attempt_num
-            if attempts_remaining > 0 and evaluation.get('correctness') != 'pass':
-                return f"Evaluation complete. Verbal feedback: {verbal_feedback}\nAttempts remaining: {attempts_remaining}. Ask if they want to revise."
-            else:
-                return f"Evaluation complete. Verbal feedback: {verbal_feedback}\nNo more attempts for this problem. Transition when ready."
-
-        except Exception as e:
-            logger.error(f"[AGENT] evaluate_code_submission error: {e}", exc_info=True)
-            return "Could not evaluate code automatically. Give feedback based on what you observed of their approach."
-
-    @function_tool
-    async def skip_coding_problem(
-        self,
-        ctx: RunContext[InterviewState]
-    ) -> str:
-        """Skip the current coding problem and move to the next one or closing."""
-        try:
-            current_stage = ctx.userdata.stage
-            current_idx = getattr(ctx.userdata, 'current_problem_index', 0)
-
-            # Mark as skipped
-            if hasattr(ctx.userdata, 'skipped_problems'):
-                ctx.userdata.skipped_problems.append(current_idx)
-            ctx.userdata.coding_stage_active = False
-
-            logger.info(f"[AGENT] Skipping coding problem {current_idx} at stage {current_stage.value}")
-            return "Problem skipped. Now call transition_stage to move to the next problem or closing."
-
-        except Exception as e:
-            logger.error(f"[AGENT] skip_coding_problem error: {e}", exc_info=True)
-            return "Error skipping problem. Call transition_stage manually."
+    # -- lifecycle ----------------------------------------------------------
 
     async def on_enter(self):
-        """Called when agent becomes active."""
+        """Speak the fixed greeting and hand the floor to the candidate.
+
+        Deliberately not `generate_reply()`: the audit found the model-written
+        greeting was non-deterministic (sometimes skipped, sometimes doubled,
+        sometimes narrated the FSM), and the stage walkthrough it used to carry
+        now lives in the pre-join panel. One line, always the same, then wait.
+        """
         logger.info(f"[AGENT] on_enter() called for candidate: {self.candidate_name}, track: {self.track_type}")
-        if self.track_type == 'intro':
-            # Original behavior: LLM generates the greeting
-            logger.info("[AGENT] Triggering intro greeting generation...")
-            self.session.generate_reply()
-        else:
-            # New tracks: Play cached welcome audio, then LLM takes over
-            audio_bytes = get_welcome_audio_bytes(self.track_type)
-            if audio_bytes:
-                try:
-                    logger.info(f"[AGENT] Playing cached welcome audio for track: {self.track_type}")
-                    await self.session.say(get_welcome_script(self.track_type), allow_interruptions=False)
-                except Exception as e:
-                    logger.warning(f"[AGENT] Failed to play cached audio, using LLM: {e}")
-                    self.session.generate_reply()
-            else:
-                # No cached audio: LLM generates greeting
-                logger.warning(f"[AGENT] No cached audio for track {self.track_type}, using LLM greeting")
-                self.session.generate_reply()
+        state = getattr(self.session, 'userdata', None)
+        if state is not None:
+            try:
+                await self.update_instructions(self._get_stage_instructions(state, state.stage))
+            except Exception as e:
+                logger.warning(f"[AGENT] Could not resolve first-stage instructions: {e}")
+            try:
+                await self._emit_stage_change(state.stage)
+            except Exception as e:
+                logger.warning(f"[AGENT] Could not emit initial stage: {e}")
+        try:
+            self.session.on("user_input_transcribed", self._on_user_transcribed)
+        except Exception as e:
+            logger.debug(f"[AGENT] could not subscribe to interim transcripts: {e}")
+        self._assessor.warm_up()
+        await self.session.say(get_greeting_line(self.track_type), allow_interruptions=False)
 
     async def on_exit(self):
         """Called when agent is deactivated."""
@@ -1000,99 +794,115 @@ async def emit_user_caption(transport: "Transport", text: str):
         logger.error(f"[UI] Failed to emit user caption: {e}")
 
 
-async def _async_skip_coding_problem(interview_state, transport, session):
-    """Handle skip_coding_problem: advance to next problem or closing."""
-    try:
-        from fsm import CodingStage
-        current_idx = getattr(interview_state, 'current_problem_index', 0)
-        problems = getattr(interview_state, 'generated_problems', [])
-        active_count = getattr(interview_state, 'active_problem_count', len(problems))
+def opening_move_for(state: InterviewState) -> Move:
+    """The first question of the stage the state is now in."""
+    stage_val = state.stage.value
+    inputs = TurnInputs(
+        track=state.track_type, stage=stage_val,
+        depth=getattr(state, 'depth_setting', 'medium') or 'medium',
+        bank_item=bank_item_for(state, state.stage),
+        questions_asked=list(state.questions_asked),
+        experience_level=state.experience_level or 'mid',
+    )
+    return first_move_for_stage(inputs, state.ledger)
 
-        next_idx = current_idx + 1
-        if next_idx < active_count and next_idx < len(problems):
-            # Push next problem
-            interview_state.current_problem_index = next_idx
-            problem = problems[next_idx]
-            attempts_done = (
-                interview_state.get_attempts_for_problem(next_idx)
-                if hasattr(interview_state, 'get_attempts_for_problem') else 0
-            )
-            await transport.emit({
-                'type': 'coding_problem',
-                'problem': problem,
-                'problem_index': next_idx,
-                'attempt_number': attempts_done + 1,
-                'max_attempts': 3,
-                'time_limit_minutes': problem.get('time_limit_minutes', 15),
-            }, reliable=True)
-            logger.info(f"[CODE] Skipped to problem {next_idx}: {problem.get('title', '?')}")
-        else:
-            # Move to closing
-            interview_state.stage = CodingStage.CLOSING
-            interview_state.coding_stage_active = False
-            await transport.emit({'type': 'stage_update', 'stage': 'closing'}, reliable=True)
-            if session:
-                try:
-                    await session.say("Great work on the coding problems. Let's wrap up.", allow_interruptions=True)
-                except Exception:
-                    pass
-            logger.info("[CODE] All problems done, moved to closing")
+
+async def speak_closing(state: InterviewState, agent: "InterviewAgent", session, transport: "Transport") -> None:
+    """Enter closing and say the one scripted line. Idempotent."""
+    closing = state.get_stage_by_name('closing')
+    if closing is not None and state.stage != closing:
+        await advance_to(state, agent, transport, closing)
+    if state.closing_spoken:
+        return
+    state.closing_spoken = True
+    utterance = build_closing_utterance(state.ledger, agent.first_name, state.track_type)
+    try:
+        await session.say(utterance, allow_interruptions=False)
+    except Exception as e:
+        logger.warning(f"[CLOSE] say failed: {e}")
+
+
+async def ask_opening_question(state: InterviewState, agent: "InterviewAgent", session, *, reason: str) -> None:
+    """After a skip or a timer-forced transition: the next thing Flow says is
+    the new stage's first question, produced by the model from a MOVE note.
+    Never a canned acknowledgement."""
+    move = opening_move_for(state)
+    move.reason = reason
+    if move.question:
+        state.last_question = move.question
+        state.questions_asked.append(move.question)
+    state.pending_move = None
+    try:
+        session.generate_reply(instructions=render_move_note(move), allow_interruptions=True)
+    except Exception as e:
+        logger.warning(f"[STAGE] generate_reply after {reason} failed: {e}")
+
+
+async def _async_skip_coding_problem(interview_state, transport, session, agent=None):
+    """Handle skip_coding_problem: the next problem, or closing."""
+    try:
+        idx = getattr(interview_state, 'current_problem_index', 0)
+        if hasattr(interview_state, 'skipped_problems') and idx not in interview_state.skipped_problems:
+            interview_state.skipped_problems.append(idx)
+        await advance_after_problem(interview_state, agent, session, transport)
     except Exception as e:
         logger.error(f"[CODE] _async_skip_coding_problem failed: {e}", exc_info=True)
 
 
-async def _async_handle_ready_for_problem(interview_state, transport):
-    """Handle ready_for_problem signal: generate problems if needed, then push to frontend."""
-    import json as _json
-    try:
-        # Generate problems on-demand if not yet generated
-        if not getattr(interview_state, 'generated_problems', None):
-            logger.info("[CODING] Generating problems on-demand for ready_for_problem")
-            try:
-                import openai as _openai
-                from prompts import QUESTION_GENERATION
-                _client = _openai.AsyncOpenAI(api_key=_openai_api_key())
-                role = getattr(interview_state, 'job_role', 'Software Engineer')
-                level = getattr(interview_state, 'experience_level', 'mid')
-                count = getattr(interview_state, 'active_problem_count', 1)
-                difficulty = 'easy' if level in ('entry', 'junior') else ('hard' if level in ('senior', 'lead') else 'medium')
-                resp = await _client.chat.completions.create(
-                    model='gpt-4o-mini',
-                    messages=[
-                        {'role': 'system', 'content': QUESTION_GENERATION.coding_system},
-                        {'role': 'user', 'content': f'Generate {count} {difficulty} coding problem(s) for a {level} {role}. Return valid JSON only.'}
-                    ],
-                    temperature=0.7,
-                    max_tokens=1500,
-                )
-                raw = resp.choices[0].message.content.strip()
-                if raw.startswith('```'):
-                    raw = raw.split('\n', 1)[1].rsplit('```', 1)[0]
-                parsed = _json.loads(raw)
-                interview_state.generated_problems = parsed.get('problems', [])
-                interview_state.active_problem_count = min(len(interview_state.generated_problems), count)
-                logger.info(f"[CODING] Generated {len(interview_state.generated_problems)} problems on-demand")
-            except Exception as _e:
-                logger.error(f"[CODING] Problem generation failed: {_e}")
-                interview_state.generated_problems = []
+async def advance_after_problem(state, agent, session, transport) -> None:
+    """A problem is finished (passed, skipped, out of attempts, or timed out):
+    push the next one, or close. Driven by the problem index, not the stage,
+    so a submit that races a stage change still lands on the right problem.
+    advance_to pushes the problem itself."""
+    idx = getattr(state, 'current_problem_index', 0)
+    active = getattr(state, 'active_problem_count', 0)
+    problems = getattr(state, 'generated_problems', []) or []
+    nxt = None
+    if idx + 1 < active and idx + 1 < len(problems):
+        nxt = state.get_stage_by_name(f'coding_problem_{idx + 2}')
+    if nxt is None:
+        await speak_closing(state, agent, session, transport)
+        return
+    await advance_to(state, agent, transport, nxt)
+    if session is not None:
+        try:
+            title = (bank_item_for(state, state.stage) or {}).get('title', 'the next problem')
+            await session.say(f"Next one's in your editor: {title}. Take a minute to read it, then talk me through your approach.",
+                              allow_interruptions=True)
+        except Exception as e:
+            logger.warning(f"[CODE] say failed: {e}")
 
-        # Push first problem to frontend
-        problems = getattr(interview_state, 'generated_problems', [])
-        if problems:
-            problem = problems[0]
-            interview_state.current_problem_index = 0
-            interview_state.coding_stage_active = True
-            await transport.emit({
-                'type': 'coding_problem',
-                'problem': problem,
-                'problem_index': 0,
-                'attempt_number': 1,
-                'max_attempts': 3,
-                'time_limit_minutes': problem.get('time_limit_minutes', 15),
-            }, reliable=True)
-            logger.info(f"[CODING] Pushed problem to frontend: {problem.get('title', '?')}")
+
+async def _async_handle_ready_for_problem(interview_state, transport, agent=None, session=None):
+    """The candidate clicked "I'm Ready".
+
+    Gated on stage: before the problems (self_intro / warm_up) it starts problem
+    1; during a problem it re-pushes the current one (a reload); at any other
+    time it is ignored. The audit found the old handler honoured the click in
+    the greeting, pushed problem 1, and then Flow ran the intro script anyway
+    and re-read problem 1 later as if new.
+    """
+    try:
+        if not getattr(interview_state, 'generated_problems', None):
+            await ensure_questions_generated(interview_state)
+        if not getattr(interview_state, 'generated_problems', None):
+            logger.warning("[CODING] ready_for_problem but no problems in the bank")
+            return
+        stage_val = interview_state.stage.value
+        if stage_val in ('self_intro', 'warm_up'):
+            first = interview_state.get_stage_by_name('coding_problem_1')
+            await advance_to(interview_state, agent, transport, first)
+            if session is not None:
+                title = (bank_item_for(interview_state, interview_state.stage) or {}).get('title', 'the first problem')
+                try:
+                    await session.say(f"It's in your editor: {title}. Read it through, then tell me how you'd approach it before you write anything.",
+                                      allow_interruptions=True)
+                except Exception as e:
+                    logger.warning(f"[CODING] say failed: {e}")
+        elif stage_val.startswith('coding_problem_'):
+            await push_coding_problem(interview_state, transport, getattr(interview_state, 'current_problem_index', 0))
         else:
-            logger.warning("[CODING] No problems to push after generation attempt")
+            logger.info(f"[CODING] ready_for_problem ignored in stage {stage_val}")
     except Exception as e:
         logger.error(f"[CODING] _async_handle_ready_for_problem failed: {e}", exc_info=True)
 
@@ -1112,41 +922,16 @@ async def execute_skip_transition(
     agent: InterviewAgent,
     transport: "Transport"
 ):
-    """Execute a skip transition directly without relying on LLM tool calls."""
+    """The Skip button. Advance, then have the model ask the new stage's first
+    question. No canned acknowledgement: the audit found those spoke the full
+    name and narrated the FSM."""
     try:
-        current_stage = interview_state.stage
-        logger.info(f"[SKIP] Executing forced skip: {current_stage.value} -> {target_stage.value}")
-
-        interview_state.transition_to(target_stage, forced=False, skipped=True)
-        sync_stage_pointers(interview_state, target_stage)
-
-        stage_instructions = agent._get_stage_instructions(interview_state, target_stage)
-        await agent.update_instructions(stage_instructions)
-
-        try:
-            await transport.emit({
-                "type": "stage_change",
-                "stage": target_stage.value,
-            })
-            logger.info(f"[SKIP] UI notified of stage change to {target_stage.value}")
-        except Exception as e:
-            logger.error(f"[SKIP] Failed to emit stage change: {e}")
-
-        ack = get_transition_ack(
-            target_stage,
-            agent.candidate_name,
-            interview_state.job_role or 'this position'
-        )
-
-        if ack:
-            logger.info(f"[SKIP] Delivering acknowledgement: {ack[:50]}...")
-            try:
-                await session.say(ack, allow_interruptions=False)
-            except Exception as e:
-                logger.warning(f"[SKIP] Failed to deliver acknowledgement: {e}")
-
-        logger.info(f"[SKIP] Skip transition complete to {target_stage.value}")
-
+        logger.info(f"[SKIP] {interview_state.stage.value} -> {target_stage.value}")
+        await advance_to(interview_state, agent, transport, target_stage, skipped=True)
+        if target_stage.value == 'closing':
+            await speak_closing(interview_state, agent, session, transport)
+            return
+        await ask_opening_question(interview_state, agent, session, reason='skip')
     except Exception as e:
         logger.error(f"[SKIP] Error executing skip transition: {e}", exc_info=True)
 
@@ -1183,15 +968,56 @@ async def _evaluate_code_async(
             code=code,
         )
 
-        response = await client.chat.completions.create(
-            model='gpt-4o-mini',
-            messages=[
-                {'role': 'system', 'content': CODE_EVALUATOR.system},
-                {'role': 'user', 'content': user_prompt}
-            ],
-            temperature=0.3,
-            max_tokens=600,
-        )
+        # Ground the evaluation in OBJECTIVE test results when the problem
+        # ships test cases and hosted execution (Piston) is enabled. This used
+        # to live only in the model-called tool; the editor's submit path never
+        # ran it. There is one evaluation path now, and this is it.
+        objective_summary = None
+        try:
+            from coding.piston_runner import PISTON_ENABLED, run_via_piston
+            test_cases = problem.get('test_cases')
+            entrypoint = problem.get('entrypoint')
+            if PISTON_ENABLED and test_cases and entrypoint and language.lower().startswith('py'):
+                # Off the event loop: run_via_piston is a blocking urlopen with
+                # a 12s timeout, and this runs mid-interview.
+                run = await asyncio.to_thread(run_via_piston, code, entrypoint, test_cases, language='python')
+                if run.get('error') is None:
+                    objective_summary = f"{run['passed']}/{run['total']} hidden test cases passed"
+                    user_prompt += (
+                        f"\n\nOBJECTIVE TEST RESULTS (ground truth - weight correctness on this): "
+                        f"{objective_summary}."
+                    )
+                else:
+                    logger.info(f"[CODE] Piston run skipped/failed: {run.get('error')}")
+        except Exception as exec_err:
+            logger.warning(f"[CODE] Objective execution error (continuing with LLM-only): {exec_err}")
+
+        # Retry with backoff: the audit saw three 429s turn into no
+        # evaluation_result at all, which left the editor on "Evaluating..."
+        # forever. On exhaustion the UI gets evaluation_error instead of silence.
+        response = None
+        last_err: Optional[Exception] = None
+        for attempt, delay in enumerate((0.0, 1.0, 2.5, 5.0)):
+            if delay:
+                await asyncio.sleep(delay)
+            try:
+                response = await client.chat.completions.create(
+                    model='gpt-4o-mini',
+                    messages=[
+                        {'role': 'system', 'content': CODE_EVALUATOR.system},
+                        {'role': 'user', 'content': user_prompt}
+                    ],
+                    temperature=0.3,
+                    max_tokens=600,
+                )
+                break
+            except Exception as e:  # noqa: PERF203 - the retry is the point
+                last_err = e
+                logger.warning(f"[CODE] evaluation call failed (attempt {attempt + 1}): {type(e).__name__}: {e}")
+        if response is None:
+            await transport.emit({'type': 'evaluation_error', 'problem_index': problem_index,
+                                  'message': 'The evaluator is unavailable right now. Please submit again.'}, reliable=True)
+            raise RuntimeError(f"evaluation failed after retries: {last_err}")
 
         raw = response.choices[0].message.content.strip()
         if raw.startswith('```'):
@@ -1217,16 +1043,27 @@ async def _evaluate_code_async(
             'attempt': attempt_num,
             'max_attempts': 3,
             'problem_index': problem_index,
+            # Honest about provenance: without Piston nothing executed the
+            # code, and correctness is an AI's reading of it.
+            'executed': bool(objective_summary),
+            'objective_tests': objective_summary,
         }, reliable=True)
         logger.info(f"[CODE] Evaluation sent to frontend for problem {problem_index}, attempt {attempt_num}")
 
-        # Agent speaks brief feedback
+        # Flow speaks the brief feedback, then code decides what is next: a
+        # pass or the third attempt ends this problem. No model turn, no tool.
         verbal = evaluation.get('brief_verbal_feedback', '')
+        passed = str(evaluation.get('correctness', '')).lower() == 'pass'
+        done = passed or attempt_num >= 3
         if verbal and session:
             try:
+                if done and not passed:
+                    verbal = f"{verbal} That was the last attempt on this one."
                 await session.say(verbal, allow_interruptions=True)
             except Exception as say_err:
                 logger.warning(f"[CODE] session.say failed: {say_err}")
+        if done:
+            await advance_after_problem(state, _agent, session, transport)
 
     except Exception as e:
         logger.error(f"[CODE] _evaluate_code_async failed: {e}", exc_info=True)
@@ -1290,14 +1127,16 @@ def build_interview_state(
     state.include_profile = config.get('include_profile', True)
     state.track = track_type
 
+    # The first stage is self_intro on every track; the greeting is spoken by
+    # code in InterviewAgent.on_enter, not driven as a stage.
     if track_type == 'behavioral':
-        state.transition_to(BehavioralStage.GREETING)
+        state.transition_to(BehavioralStage.SELF_INTRO)
     elif track_type == 'technical_voice':
-        state.transition_to(TechnicalVoiceStage.GREETING)
+        state.transition_to(TechnicalVoiceStage.SELF_INTRO)
     elif track_type == 'coding':
-        state.transition_to(CodingStage.GREETING)
+        state.transition_to(CodingStage.SELF_INTRO)
     else:
-        state.transition_to(InterviewStage.WELCOME)
+        state.transition_to(InterviewStage.SELF_INTRO)
 
     logger.info(f"[RUNTIME] Interview state initialized: track={track_type}, stage={state.stage.value}")
     return state
@@ -1336,6 +1175,10 @@ def build_session(
         min_endpointing_delay=0.8,   # more tolerance for pauses
         max_endpointing_delay=4.0,   # wait longer before cutting off
         turn_detection=turn_detection,
+        # There are no tools in the speech path any more. Belt and braces: if
+        # one ever returns, the SDK (1.3.6) drops the turn silently when this
+        # cap is exceeded, so keep it where a single call cannot cross it.
+        max_tool_steps=1,
     )
     logger.info("[RUNTIME] AgentSession created")
     return session
@@ -1510,6 +1353,10 @@ def attach_handlers(
 
             if role == "assistant":
                 agent_text = message.text_content if hasattr(message, 'text_content') else None
+                # MOVE notes live only in the per-turn copy of the context, but
+                # if one ever surfaced here it must not become a transcript line.
+                if agent_text and agent_text.lstrip().startswith(MOVE_HEADER):
+                    return
                 if agent_text:
                     logger.info(f"[AGENT] {agent_text[:150]}...")
                     conversation_history["agent"].append({
@@ -1520,14 +1367,20 @@ def attach_handlers(
                     })
                     asyncio.create_task(emit_agent_caption(transport, agent_text))
 
+                    # What Flow actually asked, so "say that again?" repeats the
+                    # spoken question - all of it, if the model asked in two parts.
+                    if "?" in agent_text:
+                        sentences = re.split(r"(?<=[.!?])\s+", agent_text.strip())
+                        questions = [q.strip() for q in sentences if q.strip().endswith("?")]
+                        if questions:
+                            state.last_question = " ".join(questions)
+
+                    # The closing is one utterance spoken by code and it ends
+                    # with a sentinel; that, not a "good luck" heuristic, is
+                    # what finalizes. The heuristic fired on a model turn that
+                    # happened to say "luck" and never fired when it did not.
                     if getattr(state.stage, 'value', '') == 'closing' and not closing_finalized["done"]:
-                        text_lower = agent_text.lower()
-                        closing_indicators = [
-                            "thank you" in text_lower and "luck" in text_lower,
-                            "good luck" in text_lower,
-                            "best of luck" in text_lower,
-                        ]
-                        if any(closing_indicators) and len(agent_text) > 50:
+                        if agent_text.rstrip().endswith(CLOSING_SENTINEL):
                             state.closing_message_delivered = True
                             if on_closing is not None:
                                 async def schedule_finalization():
@@ -1603,7 +1456,7 @@ async def _cmd_code_submitted(payload: Mapping[str, Any], ctx: CommandContext) -
 async def _cmd_skip_coding_problem(payload: Mapping[str, Any], ctx: CommandContext) -> None:
     logger.info("[CODE] skip_coding_problem received")
     if getattr(ctx.state, 'track', 'intro') == 'coding':
-        await _async_skip_coding_problem(ctx.state, ctx.transport, ctx.session)
+        await _async_skip_coding_problem(ctx.state, ctx.transport, ctx.session, ctx.agent)
 
 
 async def _cmd_skip_stage(payload: Mapping[str, Any], ctx: CommandContext) -> None:
@@ -1631,8 +1484,8 @@ async def _cmd_skip_stage(payload: Mapping[str, Any], ctx: CommandContext) -> No
 
 async def _cmd_ready_for_problem(payload: Mapping[str, Any], ctx: CommandContext) -> None:
     if getattr(ctx.state, 'track', 'intro') == 'coding':
-        logger.info("[CODING] ready_for_problem received — pushing problem")
-        await _async_handle_ready_for_problem(ctx.state, ctx.transport)
+        logger.info("[CODING] ready_for_problem received")
+        await _async_handle_ready_for_problem(ctx.state, ctx.transport, ctx.agent, ctx.session)
 
 
 #: Client -> agent commands. A registry rather than an if/elif chain so that
@@ -1777,8 +1630,7 @@ async def stage_fallback_timer(
                 if elapsed > CLOSING_TIMEOUT and not state.closing_message_delivered:
                     logger.warning("[FALLBACK] Closing timeout - forcing finalization")
                     try:
-                        closing_msg = CLOSING_FALLBACK.message.replace("[CANDIDATE_NAME]", agent.candidate_name)
-                        await session.say(closing_msg, allow_interruptions=False)
+                        await speak_closing(state, agent, session, transport)
                         await asyncio.sleep(3.0)
                     except Exception as e:
                         logger.warning(f"[FALLBACK] Closing say failed: {e}")
@@ -1813,43 +1665,33 @@ async def stage_fallback_timer(
                     logged_milestones.add(pct)
 
             if elapsed > current_time_limit:
-                # Get next stage - track-aware
-                track_type = getattr(state, 'track_type', 'intro')
-                if track_type == 'behavioral' and hasattr(state, 'get_next_behavioral_stage'):
-                    next_stage = state.get_next_behavioral_stage()
-                elif track_type == 'technical_voice' and hasattr(state, 'get_next_technical_voice_stage'):
-                    next_stage = state.get_next_technical_voice_stage()
-                else:
-                    next_stage = state.get_next_stage()
+                next_stage = next_stage_for(state)
                 if next_stage:
                     logger.warning(f"[FALLBACK] FORCING: {current_stage.value} -> {next_stage.value}")
-                    
-                    state.transition_to(next_stage, forced=True)
-                    sync_stage_pointers(state, next_stage)
-
-                    try:
-                        instructions = agent._get_stage_instructions(state, next_stage)
-                        await agent.update_instructions(instructions)
-                    except Exception as e:
-                        logger.error(f"[FALLBACK] Instruction update error: {e}")
-                    
-                    try:
-                        await transport.emit({"type": "stage_change", "stage": next_stage.value})
-                    except Exception as e:
-                        logger.error(f"[UI] Stage change emit error: {e}")
-                    
-                    ack = get_fallback_ack(next_stage, agent.candidate_name)
-                    if ack:
-                        state.pending_acknowledgement = ack
-                        state.pending_ack_stage = next_stage.value
+                    is_problem = getattr(current_stage, 'value', '').startswith('coding_problem_')
+                    if is_problem and hasattr(state, 'timed_out_problems'):
+                        state.timed_out_problems.append(getattr(state, 'current_problem_index', 0))
+                    if next_stage.value == 'closing':
+                        await speak_closing(state, agent, session, transport)
+                    elif is_problem:
                         try:
-                            await session.say(ack)
+                            await session.say("Time's up on that one — I've moved you to the next problem.", allow_interruptions=False)
                         except Exception as e:
-                            logger.warning(f"[FALLBACK] Say failed: {e}")
-                    
+                            logger.warning(f"[FALLBACK] say failed: {e}")
+                        await advance_to(state, agent, transport, next_stage, forced=True)
+                    else:
+                        await advance_to(state, agent, transport, next_stage, forced=True)
+                        # Park the new stage's first question for the candidate's
+                        # next turn so it lands as a reply, not an interjection;
+                        # if they stay silent, ask it ourselves after a beat.
+                        state.pending_move = opening_move_for(state)
+                        state.pending_move.reason = 'forced'
+                        await asyncio.sleep(6)
+                        if state.pending_move is not None and getattr(session, 'current_speech', None) is None:
+                            await ask_opening_question(state, agent, session, reason='forced')
                     logged_milestones = set()
-                    last_logged_stage = next_stage
-                    
+                    last_logged_stage = state.stage
+
     except asyncio.CancelledError:
         logger.info("[TIMER] Fallback timer cancelled")
     except Exception as e:

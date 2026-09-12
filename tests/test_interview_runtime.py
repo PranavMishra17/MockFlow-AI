@@ -167,7 +167,8 @@ def _config(**overrides):
 def test_intro_track_builds_the_base_state():
     state = build = ir.build_interview_state(_config(track='intro'), candidate_name='Ada')
     assert type(state) is InterviewState
-    assert state.stage == InterviewStage.WELCOME
+    # The greeting is spoken by code; the first stage the model drives is self_intro.
+    assert state.stage == InterviewStage.SELF_INTRO
     assert build.candidate_name == 'Ada'
 
 
@@ -177,7 +178,7 @@ def test_behavioral_track_carries_framework_depth_and_custom_questions():
         custom_questions='Tell me about a conflict\nDescribe a failure',
     ))
     assert isinstance(state, BehavioralInterviewState)
-    assert state.stage == BehavioralStage.GREETING
+    assert state.stage == BehavioralStage.SELF_INTRO
     assert state.framework == 'google'
     assert state.depth_setting == 'deep'
     assert state.custom_questions == ['Tell me about a conflict', 'Describe a failure']
@@ -188,7 +189,7 @@ def test_technical_voice_track_caps_topics_at_three():
         track='technical_voice', topics='caching,indexing', custom_topics='sharding,queues',
     ))
     assert isinstance(state, TechnicalVoiceInterviewState)
-    assert state.stage == TechnicalVoiceStage.GREETING
+    assert state.stage == TechnicalVoiceStage.SELF_INTRO
     assert state.selected_topics == ['caching', 'indexing', 'sharding']
     assert state.active_topic_count == 3
 
@@ -200,7 +201,7 @@ def test_coding_track_reads_language_and_problem_count_from_the_shared_parser():
         track='coding', preferred_language='javascript', problem_count='2',
     ))
     assert isinstance(state, CodingInterviewState)
-    assert state.stage == CodingStage.GREETING
+    assert state.stage == CodingStage.SELF_INTRO
     assert state.preferred_language == 'javascript'
     assert state.active_problem_count == 2
 
@@ -324,14 +325,14 @@ def test_skip_stage_records_the_stage_it_skipped():
     ctx = _ctx()
     asyncio.run(ir.handle_command(
         {'type': 'skip_stage', 'target_stage': 'past_experience'}, ctx))
-    assert ctx.state.skipped_stages == [InterviewStage.WELCOME.value]
+    assert ctx.state.skipped_stages == [InterviewStage.SELF_INTRO.value]
 
 
 def test_skip_stage_with_an_unknown_stage_name_does_nothing():
     ctx = _ctx()
     asyncio.run(ir.handle_command({'type': 'skip_stage', 'target_stage': 'nope'}, ctx))
 
-    assert ctx.state.stage == InterviewStage.WELCOME
+    assert ctx.state.stage == InterviewStage.SELF_INTRO
     assert ctx.transport.events == []
 
 
@@ -804,3 +805,66 @@ def test_passing_a_blocking_callable_to_a_thread_is_not_flagged(tmp_path):
         "    await asyncio.to_thread(run_via_piston, 'x', 'y', [])\n",
         encoding='utf-8')
     assert _blocking_calls_in_async(good) == []
+
+
+# ---------------------------------------------------------------------------
+# The opening: one fixed line, spoken by code, and the interview starts in
+# self_intro on every track. The 2026-09 audit found the model-generated
+# greeting was skipped, doubled, or narrated the FSM, and that a queued
+# "transition acknowledgement" displaced Flow's engagement with the
+# candidate's first answer in every new stage. Both are gone by construction.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize('track,stage_enum', [
+    ('intro', InterviewStage), ('behavioral', BehavioralStage),
+    ('technical_voice', TechnicalVoiceStage), ('coding', CodingStage),
+])
+def test_every_track_starts_in_self_intro_and_never_lists_a_greeting_stage(track, stage_enum):
+    state = ir.build_interview_state(_config(track=track))
+    assert state.stage.value == 'self_intro'
+    active = [s.value for s in state.get_active_stages()]
+    assert active[0] == 'self_intro'
+    assert not ({'welcome', 'greeting'} & set(active))
+
+
+def test_on_enter_says_the_fixed_greeting_and_never_generates():
+    """`generate_reply` in on_enter is exactly the non-determinism the audit
+    caught (F6/F18). The greeting must be `say()` of the fixed line, once."""
+    from prompts import get_greeting_line
+
+    class RecordingSession(StubSession):
+        def __init__(self, state):
+            super().__init__()
+            self.userdata = state
+            self.generated = 0
+
+        def generate_reply(self, *a, **k):
+            self.generated += 1
+
+    for track in ('intro', 'behavioral', 'technical_voice', 'coding'):
+        state = ir.build_interview_state(_config(track=track), candidate_name='Ada Lovelace')
+        transport = ir.NullTransport()
+        agent = ir.InterviewAgent(transport=transport, candidate_info={'name': 'Ada Lovelace', 'role': 'Engineer'},
+                                  track_type=track)
+        session = RecordingSession(state)
+        # Agent.session is a property backed by the activity; bypass for the unit.
+        agent._RecordingSession = session
+        type(agent).session = property(lambda self: self._RecordingSession)
+        try:
+            asyncio.run(agent.on_enter())
+        finally:
+            del type(agent).session
+        assert session.said == [get_greeting_line(track)], track
+        assert session.generated == 0, track
+        assert transport.of_type('stage_change')[0]['stage'] == 'self_intro', track
+
+
+def test_no_transition_acknowledgement_is_queued_anywhere():
+    """The fields are gone from the state, and the runtime never mentions them."""
+    import inspect
+    state = ir.build_interview_state(_config(track='behavioral'))
+    for name in ('pending_acknowledgement', 'pending_ack_stage', 'transition_acknowledged'):
+        assert not hasattr(state, name), name
+    src = inspect.getsource(ir)
+    assert 'STAGE TRANSITION - First say' not in src
+    assert 'pending_acknowledgement' not in src

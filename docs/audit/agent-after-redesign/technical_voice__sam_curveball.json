@@ -1,0 +1,265 @@
+{
+  "track": "technical_voice",
+  "persona": "sam_curveball",
+  "config": {
+    "track": "technical_voice",
+    "role": "Backend Engineer",
+    "level": "mid",
+    "user_id": "audit-user",
+    "topics": "APIs,security"
+  },
+  "duration_s": 35.9,
+  "history": [
+    {
+      "who": "flow",
+      "text": "Hey, I'm Flow \u2014 I'll be taking your interview today. Please start with a short introduction.",
+      "stage": "self_intro",
+      "t": 3.9,
+      "latency": null
+    },
+    {
+      "who": "candidate",
+      "text": "Hey Flow, nice to meet you! I'm Sam Ortiz, and I\u2019ve been working as a backend engineer for about six years now, primarily with Python and Django. I\u2019ve also dabbled in Rust. I\u2019ve spent my time at two mid-size SaaS companies, so I\u2019m pretty comfortable with the challenges that come with scaling applications. I\u2019m excited to hear more about what you\u2019re looking for and the team dynamics here. What\u2019s the most important trait you value in a backend engineer?",
+      "stage": "self_intro",
+      "t": 4.9
+    },
+    {
+      "who": "flow",
+      "text": "Got it. You mentioned scaling applications at SaaS companies. Can you describe a specific challenge you faced while scaling, and how you addressed it?",
+      "stage": "self_intro",
+      "t": 7.4,
+      "latency": 2.4
+    },
+    {
+      "who": "candidate",
+      "text": "Could you repeat the end of that question? I didn\u2019t catch it all.",
+      "stage": "self_intro",
+      "t": 8.0
+    },
+    {
+      "who": "flow",
+      "text": "Sure. You mentioned scaling applications at SaaS companies. Can you describe a specific challenge you faced while scaling, and how you addressed it?",
+      "stage": "experience_discussion",
+      "t": 10.4,
+      "latency": 2.4
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> experience_discussion]",
+      "stage": "experience_discussion",
+      "t": 10.4
+    },
+    {
+      "who": "candidate",
+      "text": "One specific challenge I faced was when we hit a bottleneck in our database queries as our user base grew. We noticed increased latency in our application. To address this, I implemented query optimizations and introduced caching strategies using Redis. We also analyzed and adjusted our indexing. It was a bit of a juggling act, but it improved performance significantly. I'm curious, how does your team typically handle database scaling challenges?",
+      "stage": "experience_discussion",
+      "t": 11.2
+    },
+    {
+      "who": "flow",
+      "text": "There's no real company behind this mock, so I can't speak for one \u2014 but that's a good question to ask in a real one. You implemented caching strategies using Redis. What were the main factors that influenced your choice to use Redis specifically?",
+      "stage": "experience_discussion",
+      "t": 13.8,
+      "latency": 2.6
+    },
+    {
+      "who": "candidate",
+      "text": "Great to hear that. I chose Redis mainly for its speed and simplicity. It's an in-memory data store, which meant we could significantly reduce read times compared to traditional databases. Also, the ease of integrating Redis with our Python/Django stack made it a practical choice. Plus, its support for various data types and structures allowed us to use it flexibly. What about your stack? What caching solutions do you typically explore?",
+      "stage": "experience_discussion",
+      "t": 14.7
+    },
+    {
+      "who": "flow",
+      "text": "You chose Redis for its speed and ease of integration. Explain the key differences between RESTful APIs and GraphQL APIs, and discuss scenarios where one might be preferred over the other.",
+      "stage": "technical_concepts_1",
+      "t": 17.2,
+      "latency": 2.4
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> technical_concepts_1]",
+      "stage": "technical_concepts_1",
+      "t": 17.2
+    },
+    {
+      "who": "candidate",
+      "text": "RESTful APIs and GraphQL APIs have some key differences. REST typically uses fixed endpoints and returns a specific set of data, which can lead to over-fetching or under-fetching. Meanwhile, GraphQL allows clients to request exactly what they need in a single request, which can optimize performance and reduce the number of round trips to the server. \n\nYou might prefer REST when you have clear, resource-based endpoints, while GraphQL shines when you need flexibility, like in complex applications where clients may require varied data shapes. In your experience, have you found one to be more popular in the projects you've worked on?",
+      "stage": "technical_concepts_1",
+      "t": 18.4
+    },
+    {
+      "who": "flow",
+      "text": "REST typically uses fixed endpoints and returns a specific set of data. What are the trade-offs between using API Gateway versus a direct microservices communication approach?",
+      "stage": "technical_concepts_1",
+      "t": 21.2,
+      "latency": 2.8
+    },
+    {
+      "who": "candidate",
+      "text": "The main trade-offs come down to complexity and control. An API Gateway centralizes traffic, making it easier to manage things like authentication, rate limiting, and logging. However, it can introduce a single point of failure and become a bottleneck if not designed carefully. \n\nOn the other hand, direct microservices communication can be more efficient and reduce latency, but it can complicate service-to-service interactions and make things like versioning and security more challenging. In your experience, which approach have you found brings the most benefit in the long run?",
+      "stage": "technical_concepts_1",
+      "t": 22.2
+    },
+    {
+      "who": "flow",
+      "text": "API Gateway centralizes traffic, making it easier to manage authentication. Explain the concept of OAuth and how it differs from traditional authentication methods like Basic Auth.",
+      "stage": "technical_concepts_2",
+      "t": 24.8,
+      "latency": 2.6
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> technical_concepts_2]",
+      "stage": "technical_concepts_2",
+      "t": 24.8
+    },
+    {
+      "who": "candidate",
+      "text": "OAuth is an authorization framework that allows third-party applications to access user data without sharing passwords. Unlike Basic Auth, where credentials are sent with each request, OAuth uses access tokens that provide limited access for a specified time. This enhances security because users can revoke access without changing their passwords. \n\nOAuth also allows for granular permissions, enabling apps to request only the data they need. I'm curious, in your experience, how has your team implemented OAuth, and what challenges have you faced with it?",
+      "stage": "technical_concepts_2",
+      "t": 26.1
+    },
+    {
+      "who": "flow",
+      "text": "OAuth enhances security by using access tokens instead of passwords. Compare symmetric encryption versus asymmetric encryption. What are the trade-offs in terms of security and performance when choosing between them for backend services?",
+      "stage": "technical_concepts_2",
+      "t": 28.8,
+      "latency": 2.6
+    },
+    {
+      "who": "candidate",
+      "text": "Symmetric encryption uses the same key for both encryption and decryption, making it faster and more efficient for large data volumes. However, sharing and managing that key securely can be a challenge. \n\nAsymmetric encryption, on the other hand, uses a pair of keys: a public key for encryption and a private key for decryption. This adds a layer of security by eliminating the need to share sensitive keys, but it's generally slower and more resource-intensive. \n\nThe trade-off typically comes down to performance versus security needs. In scenarios requiring rapid encryption and decryption, symmetric might be favored, while asymmetric is better for secure key exchanges. What's been your experience in choosing between these two in your projects?",
+      "stage": "technical_concepts_2",
+      "t": 29.9
+    },
+    {
+      "who": "flow",
+      "text": "Thanks, Sam. The part about \"OAuth is an authorization framework that allows third-party applications to access\u2026\" is the kind of specific that lands. Your written feedback is on your dashboard in a minute. That's the end of the interview \u2014 take care.",
+      "stage": "closing",
+      "t": 32.5,
+      "latency": 2.6
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> closing]",
+      "stage": "closing",
+      "t": 32.5
+    }
+  ],
+  "stages_visited": [
+    "experience_discussion",
+    "technical_concepts_1",
+    "technical_concepts_2",
+    "closing"
+  ],
+  "final_stage": "closing",
+  "tool_calls": [],
+  "question_bank": [
+    {
+      "topic": "APIs",
+      "questions": [
+        "Explain the key differences between RESTful APIs and GraphQL APIs, and discuss scenarios where one might be preferred over the other.",
+        "What are the trade-offs between using API Gateway versus a direct microservices communication approach?",
+        "When designing an API, how do you determine the appropriate level of versioning, and what strategies can you implement to manage breaking changes?"
+      ]
+    },
+    {
+      "topic": "security",
+      "questions": [
+        "Explain the concept of OAuth and how it differs from traditional authentication methods like Basic Auth.",
+        "Compare symmetric encryption vs asymmetric encryption. What are the trade-offs in terms of security and performance when choosing between them for backend services?",
+        "When implementing rate limiting in an API, what are the potential security implications and how would you balance usability with protection against abuse?"
+      ]
+    }
+  ],
+  "stalls": [],
+  "notes": [
+    "closing delivered by Flow at turn 8"
+  ],
+  "verdict": {
+    "overall": {
+      "confidence": "high",
+      "headline": "Sam demonstrates solid technical understanding and trade-off reasoning, but communication could be more structured.",
+      "recommendation": "on_fence",
+      "level_read": "mid"
+    },
+    "signals": [
+      {
+        "name": "Technical depth",
+        "reasoning": "Sam shows a good understanding of technical concepts, explaining the differences between REST and GraphQL, and symmetric versus asymmetric encryption. He also discusses the use of Redis for caching with clear reasoning.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "RESTful APIs and GraphQL APIs have some key differences. REST typically uses fixed endpoints and returns a specific set of data, which can lead to over-fetching or under-fetching.",
+          "Symmetric encryption uses the same key for both encryption and decryption, making it faster and more efficient for large data volumes."
+        ],
+        "to_raise": "Provide deeper insights into the technical challenges faced and how they were overcome."
+      },
+      {
+        "name": "Trade-off reasoning",
+        "reasoning": "Sam effectively discusses trade-offs, such as the choice between API Gateway and direct microservices communication, and symmetric versus asymmetric encryption.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "The main trade-offs come down to complexity and control. An API Gateway centralizes traffic, making it easier to manage things like authentication, rate limiting, and logging.",
+          "The trade-off typically comes down to performance versus security needs."
+        ],
+        "to_raise": "Quantify the impact of trade-offs or provide specific examples of decisions made."
+      },
+      {
+        "name": "Communication & structure",
+        "reasoning": "While Sam communicates technical concepts clearly, the structure could be improved for better clarity and impact.",
+        "band": "borderline",
+        "scope_met": "mid",
+        "evidence": [
+          "One specific challenge I faced was when we hit a bottleneck in our database queries as our user base grew.",
+          "OAuth is an authorization framework that allows third-party applications to access user data without sharing passwords."
+        ],
+        "to_raise": "Use more structured responses with clear signposting to enhance clarity."
+      }
+    ],
+    "differentiators": [
+      "Sam would be a strong hire with more structured communication and deeper insights into the impact of technical decisions."
+    ],
+    "delivery": {
+      "pace_available": false,
+      "wpm": null,
+      "wpm_band": "unknown",
+      "wpm_target": "130-160",
+      "filler_total": 4,
+      "filler_per_100w": 0.64,
+      "filler_per_min": null,
+      "filler_band": "good",
+      "filler_target": "<=3.3/100 words",
+      "word_count": 623,
+      "sentence_count": 43,
+      "filler_breakdown": {
+        "like": 3,
+        "so": 1
+      },
+      "top_crutch_word": {
+        "word": "like",
+        "count": 3
+      },
+      "talk_ratio": 0.7,
+      "longest_monologue_s": null
+    },
+    "gap_to_next": {
+      "signal": "Communication & structure",
+      "from_band": "borderline",
+      "to_band": "solid",
+      "move": "Use more structured responses with clear signposting to enhance clarity."
+    },
+    "great_answers": 0,
+    "context": {
+      "track": "technical_voice",
+      "role": "swe",
+      "seniority": "mid",
+      "archetype": "big_tech"
+    }
+  },
+  "flags": [
+    "reply latency: median 2.6s, max 2.8s (text-only; TTS adds more)",
+    "1 candidate question(s) answered with an immediate counter-question"
+  ]
+}

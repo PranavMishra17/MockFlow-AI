@@ -6,7 +6,10 @@ requires-python = ">=3.12"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
+# level_b tests drive the real agent against OpenAI (docs/TESTING_E2E.md).
+# Excluded by default; run them with `pytest -m level_b`.
+addopts = "-q -m 'not level_b'"
+markers = ["level_b: needs real API keys and spends tokens; the persona regression"]
 filterwarnings = ["ignore::DeprecationWarning"]
 
 [tool.ruff]

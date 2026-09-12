@@ -1,0 +1,310 @@
+{
+  "track": "technical_voice",
+  "persona": "ken_terse",
+  "config": {
+    "track": "technical_voice",
+    "role": "Software Engineer",
+    "level": "mid",
+    "user_id": "audit-user",
+    "topics": "concurrency,databases"
+  },
+  "duration_s": 47.6,
+  "history": [
+    {
+      "who": "flow",
+      "text": "Hey, I'm Flow \u2014 I'll be taking your interview today. Please start with a short introduction.",
+      "stage": "self_intro",
+      "t": 4.3,
+      "latency": null
+    },
+    {
+      "who": "candidate",
+      "text": "I\u2019m Ken Okafor. Five years in backend, mostly Java and Spring.",
+      "stage": "self_intro",
+      "t": 4.8
+    },
+    {
+      "who": "flow",
+      "text": "Got it. Five years in backend sounds solid. Can you describe a challenging project you worked on using Java and Spring? What was your role in it?",
+      "stage": "self_intro",
+      "t": 7.2,
+      "latency": 2.4
+    },
+    {
+      "who": "candidate",
+      "text": "I built a claims batch pipeline. I was the developer. It was fine.",
+      "stage": "self_intro",
+      "t": 7.7
+    },
+    {
+      "who": "flow",
+      "text": "Okay. You developed a claims batch pipeline. What specific challenges did you face during its development, and how did you address them?",
+      "stage": "self_intro",
+      "t": 10.1,
+      "latency": 2.3
+    },
+    {
+      "who": "candidate",
+      "text": "There were performance issues. I optimized queries and adjusted the batch size.",
+      "stage": "self_intro",
+      "t": 10.6
+    },
+    {
+      "who": "flow",
+      "text": "Got it. You optimized queries and adjusted the batch size. How did you determine the ideal batch size for processing claims, and what impact did that have on overall performance?",
+      "stage": "experience_discussion",
+      "t": 13.3,
+      "latency": 2.8
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> experience_discussion]",
+      "stage": "experience_discussion",
+      "t": 13.3
+    },
+    {
+      "who": "candidate",
+      "text": "Not sure. Next question?",
+      "stage": "experience_discussion",
+      "t": 13.7
+    },
+    {
+      "who": "flow",
+      "text": "Fair \u2014 that's better than guessing. You mentioned performance issues. Start with what the task was, and just take it one step at a time.",
+      "stage": "experience_discussion",
+      "t": 16.1,
+      "latency": 2.4
+    },
+    {
+      "who": "candidate",
+      "text": "The task was to process claims efficiently. The initial batch size was too large. I reduced it to improve speed.",
+      "stage": "experience_discussion",
+      "t": 16.7
+    },
+    {
+      "who": "flow",
+      "text": "Okay. You reduced the batch size to improve speed. How did you handle error management within the pipeline, and what design choices did you make to ensure reliability during processing?",
+      "stage": "experience_discussion",
+      "t": 19.0,
+      "latency": 2.4
+    },
+    {
+      "who": "candidate",
+      "text": "Used retry mechanisms for failures. Logged errors for troubleshooting.",
+      "stage": "experience_discussion",
+      "t": 19.5
+    },
+    {
+      "who": "flow",
+      "text": "You used retry mechanisms and logged errors for troubleshooting. Explain the concept of deadlock in concurrent programming and describe some strategies to prevent it.",
+      "stage": "technical_concepts_1",
+      "t": 22.1,
+      "latency": 2.5
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> technical_concepts_1]",
+      "stage": "technical_concepts_1",
+      "t": 22.1
+    },
+    {
+      "who": "candidate",
+      "text": "Not really my focus. Next question?",
+      "stage": "technical_concepts_1",
+      "t": 22.5
+    },
+    {
+      "who": "flow",
+      "text": "Fair \u2014 that's better than guessing. You mentioned it wasn't your focus. Start with what the task was, and just take it one step at a time.",
+      "stage": "technical_concepts_1",
+      "t": 25.2,
+      "latency": 2.7
+    },
+    {
+      "who": "candidate",
+      "text": "The task was to handle concurrent requests. I made sure processes were isolated.",
+      "stage": "technical_concepts_1",
+      "t": 25.8
+    },
+    {
+      "who": "flow",
+      "text": "You made sure processes were isolated. Compare optimistic concurrency control and pessimistic concurrency control. In which scenarios would you prefer one over the other?",
+      "stage": "technical_concepts_1",
+      "t": 28.3,
+      "latency": 2.5
+    },
+    {
+      "who": "candidate",
+      "text": "Optimistic assumes no conflict; pessimistic locks resources. Prefer optimistic when conflicts are rare.",
+      "stage": "technical_concepts_1",
+      "t": 28.9
+    },
+    {
+      "who": "flow",
+      "text": "You prefer optimistic concurrency when conflicts are rare. Explain the differences between SQL and NoSQL databases, and in what scenarios you would choose one over the other.",
+      "stage": "technical_concepts_2",
+      "t": 31.5,
+      "latency": 2.6
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> technical_concepts_2]",
+      "stage": "technical_concepts_2",
+      "t": 31.5
+    },
+    {
+      "who": "candidate",
+      "text": "SQL is structured, NoSQL is flexible. Choose SQL for complex queries, NoSQL for scalability.",
+      "stage": "technical_concepts_2",
+      "t": 32.0
+    },
+    {
+      "who": "flow",
+      "text": "Got it. SQL is structured and NoSQL is flexible. Can you elaborate on the trade-offs of using a structured database versus a flexible one, especially in terms of data consistency and schema evolution?",
+      "stage": "technical_concepts_2",
+      "t": 34.5,
+      "latency": 2.5
+    },
+    {
+      "who": "candidate",
+      "text": "Structured databases ensure strong consistency. Flexible ones allow easier schema changes but risk inconsistency.",
+      "stage": "technical_concepts_2",
+      "t": 35.0
+    },
+    {
+      "who": "flow",
+      "text": "You mentioned that structured databases ensure strong consistency. Can you explain what mechanisms they use to maintain this consistency, and how that might affect performance during write operations?",
+      "stage": "technical_concepts_2",
+      "t": 37.5,
+      "latency": 2.5
+    },
+    {
+      "who": "candidate",
+      "text": "They use transactions and ACID properties. It can slow down writes due to locking.",
+      "stage": "technical_concepts_2",
+      "t": 38.0
+    },
+    {
+      "who": "flow",
+      "text": "Thanks, Ken. The part about \"Flexible ones allow easier schema changes but risk inconsistency\" is the kind of specific that lands. Your written feedback is on your dashboard in a minute. That's the end of the interview \u2014 take care.",
+      "stage": "closing",
+      "t": 40.2,
+      "latency": 2.2
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> closing]",
+      "stage": "closing",
+      "t": 40.2
+    }
+  ],
+  "stages_visited": [
+    "experience_discussion",
+    "technical_concepts_1",
+    "technical_concepts_2",
+    "closing"
+  ],
+  "final_stage": "closing",
+  "tool_calls": [],
+  "question_bank": [
+    {
+      "topic": "concurrency",
+      "questions": [
+        "Explain the concept of deadlock in concurrent programming and describe some strategies to prevent it.",
+        "Compare optimistic concurrency control and pessimistic concurrency control. In which scenarios would you prefer one over the other?",
+        "Discuss the trade-offs between using threads and asynchronous programming for handling concurrency in applications. When would you choose one approach over the other?"
+      ]
+    },
+    {
+      "topic": "databases",
+      "questions": [
+        "Explain the differences between SQL and NoSQL databases, and in what scenarios you would choose one over the other.",
+        "What are the tradeoffs of using a relational database versus a key-value store for a web application that requires high scalability?",
+        "When would you choose to implement database sharding, and what are the potential challenges associated with this approach?"
+      ]
+    }
+  ],
+  "stalls": [],
+  "notes": [
+    "closing delivered by Flow at turn 12"
+  ],
+  "verdict": {
+    "overall": {
+      "confidence": "medium",
+      "headline": "Ken shows basic understanding but lacks depth and trade-off reasoning for a mid-level role.",
+      "recommendation": "lean_no_hire",
+      "level_read": "new_grad"
+    },
+    "signals": [
+      {
+        "name": "Technical depth",
+        "reasoning": "Ken demonstrates a basic understanding of concepts like concurrency control and database types but lacks depth in explaining mechanisms or strategies, especially when asked about deadlock and batch size optimization.",
+        "band": "borderline",
+        "scope_met": "new_grad",
+        "evidence": [
+          "Optimistic assumes no conflict; pessimistic locks resources. Prefer optimistic when conflicts are rare.",
+          "SQL is structured, NoSQL is flexible. Choose SQL for complex queries, NoSQL for scalability."
+        ],
+        "to_raise": "Provide deeper explanations and examples of technical concepts."
+      },
+      {
+        "name": "Trade-off reasoning",
+        "reasoning": "Ken mentions some trade-offs, such as choosing SQL for complex queries and NoSQL for scalability, but does not elaborate on the costs or implications of these choices.",
+        "band": "borderline",
+        "scope_met": "new_grad",
+        "evidence": [
+          "Structured databases ensure strong consistency. Flexible ones allow easier schema changes but risk inconsistency.",
+          "They use transactions and ACID properties. It can slow down writes due to locking."
+        ],
+        "to_raise": "Discuss the implications and costs of different technical choices more thoroughly."
+      },
+      {
+        "name": "Communication & structure",
+        "reasoning": "Ken's responses are generally concise but lack structure and depth, often not expanding on initial statements or providing detailed reasoning.",
+        "band": "borderline",
+        "scope_met": "new_grad",
+        "evidence": [
+          "I built a claims batch pipeline. I was the developer. It was fine.",
+          "Used retry mechanisms for failures. Logged errors for troubleshooting."
+        ],
+        "to_raise": "Organize responses with clear structure and provide more detailed explanations."
+      }
+    ],
+    "differentiators": [
+      "Ken would be a strong hire if he could consistently demonstrate deeper technical insights and articulate the trade-offs of engineering decisions with more clarity."
+    ],
+    "delivery": {
+      "pace_available": false,
+      "wpm": null,
+      "wpm_band": "unknown",
+      "wpm_target": "130-160",
+      "filler_total": 0,
+      "filler_per_100w": 0.0,
+      "filler_per_min": null,
+      "filler_band": "good",
+      "filler_target": "<=3.3/100 words",
+      "word_count": 143,
+      "sentence_count": 26,
+      "filler_breakdown": {},
+      "top_crutch_word": null,
+      "talk_ratio": 0.29,
+      "longest_monologue_s": null
+    },
+    "gap_to_next": {
+      "signal": "Technical depth",
+      "from_band": "borderline",
+      "to_band": "solid",
+      "move": "Provide deeper explanations and examples of technical concepts."
+    },
+    "great_answers": 0,
+    "context": {
+      "track": "technical_voice",
+      "role": "swe",
+      "seniority": "mid",
+      "archetype": "big_tech"
+    }
+  },
+  "flags": [
+    "reply latency: median 2.5s, max 2.8s (text-only; TTS adds more)"
+  ]
+}

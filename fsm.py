@@ -13,6 +13,8 @@ from datetime import datetime
 from typing import Callable, Optional, List, Any
 import logging
 
+from interview_coverage import CoverageLedger
+
 logger = logging.getLogger(__name__)
 
 
@@ -65,8 +67,15 @@ class InterviewState:
     - In-memory state (no database for demo)
     """
 
-    # Current stage - defaults to WELCOME
-    stage: InterviewStage = InterviewStage.WELCOME
+    # Current stage. Interviews start in SELF_INTRO: the greeting is a fixed
+    # one-liner spoken by code in on_enter, not a stage the model drives.
+    stage: InterviewStage = InterviewStage.SELF_INTRO
+
+    # Which track this state runs. The subclasses override the default; the
+    # base state IS the intro track. Every reader should use this rather than
+    # `getattr(state, 'track_type', 'intro')`, which papered over its absence
+    # here and let an AttributeError hide inside the turn loop.
+    track_type: str = "intro"
 
     # Candidate information
     candidate_name: str = ""
@@ -99,10 +108,18 @@ class InterviewState:
     pending_transition: Optional[InterviewStage] = None
     pending_transition_reason: Optional[str] = None
 
-    # Pending acknowledgement (queued when transition happens mid-user-speech)
-    pending_acknowledgement: Optional[str] = None
-    pending_ack_stage: Optional[str] = None
-    transition_acknowledged: bool = False
+    # What the candidate has demonstrated so far, in the verdict's signal
+    # vocabulary. The turn loop (interview_turn.py) reads and writes this;
+    # stage progression is decided from it, not from question counts.
+    ledger: CoverageLedger = field(default_factory=CoverageLedger)
+    # The question Flow last asked, so "can you repeat that?" repeats it.
+    last_question: str = ""
+    # The fixed line Flow last prefaced with, so it is never said twice running.
+    last_preface: str = ""
+    # An opening question parked by a skip or the fallback timer, consumed by
+    # the next prepare_turn so it lands as a reply rather than an interjection.
+    pending_move: Any = None
+    closing_spoken: bool = False
 
     # Closing stage tracking
     closing_initiated: bool = False
@@ -137,9 +154,6 @@ class InterviewState:
         # Clear pending transition
         self.pending_transition = None
         self.pending_transition_reason = None
-
-        # Reset acknowledgement tracking for new transition
-        self.transition_acknowledged = False
 
         # Reset closing flags (in case transitioning to a new stage)
         if new_stage != InterviewStage.CLOSING:
@@ -216,7 +230,6 @@ class InterviewState:
         through here so it is always track-correct.
         """
         return [
-            InterviewStage.WELCOME,
             InterviewStage.SELF_INTRO,
             InterviewStage.PAST_EXPERIENCE,
             InterviewStage.COMPANY_FIT,
@@ -569,7 +582,7 @@ class BehavioralInterviewState(InterviewState):
     """
 
     # Override stage with behavioral default
-    stage: Any = field(default=BehavioralStage.GREETING)
+    stage: Any = field(default=BehavioralStage.SELF_INTRO)
 
     # Track type identifier
     track_type: str = "behavioral"
@@ -609,7 +622,6 @@ class BehavioralInterviewState(InterviewState):
             List of active BehavioralStage enums in order
         """
         base_stages = [
-            BehavioralStage.GREETING,
             BehavioralStage.SELF_INTRO,
             BehavioralStage.BEHAVIORAL_Q1,
             BehavioralStage.BEHAVIORAL_Q2,
@@ -736,7 +748,7 @@ class TechnicalVoiceInterviewState(InterviewState):
     """
 
     # Override stage with technical default
-    stage: Any = field(default=TechnicalVoiceStage.GREETING)
+    stage: Any = field(default=TechnicalVoiceStage.SELF_INTRO)
 
     # Track type identifier
     track_type: str = "technical_voice"
@@ -767,7 +779,6 @@ class TechnicalVoiceInterviewState(InterviewState):
             List of active TechnicalVoiceStage enums in order
         """
         stages = [
-            TechnicalVoiceStage.GREETING,
             TechnicalVoiceStage.SELF_INTRO,
             TechnicalVoiceStage.EXPERIENCE_DISCUSSION,
             TechnicalVoiceStage.TECHNICAL_CONCEPTS_1,
@@ -921,7 +932,7 @@ class CodingInterviewState(InterviewState):
     """
 
     # Override stage with coding default
-    stage: Any = field(default=CodingStage.GREETING)
+    stage: Any = field(default=CodingStage.SELF_INTRO)
 
     # Track type identifier
     track_type: str = "coding"
@@ -958,6 +969,8 @@ class CodingInterviewState(InterviewState):
 
     # Track skipped problems
     skipped_problems: List[int] = field(default_factory=list)
+    # Problems the fallback timer closed for time; they count as resolved.
+    timed_out_problems: List[int] = field(default_factory=list)
 
     def get_active_stages(self) -> list:
         """
@@ -966,7 +979,7 @@ class CodingInterviewState(InterviewState):
         Returns:
             List of CodingStage members in order
         """
-        base = [CodingStage.GREETING, CodingStage.SELF_INTRO, CodingStage.WARM_UP]
+        base = [CodingStage.SELF_INTRO, CodingStage.WARM_UP]
         problems = [CodingStage.CODING_PROBLEM_1]
         if self.active_problem_count >= 2:
             problems.append(CodingStage.CODING_PROBLEM_2)
