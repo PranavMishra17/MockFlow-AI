@@ -298,3 +298,16 @@ def test_assessment_from_dict_tolerates_garbage():
 ])
 def test_competency_to_signal_mapping(competency, signal):
     assert it.competency_signal(competency) == signal
+
+
+def test_closing_never_reads_a_truncated_fragment():
+    """A 40-word evidence string used to be cut at 90 characters and read
+    aloud with an ellipsis. Prefer a quote that fits; fall back to none."""
+    led = CoverageLedger()
+    long = "that change not only improved our deployment speed but also restored the team's confidence in the release process after months of manual toil"
+    led.merge(assessment(read(**{"Ownership": f"demonstrated:{long}", "Impact & metrics": "demonstrated:cut deploy time by half"})), "q")
+    line = it.build_closing_utterance(led, "Dana", "behavioral")
+    assert "cut deploy time by half" in line and "…" not in line and long[:30] not in line
+    led2 = CoverageLedger()
+    led2.merge(assessment(read(Ownership=f"demonstrated:{long}")), "q")
+    assert it.build_closing_utterance(led2, "Dana", "behavioral").startswith("Thanks, Dana. Your written feedback")

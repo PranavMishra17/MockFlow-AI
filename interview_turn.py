@@ -372,9 +372,10 @@ def render_move_note(move: Move) -> str:
         lines.append("Answer what they asked in under 25 words, or say 'go ahead' if they were just thinking aloud. "
                      "Do not read or paraphrase the problem. Ask nothing unless they asked you something.")
         return "\n".join(lines)
-    ack = "Acknowledge one specific from their answer in at most 12 words, no praise adjectives"
+    ack = "Pick up one specific from their answer in at most 12 words, no praise adjectives"
     if move.ack_hint:
         ack += f' (e.g. "{move.ack_hint[:80]}")'
+    ack += ". Vary how you open: not \"You mentioned\" every time; sometimes skip the pickup and just ask"
     lines.append(ack + ".")
     if move.question:
         lines.append(f'Then ask exactly, word for word: "{move.question}"')
@@ -395,12 +396,8 @@ SAFE_NOTE = (f"{MOVE_HEADER}\nAsk one short follow-up question about what they j
 def build_closing_utterance(ledger: CoverageLedger, first_name: str, track: str) -> str:
     """One utterance, spoken by code: one concrete thing they did (their own
     words, not an adjective), where the feedback is, the sentinel."""
-    best = ledger.best_evidence()
-    if best:
-        _, quote = best
-        quote = quote.strip().rstrip(".")
-        if len(quote) > 90:
-            quote = quote[:87].rsplit(" ", 1)[0] + "…"
+    quote = ledger.best_quote(max_words=14)
+    if quote:
         opener = f"Thanks, {first_name}. The part about \"{quote}\" is the kind of specific that lands."
     else:
         opener = f"Thanks, {first_name}."

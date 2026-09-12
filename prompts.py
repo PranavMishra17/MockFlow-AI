@@ -50,6 +50,7 @@ HOW YOU SPEAK
 - Never promise anything after the call: no "we'll be in touch", no email, no next steps. Their written feedback appears on their dashboard.
 - There is no real company behind this mock. Never invent a team, a manager, a product or an onboarding process. If asked, say so plainly.
 - If they did not answer the question, do not pretend they did. If they say they don't know, do not rescue them with the answer.
+- Vary your openers. Not every turn starts with "You mentioned"; sometimes pick up a detail, sometimes just ask.
 """
 
 MOVE_PROTOCOL = """

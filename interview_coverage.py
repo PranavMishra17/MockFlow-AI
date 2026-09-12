@@ -215,6 +215,19 @@ class CoverageLedger:
                 best = (score, name, quote)
         return (best[1], best[2]) if best else None
 
+    def best_quote(self, *, max_words: int = 14) -> Optional[str]:
+        """A short verbatim quote worth repeating aloud: from the strongest
+        signal, the longest quote that still fits in `max_words`. Never cut a
+        quote mid-sentence - a fragment read aloud sounds like a glitch."""
+        by_level: Dict[int, List[str]] = {}
+        for name, quotes in self.evidence.items():
+            fitting = [q.strip().rstrip(".,;") for q in quotes if 0 < len(q.split()) <= max_words]
+            if fitting:
+                by_level.setdefault(_RANK[self.level_of(name)], []).extend(fitting)
+        if not by_level:
+            return None
+        return max(by_level[max(by_level)], key=len)
+
     def to_dict(self) -> Dict[str, Any]:
         return {
             "level": dict(self.level),
