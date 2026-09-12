@@ -1,0 +1,367 @@
+{
+  "track": "technical_voice",
+  "persona": "sam_curveball",
+  "config": {
+    "track": "technical_voice",
+    "role": "Backend Engineer",
+    "level": "mid",
+    "user_id": "audit-user",
+    "topics": "APIs,security"
+  },
+  "duration_s": 53.7,
+  "history": [
+    {
+      "who": "candidate",
+      "text": "Hi there! I\u2019m excited to be here. With six years under my belt working primarily with Python and Django, I\u2019ve tackled a variety of backend challenges. At my previous roles, I loved optimizing APIs and improving system performance. But enough about me, what do you mean by \u201cbest practices\u201d? Are you looking for something specific?",
+      "stage": "technical_concepts_1",
+      "t": 9.3
+    },
+    {
+      "who": "flow",
+      "text": "Hi Sam! It\u2019s great to have you here, and I appreciate your enthusiasm. With your experience in optimizing APIs, I'm sure you'll have valuable insights!\n\nNow, let's dive into some conceptual questions about APIs. Here's the first one for you:\n\n**Compare REST vs. GraphQL APIs - when would you use each?**\n\nFeel free to explain your reasoning, and I'll assess your response afterward!",
+      "stage": "technical_concepts_1",
+      "t": 10.4,
+      "latency": 1.0
+    },
+    {
+      "who": "candidate",
+      "text": "Could you repeat the end of that question? I want to make sure I catch all of your points.",
+      "stage": "technical_concepts_1",
+      "t": 10.9
+    },
+    {
+      "who": "flow",
+      "text": "Of course, Sam! The question is:\n\n**Compare REST vs. GraphQL APIs - when would you use each?**\n\nPlease share your thoughts on this, and I'll assess your response afterward!",
+      "stage": "technical_concepts_1",
+      "t": 11.7,
+      "latency": 0.8
+    },
+    {
+      "who": "candidate",
+      "text": "Got it! So, REST is great for standard CRUD operations and when you want clear, structured endpoints. It\u2019s simple and works well when the data requirements are predictable. On the other hand, GraphQL shines when clients need flexibility, allowing them to request exactly what they need, reducing over-fetching. I tend to use GraphQL in complex applications where interactions are dynamic. Does that resonate with what you\u2019re looking for in terms of API architecture?",
+      "stage": "technical_concepts_1",
+      "t": 13.0
+    },
+    {
+      "who": "flow",
+      "text": "Let's dive into some technical concepts. We'll start with another question:\n\n**What are the tradeoffs of using API gateways? When would you NOT use one?**\n\nI'm looking forward to hearing your insights on this topic!",
+      "stage": "technical_concepts_1",
+      "t": 14.9,
+      "latency": 2.0
+    },
+    {
+      "who": "candidate",
+      "text": "Thanks for the question! API gateways can centralize traffic management, authentication, and monitoring, which is great for consistency and security. However, they can also introduce latency and a single point of failure, making them less ideal for very high-performance needs. If a service is lightweight, or if you want to minimize complexity, going without an API gateway could be a better choice. Does that cover what you were hoping to discuss about trade-offs?",
+      "stage": "technical_concepts_1",
+      "t": 15.9
+    },
+    {
+      "who": "flow",
+      "text": "Let's dive into some technical concepts. We'll start with the final question in this area:\n\n**Explain the concept of rate limiting in APIs and why it\u2019s important. How would you implement it?**\n\nI'm eager to hear your thoughts on this!",
+      "stage": "technical_concepts_1",
+      "t": 17.9,
+      "latency": 2.0
+    },
+    {
+      "who": "candidate",
+      "text": "Rate limiting is crucial for controlling how many requests a client can make in a given time frame. It helps prevent abuse, protects backend resources, and ensures fair usage among clients. I typically implement it using a token bucket or leaky bucket algorithm. For instance, I would use middleware in Django that tracks requests per user in Redis. But I\u2019m curious\u2014how do you handle spikes in traffic in your systems?",
+      "stage": "technical_concepts_1",
+      "t": 19.4
+    },
+    {
+      "who": "flow",
+      "text": "Let's dive into some technical concepts. We've covered a lot about APIs, and you\u2019ve provided some excellent insights. \n\nNow, if you\u2019re ready, we can transition to discussing your experience with specific projects or challenges you've encountered in your roles. Would you like to share a particular project where you faced significant technical challenges or made a notable impact?",
+      "stage": "technical_concepts_1",
+      "t": 21.7,
+      "latency": 2.2
+    },
+    {
+      "who": "candidate",
+      "text": "Absolutely! One project that stands out was optimizing a high-traffic payment processing system. We faced performance issues due to increasing user load, which led to slow response times. I implemented caching strategies and optimized database queries, which reduced load times significantly. It was rewarding to see how those changes improved user satisfaction. What kind of challenges do your teams generally face in projects?",
+      "stage": "technical_concepts_1",
+      "t": 22.7
+    },
+    {
+      "who": "flow",
+      "text": "That sounds like a fantastic project, Sam! Optimizing performance in a high-traffic system is no small feat, and it's great to hear about the positive impact your work had on user satisfaction.\n\nIn many teams, challenges often revolve around scaling applications, managing technical debt, and ensuring security compliance, especially when dealing with sensitive data like payment information. Additionally, coordinating between different services in a microservices architecture can introduce complexity.\n\nNow, let's continue discussing your experiences. Can you share more about how you approached the optimization process for that payment system? What specific caching strategies did you implement, and how did you decide what to cache?",
+      "stage": "technical_concepts_1",
+      "t": 24.2,
+      "latency": 1.6
+    },
+    {
+      "who": "system",
+      "text": "[user pressed skip -> technical_concepts_2]",
+      "stage": "technical_concepts_2",
+      "t": 24.2
+    },
+    {
+      "who": "flow",
+      "text": "Good. Now let's talk about [TOPIC_2].",
+      "stage": "technical_concepts_2",
+      "t": 24.9,
+      "latency": null
+    },
+    {
+      "who": "candidate",
+      "text": "Sure, I\u2019m up for discussing [TOPIC_2]. What specific aspects of it are you interested in diving into?",
+      "stage": "technical_concepts_2",
+      "t": 25.6
+    },
+    {
+      "who": "flow",
+      "text": "Thank you, Sam Ortiz. That covers our technical discussion. It was a pleasure learning about your experiences and insights into backend engineering and optimization strategies. I appreciate your time today!",
+      "stage": "closing",
+      "t": 29.4,
+      "latency": 3.8
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> closing]",
+      "stage": "closing",
+      "t": 29.4
+    },
+    {
+      "who": "candidate",
+      "text": "Thank you! I enjoyed our conversation and appreciate the opportunity to share my experiences. If you have any more questions or need further insights in the future, feel free to reach out. Have a great day!",
+      "stage": "closing",
+      "t": 30.2
+    },
+    {
+      "who": "flow",
+      "text": "You're very welcome, Sam! I'm glad you enjoyed the conversation as much as I did. If you have any questions or need further discussions in the future, don't hesitate to reach out. Wishing you all the best, and have a wonderful day!",
+      "stage": "closing",
+      "t": 31.6,
+      "latency": 1.4
+    },
+    {
+      "who": "candidate",
+      "text": "Thank you! I appreciate that. I\u2019ll keep in touch and wish you the best as well. Have a fantastic day!",
+      "stage": "closing",
+      "t": 32.2
+    },
+    {
+      "who": "flow",
+      "text": "Thank you, Sam! I truly appreciate that. I look forward to staying in touch, and I wish you a fantastic day as well!",
+      "stage": "closing",
+      "t": 33.3,
+      "latency": 1.1
+    },
+    {
+      "who": "candidate",
+      "text": "Thanks again! I'm looking forward to it. Take care!",
+      "stage": "closing",
+      "t": 33.9
+    },
+    {
+      "who": "flow",
+      "text": "You're welcome, Sam! Take care, and I look forward to hearing from you soon!",
+      "stage": "closing",
+      "t": 34.6,
+      "latency": 0.7
+    },
+    {
+      "who": "candidate",
+      "text": "Absolutely, I\u2019ll be in touch! Have a great day!",
+      "stage": "closing",
+      "t": 35.4
+    },
+    {
+      "who": "flow",
+      "text": "Thank you, Sam! Have a great day too! Looking forward to your message!",
+      "stage": "closing",
+      "t": 36.3,
+      "latency": 1.0
+    },
+    {
+      "who": "candidate",
+      "text": "Thanks! I\u2019ll make sure to reach out. Talk soon!",
+      "stage": "closing",
+      "t": 36.8
+    },
+    {
+      "who": "flow",
+      "text": "Sounds great, Sam! Talk soon!",
+      "stage": "closing",
+      "t": 42.1,
+      "latency": 5.2
+    },
+    {
+      "who": "candidate",
+      "text": "Looking forward to it! Bye for now!",
+      "stage": "closing",
+      "t": 42.8
+    },
+    {
+      "who": "flow",
+      "text": "Bye for now, Sam! Take care!",
+      "stage": "closing",
+      "t": 45.9,
+      "latency": 3.1
+    },
+    {
+      "who": "candidate",
+      "text": "You too! Bye!",
+      "stage": "closing",
+      "t": 46.4
+    },
+    {
+      "who": "flow",
+      "text": "Goodbye, Sam! Take care!",
+      "stage": "closing",
+      "t": 47.1,
+      "latency": 0.7
+    },
+    {
+      "who": "candidate",
+      "text": "Goodbye! Take care!",
+      "stage": "closing",
+      "t": 47.6
+    },
+    {
+      "who": "flow",
+      "text": "Goodbye! You take care too!",
+      "stage": "closing",
+      "t": 48.3,
+      "latency": 0.7
+    },
+    {
+      "who": "candidate",
+      "text": "Thanks! Talk later!",
+      "stage": "closing",
+      "t": 48.7
+    },
+    {
+      "who": "flow",
+      "text": "Talk later!",
+      "stage": "closing",
+      "t": 49.5,
+      "latency": 0.7
+    }
+  ],
+  "stages_visited": [
+    "closing"
+  ],
+  "final_stage": "closing",
+  "tool_calls": [
+    "transition_stage",
+    "generate_interview_questions",
+    "get_current_question",
+    "transition_stage",
+    "assess_response",
+    "assess_response",
+    "assess_response",
+    "transition_stage"
+  ],
+  "question_bank": [
+    {
+      "topic": "APIs",
+      "questions": [
+        "Explain how RESTful APIs differ from GraphQL in terms of data retrieval and flexibility.",
+        "What are the tradeoffs between using API gateways and direct service-to-service communication in microservices architecture?",
+        "When would you choose to implement versioning in an API, and what are the best practices for doing so?"
+      ]
+    },
+    {
+      "topic": "security",
+      "questions": [
+        "Explain the concept of JWT (JSON Web Tokens) and how it is used for authentication and authorization in backend systems.",
+        "Compare symmetric encryption vs. asymmetric encryption in the context of securing data in transit. When would you choose one over the other?",
+        "What are the tradeoffs between using OAuth 2.0 and traditional session-based authentication for managing user sessions in a web application?"
+      ]
+    }
+  ],
+  "stalls": [
+    "turn 5: 6 candidate turns in 'technical_concepts_1' with no transition; skipped to 'technical_concepts_2'"
+  ],
+  "notes": [],
+  "verdict": {
+    "overall": {
+      "confidence": "high",
+      "headline": "Sam demonstrates solid technical understanding and trade-off reasoning, but communication could be more structured.",
+      "recommendation": "on_fence",
+      "level_read": "mid"
+    },
+    "signals": [
+      {
+        "name": "Technical depth",
+        "reasoning": "Sam shows a good understanding of API concepts and rate limiting, explaining the use of token bucket algorithms and middleware in Django.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "REST is great for standard CRUD operations and when you want clear, structured endpoints.",
+          "I typically implement it using a token bucket or leaky bucket algorithm. For instance, I would use middleware in Django that tracks requests per user in Redis."
+        ],
+        "to_raise": "Provide deeper insights into the underlying principles or potential pitfalls of the technologies discussed."
+      },
+      {
+        "name": "Trade-off reasoning",
+        "reasoning": "Sam effectively discusses the trade-offs of using API gateways, mentioning latency and single points of failure.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "API gateways can centralize traffic management, authentication, and monitoring, which is great for consistency and security. However, they can also introduce latency and a single point of failure."
+        ],
+        "to_raise": "Include more specific examples or scenarios where these trade-offs were encountered and resolved."
+      },
+      {
+        "name": "Communication & structure",
+        "reasoning": "While Sam communicates clearly, the structure could be improved to make points more concise and signposted.",
+        "band": "borderline",
+        "scope_met": "mid",
+        "evidence": [
+          "Does that resonate with what you\u2019re looking for in terms of API architecture?",
+          "But I\u2019m curious\u2014how do you handle spikes in traffic in your systems?"
+        ],
+        "to_raise": "Use more structured responses with clear signposting to guide the listener through the explanation."
+      }
+    ],
+    "differentiators": [
+      "To be a strong hire, Sam should enhance communication structure and provide more detailed examples of technical challenges and solutions."
+    ],
+    "delivery": {
+      "pace_available": false,
+      "wpm": null,
+      "wpm_band": "unknown",
+      "wpm_target": "130-160",
+      "filler_total": 2,
+      "filler_per_100w": 0.43,
+      "filler_per_min": null,
+      "filler_band": "good",
+      "filler_target": "<=3.3/100 words",
+      "word_count": 469,
+      "sentence_count": 56,
+      "filler_breakdown": {
+        "so": 1,
+        "kind of": 1
+      },
+      "top_crutch_word": {
+        "word": "so",
+        "count": 1
+      },
+      "talk_ratio": 0.49,
+      "longest_monologue_s": null
+    },
+    "gap_to_next": {
+      "signal": "Communication & structure",
+      "from_band": "borderline",
+      "to_band": "solid",
+      "move": "Use more structured responses with clear signposting to guide the listener through the explanation."
+    },
+    "great_answers": 0,
+    "context": {
+      "track": "technical_voice",
+      "role": "swe",
+      "seniority": "mid",
+      "archetype": "big_tech"
+    }
+  },
+  "flags": [
+    "1/17 Flow turns over 90 words (voice: too long) \u2014 longest 105 words",
+    "2 Flow turns ask 2+ questions at once",
+    "8 praise words across 17 Flow turns (sycophancy)",
+    "uses the candidate's first name 11 times in 17 turns",
+    "possible meta/stage leakage in 1 turns, e.g. \"Let's dive into some technical concepts. We've covered a lot about APIs, and you\"",
+    "reply latency: median 1.4s, max 5.2s (text-only; TTS adds more)",
+    "repeated openers: ['thank you']"
+  ]
+}

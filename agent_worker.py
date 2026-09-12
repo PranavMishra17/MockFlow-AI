@@ -216,7 +216,7 @@ async def _connect_to_room(env: dict) -> Room:
 
     token = livekit_api.AccessToken(env['livekit_api_key'], env['livekit_api_secret'])
     token.with_identity("interview-agent")
-    token.with_name("AI Interviewer")
+    token.with_name("Flow")
     token.with_grants(livekit_api.VideoGrants(
         room_join=True,
         room=room_name,

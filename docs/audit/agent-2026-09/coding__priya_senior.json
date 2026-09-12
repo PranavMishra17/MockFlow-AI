@@ -1,0 +1,570 @@
+{
+  "track": "coding",
+  "persona": "priya_senior",
+  "config": {
+    "track": "coding",
+    "role": "Senior Backend Engineer",
+    "level": "senior",
+    "user_id": "audit-user",
+    "preferred_language": "python",
+    "problem_count": "2"
+  },
+  "duration_s": 60.1,
+  "history": [
+    {
+      "who": "flow",
+      "text": "Hello and welcome, candidate! Please click the \"I'm Ready\" button when you want to receive your first problem.",
+      "stage": "greeting",
+      "t": 3.3,
+      "latency": null
+    },
+    {
+      "who": "system",
+      "text": "[coding_problem pushed: Two Sum]",
+      "stage": "greeting",
+      "t": 3.9
+    },
+    {
+      "who": "candidate",
+      "text": "First, I would create a hash map to store each number and its corresponding index as I iterate through the array. For each number, I would calculate its complement by subtracting the current number from the target. Then I would check if this complement exists in the map. If it does, I've found my two indices and can return them. If not, I would add the current number and its index to the hash map and continue. This approach ensures that I only need to traverse the array once, resulting in an O(n) time complexity, which is efficient. Would you like me to discuss potential edge cases?",
+      "stage": "self_intro",
+      "t": 6.1
+    },
+    {
+      "who": "system",
+      "text": "[code_submitted problem 0, 7 lines]\ndef two_sum(nums, target):\n    num_to_index = {}\n    for i, num in enumerate(nums):\n        complement = target - num\n        if complement in num_to_index:\n            return [num_to_index[complement], i]\n        num_to_index[num] = i",
+      "stage": "self_intro",
+      "t": 12.0
+    },
+    {
+      "who": "flow",
+      "text": "Your solution is efficient and correctly identifies the indices, but consider edge cases for completeness.",
+      "stage": "self_intro",
+      "t": 13.2,
+      "latency": null
+    },
+    {
+      "who": "system",
+      "text": "[evaluation_result] {\"correctness\": \"pass\", \"approach_quality\": \"A\", \"edge_cases_handled\": [], \"edge_cases_missed\": [\"Input with negative numbers\", \"Input with large numbers\", \"Input with the minimum length of 2\"], \"time_complexity\": \"O(n)\", \"space_complexity\": \"O(n)\", \"code_quality_notes\": [\"good variable naming\"], \"suggestions\": [\"Add handling for edge cases, such as negative numbers or the minimum input length.\"], \"brief_verbal_feedback\": \"Your solution is efficient and correctly identifies the indices, but consider edge cases for completeness.\"}",
+      "stage": "self_intro",
+      "t": 13.2
+    },
+    {
+      "who": "candidate",
+      "text": "Thank you for the feedback. To address the edge cases, I would ensure that the function can handle scenarios where the input list contains negative numbers and the minimum length requirement of two elements. For negative numbers, the current logic already covers them since we're working with complements. However, I would include a check at the start to confirm that the input length is at least two. If it\u2019s not, I could return an appropriate error message or indication. This would make the function more robust overall. Would you like me to elaborate on any specific edge case?",
+      "stage": "self_intro",
+      "t": 15.0
+    },
+    {
+      "who": "flow",
+      "text": "Great insights, Priya! Now, could you provide a brief intro of your programming background?",
+      "stage": "self_intro",
+      "t": 16.8,
+      "latency": 1.8
+    },
+    {
+      "who": "candidate",
+      "text": "Certainly! I have eight years of experience in backend engineering, currently serving as a tech lead for a payments platform at a fintech. Here, I work with technologies like Go, Postgres, Kafka, and AWS. I've successfully led a migration from a monolithic architecture to a microservices approach, which reduced our P99 latency by 40%, significantly improving our performance. In addition to my technical responsibilities, I mentor two junior engineers, helping them develop their skills and advance in their careers. Before this role, I was at a logistics startup that was acquired, which provided me with valuable experience in scaling services under pressure.",
+      "stage": "self_intro",
+      "t": 18.2
+    },
+    {
+      "who": "flow",
+      "text": "That\u2019s an impressive background, Priya! What programming language do you prefer to use today?",
+      "stage": "self_intro",
+      "t": 20.3,
+      "latency": 2.1
+    },
+    {
+      "who": "candidate",
+      "text": "I currently prefer using Go for backend development. Its performance, concurrency support, and simplicity in handling microservices make it an ideal choice for our payments platform. Go's strong type system and built-in tools for testing and profiling also enhance code reliability and maintainability. Additionally, its ecosystem is well-suited for cloud-based applications, which aligns perfectly with our architecture on AWS. Overall, Go enables me to deliver efficient and scalable solutions while maintaining high code quality.",
+      "stage": "self_intro",
+      "t": 21.5
+    },
+    {
+      "who": "flow",
+      "text": "Great, we'll use Go today, Priya! Now that we've covered your background and preferred programming language, let's transition to the next stage of our interview. \n\nWe'll dive deeper into some technical questions and system design aspects related to backend engineering. Are you ready?",
+      "stage": "warm_up",
+      "t": 23.6,
+      "latency": 2.1
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> warm_up]",
+      "stage": "warm_up",
+      "t": 23.6
+    },
+    {
+      "who": "candidate",
+      "text": "Absolutely, I'm ready to dive into the technical questions and system design aspects. I'm looking forward to discussing how we can create efficient and scalable backend systems. Please go ahead with your first question!",
+      "stage": "warm_up",
+      "t": 24.4
+    },
+    {
+      "who": "flow",
+      "text": "Fantastic, Priya! We\u2019re now moving on to technical questions and coding problems. Here\u2019s your first coding challenge: \n\n**Problem:** Given a list of integers, write a function to find all unique triplets in the list that sum up to zero. \n\nPlease implement this in your preferred programming language, Go. Let me know when you're ready to submit your solution!",
+      "stage": "coding_problem_1",
+      "t": 26.4,
+      "latency": 2.0
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> coding_problem_1]",
+      "stage": "coding_problem_1",
+      "t": 26.4
+    },
+    {
+      "who": "candidate",
+      "text": "I'm ready to tackle the coding challenge. I would approach this problem by first sorting the list of integers, then using a loop to find unique triplets that sum to zero by leveraging a two-pointer technique. This way, I can efficiently check for the sum while avoiding duplicates. \n\nOnce I've implemented the solution, I'll ensure to run through some test cases to validate its accuracy. I'll get started on this now.",
+      "stage": "coding_problem_1",
+      "t": 27.6
+    },
+    {
+      "who": "flow",
+      "text": "That sounds like a solid approach, Priya! Take your time to implement the solution, and let me know when you're ready to submit your code.",
+      "stage": "coding_problem_1",
+      "t": 28.3,
+      "latency": 0.8
+    },
+    {
+      "who": "candidate",
+      "text": "Thank you! I appreciate the encouragement. I'll work through the implementation now, focusing on optimizing the logic to ensure it handles edge cases effectively. I\u2019ll let you know when I\u2019m ready to submit the code.",
+      "stage": "coding_problem_1",
+      "t": 29.0
+    },
+    {
+      "who": "flow",
+      "text": "You're welcome, Priya! I'm here if you need any assistance while you work on the implementation. Just let me know when you're ready to submit your code.",
+      "stage": "coding_problem_1",
+      "t": 29.8,
+      "latency": 0.8
+    },
+    {
+      "who": "candidate",
+      "text": "Thank you! I\u2019ll apply the two-pointer technique to find the unique triplets that sum to zero and make sure to handle any potential duplicates. I\u2019ll let you know when I\u2019ve completed the implementation.",
+      "stage": "coding_problem_1",
+      "t": 30.6
+    },
+    {
+      "who": "flow",
+      "text": "Sounds good, Priya! I'm looking forward to seeing your implementation. Take your time, and let me know when you're ready to submit.",
+      "stage": "coding_problem_1",
+      "t": 31.4,
+      "latency": 0.8
+    },
+    {
+      "who": "candidate",
+      "text": "I've completed the implementation. I used sorting combined with a two-pointer technique to efficiently find all unique triplets that sum to zero. The solution ensures that duplicates are avoided by skipping over repeated values. I'm ready to submit my code now.",
+      "stage": "coding_problem_1",
+      "t": 32.1
+    },
+    {
+      "who": "flow",
+      "text": "Thank you for your submission, Priya! However, your code seems to solve a different problem than the one asked. It looks like it's addressing the two-sum logic instead of finding unique triplets that sum to zero. Would you like to revise your implementation based on the original problem statement?",
+      "stage": "coding_problem_1",
+      "t": 38.3,
+      "latency": 6.2
+    },
+    {
+      "who": "candidate",
+      "text": "I appreciate your feedback. I see how that happened. To correctly address the problem, I would revise my approach: I would still sort the array, but then iterate through each number, using two pointers to find pairs that, together with the current number, sum to zero. This would ensure we\u2019re considering unique triplets. I\u2019ll update my implementation accordingly. Thank you for pointing this out!",
+      "stage": "coding_problem_1",
+      "t": 39.4
+    },
+    {
+      "who": "flow",
+      "text": "You're welcome, Priya! I'm glad you're revising your approach. Take your time to implement the corrected solution, and let me know when you're ready to submit it again.",
+      "stage": "coding_problem_1",
+      "t": 41.1,
+      "latency": 1.7
+    },
+    {
+      "who": "system",
+      "text": "[user pressed skip -> coding_problem_2]",
+      "stage": "coding_problem_2",
+      "t": 41.1
+    },
+    {
+      "who": "flow",
+      "text": "Good work. Here's the second problem.",
+      "stage": "coding_problem_2",
+      "t": 41.8,
+      "latency": null
+    },
+    {
+      "who": "candidate",
+      "text": "Thank you! I'm ready for the second problem. Please go ahead and share the details, and I'll do my best to provide a thoughtful solution.",
+      "stage": "coding_problem_2",
+      "t": 42.4
+    },
+    {
+      "who": "flow",
+      "text": "Here's your second problem, Priya: \n\n**Problem:** Given a string `s` of just '()[]{}' characters, return `True` if every bracket is closed by the same type in the correct order, else return `False`. \n\nYou have 15 minutes to solve this. Let me know when you're ready to submit your solution!",
+      "stage": "coding_problem_2",
+      "t": 44.4,
+      "latency": 2.0
+    },
+    {
+      "who": "system",
+      "text": "[coding_problem pushed: Valid Parentheses]",
+      "stage": "coding_problem_2",
+      "t": 44.4
+    },
+    {
+      "who": "candidate",
+      "text": "To solve the Valid Parentheses problem, I would use a stack data structure, which is ideal for tracking opening brackets. \n\nFirst, I would iterate through each character in the string. When encountering an opening bracket\u2014like '(', '[', or '{'\u2014I\u2019d push it onto the stack. For closing brackets\u2014like ')', ']', or '}'\u2014I would check if the stack is not empty and if the top of the stack corresponds to the closing bracket. If they match, I'd pop the stack; if not, I would immediately return False.\n\nFinally, after processing all characters, if the stack is empty, it means all brackets were properly closed in order, so I would return True. If not, I'd return False. This approach has a time complexity of O(n) and a space complexity of O(n) in the worst case. Would you like me to proceed with the implementation?",
+      "stage": "coding_problem_2",
+      "t": 46.9
+    },
+    {
+      "who": "flow",
+      "text": "That sounds like an excellent plan, Priya! Go ahead and implement the solution, and let me know when you're ready to submit your code.",
+      "stage": "coding_problem_2",
+      "t": 48.5,
+      "latency": 1.6
+    },
+    {
+      "who": "system",
+      "text": "[code_submitted problem 1, 11 lines]\ndef is_valid(s):\n    stack = []\n    mapping = {')': '(', '}': '{', ']': '['}\n    \n    for char in s:\n        if char in mapping.values():\n            stack.append(char)\n        elif char in mapping.keys():\n            if stack == [] or mapping[char] != stack.pop():\n                return False\n    return stack == []",
+      "stage": "coding_problem_2",
+      "t": 50.7
+    },
+    {
+      "who": "flow",
+      "text": "Your solution is efficient and correctly handles the main cases for valid parentheses.",
+      "stage": "coding_problem_2",
+      "t": 51.8,
+      "latency": null
+    },
+    {
+      "who": "system",
+      "text": "[evaluation_result] {\"correctness\": \"pass\", \"approach_quality\": \"A\", \"edge_cases_handled\": [\"empty string\", \"single type of brackets\", \"nested brackets\"], \"edge_cases_missed\": [], \"time_complexity\": \"O(n)\", \"space_complexity\": \"O(n)\", \"code_quality_notes\": [\"good variable naming\", \"clear logic\"], \"suggestions\": [\"Consider adding type hints for better readability.\"], \"brief_verbal_feedback\": \"Your solution is efficient and correctly handles the main cases for valid parentheses.\"}",
+      "stage": "coding_problem_2",
+      "t": 51.8
+    },
+    {
+      "who": "candidate",
+      "text": "Thank you for the feedback! I'm glad the solution passed all the necessary tests and handled the edge cases well. I appreciate the suggestion about type hints; I'll definitely incorporate that in future implementations for better readability. If there are any further questions or problems to tackle, I'm ready to take them on!",
+      "stage": "coding_problem_2",
+      "t": 52.7
+    },
+    {
+      "who": "flow",
+      "text": "That's all the problems for today, Priya Raman. Let me wrap up. Thank you for your thoughtful solutions and engagement throughout the interview. Your experience and approach to problem-solving were impressive. Best of luck with the next steps!",
+      "stage": "closing",
+      "t": 54.5,
+      "latency": 1.8
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> closing]",
+      "stage": "closing",
+      "t": 54.5
+    }
+  ],
+  "stages_visited": [
+    "warm_up",
+    "coding_problem_1",
+    "closing"
+  ],
+  "final_stage": "closing",
+  "tool_calls": [
+    "record_response",
+    "get_current_question",
+    "generate_interview_questions",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "transition_stage",
+    "transition_stage",
+    "evaluate_code_submission",
+    "record_response",
+    "get_current_question",
+    "record_response",
+    "transition_stage"
+  ],
+  "question_bank": [
+    {
+      "slug": "two-sum",
+      "title": "Two Sum",
+      "difficulty": "easy",
+      "time_limit_minutes": 15,
+      "description": "Given an array of integers `nums` and an integer `target`, return the indices of the two numbers that add up to `target`. Exactly one solution exists and you may not use the same element twice. Return the indices in increasing order.",
+      "examples": [
+        {
+          "input": "nums = [2,7,11,15], target = 9",
+          "output": "[0,1]",
+          "explanation": "2 + 7 = 9"
+        },
+        {
+          "input": "nums = [3,2,4], target = 6",
+          "output": "[1,2]"
+        }
+      ],
+      "constraints": [
+        "2 <= len(nums) <= 10^4",
+        "Exactly one valid answer exists"
+      ],
+      "hints": [
+        "For each number, what complement would complete the pair?",
+        "A hash map of value->index gives O(n)."
+      ],
+      "entrypoint": "two_sum",
+      "starter_code": {
+        "python": "def two_sum(nums, target):\n    # return [i, j] with i < j\n    pass\n"
+      },
+      "test_cases": [
+        {
+          "args": [
+            [
+              2,
+              7,
+              11,
+              15
+            ],
+            9
+          ],
+          "expected": [
+            0,
+            1
+          ]
+        },
+        {
+          "args": [
+            [
+              3,
+              2,
+              4
+            ],
+            6
+          ],
+          "expected": [
+            1,
+            2
+          ]
+        },
+        {
+          "args": [
+            [
+              3,
+              3
+            ],
+            6
+          ],
+          "expected": [
+            0,
+            1
+          ]
+        },
+        {
+          "args": [
+            [
+              -1,
+              -2,
+              -3,
+              -4,
+              -5
+            ],
+            -8
+          ],
+          "expected": [
+            2,
+            4
+          ]
+        }
+      ],
+      "reference_solution": {
+        "python": "def two_sum(nums, target):\n    seen = {}\n    for i, n in enumerate(nums):\n        c = target - n\n        if c in seen:\n            return [seen[c], i]\n        seen[n] = i\n    return []\n"
+      }
+    },
+    {
+      "slug": "valid-parentheses",
+      "title": "Valid Parentheses",
+      "difficulty": "easy",
+      "time_limit_minutes": 15,
+      "description": "Given a string `s` of just '()[]{}' characters, return True if every bracket is closed by the same type in the correct order, else False.",
+      "examples": [
+        {
+          "input": "s = \"()[]{}\"",
+          "output": "True"
+        },
+        {
+          "input": "s = \"([)]\"",
+          "output": "False"
+        }
+      ],
+      "constraints": [
+        "0 <= len(s) <= 10^4",
+        "s contains only bracket characters"
+      ],
+      "hints": [
+        "A stack matches the most recent open bracket.",
+        "Empty string is valid."
+      ],
+      "entrypoint": "is_valid",
+      "starter_code": {
+        "python": "def is_valid(s):\n    pass\n"
+      },
+      "test_cases": [
+        {
+          "args": [
+            "()"
+          ],
+          "expected": true
+        },
+        {
+          "args": [
+            "()[]{}"
+          ],
+          "expected": true
+        },
+        {
+          "args": [
+            "(]"
+          ],
+          "expected": false
+        },
+        {
+          "args": [
+            "([)]"
+          ],
+          "expected": false
+        },
+        {
+          "args": [
+            "{[]}"
+          ],
+          "expected": true
+        },
+        {
+          "args": [
+            ""
+          ],
+          "expected": true
+        }
+      ],
+      "reference_solution": {
+        "python": "def is_valid(s):\n    pairs = {')': '(', ']': '[', '}': '{'}\n    stack = []\n    for ch in s:\n        if ch in '([{':\n            stack.append(ch)\n        else:\n            if not stack or stack.pop() != pairs[ch]:\n                return False\n    return not stack\n"
+      }
+    }
+  ],
+  "stalls": [
+    "turn 8: 6 candidate turns in 'coding_problem_1' with no transition; skipped to 'coding_problem_2'"
+  ],
+  "notes": [
+    "closing delivered by Flow at turn 11"
+  ],
+  "verdict": {
+    "overall": {
+      "confidence": "medium",
+      "headline": "Priya demonstrates strong problem-solving skills but needs to improve on verifying and aligning solutions to problem statements.",
+      "recommendation": "on_fence",
+      "level_read": "mid"
+    },
+    "signals": [
+      {
+        "name": "Problem-solving",
+        "reasoning": "Priya demonstrated a clear approach to solving problems by outlining strategies before coding. She stated the use of a hash map for the two-sum problem and a two-pointer technique for the triplet sum problem.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "First, I would create a hash map to store each number and its corresponding index as I iterate through the array.",
+          "I would approach this problem by first sorting the list of integers, then using a loop to find unique triplets that sum to zero by leveraging a two-pointer technique."
+        ],
+        "to_raise": "Consider alternative strategies and discuss trade-offs more explicitly."
+      },
+      {
+        "name": "Coding",
+        "reasoning": "Priya's initial implementation did not align with the problem statement, indicating a gap in translating the plan to code. However, she quickly identified the issue and revised her approach.",
+        "band": "borderline",
+        "scope_met": "new_grad",
+        "evidence": [
+          "I've completed the implementation. I used sorting combined with a two-pointer technique to efficiently find all unique triplets that sum to zero.",
+          "I see how that happened. To correctly address the problem, I would revise my approach."
+        ],
+        "to_raise": "Ensure the implementation aligns with the problem statement before submission."
+      },
+      {
+        "name": "Testing & verification",
+        "reasoning": "Priya did not explicitly mention testing her code with various cases, and her initial solution did not meet the problem requirements, indicating a lack of thorough verification.",
+        "band": "borderline",
+        "scope_met": "new_grad",
+        "evidence": [
+          "Once I've implemented the solution, I'll ensure to run through some test cases to validate its accuracy.",
+          "I appreciate your feedback. I see how that happened."
+        ],
+        "to_raise": "Proactively test with edge cases and verify correctness before submission."
+      },
+      {
+        "name": "Response to hints",
+        "reasoning": "Priya was receptive to feedback and adjusted her approach when the interviewer pointed out the misalignment with the problem statement.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "I appreciate your feedback. I see how that happened.",
+          "Thank you for pointing this out!"
+        ],
+        "to_raise": "Integrate hints more proactively to avoid initial missteps."
+      },
+      {
+        "name": "Communication & structure",
+        "reasoning": "Priya communicated her thought process clearly and structured her responses well, making it easy to follow her reasoning.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "First, I would create a hash map to store each number and its corresponding index as I iterate through the array.",
+          "To solve the Valid Parentheses problem, I would use a stack data structure, which is ideal for tracking opening brackets."
+        ],
+        "to_raise": "Provide more structured explanations of trade-offs and decision-making."
+      }
+    ],
+    "differentiators": [
+      "To be a strong hire, Priya should ensure her implementations align with problem statements and verify solutions thoroughly before submission."
+    ],
+    "delivery": {
+      "pace_available": false,
+      "wpm": null,
+      "wpm_band": "unknown",
+      "wpm_target": "130-160",
+      "filler_total": 9,
+      "filler_per_100w": 1.03,
+      "filler_per_min": null,
+      "filler_band": "good",
+      "filler_target": "<=3.3/100 words",
+      "word_count": 878,
+      "sentence_count": 66,
+      "filler_breakdown": {
+        "like": 6,
+        "so": 1,
+        "you know": 2
+      },
+      "top_crutch_word": {
+        "word": "like",
+        "count": 6
+      },
+      "talk_ratio": 0.66,
+      "longest_monologue_s": null
+    },
+    "gap_to_next": {
+      "signal": "Coding",
+      "from_band": "borderline",
+      "to_band": "solid",
+      "move": "Ensure the implementation aligns with the problem statement before submission."
+    },
+    "great_answers": 0,
+    "context": {
+      "track": "coding",
+      "role": "swe",
+      "seniority": "mid",
+      "archetype": "big_tech"
+    }
+  },
+  "flags": [
+    "uses the candidate's first name 12 times in 16 turns",
+    "possible meta/stage leakage in 1 turns, e.g. \"Great, we'll use Go today, Priya! Now that we've covered your background and pre\"",
+    "reply latency: median 1.8s, max 6.2s (text-only; TTS adds more)",
+    "1 candidate question(s) answered with an immediate counter-question"
+  ]
+}
