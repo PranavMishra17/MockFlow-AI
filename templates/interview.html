@@ -264,8 +264,11 @@
                 if (LK) return LK;
                 if (statusEl) statusEl.textContent = 'Loading LiveKit client...';
 
-                // Try a local vendor copy first (faster and avoids CDN issues)
-                var localPath = '/static/vendors/livekit-client.umd.min.js';
+                // Try the vendored copy first: the upstream UMD build from the
+                // livekit-client 2.22.3 npm tarball (jsdelivr's ".min" variant is
+                // its own re-minification, not a published artifact). Keep the
+                // version in step with LIVEKIT_CDN below.
+                var localPath = '/static/vendors/livekit-client.umd.js';
                 try {
                     await loadScript(localPath);
                     LK = getLKGlobal();
@@ -356,7 +359,7 @@
                             }).catch(function(e2) {
                                 console.error('[LIVEKIT] Local fallback failed', e2);
                                 localBtn.disabled = false;
-                                details.textContent = String(e2 && e2.message ? e2.message : e2) + '\n\nTip: Place a copy of the LiveKit client at /static/vendors/livekit-client.umd.min.js to enable local fallback.';
+                                details.textContent = String(e2 && e2.message ? e2.message : e2) + '\n\nTip: Place a copy of the LiveKit client at /static/vendors/livekit-client.umd.js to enable local fallback.';
                                 if (statusEl) statusEl.textContent = 'Local fallback failed';
                             });
                         });
