@@ -141,7 +141,17 @@ python tests/e2e/run_smoke.py         # Playwright: every page in Chromium, cons
 
 ## 5. Optional — exercise the free tier
 
-Off by default. To test the owner-funded trial path without BYOK keys:
+Off by default locally; ON in production since 2026-09-12 (see DEPLOYMENT_GCP.md, Part F).
+
+Scripted, and the way to prove it: `python tests/e2e/free_tier_probe.py`. It runs the
+real app against the real database as a brand-new throwaway user with no keys, forces
+`FREE_TIER_ENABLED=true` for its own process, falls back to your own LiveKit/OpenAI/Deepgram
+keys when `SYSTEM_*` are unset, and asserts: status reports 2 free interviews; `/api/token`
+serves without keys and the spawned agent actually speaks; the credit and the monthly counter
+move; the 2nd is served and the 3rd is refused with a message that says to add keys. It
+deletes the user and restores the month's counter afterwards. Costs one short interview.
+
+By hand:
 1. Set `FREE_TIER_ENABLED=true` and all five `SYSTEM_*` keys (your own LiveKit/OpenAI/Deepgram) in `.env`.
 2. Restart. A new email should get its bounded free interviews; the dashboard badge shows remaining slots; the monthly ceiling (`FREE_TIER_MONTHLY_MAX_CALLS`) is the kill-switch.
 3. ✅ Confirm a 3rd interview on the same email falls back to "bring your own keys".
