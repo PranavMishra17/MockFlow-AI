@@ -12,7 +12,8 @@ track, and a test can assert on FSM state, which tools the model called, what
 the agent emitted to the UI, and the transcript that would have been scored.
 
 What it deliberately does NOT cover — do not retire the e2e suite on its
-account: VAD, endpointing and barge-in; STT errors and caption timing; TTS and
+account: VAD, endpointing and barge-in; STT errors and caption timing (for
+those, `tests/e2e/caption_probe.py` drives a real room); TTS and
 the audio cache; LiveKit connection and tokens; worker and dispatch lifecycle;
 database persistence; real wall-clock races; and everything in interview.html.
 """

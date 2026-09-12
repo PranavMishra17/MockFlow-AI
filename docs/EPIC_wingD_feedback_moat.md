@@ -51,7 +51,7 @@ Run `migrations/003_interview_scores.sql` on Neon. Optionally set `EVALUATOR_MOD
 A real interview ran on Render and the verdict reveal worked. Two-part fix list from that run:
 
 **Part 1 — interview-flow UX** (`interview.html`, `form.html`, `agent_worker.py`, api-keys)
-- [x] **Live captions.** Shipped: stream interim user transcripts via LiveKit's audio-synced `RoomEvent.TranscriptionReceived` (additive + guarded; agents 1.3.6 forwards transcription by default).
+- [x] **Live captions.** ~~Shipped: stream interim user transcripts via LiveKit's audio-synced `RoomEvent.TranscriptionReceived`.~~ That never fired: LiveKit Cloud does not forward the legacy `Transcription` packet, and `livekit-client@2.5.0` could not read the text streams the SDK actually sends, so captions only appeared from the end-of-turn `agent_caption` data packet. Fixed 2026-09: client bumped to 2.22.3, `lk.transcription` text streams consumed via `static/captions.js`, routed by `lk.transcribed_track_id`. Proven live by `tests/e2e/caption_probe.py`.
 - [x] **Form begin-button.** When the form auto-fills from a prior session, Begin stays disabled until a track is re-clicked — enable it on cache restore (`syncRestoredTrack`).
 - [x] **API-keys can't be updated.** Was: editing one masked field left the other four as `••••` and `validateKeys()` rejected any masked value → partial update impossible. Shipped: the save path merges with the stored row — a blank/masked field keeps its saved value (`app.py`) — and the client validates only the fields the user actually changed (`static/apikeys.js`). First-time setup still requires all five.
 - [ ] **Interview-page layout.** Timer + "Skip stages" placement, the mic/End-Interview buttons, and the orb/candidate panel balance need polish.

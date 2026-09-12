@@ -120,6 +120,7 @@ python tests/e2e/run_smoke.py         # Playwright: every page in Chromium, cons
    - ✅ Watch the server log for the worker spawn; the cold-start panel should resolve to "Agent ready".
 3. **Grant microphone** access when the browser asks. Join the room.
    - ✅ The orb animates; the interviewer **greets you out loud** (TTS).
+   - ✅ The interviewer's caption **grows word by word while they speak**, not after. Yours updates every ~0.5–1 s as you talk (that is Deepgram's interim cadence). If either only appears once the turn is over, run `python tests/e2e/caption_probe.py --say "Hi, I'm Sam." --speak-at 40 --seconds 65` — it joins a room, spawns the agent, and asserts the `lk.transcription` streams arrive with the audio and are tagged per speaker. No browser or mic needed.
    - ✅ Speak — your words are transcribed (Deepgram STT) and the agent asks adaptive follow-ups (OpenAI LLM).
    - ✅ FSM advances through stages; the skip control moves you forward.
 4. **Coding track** (separate run): pick **Coding**.

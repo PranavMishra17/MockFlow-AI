@@ -121,8 +121,8 @@ exceptions — a malformed client message must not end the interview.
 
 ## 2. Client → agent payloads
 
-Everything goes over `publishData`. The frontend pins `livekit-client@2.5.0`,
-which predates text streams and RPC; those fail **silently** at runtime.
+Everything goes over `publishData`. The frontend runs `livekit-client@2.22.3`
+(bumped from 2.5.0 for live captions, see §3); commands stay on `publishData`.
 
 | `type` | Fields | Owner | Status |
 |---|---|---|---|
@@ -144,12 +144,24 @@ which predates text streams and RPC; those fail **silently** at runtime.
 |---|---|---|---|
 | `stage_change` | `stage` | WT0 | LIVE |
 | `stage_update` | `stage` | WT0 | LIVE (coding close-out only) |
-| `user_caption` / `agent_caption` | `text` | WT0 | LIVE |
+| `user_caption` / `agent_caption` | `text` | WT0 | LIVE — **fallback only** |
 | `coding_problem` | `problem`, `problem_index`, `attempt_number`, `max_attempts`, `time_limit_minutes` | WT0 | LIVE |
 | `evaluation_result` | `evaluation`, `attempt`, `max_attempts`, `problem_index`, `objective_tests?` | WT0 | LIVE |
 | `max_attempts_reached` | `problem_index` | WT0 | LIVE |
 | `interview_saved` | `interview_id`, `message?` | WT0 | LIVE |
 | `interview_ending` / `save_error` | `message` | WT0 | LIVE |
+
+**Live captions are not a data payload.** The agents SDK publishes both speakers'
+transcriptions as text streams on topic `lk.transcription`, paced to the audio
+(one delta stream per agent reply; one full-text stream per STT interim for the
+candidate, same `lk.segment_id`). `interview.html` consumes them via
+`registerTextStreamHandler` and `static/captions.js`. Two facts the page depends
+on, both verified against LiveKit Cloud (2026-09): the legacy `Transcription`
+packet (`RoomEvent.TranscriptionReceived`) is **not forwarded** any more, and in
+direct mode both speakers' streams arrive under the **agent's** identity, so the
+page routes by `lk.transcribed_track_id`, not sender. `agent_caption` is emitted
+from `conversation_item_added`, i.e. after playback, which is why it can only
+be the fallback. `tests/e2e/caption_probe.py` asserts all of this live.
 | `question_skipped` | `stage`, `outcome`, `skipped_count` | WT2 | RESERVED |
 | `agent_state` | `state`: `"listening"｜"thinking"｜"speaking"` | WT5 | RESERVED |
 | `input_mode` | `mode` | WT5 | RESERVED |

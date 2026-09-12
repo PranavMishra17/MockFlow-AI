@@ -215,14 +215,15 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/livekit-client@2.5.0/dist/livekit-client.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client@2.22.3/dist/livekit-client.umd.min.js"></script>
     <script>
         if (typeof LivekitClient === 'undefined' && typeof LiveKit === 'undefined') {
-            document.write('<script src="https://unpkg.com/livekit-client@2.5.0/dist/livekit-client.umd.min.js"><\/script>');
+            document.write('<script src="https://unpkg.com/livekit-client@2.22.3/dist/livekit-client.umd.min.js"><\/script>');
         }
     </script>
 
     <script src="/static/utils.js"></script>
+    <script src="/static/captions.js"></script>
 
     <script>
     (function() {
@@ -240,7 +241,7 @@
             }
 
             var LK = null;
-            var LIVEKIT_CDN = 'https://cdn.jsdelivr.net/npm/livekit-client@2.5.0/dist/livekit-client.umd.min.js';
+            var LIVEKIT_CDN = 'https://cdn.jsdelivr.net/npm/livekit-client@2.22.3/dist/livekit-client.umd.min.js';
             var statusEl = document.getElementById('statusText');
 
             function getLKGlobal() {
@@ -395,7 +396,16 @@
                 agentAudioContext: null,
                 roomName: null,
                 interviewFilename: null,
-                interviewDatabaseId: null
+                interviewDatabaseId: null,
+                // Live captions, reduced from LiveKit `lk.transcription` text
+                // streams (static/captions.js). Once a speaker's first stream
+                // lands, streams are authoritative for that speaker and the
+                // agent's `agent_caption` / `user_caption` data packets are
+                // ignored, so the finished text does not stomp the live one.
+                captions: {
+                    agent: (typeof CaptionTrack === 'function') ? new CaptionTrack() : null,
+                    candidate: (typeof CaptionTrack === 'function') ? new CaptionTrack() : null
+                }
             };
             
             var elements = {
@@ -1384,10 +1394,19 @@
                     state.room.on(LK.RoomEvent.DataReceived, onDataReceived);
                     state.room.on(LK.RoomEvent.ParticipantConnected, onParticipantConnected);
                     state.room.on(LK.RoomEvent.LocalTrackPublished, onLocalTrackPublished);
-                    // LiveKit forwards transcription segments synced to audio — consume
-                    // them for LIVE captions (streams as words land). Additive + guarded:
-                    // writes the same caption elements as the manual data-payload path,
-                    // and is a no-op if the client SDK lacks the event.
+                    // LIVE captions. The agents SDK publishes transcriptions, paced
+                    // to the audio, as text streams on the `lk.transcription` topic.
+                    // That is the only channel that arrives while the agent is still
+                    // talking: LiveKit Cloud no longer forwards the legacy
+                    // `Transcription` packet (TranscriptionReceived never fires), and
+                    // the agent's own `agent_caption` data packet is sent from
+                    // conversation_item_added, i.e. after playback has finished.
+                    // Registered before connect() so no early segment is missed.
+                    if (typeof state.room.registerTextStreamHandler === 'function' && state.captions.agent) {
+                        state.room.registerTextStreamHandler('lk.transcription', onTranscriptionStream);
+                    }
+                    // Legacy path, kept for self-hosted servers that still forward
+                    // it. Same caption elements; a no-op where the event is absent.
                     if (LK.RoomEvent.TranscriptionReceived) {
                         state.room.on(LK.RoomEvent.TranscriptionReceived, onTranscription);
                     }
@@ -1708,11 +1727,16 @@
                         updateStage(data.stage);
                     }
 
-                    if (data.type === 'agent_caption') {
+                    // Captions over the data channel. `agent_caption` is sent
+                    // after the agent's turn has played out, so it is only the
+                    // fallback for when no `lk.transcription` stream has reached
+                    // us for that speaker — otherwise the finished text would
+                    // overwrite the live one.
+                    if (data.type === 'agent_caption' && !(state.captions.agent && state.captions.agent.live)) {
                         updateAgentCaption(data.text);
                     }
 
-                    if (data.type === 'user_caption') {
+                    if (data.type === 'user_caption' && !(state.captions.candidate && state.captions.candidate.live)) {
                         updateCandidateCaption(data.text);
                     }
 
@@ -1741,7 +1765,49 @@
                 }
             }
             
-            // Live captions from LiveKit's transcription stream (synced to audio).
+            // Live captions from `lk.transcription` text streams. One call per
+            // stream; the agent keeps one stream open per reply and writes it
+            // word by word, the candidate's STT opens a new full-text stream per
+            // interim result. CaptionTrack (static/captions.js) reduces both.
+            //
+            // Whose words these are is decided by `lk.transcribed_track_id`, NOT
+            // the sender. The agent publishes the candidate's STT "on behalf of"
+            // the candidate, but in direct mode it holds a plain token, so the
+            // server stamps the agent as sender of both — verified against
+            // LiveKit Cloud. The track id is the candidate's own mic SID for
+            // their speech and the agent's audio track for the agent's.
+            async function onTranscriptionStream(reader, participantInfo) {
+                var attrs = (reader.info && reader.info.attributes) || {};
+                var segmentId = attrs['lk.segment_id'] || (reader.info && reader.info.id) || 'seg';
+                var local = state.room && state.room.localParticipant;
+                var trackId = attrs['lk.transcribed_track_id'];
+                var isLocal;
+                if (trackId && local && local.trackPublications && local.trackPublications.size) {
+                    isLocal = local.trackPublications.has(trackId);
+                } else {
+                    isLocal = !!(participantInfo && local && participantInfo.identity === local.identity);
+                }
+                var track = isLocal ? state.captions.candidate : state.captions.agent;
+                var render = isLocal ? updateCandidateCaption : updateAgentCaption;
+                if (!track.live) {
+                    console.log('[TRANSCRIPT] live caption stream active for', isLocal ? 'candidate' : 'agent');
+                }
+                track.open(segmentId);
+                try {
+                    for await (var chunk of reader) {
+                        if (track.append(segmentId, chunk)) render(track.caption());
+                    }
+                } catch (e) {
+                    console.error('[TRANSCRIPT] stream error:', e);
+                }
+                // The final flag rides in the stream trailer; the SDK merges it
+                // into reader.info.attributes by the time iteration ends.
+                var finalAttr = (reader.info && reader.info.attributes || {})['lk.transcription_final'];
+                track.close(segmentId, finalAttr === 'true');
+                if (track.segmentId === segmentId) render(track.caption());
+            }
+
+            // Legacy captions from LiveKit's transcription packets (older servers).
             function onTranscription(segments, participant) {
                 try {
                     if (!segments || !segments.length) return;

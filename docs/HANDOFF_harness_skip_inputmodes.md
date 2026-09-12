@@ -357,9 +357,9 @@ is the established PTT convention.
 - *Text* — `user_text` command → interrupt + `generate_reply(user_input=…)`, and
   disable audio input so background noise cannot trigger a turn.
 
-**Transport:** the frontend pins `livekit-client@2.5.0`, which predates text
-streams and RPC. **Use `publishData` for everything in v1**; bumping the client is
-a separate ticket. Anything else fails silently at runtime.
+**Transport:** the frontend now runs `livekit-client@2.22.3` (bumped for live
+captions; text streams work). Commands still go over `publishData` — keep it
+that way for v1 so agent- and client-side dispatch stay one mechanism.
 
 **Delivery metrics when the candidate types — this is the moat-critical part:**
 - §1.1 is **already fixed on `main`** — real per-turn `duration_s` and
@@ -461,8 +461,8 @@ that dispatch is a dict registry rather than an if/elif chain.
 5. **Cassette drift** — prompt edits change real-LLM behavior while cassettes keep
    passing. Cassettes are regression pins, not proof of prompt quality; run the
    live tier by hand before merging any prompt change (§8.8).
-6. **`livekit-client@2.5.0`** — text streams / RPC will fail silently. Stay on
-   `publishData`.
+6. ~~**`livekit-client@2.5.0`** — text streams / RPC will fail silently.~~ Bumped
+   to 2.22.3 for live captions. Commands stay on `publishData` regardless.
 7. **Coding-skip unification changes coding-track behavior** — cover with a
    scenario before changing it.
 
