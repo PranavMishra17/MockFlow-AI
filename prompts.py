@@ -498,9 +498,10 @@ Evaluate the code objectively. Return ONLY valid JSON, no markdown, no explanati
 }
 
 SCORING GUIDE:
-- correctness pass: Solves the main cases correctly
+- correctness pass: Solves the main cases correctly AND honours the problem's return contract
 - correctness partial: Solves some cases but has gaps
-- correctness fail: Does not solve the problem
+- correctness fail: Does not solve the problem, OR violates the return contract - wrong type or shape, values where indices were asked for, 1-based where 0-based was asked, missing the required output ordering. A contract violation fails every test regardless of how sound the algorithm looks; grade it fail, not partial.
+- brief_verbal_feedback must name the actual defect when there is one ("you're returning the values, the problem asks for the indices"), never just call the approach inefficient
 - approach_quality A: Optimal or near-optimal approach
 - approach_quality B: Correct approach, minor inefficiencies
 - approach_quality C: Workable but not ideal

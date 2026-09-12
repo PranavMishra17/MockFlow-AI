@@ -125,8 +125,12 @@
                 </div>
                 <div id="evalStatusStrip" style="display:none;align-items:center;gap:10px;padding:10px 14px;margin-top:8px;border-radius:var(--radius-sm);background:var(--bg-soft);border:1px solid var(--bg-soft);">
                     <span class="eval-spinner"></span>
-                    <span style="font-size:0.8125rem;color:var(--text-muted);">Evaluating your solution — agent will respond shortly...</span>
+                    <span style="font-size:0.8125rem;color:var(--text-muted);">Evaluating your solution — Flow will respond shortly...</span>
                 </div>
+                <!-- What the last evaluation was based on. Without a code runner the
+                     verdict on correctness is an AI's reading of the code, and the
+                     candidate should know that. -->
+                <div id="evalProvenance" style="display:none;padding:6px 14px;margin-top:6px;font-size:0.75rem;color:var(--text-muted);"></div>
             </div>
 
             <div class="candidate-side">
@@ -973,6 +977,17 @@
                 }
             }
 
+            function showEvalProvenance(data) {
+                var el = document.getElementById('evalProvenance');
+                if (!el) return;
+                if (data.executed) {
+                    el.textContent = 'Checked by running your code: ' + (data.objective_tests || 'tests executed') + '.';
+                } else {
+                    el.textContent = 'Not executed — reviewed by AI only. Correctness is an assessment, not a test result.';
+                }
+                el.style.display = 'block';
+            }
+
             function handleCodeSubmit(isAutoSubmit) {
                 if (!state.room) return;
                 var code = monacoEditor ? monacoEditor.getValue() : '';
@@ -1792,7 +1807,15 @@
                     if (data.type === 'evaluation_result') {
                         updateAttemptCounter(data.attempt || 1, data.max_attempts || 3);
                         setSubmitEvaluating(false);
+                        showEvalProvenance(data);
                         console.log('[CODE] Evaluation received:', data.evaluation);
+                    }
+                    if (data.type === 'evaluation_error') {
+                        // The evaluator failed after retries. Release the editor
+                        // instead of leaving it on "Evaluating..." forever.
+                        setSubmitEvaluating(false);
+                        updateStatus(data.message || 'Evaluation failed - please submit again.', 'error');
+                        console.error('[CODE] Evaluation error:', data);
                     }
                     if (data.type === 'max_attempts_reached') {
                         clearInterval(problemTimerInterval);

@@ -1375,15 +1375,12 @@ def attach_handlers(
                         if questions:
                             state.last_question = " ".join(questions)
 
+                    # The closing is one utterance spoken by code and it ends
+                    # with a sentinel; that, not a "good luck" heuristic, is
+                    # what finalizes. The heuristic fired on a model turn that
+                    # happened to say "luck" and never fired when it did not.
                     if getattr(state.stage, 'value', '') == 'closing' and not closing_finalized["done"]:
-                        text_lower = agent_text.lower()
-                        closing_indicators = [
-                            agent_text.rstrip().endswith(CLOSING_SENTINEL),
-                            "thank you" in text_lower and "luck" in text_lower,
-                            "good luck" in text_lower,
-                            "best of luck" in text_lower,
-                        ]
-                        if any(closing_indicators) and len(agent_text) > 30:
+                        if agent_text.rstrip().endswith(CLOSING_SENTINEL):
                             state.closing_message_delivered = True
                             if on_closing is not None:
                                 async def schedule_finalization():
