@@ -1,0 +1,367 @@
+{
+  "track": "intro",
+  "persona": "ken_terse",
+  "config": {
+    "track": "intro",
+    "role": "Software Engineer",
+    "level": "mid",
+    "user_id": "audit-user"
+  },
+  "duration_s": 45.8,
+  "history": [
+    {
+      "who": "flow",
+      "text": "Hi Ken Okafor! I'm Flow, and I'll be your interviewer today. Welcome to your mock interview for the Software Engineer position. We'll go through a few stages: first you'll introduce yourself, then we'll discuss your past experience, explore how you might fit with the role, and wrap up. Let's get started! Please go ahead and introduce yourself.",
+      "stage": "welcome",
+      "t": 2.4,
+      "latency": null
+    },
+    {
+      "who": "candidate",
+      "text": "I\u2019m Ken. I\u2019ve worked as a backend developer for five years. Primarily Java and Spring.",
+      "stage": "welcome",
+      "t": 3.0
+    },
+    {
+      "who": "flow",
+      "text": "Thank you for your introduction, Ken! It's great to hear about your experience. Now, let's dive into your past experience in more detail. \n\nCan you tell me about a specific project you've worked on as a backend developer? What were your responsibilities, and what technologies did you use?",
+      "stage": "self_intro",
+      "t": 5.7,
+      "latency": 2.7
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> self_intro]",
+      "stage": "self_intro",
+      "t": 5.7
+    },
+    {
+      "who": "candidate",
+      "text": "I built a claims batch pipeline. Used Java and Spring. My responsibility was mainly coding and integration.",
+      "stage": "self_intro",
+      "t": 6.3
+    },
+    {
+      "who": "flow",
+      "text": "Ken, please go ahead and tell me about yourself. What motivated you to pursue software development?",
+      "stage": "self_intro",
+      "t": 8.2,
+      "latency": 1.9
+    },
+    {
+      "who": "candidate",
+      "text": "Not much motivation, really. I just fell into it after college. It pays the bills.",
+      "stage": "self_intro",
+      "t": 8.8
+    },
+    {
+      "who": "flow",
+      "text": "What do you enjoy most about your current work?",
+      "stage": "self_intro",
+      "t": 10.9,
+      "latency": 2.1
+    },
+    {
+      "who": "candidate",
+      "text": "It's fine. I like solving problems, I guess.",
+      "stage": "self_intro",
+      "t": 11.5
+    },
+    {
+      "who": "flow",
+      "text": "Are there any specific types of problems you prefer to solve?",
+      "stage": "self_intro",
+      "t": 13.3,
+      "latency": 1.9
+    },
+    {
+      "who": "candidate",
+      "text": "Not really. I handle whatever comes up.",
+      "stage": "self_intro",
+      "t": 14.0
+    },
+    {
+      "who": "flow",
+      "text": "Thank you for sharing that, Ken! Now that we have a good sense of your background, let's move on to discussing your past experiences in more detail. \n\nCan you tell me about a challenging technical problem you faced in your previous roles and how you approached solving it?",
+      "stage": "past_experience",
+      "t": 16.3,
+      "latency": 2.3
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> past_experience]",
+      "stage": "past_experience",
+      "t": 16.3
+    },
+    {
+      "who": "candidate",
+      "text": "There was a performance issue with the claims pipeline. I optimized some queries and adjusted configurations. It helped improve speed.",
+      "stage": "past_experience",
+      "t": 17.0
+    },
+    {
+      "who": "flow",
+      "text": "Excellent introduction, thank you Ken Okafor! Now let's discuss your past work experience, particularly as it relates to the Software Engineer role. \n\nWhat specific optimizations did you implement on those queries?",
+      "stage": "past_experience",
+      "t": 18.8,
+      "latency": 1.9
+    },
+    {
+      "who": "candidate",
+      "text": "I added indexes and rewrote some inefficient joins. It reduced load time.",
+      "stage": "past_experience",
+      "t": 19.5
+    },
+    {
+      "who": "flow",
+      "text": "How did you measure the impact of those optimizations?",
+      "stage": "past_experience",
+      "t": 21.2,
+      "latency": 1.7
+    },
+    {
+      "who": "candidate",
+      "text": "I used performance metrics before and after changes. Load times improved by about 30 percent.",
+      "stage": "past_experience",
+      "t": 21.9
+    },
+    {
+      "who": "flow",
+      "text": "What was the team's reaction to these improvements?",
+      "stage": "past_experience",
+      "t": 23.6,
+      "latency": 1.7
+    },
+    {
+      "who": "candidate",
+      "text": "They were pleased. It made things faster.",
+      "stage": "past_experience",
+      "t": 24.3
+    },
+    {
+      "who": "flow",
+      "text": "Can you describe a time when you had to collaborate closely with your team on a project?",
+      "stage": "past_experience",
+      "t": 26.1,
+      "latency": 1.8
+    },
+    {
+      "who": "candidate",
+      "text": "We worked on a system upgrade together. I handled backend changes while others focused on the frontend. It went smoothly.",
+      "stage": "past_experience",
+      "t": 26.8
+    },
+    {
+      "who": "flow",
+      "text": "What tools or processes did you use to ensure effective collaboration?",
+      "stage": "past_experience",
+      "t": 28.6,
+      "latency": 1.8
+    },
+    {
+      "who": "system",
+      "text": "[user pressed skip -> company_fit]",
+      "stage": "company_fit",
+      "t": 28.6
+    },
+    {
+      "who": "flow",
+      "text": "Great insights into your experience, Ken Okafor! Now let's talk about company and role fit. I'd like to understand what draws you to this opportunity.",
+      "stage": "company_fit",
+      "t": 29.2,
+      "latency": null
+    },
+    {
+      "who": "candidate",
+      "text": "I\u2019m looking for new challenges. This role seems interesting.",
+      "stage": "company_fit",
+      "t": 30.9
+    },
+    {
+      "who": "flow",
+      "text": "What specific aspects of this role stand out to you?",
+      "stage": "company_fit",
+      "t": 32.7,
+      "latency": 1.8
+    },
+    {
+      "who": "candidate",
+      "text": "The focus on backend work. I prefer that over frontend.",
+      "stage": "company_fit",
+      "t": 33.4
+    },
+    {
+      "who": "flow",
+      "text": "The role mentions independent ownership and technical decisions - how do you feel about taking on that responsibility?",
+      "stage": "company_fit",
+      "t": 35.5,
+      "latency": 2.1
+    },
+    {
+      "who": "candidate",
+      "text": "I'm okay with it. I've done independent work before.",
+      "stage": "company_fit",
+      "t": 36.2
+    },
+    {
+      "who": "flow",
+      "text": "How do you approach making technical decisions when working independently?",
+      "stage": "company_fit",
+      "t": 38.2,
+      "latency": 2.0
+    },
+    {
+      "who": "candidate",
+      "text": "I rely on past experience and best practices. Keep it simple.",
+      "stage": "company_fit",
+      "t": 38.7
+    },
+    {
+      "who": "flow",
+      "text": "Thank you so much for sharing all of that, Ken Okafor. I really enjoyed learning about your background and experience. We'll be in touch with next steps via email. Thank you again, and best of luck!",
+      "stage": "closing",
+      "t": 40.5,
+      "latency": 1.7
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> closing]",
+      "stage": "closing",
+      "t": 40.5
+    }
+  ],
+  "stages_visited": [
+    "self_intro",
+    "past_experience",
+    "closing"
+  ],
+  "final_stage": "closing",
+  "tool_calls": [
+    "record_response",
+    "transition_stage",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "transition_stage",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "transition_stage"
+  ],
+  "question_bank": [],
+  "stalls": [
+    "turn 9: 6 candidate turns in 'past_experience' with no transition; skipped to 'company_fit'"
+  ],
+  "notes": [
+    "closing delivered by Flow at turn 14"
+  ],
+  "verdict": {
+    "overall": {
+      "confidence": "high",
+      "headline": "Ken Okafor shows technical competence but lacks motivation and specific company fit.",
+      "recommendation": "lean_no_hire",
+      "level_read": "intern"
+    },
+    "signals": [
+      {
+        "name": "Motivation & authenticity",
+        "reasoning": "Ken's motivation for pursuing software development is weak and lacks specificity. He states, 'Not much motivation, really. I just fell into it after college. It pays the bills.' This suggests a lack of genuine interest or passion for the field.",
+        "band": "poor",
+        "scope_met": "intern",
+        "evidence": [
+          "Not much motivation, really. I just fell into it after college. It pays the bills."
+        ],
+        "to_raise": "Provide a more compelling and specific reason for pursuing software development."
+      },
+      {
+        "name": "Communication & structure",
+        "reasoning": "Ken's communication is concise but lacks depth and detail. For example, when discussing optimizations, he says, 'I added indexes and rewrote some inefficient joins. It reduced load time.' While clear, it lacks elaboration on the process or challenges faced.",
+        "band": "solid",
+        "scope_met": "new_grad",
+        "evidence": [
+          "I added indexes and rewrote some inefficient joins. It reduced load time."
+        ],
+        "to_raise": "Provide more detailed explanations and context for technical decisions."
+      },
+      {
+        "name": "Role / company fit",
+        "reasoning": "Ken's understanding of the role is basic and lacks depth. He mentions, 'I\u2019m looking for new challenges. This role seems interesting,' but does not elaborate on specific aspects of the company or role that appeal to him.",
+        "band": "borderline",
+        "scope_met": "intern",
+        "evidence": [
+          "I\u2019m looking for new challenges. This role seems interesting."
+        ],
+        "to_raise": "Research and articulate specific aspects of the company and role that align with his interests."
+      },
+      {
+        "name": "Self-awareness",
+        "reasoning": "Ken does not demonstrate significant self-awareness or reflection on his strengths and weaknesses. His responses are straightforward but lack introspection, such as when he says, 'I'm okay with it. I've done independent work before.'",
+        "band": "borderline",
+        "scope_met": "intern",
+        "evidence": [
+          "I'm okay with it. I've done independent work before."
+        ],
+        "to_raise": "Reflect on personal strengths and areas for improvement with specific examples."
+      }
+    ],
+    "differentiators": [
+      "Ken would be a stronger hire with clearer motivation and a deeper understanding of the company's unique aspects."
+    ],
+    "delivery": {
+      "pace_available": false,
+      "wpm": null,
+      "wpm_band": "unknown",
+      "wpm_target": "130-160",
+      "filler_total": 1,
+      "filler_per_100w": 0.57,
+      "filler_per_min": null,
+      "filler_band": "good",
+      "filler_target": "<=3.3/100 words",
+      "word_count": 175,
+      "sentence_count": 33,
+      "filler_breakdown": {
+        "like": 1
+      },
+      "top_crutch_word": {
+        "word": "like",
+        "count": 1
+      },
+      "talk_ratio": 0.32,
+      "longest_monologue_s": null
+    },
+    "gap_to_next": {
+      "signal": "Motivation & authenticity",
+      "from_band": "poor",
+      "to_band": "borderline",
+      "move": "Provide a more compelling and specific reason for pursuing software development."
+    },
+    "great_answers": 0,
+    "context": {
+      "track": "intro",
+      "role": "swe",
+      "seniority": "mid",
+      "archetype": "big_tech"
+    }
+  },
+  "flags": [
+    "reply latency: median 1.9s, max 2.7s (text-only; TTS adds more)"
+  ]
+}

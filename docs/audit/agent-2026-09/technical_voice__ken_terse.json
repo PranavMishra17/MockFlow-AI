@@ -1,0 +1,378 @@
+{
+  "track": "technical_voice",
+  "persona": "ken_terse",
+  "config": {
+    "track": "technical_voice",
+    "role": "Software Engineer",
+    "level": "mid",
+    "user_id": "audit-user",
+    "topics": "concurrency,databases"
+  },
+  "duration_s": 45.7,
+  "history": [
+    {
+      "who": "flow",
+      "text": "Great, Ken! We've moved on to the experience discussion stage. Let's dive into your background and experiences. Can you start by telling me about your previous roles and how they relate to the topics we'll be discussing today?",
+      "stage": "experience_discussion",
+      "t": 9.0,
+      "latency": null
+    },
+    {
+      "who": "candidate",
+      "text": "I\u2019ve worked in backend development for five years. Mainly Java and Spring.",
+      "stage": "experience_discussion",
+      "t": 9.6
+    },
+    {
+      "who": "flow",
+      "text": "Great! Now let's talk about your hands-on experience with these topics. Can you share any specific projects you've worked on that involved concurrency or database management? What were some of the key challenges you faced during those projects?",
+      "stage": "experience_discussion",
+      "t": 11.3,
+      "latency": 1.7
+    },
+    {
+      "who": "candidate",
+      "text": "I built a claims batch pipeline. Concurrency was a challenge. Managed transactions and data integrity.",
+      "stage": "experience_discussion",
+      "t": 11.8
+    },
+    {
+      "who": "flow",
+      "text": "Great! Now let's talk about your hands-on experience with these topics. Can you elaborate on how you managed concurrency and ensured data integrity in that claims batch pipeline? What specific strategies or technologies did you use?",
+      "stage": "experience_discussion",
+      "t": 14.2,
+      "latency": 2.4
+    },
+    {
+      "who": "candidate",
+      "text": "Used Spring's transaction management. Implemented optimistic locking. It worked fine.",
+      "stage": "experience_discussion",
+      "t": 14.8
+    },
+    {
+      "who": "flow",
+      "text": "What were some of the key decisions you made during the development of that pipeline, and how did those decisions impact the project's success?",
+      "stage": "experience_discussion",
+      "t": 16.9,
+      "latency": 2.1
+    },
+    {
+      "who": "candidate",
+      "text": "Focused on scalability and performance. Those choices improved processing speed.",
+      "stage": "experience_discussion",
+      "t": 17.4
+    },
+    {
+      "who": "flow",
+      "text": "Great, Ken! We've now transitioned to the technical concepts stage. Let's dive deeper into some specific concepts related to concurrency and databases. Are you ready for some technical questions?",
+      "stage": "technical_concepts_1",
+      "t": 19.5,
+      "latency": 2.1
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> technical_concepts_1]",
+      "stage": "technical_concepts_1",
+      "t": 19.5
+    },
+    {
+      "who": "candidate",
+      "text": "Yeah. I'm ready.",
+      "stage": "technical_concepts_1",
+      "t": 20.0
+    },
+    {
+      "who": "flow",
+      "text": "Let's dive into some technical concepts. We'll start with concurrency control. Compare optimistic locking and pessimistic locking in this context. When would you use each approach?",
+      "stage": "technical_concepts_1",
+      "t": 21.7,
+      "latency": 1.7
+    },
+    {
+      "who": "candidate",
+      "text": "Optimistic locking is for low contention. Pessimistic locking for high contention situations.",
+      "stage": "technical_concepts_1",
+      "t": 22.4
+    },
+    {
+      "who": "flow",
+      "text": "What are some common pitfalls of using concurrency in applications? How can these pitfalls be mitigated?",
+      "stage": "technical_concepts_1",
+      "t": 24.9,
+      "latency": 2.5
+    },
+    {
+      "who": "candidate",
+      "text": "Common pitfalls are race conditions and deadlocks. Mitigate with proper locking and testing.",
+      "stage": "technical_concepts_1",
+      "t": 25.4
+    },
+    {
+      "who": "flow",
+      "text": "Great, Ken! We've now transitioned to the next set of technical concepts. Let's continue exploring more about databases and how they interact with concurrency. Are you ready for the next question?",
+      "stage": "technical_concepts_2",
+      "t": 28.4,
+      "latency": 3.0
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> technical_concepts_2]",
+      "stage": "technical_concepts_2",
+      "t": 28.4
+    },
+    {
+      "who": "candidate",
+      "text": "Yeah. Go ahead.",
+      "stage": "technical_concepts_2",
+      "t": 28.9
+    },
+    {
+      "who": "flow",
+      "text": "Good. Now let's talk about database types. Compare SQL and NoSQL databases. What are the scenarios where each type would be more advantageous?",
+      "stage": "technical_concepts_2",
+      "t": 30.5,
+      "latency": 1.5
+    },
+    {
+      "who": "candidate",
+      "text": "SQL is good for structured data. NoSQL for unstructured or flexible schemas.",
+      "stage": "technical_concepts_2",
+      "t": 31.0
+    },
+    {
+      "who": "flow",
+      "text": "What are some trade-offs to consider when choosing between SQL and NoSQL databases? When might you decide against using one of them?",
+      "stage": "technical_concepts_2",
+      "t": 33.1,
+      "latency": 2.1
+    },
+    {
+      "who": "candidate",
+      "text": "Trade-offs include consistency versus scalability. I'd avoid NoSQL for strict transactions.",
+      "stage": "technical_concepts_2",
+      "t": 33.6
+    },
+    {
+      "who": "flow",
+      "text": "Thank you, Ken Okafor. That covers our technical discussion. I appreciate your insights and the experience you've shared with us today.",
+      "stage": "closing",
+      "t": 35.7,
+      "latency": 2.1
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> closing]",
+      "stage": "closing",
+      "t": 35.7
+    },
+    {
+      "who": "candidate",
+      "text": "Yeah. No problem.",
+      "stage": "closing",
+      "t": 36.2
+    },
+    {
+      "who": "flow",
+      "text": "It was great to speak with you, Ken. Your knowledge and experience are impressive. Detailed feedback will be available on the platform. Wishing you all the best, and have a wonderful day!",
+      "stage": "closing",
+      "t": 37.1,
+      "latency": 0.9
+    },
+    {
+      "who": "candidate",
+      "text": "Thanks. You too.",
+      "stage": "closing",
+      "t": 37.6
+    },
+    {
+      "who": "flow",
+      "text": "Thank you! Take care, Ken!",
+      "stage": "closing",
+      "t": 38.2,
+      "latency": 0.6
+    },
+    {
+      "who": "candidate",
+      "text": "Yeah. You too.",
+      "stage": "closing",
+      "t": 38.7
+    },
+    {
+      "who": "flow",
+      "text": "Goodbye, Ken!",
+      "stage": "closing",
+      "t": 39.3,
+      "latency": 0.6
+    },
+    {
+      "who": "candidate",
+      "text": "Goodbye.",
+      "stage": "closing",
+      "t": 39.8
+    },
+    {
+      "who": "flow",
+      "text": "Goodbye!",
+      "stage": "closing",
+      "t": 40.4,
+      "latency": 0.6
+    },
+    {
+      "who": "candidate",
+      "text": "Goodbye.",
+      "stage": "closing",
+      "t": 40.8
+    },
+    {
+      "who": "flow",
+      "text": "Goodbye!",
+      "stage": "closing",
+      "t": 41.5,
+      "latency": 0.6
+    },
+    {
+      "who": "candidate",
+      "text": "Goodbye.",
+      "stage": "closing",
+      "t": 41.9
+    },
+    {
+      "who": "flow",
+      "text": "Goodbye!",
+      "stage": "closing",
+      "t": 42.5,
+      "latency": 0.6
+    }
+  ],
+  "stages_visited": [
+    "technical_concepts_1",
+    "technical_concepts_2",
+    "closing"
+  ],
+  "final_stage": "closing",
+  "tool_calls": [
+    "transition_stage",
+    "generate_interview_questions",
+    "get_current_question",
+    "transition_stage",
+    "assess_response",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "transition_stage",
+    "ask_question",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "transition_stage",
+    "ask_question",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "transition_stage"
+  ],
+  "question_bank": [
+    {
+      "topic": "concurrency",
+      "questions": [
+        "Explain the differences between multi-threading and multi-processing. In what scenarios would you prefer one over the other?",
+        "What are the trade-offs between using locks and using lock-free data structures in a concurrent environment?",
+        "When dealing with concurrency, what are the potential pitfalls of shared state, and how can you mitigate them in a software design?"
+      ]
+    },
+    {
+      "topic": "databases",
+      "questions": [
+        "Explain the differences between SQL and NoSQL databases, and in what scenarios would you choose one over the other?",
+        "What are the tradeoffs between normalization and denormalization in database design, and how do you decide which approach to take?",
+        "When dealing with database transactions, explain the ACID properties and how they impact your database design decisions in a real-world application."
+      ]
+    }
+  ],
+  "stalls": [],
+  "notes": [],
+  "verdict": {
+    "overall": {
+      "confidence": "medium",
+      "headline": "Ken shows solid technical understanding but lacks depth in trade-off reasoning and communication.",
+      "recommendation": "on_fence",
+      "level_read": "new_grad"
+    },
+    "signals": [
+      {
+        "name": "Technical depth",
+        "reasoning": "Ken demonstrates a solid understanding of concurrency and database concepts, mentioning specific strategies like optimistic locking and transaction management.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "Used Spring's transaction management. Implemented optimistic locking.",
+          "Optimistic locking is for low contention. Pessimistic locking for high contention situations."
+        ],
+        "to_raise": "Provide deeper explanations of the underlying principles and potential issues."
+      },
+      {
+        "name": "Trade-off reasoning",
+        "reasoning": "Ken identifies some trade-offs but does not elaborate on the implications or alternatives in detail.",
+        "band": "borderline",
+        "scope_met": "new_grad",
+        "evidence": [
+          "Trade-offs include consistency versus scalability. I'd avoid NoSQL for strict transactions."
+        ],
+        "to_raise": "Discuss more alternatives and their specific costs or benefits."
+      },
+      {
+        "name": "Communication & structure",
+        "reasoning": "Ken's responses are concise but lack structure and depth, making it difficult to follow his reasoning.",
+        "band": "borderline",
+        "scope_met": "new_grad",
+        "evidence": [
+          "Common pitfalls are race conditions and deadlocks. Mitigate with proper locking and testing.",
+          "SQL is good for structured data. NoSQL for unstructured or flexible schemas."
+        ],
+        "to_raise": "Organize responses with clear signposting and more detailed explanations."
+      }
+    ],
+    "differentiators": [
+      "Ken could become a strong hire by enhancing his ability to articulate trade-offs and structuring his communication more effectively."
+    ],
+    "delivery": {
+      "pace_available": false,
+      "wpm": null,
+      "wpm_band": "unknown",
+      "wpm_target": "130-160",
+      "filler_total": 0,
+      "filler_per_100w": 0.0,
+      "filler_per_min": null,
+      "filler_band": "good",
+      "filler_target": "<=3.3/100 words",
+      "word_count": 113,
+      "sentence_count": 31,
+      "filler_breakdown": {},
+      "top_crutch_word": null,
+      "talk_ratio": 0.25,
+      "longest_monologue_s": null
+    },
+    "gap_to_next": {
+      "signal": "Trade-off reasoning",
+      "from_band": "borderline",
+      "to_band": "solid",
+      "move": "Discuss more alternatives and their specific costs or benefits."
+    },
+    "great_answers": 0,
+    "context": {
+      "track": "technical_voice",
+      "role": "swe",
+      "seniority": "mid",
+      "archetype": "big_tech"
+    }
+  },
+  "flags": [
+    "4 Flow turns ask 2+ questions at once",
+    "8 praise words across 17 Flow turns (sycophancy)",
+    "possible meta/stage leakage in 2 turns, e.g. \"Great, Ken! We've moved on to the experience discussion stage. Let's dive into y\"",
+    "reply latency: median 1.7s, max 3.0s (text-only; TTS adds more)",
+    "repeated openers: ['goodbye', 'great']"
+  ]
+}

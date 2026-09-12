@@ -1,0 +1,340 @@
+{
+  "track": "behavioral",
+  "persona": "ken_terse",
+  "config": {
+    "track": "behavioral",
+    "role": "Software Engineer",
+    "level": "mid",
+    "user_id": "audit-user",
+    "framework": "amazon",
+    "depth": "medium"
+  },
+  "duration_s": 66.8,
+  "history": [
+    {
+      "who": "flow",
+      "text": "Great! Now that we've completed the greeting, let's move on to the next stage. Can you please introduce yourself and share a bit about your background and experience?",
+      "stage": "self_intro",
+      "t": 5.2,
+      "latency": null
+    },
+    {
+      "who": "candidate",
+      "text": "I\u2019m Ken. I have five years of experience in backend development, mainly with Java and Spring at an insurance company.",
+      "stage": "self_intro",
+      "t": 6.0
+    },
+    {
+      "who": "candidate",
+      "text": "What specific projects have you worked on in your previous role?",
+      "stage": "self_intro",
+      "t": 9.7
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> behavioral_q1]",
+      "stage": "behavioral_q1",
+      "t": 12.5
+    },
+    {
+      "who": "candidate",
+      "text": "I built a claims batch pipeline. It handled processing claims.",
+      "stage": "behavioral_q1",
+      "t": 13.1
+    },
+    {
+      "who": "candidate",
+      "text": "Can you describe the challenges you faced while working on the claims batch pipeline?",
+      "stage": "behavioral_q1",
+      "t": 18.8
+    },
+    {
+      "who": "candidate",
+      "text": "There were performance issues. Had to optimize it.",
+      "stage": "behavioral_q1",
+      "t": 22.7
+    },
+    {
+      "who": "candidate",
+      "text": "How did you go about resolving those performance issues?",
+      "stage": "behavioral_q1",
+      "t": 26.5
+    },
+    {
+      "who": "candidate",
+      "text": "I analyzed the queries and improved indexing. Then, I made some refactoring.",
+      "stage": "behavioral_q1",
+      "t": 30.5
+    },
+    {
+      "who": "flow",
+      "text": "Thank you for your detailed responses, Ken! Now, let's move on to the next behavioral question. \n\nCan you describe a time when you had to work collaboratively with a team to achieve a common goal? What was your role in the team, and how did you contribute to the project's success?",
+      "stage": "behavioral_q2",
+      "t": 33.0,
+      "latency": 2.5
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> behavioral_q2]",
+      "stage": "behavioral_q2",
+      "t": 33.0
+    },
+    {
+      "who": "candidate",
+      "text": "I worked with the team on a project integration. I handled backend services. We coordinated to meet deadlines.",
+      "stage": "behavioral_q2",
+      "t": 33.9
+    },
+    {
+      "who": "candidate",
+      "text": "What specific contributions did you make to ensure the project's success?",
+      "stage": "behavioral_q2",
+      "t": 39.2
+    },
+    {
+      "who": "candidate",
+      "text": "I wrote the APIs and fixed bugs as they came up.",
+      "stage": "behavioral_q2",
+      "t": 44.3
+    },
+    {
+      "who": "flow",
+      "text": "Thank you for your insights, Ken! Let's move on to the final behavioral question.\n\nCan you share an experience where you had to dive deep into a technical problem to find a solution? What steps did you take, and what was the result?",
+      "stage": "behavioral_q3",
+      "t": 47.7,
+      "latency": 3.3
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> behavioral_q3]",
+      "stage": "behavioral_q3",
+      "t": 47.7
+    },
+    {
+      "who": "candidate",
+      "text": "I had a bug in the data processing. Debugged the logs and traced the source. I found a logic error and fixed it. It worked after that.",
+      "stage": "behavioral_q3",
+      "t": 48.3
+    },
+    {
+      "who": "candidate",
+      "text": "What tools or methods did you use to debug the issue?",
+      "stage": "behavioral_q3",
+      "t": 52.6
+    },
+    {
+      "who": "candidate",
+      "text": "I used logging, and also a debugger in my IDE.",
+      "stage": "behavioral_q3",
+      "t": 57.1
+    },
+    {
+      "who": "flow",
+      "text": "Thank you so much for your thoughtful responses, Ken Okafor. Let me wrap up. \n\nIt was great to hear about your experiences and insights, especially regarding your work on the claims batch pipeline and how you handled challenges in your projects. We appreciate your time today and will be in touch regarding the next steps. Have a great day!",
+      "stage": "closing",
+      "t": 59.7,
+      "latency": 2.6
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> closing]",
+      "stage": "closing",
+      "t": 59.7
+    },
+    {
+      "who": "candidate",
+      "text": "Yeah, thanks. You too.",
+      "stage": "closing",
+      "t": 60.3
+    },
+    {
+      "who": "flow",
+      "text": "You're welcome, Ken! Take care, and best of luck with your future endeavors!",
+      "stage": "closing",
+      "t": 61.1,
+      "latency": 0.8
+    }
+  ],
+  "stages_visited": [
+    "behavioral_q1",
+    "behavioral_q2",
+    "behavioral_q3",
+    "closing"
+  ],
+  "final_stage": "closing",
+  "tool_calls": [
+    "transition_stage",
+    "assess_response",
+    "ask_question",
+    "ask_question",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "assess_response",
+    "transition_stage",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "assess_response",
+    "transition_stage",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "assess_response",
+    "transition_stage"
+  ],
+  "question_bank": [
+    {
+      "main_question": "Tell me about a time when you had to deliver a project under a tight deadline. How did you ensure the quality of your work while meeting the deadline?",
+      "competency": "Deliver Results",
+      "follow_up_probes": [
+        "What challenges did you face during this process?",
+        "How did you prioritize your tasks to meet the deadline?"
+      ]
+    },
+    {
+      "main_question": "Describe a situation where you had to dive deep into a technical problem to find a solution. What steps did you take and what was the result?",
+      "competency": "Dive Deep",
+      "follow_up_probes": [
+        "What resources did you use to gather information?",
+        "How did you ensure your solution was effective?"
+      ]
+    },
+    {
+      "main_question": "Tell me about a time when you disagreed with a decision made by your team or manager. How did you handle the situation?",
+      "competency": "Have Backbone; Disagree and Commit",
+      "follow_up_probes": [
+        "What was the outcome of your disagreement?",
+        "How did you maintain trust and collaboration with your team afterward?"
+      ]
+    }
+  ],
+  "stalls": [],
+  "notes": [
+    "closing delivered by Flow at turn 14"
+  ],
+  "verdict": {
+    "overall": {
+      "confidence": "medium",
+      "headline": "Ken shows technical competence but lacks depth in ownership and impact.",
+      "recommendation": "lean_no_hire",
+      "level_read": "new_grad"
+    },
+    "signals": [
+      {
+        "name": "Ownership",
+        "reasoning": "Ken's responses indicate involvement but lack personal initiative or leadership. He describes tasks he performed but doesn't convey a sense of driving the project or uncovering problems independently.",
+        "band": "borderline",
+        "scope_met": "new_grad",
+        "evidence": [
+          "I built a claims batch pipeline.",
+          "I handled backend services.",
+          "I wrote the APIs and fixed bugs as they came up."
+        ],
+        "to_raise": "Provide examples where you identified and drove solutions independently."
+      },
+      {
+        "name": "Impact & metrics",
+        "reasoning": "Ken mentions resolving performance issues and fixing bugs but does not provide any metrics or specific outcomes to quantify the impact of his work.",
+        "band": "poor",
+        "scope_met": "intern",
+        "evidence": [
+          "There were performance issues. Had to optimize it.",
+          "I found a logic error and fixed it. It worked after that."
+        ],
+        "to_raise": "Include specific metrics or outcomes to demonstrate the impact of your work."
+      },
+      {
+        "name": "Conflict & collaboration",
+        "reasoning": "Ken describes working with a team but does not provide details on how he navigated any conflicts or collaborated beyond task completion.",
+        "band": "borderline",
+        "scope_met": "new_grad",
+        "evidence": [
+          "I worked with the team on a project integration.",
+          "We coordinated to meet deadlines."
+        ],
+        "to_raise": "Discuss specific instances of conflict resolution or collaborative problem-solving."
+      },
+      {
+        "name": "Communication & structure",
+        "reasoning": "Ken's responses are concise but lack structure and depth, making it difficult to follow his thought process or understand the full scope of his contributions.",
+        "band": "borderline",
+        "scope_met": "new_grad",
+        "evidence": [
+          "I analyzed the queries and improved indexing.",
+          "Debugged the logs and traced the source."
+        ],
+        "to_raise": "Provide more structured and detailed explanations of your problem-solving process."
+      },
+      {
+        "name": "Authenticity",
+        "reasoning": "Ken's responses seem genuine but are very brief and lack the depth that would indicate a strong personal stake or reflection.",
+        "band": "borderline",
+        "scope_met": "new_grad",
+        "evidence": [
+          "I had a bug in the data processing.",
+          "I used logging, and also a debugger in my IDE."
+        ],
+        "to_raise": "Share more personal insights or reflections on your experiences."
+      }
+    ],
+    "differentiators": [
+      "Ken could become a strong hire by demonstrating more ownership and providing quantifiable impacts of his work."
+    ],
+    "delivery": {
+      "pace_available": false,
+      "wpm": null,
+      "wpm_band": "unknown",
+      "wpm_target": "130-160",
+      "filler_total": 0,
+      "filler_per_100w": 0.0,
+      "filler_per_min": null,
+      "filler_band": "good",
+      "filler_target": "<=3.3/100 words",
+      "word_count": 176,
+      "sentence_count": 24,
+      "filler_breakdown": {},
+      "top_crutch_word": null,
+      "talk_ratio": 0.48,
+      "longest_monologue_s": null
+    },
+    "gap_to_next": {
+      "signal": "Impact & metrics",
+      "from_band": "poor",
+      "to_band": "borderline",
+      "move": "Include specific metrics or outcomes to demonstrate the impact of your work."
+    },
+    "great_answers": 0,
+    "context": {
+      "track": "behavioral",
+      "role": "swe",
+      "seniority": "mid",
+      "archetype": "big_tech"
+    }
+  },
+  "flags": [
+    "2 Flow turns ask 2+ questions at once",
+    "3 praise words across 5 Flow turns (sycophancy)",
+    "uses the candidate's first name 4 times in 5 turns",
+    "possible meta/stage leakage in 1 turns, e.g. \"Great! Now that we've completed the greeting, let's move on to the next stage. C\"",
+    "reply latency: median 2.6s, max 3.3s (text-only; TTS adds more)"
+  ]
+}

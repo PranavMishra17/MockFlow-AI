@@ -1,0 +1,380 @@
+{
+  "track": "behavioral",
+  "persona": "marcus_junior",
+  "config": {
+    "track": "behavioral",
+    "role": "Software Engineer",
+    "level": "junior",
+    "user_id": "audit-user",
+    "framework": "amazon",
+    "depth": "medium"
+  },
+  "duration_s": 59.7,
+  "history": [
+    {
+      "who": "flow",
+      "text": "Now that we've completed the greeting, let's move on to the self-introduction stage. Please tell me a bit about yourself and your background, Marcus.",
+      "stage": "self_intro",
+      "t": 8.0,
+      "latency": null
+    },
+    {
+      "who": "candidate",
+      "text": "Um, sure. So, I\u2019m Marcus Lee, um, I recently graduated with a computer science degree. I had a, like, ten-week internship at a startup where I, um, built a React dashboard. I also worked on some class projects, like a Flask todo app and a, um, chess engine in Python. I guess I\u2019m really interested in, like, software development and learning more, um, in this field.",
+      "stage": "self_intro",
+      "t": 9.6
+    },
+    {
+      "who": "flow",
+      "text": "Thank you for sharing, Marcus! What was your experience like during your internship at the startup?",
+      "stage": "self_intro",
+      "t": 11.5,
+      "latency": 1.8
+    },
+    {
+      "who": "candidate",
+      "text": "Uh, it was, like, pretty exciting but also a bit, um, challenging. I worked on a React dashboard, um, and I learned a lot about, like, front-end development. I had to, um, collaborate with my team, which was, like, a good experience for learning teamwork. But, um, I also faced some, like, tight deadlines, which was, um, stressful at times. Overall, I guess it was a great learning opportunity.",
+      "stage": "self_intro",
+      "t": 13.2
+    },
+    {
+      "who": "flow",
+      "text": "That sounds like a valuable experience, Marcus! Can you tell me more about the specific features you implemented in the React dashboard?",
+      "stage": "self_intro",
+      "t": 15.2,
+      "latency": 1.9
+    },
+    {
+      "who": "candidate",
+      "text": "Um, I\u2019m not sure I, like, remember the specific features exactly. I think I, um, worked on, like, data visualization components and, um, maybe some user authentication stuff. But, like, the details are a bit fuzzy now. I, um, mostly focused on learning the framework and, like, how to connect it to our backend. So, yeah, sorry if that\u2019s not super detailed.",
+      "stage": "self_intro",
+      "t": 17.2
+    },
+    {
+      "who": "flow",
+      "text": "Thanks for sharing that, Marcus! What did you find most challenging about learning the React framework?",
+      "stage": "self_intro",
+      "t": 18.9,
+      "latency": 1.8
+    },
+    {
+      "who": "candidate",
+      "text": "Um, I guess the most challenging part for me was, like, understanding the component lifecycle and, um, managing state. It was a bit overwhelming at first, especially since there are, like, so many ways to do things. Trying to keep track of, um, props and state changes was, like, kind of tricky. I, um, had to spend extra time, like, practicing to really get it.",
+      "stage": "self_intro",
+      "t": 20.1
+    },
+    {
+      "who": "flow",
+      "text": "Thank you for sharing your experiences, Marcus! I appreciate your insights into the challenges you faced while learning React. Now, let's transition into the behavioral questions. \n\nTo start, can you describe a time when you faced a significant challenge in a project and how you handled it?",
+      "stage": "behavioral_q1",
+      "t": 22.2,
+      "latency": 2.1
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> behavioral_q1]",
+      "stage": "behavioral_q1",
+      "t": 22.2
+    },
+    {
+      "who": "candidate",
+      "text": "Um, sure. So, there was this group project we did on the chess engine, and, um, we faced a lot of, like, coordination issues at the beginning. Some team members, um, weren't communicating well, which, like, slowed us down. I, um, decided to, like, set up regular check-ins to, like, keep everyone on the same page. It helped us, um, work better together, and we ended up finishing the project, um, on time. It was, like, a learning experience for me in teamwork.",
+      "stage": "behavioral_q1",
+      "t": 24.6
+    },
+    {
+      "who": "flow",
+      "text": "Great, Marcus! Let's move into the behavioral questions. Can you provide more context about the situation and your specific responsibilities in that chess engine project?",
+      "stage": "behavioral_q1",
+      "t": 26.6,
+      "latency": 1.9
+    },
+    {
+      "who": "candidate",
+      "text": "Um, yeah, so in the chess engine project, I was, like, responsible for implementing some of the, uh, game logic and, like, the move validation. My role involved, um, writing algorithms to, like, check for valid moves and, um, handle special cases like castling and en passant. When we had those coordination issues, I, um, realized I needed to help facilitate communication, so I, like, took the initiative to, um, organize our meetings. It, um, helped clarify everyone's tasks, I guess.",
+      "stage": "behavioral_q1",
+      "t": 28.2
+    },
+    {
+      "who": "flow",
+      "text": "That sounds like an effective approach, Marcus! What specific actions did you take during those meetings to improve communication and coordination?",
+      "stage": "behavioral_q1",
+      "t": 30.2,
+      "latency": 2.0
+    },
+    {
+      "who": "candidate",
+      "text": "Um, during the meetings, I, like, encouraged each team member to, um, share their progress and any, like, challenges they were facing. I tried to, um, create a safe space so everyone felt, like, comfortable speaking up. We also set, um, clear objectives for each meeting to, like, stay focused and make sure we weren't, um, getting off track. I guess that helped us, like, align better and, um, keep everyone accountable for their tasks.",
+      "stage": "behavioral_q1",
+      "t": 31.7
+    },
+    {
+      "who": "flow",
+      "text": "Thank you for sharing those details, Marcus! It\u2019s clear that your proactive approach significantly improved team dynamics. Now, let's move on to the next behavioral question.\n\nCan you tell me about a time when you had to deliver a project under a tight deadline? How did you ensure the quality of your work while meeting the deadline?",
+      "stage": "behavioral_q2",
+      "t": 33.9,
+      "latency": 2.2
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> behavioral_q2]",
+      "stage": "behavioral_q2",
+      "t": 33.9
+    },
+    {
+      "who": "candidate",
+      "text": "Um, okay, so there was this, like, final project for one of my classes where we had to, um, develop a Flask todo app. The deadline was, like, super tight because we had, um, other assignments due at the same time. I, um, focused on the core features first, like, making sure the app, um, worked properly before adding any extra functionality. I also, like, scheduled time to test everything thoroughly, even though it was, um, stressful to balance it all. I think, um, prioritizing and, like, staying organized helped me deliver it on time while keeping it, um, functional.",
+      "stage": "behavioral_q2",
+      "t": 35.8
+    },
+    {
+      "who": "flow",
+      "text": "Good. Let's move on to the next question. What specific challenges did you face while balancing the project with your other assignments?",
+      "stage": "behavioral_q2",
+      "t": 38.0,
+      "latency": 2.2
+    },
+    {
+      "who": "candidate",
+      "text": "Um, I guess one of the biggest challenges was, like, managing my time effectively. I had, um, multiple assignments due around the same time, so it was, like, hard to find enough focus for each task. I, um, also felt a bit overwhelmed at times, trying to, like, make sure everything was done well. To handle it, I, um, tried to create a schedule that, like, broke down my tasks into smaller, manageable parts. I sort of made a plan to, um, dedicate certain hours to each assignment. That helped me, um, keep everything on track, I think.",
+      "stage": "behavioral_q2",
+      "t": 40.1
+    },
+    {
+      "who": "flow",
+      "text": "Thank you for that insight, Marcus! It's impressive how you managed your time effectively despite the challenges. Now, let's move on to the final behavioral question. \n\nCan you describe a situation where you had to collaborate with someone who had a different working style than yours? How did you handle it?",
+      "stage": "behavioral_q3",
+      "t": 42.4,
+      "latency": 2.3
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> behavioral_q3]",
+      "stage": "behavioral_q3",
+      "t": 42.4
+    },
+    {
+      "who": "candidate",
+      "text": "Um, sure. So, in the chess engine project, I worked with a teammate who, like, preferred to dive straight into coding without much planning, while I was more, um, structured and, like, wanted to outline everything first. It, um, caused some friction at first because, you know, we had different approaches. To handle it, I, um, suggested we find a balance by, like, setting aside some time to discuss the overall design before we coded. We figured out a way to, um, combine our styles, which helped us, um, work together more smoothly, I guess.",
+      "stage": "behavioral_q3",
+      "t": 44.7
+    },
+    {
+      "who": "flow",
+      "text": "Excellent. One more question. What was the outcome of this collaboration? Did it impact the project in any way?",
+      "stage": "behavioral_q3",
+      "t": 46.8,
+      "latency": 2.0
+    },
+    {
+      "who": "candidate",
+      "text": "Um, yeah, so the outcome was actually pretty good. By, like, combining our approaches, we ended up with a, um, clearer design and, like, better code overall. It, um, really helped us avoid some potential issues later on, I think. Plus, we were able to, like, finish the project on time and implement all the key features we wanted. So, um, I guess it definitely had a positive impact on the project and, like, improved our teamwork too.",
+      "stage": "behavioral_q3",
+      "t": 48.4
+    },
+    {
+      "who": "flow",
+      "text": "Thank you so much for your thoughtful responses, Marcus Lee. Let me wrap up. \n\nIt was great to learn about your experiences, especially how you've navigated challenges in teamwork and project management. Your insights into your learning process and collaboration skills are impressive and will serve you well as you advance in your career. \n\nIf you have any questions or need anything else, feel free to ask!",
+      "stage": "closing",
+      "t": 50.9,
+      "latency": 2.6
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> closing]",
+      "stage": "closing",
+      "t": 50.9
+    },
+    {
+      "who": "candidate",
+      "text": "Um, thank you! I really appreciate the opportunity to, like, share my experiences. I guess, um, one question I have is, like, what does the onboarding process look like for new grads in this role? And, um, yeah, thanks again for your time!",
+      "stage": "closing",
+      "t": 52.0
+    },
+    {
+      "who": "flow",
+      "text": "You're very welcome, Marcus! I'm glad you found the opportunity valuable. Regarding your question about the onboarding process for new grads, it typically includes a comprehensive orientation, mentorship programs, and hands-on training to help you get acclimated to the team and projects. \n\nThank you once again for your time today, and I wish you the best of luck in your job search and future endeavors!",
+      "stage": "closing",
+      "t": 53.6,
+      "latency": 1.5
+    }
+  ],
+  "stages_visited": [
+    "behavioral_q1",
+    "behavioral_q2",
+    "behavioral_q3",
+    "closing"
+  ],
+  "final_stage": "closing",
+  "tool_calls": [
+    "transition_stage",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "transition_stage",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "transition_stage",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "transition_stage",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "transition_stage"
+  ],
+  "question_bank": [
+    {
+      "main_question": "Tell me about a time when you had to deliver a project under a tight deadline. How did you ensure the quality of your work while meeting the deadline?",
+      "competency": "Deliver Results",
+      "follow_up_probes": [
+        "What challenges did you face during this project?",
+        "How did you prioritize your tasks?"
+      ]
+    },
+    {
+      "main_question": "Describe a situation where you had to learn a new technology or programming language quickly to complete a project. What steps did you take to ensure you understood it well enough to apply it?",
+      "competency": "Learn and Be Curious",
+      "follow_up_probes": [
+        "What resources did you use to learn?",
+        "How did you apply what you learned in that project?"
+      ]
+    },
+    {
+      "main_question": "Tell me about a time when you disagreed with a team member on a technical decision. How did you handle that disagreement, and what was the final outcome?",
+      "competency": "Have Backbone; Disagree and Commit",
+      "follow_up_probes": [
+        "How did you communicate your perspective?",
+        "Were you able to reach a compromise?"
+      ]
+    }
+  ],
+  "stalls": [],
+  "notes": [
+    "closing delivered by Flow at turn 12"
+  ],
+  "verdict": {
+    "overall": {
+      "confidence": "medium",
+      "headline": "Marcus shows potential but lacks depth in ownership and impact.",
+      "recommendation": "lean_no_hire",
+      "level_read": "intern"
+    },
+    "signals": [
+      {
+        "name": "Ownership",
+        "reasoning": "Marcus often uses 'we' and 'like' which dilutes his personal ownership. He mentions setting up meetings but doesn't strongly assert his role in driving outcomes.",
+        "band": "borderline",
+        "scope_met": "intern",
+        "evidence": [
+          "I, um, decided to, like, set up regular check-ins to, like, keep everyone on the same page.",
+          "I, um, realized I needed to help facilitate communication, so I, like, took the initiative to, um, organize our meetings."
+        ],
+        "to_raise": "Use more first-person language and clearly articulate personal contributions."
+      },
+      {
+        "name": "Impact & metrics",
+        "reasoning": "Marcus provides vague descriptions of his work without specific metrics or outcomes. He struggles to recall details of his contributions.",
+        "band": "poor",
+        "scope_met": "intern",
+        "evidence": [
+          "I think I, um, worked on, like, data visualization components and, um, maybe some user authentication stuff.",
+          "It, um, really helped us avoid some potential issues later on, I think."
+        ],
+        "to_raise": "Provide specific metrics or outcomes to demonstrate impact."
+      },
+      {
+        "name": "Conflict & collaboration",
+        "reasoning": "Marcus shows some ability to handle conflict and collaborate, but his examples lack depth and specificity.",
+        "band": "borderline",
+        "scope_met": "intern",
+        "evidence": [
+          "To handle it, I, um, suggested we find a balance by, like, setting aside some time to discuss the overall design before we coded.",
+          "I, um, tried to, um, create a safe space so everyone felt, like, comfortable speaking up."
+        ],
+        "to_raise": "Provide more detailed examples of resolving conflicts and collaborating effectively."
+      },
+      {
+        "name": "Communication & structure",
+        "reasoning": "Marcus's communication is filled with filler words and lacks structure, making it difficult to follow his points.",
+        "band": "poor",
+        "scope_met": "intern",
+        "evidence": [
+          "Um, sure. So, I\u2019m Marcus Lee, um, I recently graduated with a computer science degree.",
+          "Um, I guess the most challenging part for me was, like, understanding the component lifecycle and, um, managing state."
+        ],
+        "to_raise": "Reduce filler words and organize thoughts more clearly before speaking."
+      },
+      {
+        "name": "Authenticity",
+        "reasoning": "Marcus appears genuine in his responses, though his frequent use of filler words can detract from the perceived authenticity.",
+        "band": "solid",
+        "scope_met": "new_grad",
+        "evidence": [
+          "Um, sure. So, there was this group project we did on the chess engine, and, um, we faced a lot of, like, coordination issues at the beginning.",
+          "Um, yeah, so the outcome was actually pretty good. By, like, combining our approaches, we ended up with a, um, clearer design and, like, better code overall."
+        ],
+        "to_raise": "Reduce filler words to enhance the perception of authenticity."
+      }
+    ],
+    "differentiators": [
+      "Marcus would be a strong hire if he could articulate his personal contributions with specific metrics and outcomes."
+    ],
+    "delivery": {
+      "pace_available": false,
+      "wpm": null,
+      "wpm_band": "unknown",
+      "wpm_target": "130-160",
+      "filler_total": 130,
+      "filler_per_100w": 14.21,
+      "filler_per_min": null,
+      "filler_band": "high",
+      "filler_target": "<=3.3/100 words",
+      "word_count": 915,
+      "sentence_count": 58,
+      "filler_breakdown": {
+        "um": 63,
+        "uh": 2,
+        "like": 49,
+        "actually": 1,
+        "so": 12,
+        "you know": 1,
+        "kind of": 1,
+        "sort of": 1
+      },
+      "top_crutch_word": {
+        "word": "um",
+        "count": 63
+      },
+      "talk_ratio": 0.67,
+      "longest_monologue_s": null
+    },
+    "gap_to_next": {
+      "signal": "Impact & metrics",
+      "from_band": "poor",
+      "to_band": "borderline",
+      "move": "Provide specific metrics or outcomes to demonstrate impact."
+    },
+    "great_answers": 0,
+    "context": {
+      "track": "behavioral",
+      "role": "swe",
+      "seniority": "new_grad",
+      "archetype": "big_tech"
+    }
+  },
+  "flags": [
+    "3 Flow turns ask 2+ questions at once",
+    "uses the candidate's first name 11 times in 13 turns",
+    "possible meta/stage leakage in 2 turns, e.g. \"Now that we've completed the greeting, let's move on to the self-introduction st\"",
+    "reply latency: median 2.0s, max 2.6s (text-only; TTS adds more)"
+  ]
+}

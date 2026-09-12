@@ -1,0 +1,345 @@
+{
+  "track": "intro",
+  "persona": "marcus_junior",
+  "config": {
+    "track": "intro",
+    "role": "Software Engineer",
+    "level": "junior",
+    "user_id": "audit-user"
+  },
+  "duration_s": 93.3,
+  "history": [
+    {
+      "who": "flow",
+      "text": "Now that we've completed the greeting, let's move on to the self-introduction stage. Please go ahead and introduce yourself, Marcus!",
+      "stage": "self_intro",
+      "t": 2.3,
+      "latency": null
+    },
+    {
+      "who": "candidate",
+      "text": "Um, sure! So, um, I'm Marcus Lee. I recently graduated with a degree in Computer Science, and, um, I did a 10-week internship at a startup where I, like, built a React dashboard. I, um, also worked on a couple of projects in school, like a Flask todo app and a chess engine in Python. So, yeah, I guess that's me!",
+      "stage": "self_intro",
+      "t": 3.2
+    },
+    {
+      "who": "flow",
+      "text": "That's great, Marcus! What motivated you to study Computer Science?",
+      "stage": "self_intro",
+      "t": 5.5,
+      "latency": 2.3
+    },
+    {
+      "who": "candidate",
+      "text": "Um, well, I guess I was always interested in technology, you know? Like, I found programming really fascinating, especially how you can, um, create things from scratch. So, I thought Computer Science would be, um, a good way to, like, explore that interest and, uh, learn more about software development.",
+      "stage": "self_intro",
+      "t": 6.3
+    },
+    {
+      "who": "flow",
+      "text": "What kind of projects are you currently working on?",
+      "stage": "self_intro",
+      "t": 9.6,
+      "latency": 3.3
+    },
+    {
+      "who": "candidate",
+      "text": "Um, right now, I\u2019m not really working on any specific projects, I guess. I, um, recently finished my internship, so I\u2019m kind of looking for new opportunities. But, um, I\u2019m always trying to, like, learn more and maybe, you know, work on personal projects in the future.",
+      "stage": "self_intro",
+      "t": 10.5
+    },
+    {
+      "who": "flow",
+      "text": "What skills are you looking to develop further?",
+      "stage": "self_intro",
+      "t": 13.2,
+      "latency": 2.8
+    },
+    {
+      "who": "candidate",
+      "text": "Um, I think I\u2019d like to, like, get better at, um, JavaScript since I, uh, used it during my internship with React. And, I also want to, um, improve my skills in, like, back-end development, especially with Flask and Python. So, yeah, just, um, trying to become a more well-rounded developer, I guess.",
+      "stage": "self_intro",
+      "t": 14.2
+    },
+    {
+      "who": "flow",
+      "text": "Now that we've covered your background and interests, let's move on to the past experience stage. I'm looking forward to hearing more about your experiences!",
+      "stage": "past_experience",
+      "t": 20.2,
+      "latency": 6.0
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> past_experience]",
+      "stage": "past_experience",
+      "t": 20.2
+    },
+    {
+      "who": "candidate",
+      "text": "Oh, um, sure! So, like, my most relevant experience is my, um, internship at the startup. I, um, built a React dashboard there, which was, like, really cool. I, uh, worked on, like, creating components and, um, managing state. It was a pretty small team, so I got to, you know, learn a lot and, um, collaborate closely with others.",
+      "stage": "past_experience",
+      "t": 21.2
+    },
+    {
+      "who": "flow",
+      "text": "Excellent introduction, thank you, Marcus! Now let's discuss your past work experience, particularly as it relates to the Software Engineer role. What was the biggest challenge you faced while working on the dashboard?",
+      "stage": "past_experience",
+      "t": 25.7,
+      "latency": 4.5
+    },
+    {
+      "who": "candidate",
+      "text": "Um, I think the biggest challenge was, like, figuring out how to manage state effectively in React. I, um, struggled a bit with, like, understanding the different methods for state management, and, uh, sometimes it felt overwhelming. But, um, I learned a lot by, like, asking for help and, you know, researching solutions online.",
+      "stage": "past_experience",
+      "t": 26.7
+    },
+    {
+      "who": "flow",
+      "text": "How did you collaborate with your team during the project?",
+      "stage": "past_experience",
+      "t": 34.1,
+      "latency": 7.4
+    },
+    {
+      "who": "candidate",
+      "text": "Um, so we, like, had regular meetings to discuss our progress and, um, any issues we were facing. I, uh, communicated a lot through, like, Slack and we used GitHub for, um, version control. I guess we all just, like, tried to be open and supportive of each other while, um, working on our parts of the project.",
+      "stage": "past_experience",
+      "t": 35.6
+    },
+    {
+      "who": "flow",
+      "text": "What impact did your work on the dashboard have on the startup?",
+      "stage": "past_experience",
+      "t": 40.7,
+      "latency": 5.1
+    },
+    {
+      "who": "candidate",
+      "text": "Um, so, like, my work on the dashboard, I guess, helped improve, um, the user experience a bit. It, uh, allowed users to, like, visualize data more easily, which was, um, important for them. I\u2019m not sure about specific metrics or anything, but, um, I think it contributed to the overall product, like, being more user-friendly.",
+      "stage": "past_experience",
+      "t": 41.8
+    },
+    {
+      "who": "candidate",
+      "text": "Um, so, like, my work on the dashboard, I guess, helped improve, um, the user experience a bit. It, uh, allowed users to, like, visualize data more easily, which was, um, important for them. I\u2019m not sure about specific metrics or anything, but, um, I think it contributed to the overall product, like, being more user-friendly.",
+      "stage": "past_experience",
+      "t": 48.2
+    },
+    {
+      "who": "flow",
+      "text": "What did you learn from this internship that you will apply in your next role?",
+      "stage": "past_experience",
+      "t": 59.7,
+      "latency": 11.4
+    },
+    {
+      "who": "system",
+      "text": "[user pressed skip -> company_fit]",
+      "stage": "company_fit",
+      "t": 59.7
+    },
+    {
+      "who": "flow",
+      "text": "Great insights into your experience, Marcus Lee! Now let's talk about company and role fit. I'd like to understand what draws you to this opportunity.",
+      "stage": "company_fit",
+      "t": 60.4,
+      "latency": null
+    },
+    {
+      "who": "candidate",
+      "text": "Um, I guess I\u2019m really drawn to this opportunity because, like, I love working with, um, technology and solving problems. I, um, appreciate the focus on, like, collaboration and innovation at your company. Also, I think it would be, like, a great chance for me to, um, learn from experienced engineers and, um, grow my skills further.",
+      "stage": "company_fit",
+      "t": 61.6
+    },
+    {
+      "who": "candidate",
+      "text": "Um, I guess I\u2019m really drawn to this opportunity because, like, I love working with, um, technology and solving problems. I, um, appreciate the focus on, like, collaboration and innovation at your company. Also, I think it would be, like, a great chance for me to, um, learn from experienced engineers and, um, grow my skills further.",
+      "stage": "company_fit",
+      "t": 71.4
+    },
+    {
+      "who": "flow",
+      "text": "What do you think makes a successful team in a software development environment?",
+      "stage": "company_fit",
+      "t": 72.7,
+      "latency": 1.4
+    },
+    {
+      "who": "candidate",
+      "text": "Um, I think a successful team, like, really needs good communication and, um, trust among team members. It's, uh, important for everyone to, like, feel comfortable sharing ideas and, um, asking for help. Also, um, being open to feedback and, like, having a shared goal can really, you know, help keep the team, um, focused and motivated.",
+      "stage": "company_fit",
+      "t": 73.7
+    },
+    {
+      "who": "flow",
+      "text": "What are you hoping to achieve in the next few years in your career?",
+      "stage": "company_fit",
+      "t": 85.3,
+      "latency": 11.6
+    },
+    {
+      "who": "candidate",
+      "text": "Um, I guess in the next few years, I\u2019m hoping to, like, really develop my skills, especially in, um, software development and, like, maybe work on more complex projects. I\u2019d also like to, um, take on more responsibilities and, um, possibly mentor others as I gain experience. Overall, I just want to, like, grow and learn as much as I can.",
+      "stage": "company_fit",
+      "t": 86.7
+    },
+    {
+      "who": "flow",
+      "text": "Thank you so much for sharing all of that, Marcus Lee. I really enjoyed learning about your background and experience. We'll be in touch with next steps via email. Thank you again, and best of luck!",
+      "stage": "closing",
+      "t": 89.0,
+      "latency": 2.3
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> closing]",
+      "stage": "closing",
+      "t": 89.0
+    }
+  ],
+  "stages_visited": [
+    "past_experience",
+    "closing"
+  ],
+  "final_stage": "closing",
+  "tool_calls": [
+    "transition_stage",
+    "assess_response",
+    "ask_question",
+    "ask_question",
+    "assess_response",
+    "ask_question",
+    "ask_question",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "transition_stage",
+    "assess_response",
+    "ask_question",
+    "ask_question",
+    "assess_response",
+    "ask_question",
+    "ask_question",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "ask_question",
+    "ask_question",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "transition_stage"
+  ],
+  "question_bank": [],
+  "stalls": [
+    "turn 8: 6 candidate turns in 'past_experience' with no transition; skipped to 'company_fit'"
+  ],
+  "notes": [
+    "closing delivered by Flow at turn 13"
+  ],
+  "verdict": {
+    "overall": {
+      "confidence": "medium",
+      "headline": "Marcus shows potential but lacks clarity and depth in communication and role understanding.",
+      "recommendation": "lean_no_hire",
+      "level_read": "intern"
+    },
+    "signals": [
+      {
+        "name": "Motivation & authenticity",
+        "reasoning": "Marcus expresses a general interest in technology and problem-solving but lacks specificity in why this role or company is a fit for him.",
+        "band": "borderline",
+        "scope_met": "intern",
+        "evidence": [
+          "I guess I\u2019m really drawn to this opportunity because, like, I love working with, um, technology and solving problems.",
+          "I, um, appreciate the focus on, like, collaboration and innovation at your company."
+        ],
+        "to_raise": "Provide specific reasons why this company and role align with his career goals."
+      },
+      {
+        "name": "Communication & structure",
+        "reasoning": "Marcus's communication is filled with filler words and lacks structure, making it difficult to follow his points.",
+        "band": "poor",
+        "scope_met": "intern",
+        "evidence": [
+          "Um, so we, like, had regular meetings to discuss our progress and, um, any issues we were facing.",
+          "Um, I think the biggest challenge was, like, figuring out how to manage state effectively in React."
+        ],
+        "to_raise": "Practice delivering concise and structured responses to improve clarity."
+      },
+      {
+        "name": "Role / company fit",
+        "reasoning": "Marcus has a vague understanding of the role and company, focusing on general aspects like collaboration and learning.",
+        "band": "borderline",
+        "scope_met": "intern",
+        "evidence": [
+          "I, um, appreciate the focus on, like, collaboration and innovation at your company.",
+          "Also, I think it would be, like, a great chance for me to, um, learn from experienced engineers."
+        ],
+        "to_raise": "Research and articulate specific aspects of the company and role that excite him."
+      },
+      {
+        "name": "Self-awareness",
+        "reasoning": "Marcus shows some self-awareness by identifying areas for improvement but lacks depth in how he plans to address these gaps.",
+        "band": "borderline",
+        "scope_met": "intern",
+        "evidence": [
+          "I think I\u2019d like to, like, get better at, um, JavaScript since I, uh, used it during my internship with React.",
+          "I, um, struggled a bit with, like, understanding the different methods for state management."
+        ],
+        "to_raise": "Develop a concrete plan for addressing skill gaps and articulate it clearly."
+      }
+    ],
+    "differentiators": [
+      "Marcus could become a strong hire by improving his communication skills and demonstrating a deeper understanding of the role and company."
+    ],
+    "delivery": {
+      "pace_available": false,
+      "wpm": null,
+      "wpm_band": "unknown",
+      "wpm_target": "130-160",
+      "filler_total": 114,
+      "filler_per_100w": 15.68,
+      "filler_per_min": null,
+      "filler_band": "high",
+      "filler_target": "<=3.3/100 words",
+      "word_count": 727,
+      "sentence_count": 43,
+      "filler_breakdown": {
+        "um": 53,
+        "uh": 8,
+        "like": 36,
+        "so": 10,
+        "right": 1,
+        "you know": 5,
+        "kind of": 1
+      },
+      "top_crutch_word": {
+        "word": "um",
+        "count": 53
+      },
+      "talk_ratio": 0.76,
+      "longest_monologue_s": null
+    },
+    "gap_to_next": {
+      "signal": "Communication & structure",
+      "from_band": "poor",
+      "to_band": "borderline",
+      "move": "Practice delivering concise and structured responses to improve clarity."
+    },
+    "great_answers": 0,
+    "context": {
+      "track": "intro",
+      "role": "swe",
+      "seniority": "new_grad",
+      "archetype": "big_tech"
+    }
+  },
+  "flags": [
+    "possible meta/stage leakage in 2 turns, e.g. \"Now that we've completed the greeting, let's move on to the self-introduction st\"",
+    "reply latency: median 4.5s, max 11.6s (text-only; TTS adds more)"
+  ]
+}

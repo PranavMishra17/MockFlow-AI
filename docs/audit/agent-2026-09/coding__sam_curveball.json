@@ -1,0 +1,615 @@
+{
+  "track": "coding",
+  "persona": "sam_curveball",
+  "config": {
+    "track": "coding",
+    "role": "Backend Engineer",
+    "level": "mid",
+    "user_id": "audit-user",
+    "preferred_language": "python",
+    "problem_count": "2"
+  },
+  "duration_s": 75.0,
+  "history": [
+    {
+      "who": "flow",
+      "text": "Hello! When you're ready, click the \"I'm Ready\" button to receive your first problem, and let's get started!",
+      "stage": "greeting",
+      "t": 2.6,
+      "latency": null
+    },
+    {
+      "who": "system",
+      "text": "[coding_problem pushed: Maximum Subarray]",
+      "stage": "greeting",
+      "t": 3.3
+    },
+    {
+      "who": "candidate",
+      "text": "Alright! So, the classic way to tackle the Maximum Subarray problem is to use Kadane\u2019s algorithm. I\u2019d iterate through the array, maintaining two variables: one for the maximum sum ending at the current position and another for the overall maximum sum found. \n\nFor each element, I\u2019d update the current sum by adding the element, but if that sum drops below zero, I\u2019d reset it to zero. Then, I\u2019d compare it with the overall max and update it accordingly. Does that sound like a practical approach to you? And what do you think about performance here?",
+      "stage": "greeting",
+      "t": 5.7
+    },
+    {
+      "who": "flow",
+      "text": "Please implement your solution for the Maximum Subarray problem.",
+      "stage": "greeting",
+      "t": 8.1,
+      "latency": 2.3
+    },
+    {
+      "who": "system",
+      "text": "[code_submitted problem 0, 6 lines]\ndef max_sub_array(nums):\n    max_sum = current_sum = nums[0]\n    for num in nums[1:]:\n        current_sum = max(num, current_sum + num)\n        max_sum = max(max_sum, current_sum)\n    return max_sum",
+      "stage": "greeting",
+      "t": 9.7
+    },
+    {
+      "who": "flow",
+      "text": "Great job on implementing Kadane's algorithm efficiently!",
+      "stage": "greeting",
+      "t": 10.9,
+      "latency": null
+    },
+    {
+      "who": "system",
+      "text": "[evaluation_result] {\"correctness\": \"pass\", \"approach_quality\": \"A\", \"edge_cases_handled\": [\"single element array\", \"all negative numbers\"], \"edge_cases_missed\": [], \"time_complexity\": \"O(n)\", \"space_complexity\": \"O(1)\", \"code_quality_notes\": [\"good variable naming\", \"clear logic\"], \"suggestions\": [], \"brief_verbal_feedback\": \"Great job on implementing Kadane's algorithm efficiently!\"}",
+      "stage": "greeting",
+      "t": 10.9
+    },
+    {
+      "who": "candidate",
+      "text": "Thanks! I appreciate the feedback. I aimed to keep it clean and efficient. Are there any edge cases you think I might have missed? Or do you see potential areas for improvement in the logic?",
+      "stage": "greeting",
+      "t": 11.6
+    },
+    {
+      "who": "flow",
+      "text": "What edge cases do you think are important to consider for this problem?",
+      "stage": "greeting",
+      "t": 13.9,
+      "latency": 2.3
+    },
+    {
+      "who": "candidate",
+      "text": "I think the typical edge cases would include handling an empty array, a single element array, and scenarios with all negative numbers. Also, arrays with mixed signs could be interesting too\u2014like a sequence where the maximum subarray starts or ends with negative numbers. Have you seen any other tricky cases in your experience?",
+      "stage": "greeting",
+      "t": 14.7
+    },
+    {
+      "who": "flow",
+      "text": "How would you modify your algorithm to handle an empty array?",
+      "stage": "greeting",
+      "t": 18.1,
+      "latency": 3.4
+    },
+    {
+      "who": "candidate",
+      "text": "Good question! To handle an empty array, I\u2019d add a check at the beginning of the function. If the array is empty, I could return zero or raise an exception, depending on how you want to handle it. What approach do you prefer in your projects for empty inputs?",
+      "stage": "greeting",
+      "t": 18.9
+    },
+    {
+      "who": "flow",
+      "text": "Now that we've covered the algorithm and its edge cases, let's transition to discussing your self-introduction and relevant experiences.",
+      "stage": "self_intro",
+      "t": 21.3,
+      "latency": 2.4
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> self_intro]",
+      "stage": "self_intro",
+      "t": 21.3
+    },
+    {
+      "who": "candidate",
+      "text": "Sure! I'm Sam Ortiz, and I have about six years of experience as a Backend Engineer, primarily working with Python and Django, and I\u2019ve dabbled in Rust as well. I've spent most of my career at mid-sized SaaS companies, where I focused on building scalable APIs and optimizing backend performance. My approach is to always consider the user experience while keeping the codebase clean and maintainable. Outside of coding, I enjoy exploring new tech trends. What about you? What\u2019s your background?",
+      "stage": "self_intro",
+      "t": 22.4
+    },
+    {
+      "who": "flow",
+      "text": "Sam Ortiz, tell me about your programming background.",
+      "stage": "self_intro",
+      "t": 25.4,
+      "latency": 3.1
+    },
+    {
+      "who": "candidate",
+      "text": "I started coding about eight years ago, initially diving into Python because of its simplicity. Over the past six years, I've honed my skills in Python and Django, primarily focusing on backend development in SaaS environments. I also picked up some Rust for performance-critical tasks. I love tackling complex problems and optimizing solutions. What about you? How did you get into programming?",
+      "stage": "self_intro",
+      "t": 26.3
+    },
+    {
+      "who": "flow",
+      "text": "What programming language do you prefer to use today?",
+      "stage": "self_intro",
+      "t": 28.8,
+      "latency": 2.6
+    },
+    {
+      "who": "candidate",
+      "text": "I'd say Python is still my go-to. Its versatility and the rich ecosystem make it incredibly effective for backend work. I also enjoy using Rust for specific projects where performance and safety are critical. Do you have a favorite language or one that you find most effective in your work?",
+      "stage": "self_intro",
+      "t": 29.6
+    },
+    {
+      "who": "flow",
+      "text": "Thank you for sharing, Sam! Now that we've covered your programming background and language preferences, let's warm up with some technical questions related to backend engineering.",
+      "stage": "warm_up",
+      "t": 32.2,
+      "latency": 2.6
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> warm_up]",
+      "stage": "warm_up",
+      "t": 32.2
+    },
+    {
+      "who": "candidate",
+      "text": "Sounds great! I'm ready for some technical questions. What do you have in mind?",
+      "stage": "warm_up",
+      "t": 32.9
+    },
+    {
+      "who": "flow",
+      "text": "Great! Before we dive in, let's warm up with a quick discussion. Can you explain the concept of RESTful APIs and their key principles?",
+      "stage": "warm_up",
+      "t": 35.4,
+      "latency": 2.5
+    },
+    {
+      "who": "candidate",
+      "text": "Absolutely! RESTful APIs are an architectural style that uses HTTP requests to interact with resources. The key principles include statelessness, meaning each request from a client contains all the information the server needs to fulfill it. Resources are identified by URLs, and interactions are typically done using standard HTTP methods like GET, POST, PUT, and DELETE. It\u2019s all about simplicity and scalability. Do you use REST in your projects, or do you lean towards another API style?",
+      "stage": "warm_up",
+      "t": 36.4
+    },
+    {
+      "who": "flow",
+      "text": "What are some common challenges you face when designing RESTful APIs?",
+      "stage": "warm_up",
+      "t": 39.4,
+      "latency": 3.0
+    },
+    {
+      "who": "candidate",
+      "text": "One common challenge is balancing flexibility with simplicity. I\u2019ve found that it\u2019s easy to overcomplicate the API with too many endpoints or parameters. Another issue is versioning; you want to evolve the API without breaking existing clients. And, of course, handling authentication and rate limiting can be tricky. What about your experience? Have you encountered any particularly tough challenges in API design?",
+      "stage": "warm_up",
+      "t": 40.3
+    },
+    {
+      "who": "flow",
+      "text": "Thank you for your insights, Sam! Now let's move on to a coding problem. Are you ready for your first coding challenge?",
+      "stage": "coding_problem_1",
+      "t": 42.9,
+      "latency": 2.6
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> coding_problem_1]",
+      "stage": "coding_problem_1",
+      "t": 42.9
+    },
+    {
+      "who": "candidate",
+      "text": "Absolutely, I\u2019m ready! What\u2019s the challenge? Let\u2019s tackle it together.",
+      "stage": "coding_problem_1",
+      "t": 43.5
+    },
+    {
+      "who": "flow",
+      "text": "Alright, let's get into it. Here's your first problem: Create a function that takes a list of integers and returns the two numbers that add up to a specific target.",
+      "stage": "coding_problem_1",
+      "t": 45.9,
+      "latency": 2.4
+    },
+    {
+      "who": "candidate",
+      "text": "Got it! A straightforward approach would be to use a hash map. As we iterate through the list, we can store the numbers we've seen and check if the complement\u2014target minus the current number\u2014exists in the map. If it does, we return those two numbers. Do you have a specific target in mind for this example, or should I just pick one?",
+      "stage": "coding_problem_1",
+      "t": 47.0
+    },
+    {
+      "who": "flow",
+      "text": "You can pick any target for your implementation. Please go ahead!",
+      "stage": "coding_problem_1",
+      "t": 49.8,
+      "latency": 2.8
+    },
+    {
+      "who": "candidate",
+      "text": "Alright! Let\u2019s say our target is ten. So, I\u2019d loop through the list, and for each number, I\u2019d check if the complement exists in our hash map. If it does, we return those two numbers; if not, we add the number to the map. How does that sound? Would you like me to clarify any part of the logic?",
+      "stage": "coding_problem_1",
+      "t": 50.7
+    },
+    {
+      "who": "flow",
+      "text": "Please implement your solution based on that logic.",
+      "stage": "coding_problem_1",
+      "t": 53.4,
+      "latency": 2.7
+    },
+    {
+      "who": "candidate",
+      "text": "Sure! The function would look something like this: loop through the list, check for the complement in the hash map, and add the number if it\u2019s not there. The return statement would give us the two numbers when found. What kind of edge cases should I consider? For example, how should it behave if there are no pairs?",
+      "stage": "coding_problem_1",
+      "t": 54.2
+    },
+    {
+      "who": "flow",
+      "text": "It's important to return a clear indication when no pairs are found, such as returning None or an empty list. How would you implement that?",
+      "stage": "coding_problem_1",
+      "t": 57.6,
+      "latency": 3.4
+    },
+    {
+      "who": "candidate",
+      "text": "Great point! I\u2019d just add a check at the end of the function. If we finish the loop without finding a pair, we\u2019d return None or an empty list based on your preference. That way, the caller knows immediately that no valid pair exists. Would you prefer returning `None` or an empty list for clarity?",
+      "stage": "coding_problem_1",
+      "t": 58.4
+    },
+    {
+      "who": "flow",
+      "text": "Returning None is often a clear choice. Let's proceed with that. Are you ready to implement your final solution?",
+      "stage": "coding_problem_1",
+      "t": 61.8,
+      "latency": 3.5
+    },
+    {
+      "who": "system",
+      "text": "[user pressed skip -> coding_problem_2]",
+      "stage": "coding_problem_2",
+      "t": 61.8
+    },
+    {
+      "who": "flow",
+      "text": "Good work. Here's the second problem.",
+      "stage": "coding_problem_2",
+      "t": 62.5,
+      "latency": null
+    },
+    {
+      "who": "candidate",
+      "text": "I'm ready! What\u2019s the next challenge? Let\u2019s dive in!",
+      "stage": "coding_problem_2",
+      "t": 63.0
+    },
+    {
+      "who": "flow",
+      "text": "Let's dive into your next challenge: Design a simple in-memory key-value store with basic operations: set, get, and delete.",
+      "stage": "coding_problem_2",
+      "t": 65.1,
+      "latency": 2.0
+    },
+    {
+      "who": "candidate",
+      "text": "Sure! For a simple in-memory key-value store, I\u2019d use a Python dictionary to keep things efficient. The `set` method would add or update a key-value pair, `get` would retrieve the value for a given key or return None if it doesn't exist, and `delete` would remove the key. How do you feel about handling concurrent access? Should we consider any threading issues?",
+      "stage": "coding_problem_2",
+      "t": 66.4
+    },
+    {
+      "who": "flow",
+      "text": "Handling concurrent access is crucial. You might consider using threading locks to ensure that only one thread can modify the store at a time. How would you implement that in your design?",
+      "stage": "coding_problem_2",
+      "t": 69.7,
+      "latency": 3.3
+    }
+  ],
+  "stages_visited": [
+    "self_intro",
+    "warm_up",
+    "coding_problem_1"
+  ],
+  "final_stage": "coding_problem_2",
+  "tool_calls": [
+    "generate_interview_questions",
+    "get_current_question",
+    "record_response",
+    "ask_question",
+    "record_response",
+    "ask_question",
+    "record_response",
+    "ask_question",
+    "record_response",
+    "transition_stage",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "ask_question",
+    "assess_response",
+    "transition_stage",
+    "get_current_question",
+    "ask_question",
+    "record_response",
+    "ask_question",
+    "record_response",
+    "transition_stage",
+    "ask_question",
+    "record_response",
+    "ask_question",
+    "record_response",
+    "ask_question",
+    "record_response",
+    "ask_question",
+    "record_response",
+    "ask_question",
+    "ask_question",
+    "record_response",
+    "ask_question"
+  ],
+  "question_bank": [
+    {
+      "slug": "maximum-subarray",
+      "title": "Maximum Subarray",
+      "difficulty": "medium",
+      "time_limit_minutes": 20,
+      "description": "Given an integer array `nums`, return the largest sum of any contiguous non-empty subarray.",
+      "examples": [
+        {
+          "input": "nums = [-2,1,-3,4,-1,2,1,-5,4]",
+          "output": "6",
+          "explanation": "[4,-1,2,1] sums to 6"
+        },
+        {
+          "input": "nums = [5,4,-1,7,8]",
+          "output": "23"
+        }
+      ],
+      "constraints": [
+        "1 <= len(nums) <= 10^5"
+      ],
+      "hints": [
+        "Track the best sum ending at each index.",
+        "Kadane's algorithm is O(n)."
+      ],
+      "entrypoint": "max_sub_array",
+      "starter_code": {
+        "python": "def max_sub_array(nums):\n    pass\n"
+      },
+      "test_cases": [
+        {
+          "args": [
+            [
+              -2,
+              1,
+              -3,
+              4,
+              -1,
+              2,
+              1,
+              -5,
+              4
+            ]
+          ],
+          "expected": 6
+        },
+        {
+          "args": [
+            [
+              1
+            ]
+          ],
+          "expected": 1
+        },
+        {
+          "args": [
+            [
+              5,
+              4,
+              -1,
+              7,
+              8
+            ]
+          ],
+          "expected": 23
+        },
+        {
+          "args": [
+            [
+              -1
+            ]
+          ],
+          "expected": -1
+        },
+        {
+          "args": [
+            [
+              -2,
+              -1
+            ]
+          ],
+          "expected": -1
+        }
+      ],
+      "reference_solution": {
+        "python": "def max_sub_array(nums):\n    best = cur = nums[0]\n    for n in nums[1:]:\n        cur = max(n, cur + n)\n        best = max(best, cur)\n    return best\n"
+      }
+    },
+    {
+      "slug": "longest-substring-no-repeat",
+      "title": "Longest Substring Without Repeating Characters",
+      "difficulty": "medium",
+      "time_limit_minutes": 20,
+      "description": "Given a string `s`, return the length of the longest substring that contains no repeating characters.",
+      "examples": [
+        {
+          "input": "s = \"abcabcbb\"",
+          "output": "3",
+          "explanation": "\"abc\""
+        },
+        {
+          "input": "s = \"pwwkew\"",
+          "output": "3",
+          "explanation": "\"wke\""
+        }
+      ],
+      "constraints": [
+        "0 <= len(s) <= 5*10^4"
+      ],
+      "hints": [
+        "Use a sliding window.",
+        "Track the last index of each character."
+      ],
+      "entrypoint": "length_of_longest_substring",
+      "starter_code": {
+        "python": "def length_of_longest_substring(s):\n    pass\n"
+      },
+      "test_cases": [
+        {
+          "args": [
+            "abcabcbb"
+          ],
+          "expected": 3
+        },
+        {
+          "args": [
+            "bbbbb"
+          ],
+          "expected": 1
+        },
+        {
+          "args": [
+            "pwwkew"
+          ],
+          "expected": 3
+        },
+        {
+          "args": [
+            ""
+          ],
+          "expected": 0
+        },
+        {
+          "args": [
+            "au"
+          ],
+          "expected": 2
+        },
+        {
+          "args": [
+            "dvdf"
+          ],
+          "expected": 3
+        }
+      ],
+      "reference_solution": {
+        "python": "def length_of_longest_substring(s):\n    last = {}\n    start = 0\n    best = 0\n    for i, ch in enumerate(s):\n        if ch in last and last[ch] >= start:\n            start = last[ch] + 1\n        last[ch] = i\n        best = max(best, i - start + 1)\n    return best\n"
+      }
+    }
+  ],
+  "stalls": [
+    "turn 13: 6 candidate turns in 'coding_problem_1' with no transition; skipped to 'coding_problem_2'"
+  ],
+  "notes": [],
+  "verdict": {
+    "overall": {
+      "confidence": "medium",
+      "headline": "Sam demonstrates solid problem-solving and coding skills but lacks depth in testing and verification.",
+      "recommendation": "lean_hire",
+      "level_read": "mid"
+    },
+    "signals": [
+      {
+        "name": "Problem-solving",
+        "reasoning": "Sam clearly articulated the approach for both problems, including the use of Kadane's algorithm and a hash map for the two-sum problem. They also considered edge cases and discussed potential improvements.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "The classic way to tackle the Maximum Subarray problem is to use Kadane\u2019s algorithm.",
+          "A straightforward approach would be to use a hash map."
+        ],
+        "to_raise": "Weigh alternatives more explicitly before deciding on an approach."
+      },
+      {
+        "name": "Coding",
+        "reasoning": "Sam described the coding logic clearly and implemented solutions efficiently, demonstrating a good grasp of idiomatic Python.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "The function would look something like this: loop through the list, check for the complement in the hash map, and add the number if it\u2019s not there.",
+          "For a simple in-memory key-value store, I\u2019d use a Python dictionary to keep things efficient."
+        ],
+        "to_raise": "Translate the plan to code with more detailed implementation steps."
+      },
+      {
+        "name": "Testing & verification",
+        "reasoning": "Sam mentioned edge cases but did not demonstrate a thorough testing strategy or self-correction during the interview.",
+        "band": "borderline",
+        "scope_met": "new_grad",
+        "evidence": [
+          "Are there any edge cases you think I might have missed?",
+          "What kind of edge cases should I consider?"
+        ],
+        "to_raise": "Proactively test and verify solutions with specific test cases."
+      },
+      {
+        "name": "Response to hints",
+        "reasoning": "Sam integrated feedback about handling empty arrays and returning None for no pairs, showing coachability.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "To handle an empty array, I\u2019d add a check at the beginning of the function.",
+          "I\u2019d just add a check at the end of the function. If we finish the loop without finding a pair, we\u2019d return None."
+        ],
+        "to_raise": "Accelerate implementation after integrating hints."
+      },
+      {
+        "name": "Communication & structure",
+        "reasoning": "Sam communicated their thought process clearly and structured their responses well, making it easy to follow their logic.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "Does that sound like a practical approach to you? And what do you think about performance here?",
+          "How does that sound? Would you like me to clarify any part of the logic?"
+        ],
+        "to_raise": "Use more concise language to enhance clarity and impact."
+      }
+    ],
+    "differentiators": [
+      "Demonstrate a more comprehensive testing strategy and self-correction during problem-solving."
+    ],
+    "delivery": {
+      "pace_available": false,
+      "wpm": null,
+      "wpm_band": "unknown",
+      "wpm_target": "130-160",
+      "filler_total": 8,
+      "filler_per_100w": 0.9,
+      "filler_per_min": null,
+      "filler_band": "good",
+      "filler_target": "<=3.3/100 words",
+      "word_count": 893,
+      "sentence_count": 83,
+      "filler_breakdown": {
+        "like": 5,
+        "so": 2,
+        "kind of": 1
+      },
+      "top_crutch_word": {
+        "word": "like",
+        "count": 5
+      },
+      "talk_ratio": 0.73,
+      "longest_monologue_s": null
+    },
+    "gap_to_next": {
+      "signal": "Testing & verification",
+      "from_band": "borderline",
+      "to_band": "solid",
+      "move": "Proactively test and verify solutions with specific test cases."
+    },
+    "great_answers": 0,
+    "context": {
+      "track": "coding",
+      "role": "swe",
+      "seniority": "mid",
+      "archetype": "big_tech"
+    }
+  },
+  "flags": [
+    "possible meta/stage leakage in 1 turns, e.g. \"Now that we've covered the algorithm and its edge cases, let's transition to dis\"",
+    "reply latency: median 2.6s, max 3.5s (text-only; TTS adds more)",
+    "7 candidate question(s) answered with an immediate counter-question"
+  ]
+}

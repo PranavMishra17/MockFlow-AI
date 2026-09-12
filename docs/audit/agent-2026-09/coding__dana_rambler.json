@@ -1,0 +1,585 @@
+{
+  "track": "coding",
+  "persona": "dana_rambler",
+  "config": {
+    "track": "coding",
+    "role": "Full Stack Engineer",
+    "level": "mid",
+    "user_id": "audit-user",
+    "preferred_language": "python",
+    "problem_count": "2"
+  },
+  "duration_s": 92.2,
+  "history": [
+    {
+      "who": "flow",
+      "text": "Hello! I'm excited to work with you today; just click the \"I'm Ready\" button when you want to receive your first problem.",
+      "stage": "greeting",
+      "t": 15.4,
+      "latency": null
+    },
+    {
+      "who": "system",
+      "text": "[coding_problem pushed: Maximum Subarray]",
+      "stage": "greeting",
+      "t": 16.1
+    },
+    {
+      "who": "candidate",
+      "text": "Oh, absolutely! So, before diving into the solution, I think it\u2019s helpful to discuss why this problem matters. In my experience, particularly in the healthcare scheduling app I work on, we often deal with performance-related issues where finding the optimal data structure or algorithm can significantly impact user experience. Okay, back to the problem at hand!\n\nTo tackle the Maximum Subarray problem, I\u2019d start by considering a couple of approaches. The brute force method would involve checking every possible subarray, calculating their sums, and then determining the maximum. But, as I\u2019ve learned over the years, that approach can be inefficient, especially for larger arrays, leading to a time complexity of O(n\u00b2), which can be really slow in practice.\n\nInstead, I\u2019d lean towards Kadane\u2019s Algorithm, which is a game-changer here. The basic idea is to maintain two variables: one for the current subarray sum and another for storing the maximum sum encountered so far. As we traverse the array, we would keep adding to the current sum and reset it to zero if it ever drops below zero. This way, we\u2019re ensuring that we\u2019re always evaluating the best possible contiguous sum without redundant calculations.\n\nTo put it simply, this approach has a solid time complexity of O(n) and space complexity of O(1). So, basically, it\u2019s efficient and direct. I\u2019ve always found that simplicity is key, especially when working in fast-paced environments, like my current role, where quick adjustments can make such a difference! Long story short, that\u2019s the route I\u2019d take!",
+      "stage": "self_intro",
+      "t": 19.1
+    },
+    {
+      "who": "flow",
+      "text": "Great job on your response! Now let's move on to the coding problem.",
+      "stage": "self_intro",
+      "t": 22.4,
+      "latency": 3.2
+    },
+    {
+      "who": "system",
+      "text": "[code_submitted problem 0, 9 lines]\ndef max_sub_array(nums):\n    max_sum = nums[0]\n    current_sum = nums[0]\n    \n    for num in nums[1:]:\n        current_sum = max(num, current_sum + num)\n        max_sum = max(max_sum, current_sum)\n    \n    return max_sum",
+      "stage": "self_intro",
+      "t": 24.1
+    },
+    {
+      "who": "flow",
+      "text": "Great job implementing Kadane's algorithm; your solution is efficient and clear.",
+      "stage": "self_intro",
+      "t": 25.2,
+      "latency": null
+    },
+    {
+      "who": "system",
+      "text": "[evaluation_result] {\"correctness\": \"pass\", \"approach_quality\": \"A\", \"edge_cases_handled\": [\"single element array\", \"all negative numbers\"], \"edge_cases_missed\": [], \"time_complexity\": \"O(n)\", \"space_complexity\": \"O(1)\", \"code_quality_notes\": [\"good variable naming\", \"clear logic\"], \"suggestions\": [], \"brief_verbal_feedback\": \"Great job implementing Kadane's algorithm; your solution is efficient and clear.\"}",
+      "stage": "self_intro",
+      "t": 25.2
+    },
+    {
+      "who": "candidate",
+      "text": "Thank you so much for the feedback! I'm really glad to hear that the implementation resonated well with you. Kadane's algorithm has become such a reliable tool in my toolbox, and it's always exciting to apply it to real problems, especially when you want to maintain efficiency in the applications we're building. \n\nYou know, when I first started exploring algorithmic solutions as a product analyst, I was quite surprised at how much of an impact these choices have on overall application performance. In fact, it was during one of our sprints to improve the user experience in our healthcare app that I really dove into optimizing algorithms like this. It was eye-opening to see how a well-crafted solution could drastically cut down loading times and enhance the overall flow of the booking process for patients.\n\nSo, as I've transitioned from analysis to engineering, I've kept this focus on both performance and clarity in mind. It's about finding that balance, right? Creating code that's not just efficient but also maintainable and comprehensible for others in the team. Long story short, I'm really excited to apply these principles in our conversation today and in future projects!",
+      "stage": "self_intro",
+      "t": 27.0
+    },
+    {
+      "who": "flow",
+      "text": "Dana Whitfield, tell me about your programming background.",
+      "stage": "self_intro",
+      "t": 29.9,
+      "latency": 2.9
+    },
+    {
+      "who": "candidate",
+      "text": "Sure! So, my programming journey began about four years ago. Initially, I came on board as a product analyst, where I was doing a lot of data analysis and working closely with product teams to gather insights. It was a fantastic role because I got to see how features were shaped based on user feedback and data trends. But I realized pretty quickly that I wanted to get my hands dirty with the actual coding part of it, you know? \n\nEventually, I transitioned into engineering, which was a natural progression for my curiosity about how the products were built. I started learning programming languages like JavaScript and then dove into frameworks like React for front-end and Node for back-end. I really enjoy working with TypeScript as well because it adds that nice layer of type safety that can help catch errors early in the development process.\n\nNow, I've been working on a healthcare scheduling app, which has been an incredible learning experience. It's such a complex domain, and I've had the opportunity to redesign significant workflows, like the booking flow, which not only improved user experience but also made the whole process more efficient. \n\nSo, basically, my background is a blend of data analysis and hands-on engineering, which I think gives me a unique perspective on building user-centered products. Long story short, I love the continuous learning that comes with this field, and I\u2019m excited about the future!",
+      "stage": "self_intro",
+      "t": 32.0
+    },
+    {
+      "who": "flow",
+      "text": "What programming language do you prefer to use today?",
+      "stage": "self_intro",
+      "t": 36.0,
+      "latency": 4.0
+    },
+    {
+      "who": "candidate",
+      "text": "That\u2019s a great question! Given my current role, I really lean towards TypeScript as my preferred programming language. I find it to be incredibly versatile, especially when I\u2019m working on our healthcare scheduling app. The way TypeScript adds static typing to JavaScript helps catch errors during development, which is crucial\u2014especially in a domain like healthcare where reliability is key.\n\nI started with JavaScript, like many developers do, and while it\u2019s a fantastic language, I found that TypeScript gives me an extra layer of confidence when I'm writing code. It helps with code readability too; I think the clear type definitions make it easier for others on the team to understand the codebase. When I was involved in the redesign of the booking flow, leveraging TypeScript\u2019s features really streamlined our process and made collaboration smoother. \n\nI also enjoy working with React for the front end and Node for the back end. They just seem to fit well together within the TypeScript ecosystem. So, basically, TypeScript is my go-to language nowadays because it aligns well with the project requirements and my personal preference for maintainable, clear, and robust code. Long story short, it\u2019s been a game-changer for how I approach development!",
+      "stage": "self_intro",
+      "t": 38.0
+    },
+    {
+      "who": "flow",
+      "text": "Great choice! We'll use TypeScript today. \n\nNow, let's warm up with a few coding problems to get your mind into the right space.",
+      "stage": "warm_up",
+      "t": 41.4,
+      "latency": 3.4
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> warm_up]",
+      "stage": "warm_up",
+      "t": 41.4
+    },
+    {
+      "who": "candidate",
+      "text": "Absolutely, I\u2019m ready! Warm-ups are always a good way to get the creative juices flowing. I've found that these smaller problems can really help in sharpening problem-solving skills, especially when you're working on real-world projects. They often mimic the types of challenges you face in a production environment, whether it\u2019s about optimizing performance or ensuring code clarity. So, what\u2019s the first problem we\u2019re tackling? I'm excited to dive in!",
+      "stage": "warm_up",
+      "t": 42.3
+    },
+    {
+      "who": "flow",
+      "text": "I appreciate your enthusiasm, Dana! Let's dive into the first coding problem.",
+      "stage": "warm_up",
+      "t": 48.4,
+      "latency": 6.2
+    },
+    {
+      "who": "candidate",
+      "text": "Thank you! I\u2019m glad to hear that. I always think enthusiasm plays a huge role in problem-solving, especially when you\u2019re facing some tricky challenges. I\u2019ve definitely had my fair share of them while working on various projects. For instance, during our last sprint on the scheduling app, we encountered some performance issues under heavy load. It was a real puzzle trying to optimize the backend while keeping the user experience smooth. \n\nBut I'm ready to focus now! What\u2019s the first coding problem on our agenda? I\u2019m all ears!",
+      "stage": "warm_up",
+      "t": 49.6
+    },
+    {
+      "who": "flow",
+      "text": "Let's get started with your first coding problem! Here it comes.",
+      "stage": "warm_up",
+      "t": 51.4,
+      "latency": 1.8
+    },
+    {
+      "who": "candidate",
+      "text": "Great, I'm all set! Lay it on me\u2014what's the first problem we\u2019re tackling? I'm eager to jump in and start coding!",
+      "stage": "warm_up",
+      "t": 53.0
+    },
+    {
+      "who": "flow",
+      "text": "It looks like there was a mix-up. Let me get the first coding problem for you right now!",
+      "stage": "warm_up",
+      "t": 54.5,
+      "latency": 1.5
+    },
+    {
+      "who": "candidate",
+      "text": "No problem at all! I appreciate your patience. I know these transitions can be a little tricky sometimes. I\u2019m ready to tackle that first coding problem whenever you are. Just let me know what it is, and I\u2019ll dive right in!",
+      "stage": "warm_up",
+      "t": 55.1
+    },
+    {
+      "who": "flow",
+      "text": "Thank you for your understanding! I\u2019m working to get that first coding problem for you right now. Just a moment!",
+      "stage": "warm_up",
+      "t": 59.3,
+      "latency": 4.1
+    },
+    {
+      "who": "candidate",
+      "text": "Of course! Take your time. I know these things can take a little bit of effort to set up. In the meantime, I\u2019d be happy to share some thoughts on how I approach coding problems or maybe talk about some experiences where I had to think outside the box to find a solution. But I\u2019m really looking forward to diving into that first problem whenever you\u2019re ready!",
+      "stage": "warm_up",
+      "t": 60.1
+    },
+    {
+      "who": "flow",
+      "text": "I appreciate your patience! I'm ready to present the first coding problem now. Let's dive in!",
+      "stage": "warm_up",
+      "t": 61.6,
+      "latency": 1.4
+    },
+    {
+      "who": "system",
+      "text": "[user pressed skip -> coding_problem_1]",
+      "stage": "coding_problem_1",
+      "t": 61.6
+    },
+    {
+      "who": "flow",
+      "text": "Alright, let's get into it. Here's your first problem.",
+      "stage": "coding_problem_1",
+      "t": 62.2,
+      "latency": null
+    },
+    {
+      "who": "candidate",
+      "text": "I\u2019m ready! Please share the problem with me, and I\u2019ll get started on it right away. I\u2019m excited to tackle this challenge!",
+      "stage": "coding_problem_1",
+      "t": 62.8
+    },
+    {
+      "who": "flow",
+      "text": "You've got the problem now! It's the Maximum Subarray challenge. Take your time, and let me know when you're ready to submit your solution or if you have any questions. Good luck!",
+      "stage": "coding_problem_1",
+      "t": 64.3,
+      "latency": 1.5
+    },
+    {
+      "who": "candidate",
+      "text": "Great! The Maximum Subarray problem is such a classic. So, for some context, the challenge is to find a contiguous subarray within a one-dimensional array of numbers that has the largest sum. I remember when I first came across this problem in my early days as a product analyst, and it really got me thinking about dynamic programming techniques.\n\nTo tackle this efficiently, I\u2019d probably use Kadane\u2019s algorithm, which allows us to solve the problem in linear time. The idea would be to keep track of the current subarray sum and the maximum sum found so far. If the current sum goes below zero, we reset it. I love how it elegantly balances between keeping the running total and checking against the maximum.\n\nIf I were coding this, I\u2019d start by initializing two variables, one for the current sum and one for the maximum sum, and then loop through the array to update those values. \n\nSo, basically, I\u2019d write code that iterates through the array and updates these sums accordingly. I\u2019m ready to give a detailed walkthrough of the code if you\u2019d like, or dive into implementing it. What do you think?",
+      "stage": "coding_problem_1",
+      "t": 66.3
+    },
+    {
+      "who": "flow",
+      "text": "Great! Before we dive in, let's warm up with a quick discussion. What specific challenges do you anticipate while implementing Kadane's algorithm for this problem?",
+      "stage": "coding_problem_2",
+      "t": 71.8,
+      "latency": 5.5
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> coding_problem_2]",
+      "stage": "coding_problem_2",
+      "t": 71.8
+    },
+    {
+      "who": "candidate",
+      "text": "Ah, okay! Jumping into a new problem, I see. That's fine! Just let me know what the new challenge is, and I'm ready to tackle it as well. I appreciate the smooth transition!",
+      "stage": "coding_problem_2",
+      "t": 72.5
+    },
+    {
+      "who": "flow",
+      "text": "Here's your new challenge: the Longest Substring Without Repeating Characters problem. Take your time to think it through, and let me know when you're ready to submit your solution or if you have any questions! Good luck!",
+      "stage": "coding_problem_2",
+      "t": 74.3,
+      "latency": 1.8
+    },
+    {
+      "who": "system",
+      "text": "[coding_problem pushed: Longest Substring Without Repeating Characters]",
+      "stage": "coding_problem_2",
+      "t": 74.3
+    },
+    {
+      "who": "candidate",
+      "text": "Absolutely! The Longest Substring Without Repeating Characters is such a fun challenge. It reminds me of when I was working on optimizing user experience in our scheduling app. We wanted to ensure that users could easily navigate without getting lost in repeated selections or backtracking, which is a bit of a parallel to this problem.\n\nFor this specific problem, I\u2019d approach it using a sliding window technique, which I find really effective for substring-related challenges. So, the idea here is to maintain a window defined by two pointers. I'll have one pointer to denote the start of the substring and another to denote the current character being examined as I iterate through the string.\n\nAs I iterate through the characters, I would use a hash map or a set to track the characters in the current window. If I encounter a repeating character, I\u2019d shift the start pointer to the right until the substring is valid again, meaning no repeating characters. Throughout this process, I would keep track of the maximum length of valid substrings I\u2019ve found.\n\nLong story short, while iterating, I\u2019d continuously update the maximum length found, and at the end, I\u2019d return that. It\u2019s a neat and efficient solution, running in linear time. I\u2019m excited to implement it if you want to proceed! What do you think?",
+      "stage": "closing",
+      "t": 77.1
+    },
+    {
+      "who": "flow",
+      "text": "That's all the problems for today, Dana Whitfield. Let me wrap up.",
+      "stage": "closing",
+      "t": 79.9,
+      "latency": 2.8
+    },
+    {
+      "who": "system",
+      "text": "[code_submitted problem 1, 11 lines]\ndef length_of_longest_substring(s):\n    char_index = {}\n    start = max_length = 0\n    \n    for i, char in enumerate(s):\n        if char in char_index and char_index[char] >= start:\n            start = char_index[char] + 1\n        char_index[char] = i\n        max_length = max(max_length, i - start + 1)\n    \n    return max_length",
+      "stage": "closing",
+      "t": 82.2
+    },
+    {
+      "who": "flow",
+      "text": "Your solution is efficient and handles the main cases well, demonstrating a good understanding of the sliding window technique.",
+      "stage": "closing",
+      "t": 83.3,
+      "latency": null
+    },
+    {
+      "who": "system",
+      "text": "[evaluation_result] {\"correctness\": \"pass\", \"approach_quality\": \"A\", \"edge_cases_handled\": [\"empty string\", \"string with all unique characters\", \"string with all repeating characters\"], \"edge_cases_missed\": [], \"time_complexity\": \"O(n)\", \"space_complexity\": \"O(min(n, m))\", \"code_quality_notes\": [\"good variable naming\", \"efficient use of data structures\"], \"suggestions\": [\"Consider adding type hints for function parameters and return type.\"], \"brief_verbal_feedback\": \"Your solution is efficient and handles the main cases well, demonstrating a good understanding of the sliding window technique.\"}",
+      "stage": "closing",
+      "t": 83.3
+    },
+    {
+      "who": "candidate",
+      "text": "Thank you so much for the feedback! I really appreciate the recognition of the sliding window technique, as I find it fascinating how such a simple approach can yield such elegant solutions. \n\nAnd you're right about the type hints! It's something I always strive to implement when coding, especially in TypeScript and other statically typed languages, as it adds clarity and helps maintain the code in the long run. \n\nIt\u2019s great to hear that the edge cases were handled effectively too, since I've learned that anticipating those is key in real-world applications, especially in healthcare scheduling where user inputs can be quite varied. \n\nIf there are any more questions or if you\u2019d like to dive deeper into any part of the process or the solution itself, I\u2019m totally open to that!",
+      "stage": "closing",
+      "t": 84.7
+    },
+    {
+      "who": "flow",
+      "text": "Thank you for your time today, Dana Whitfield. It was great to see your problem-solving approach and your emphasis on clarity in coding. Detailed feedback and code analysis will be available on your dashboard. Best of luck!",
+      "stage": "closing",
+      "t": 85.7,
+      "latency": 1.0
+    }
+  ],
+  "stages_visited": [
+    "warm_up",
+    "coding_problem_2"
+  ],
+  "final_stage": "closing",
+  "tool_calls": [
+    "generate_interview_questions",
+    "get_current_question",
+    "record_response",
+    "assess_response",
+    "transition_stage",
+    "record_response",
+    "assess_response",
+    "ask_question",
+    "record_response",
+    "assess_response",
+    "ask_question",
+    "record_response",
+    "assess_response",
+    "transition_stage",
+    "get_current_question",
+    "get_current_question",
+    "get_current_question",
+    "get_current_question",
+    "get_current_question",
+    "get_current_question",
+    "record_response",
+    "assess_response",
+    "transition_stage",
+    "get_current_question",
+    "record_response",
+    "assess_response",
+    "transition_stage"
+  ],
+  "question_bank": [
+    {
+      "slug": "maximum-subarray",
+      "title": "Maximum Subarray",
+      "difficulty": "medium",
+      "time_limit_minutes": 20,
+      "description": "Given an integer array `nums`, return the largest sum of any contiguous non-empty subarray.",
+      "examples": [
+        {
+          "input": "nums = [-2,1,-3,4,-1,2,1,-5,4]",
+          "output": "6",
+          "explanation": "[4,-1,2,1] sums to 6"
+        },
+        {
+          "input": "nums = [5,4,-1,7,8]",
+          "output": "23"
+        }
+      ],
+      "constraints": [
+        "1 <= len(nums) <= 10^5"
+      ],
+      "hints": [
+        "Track the best sum ending at each index.",
+        "Kadane's algorithm is O(n)."
+      ],
+      "entrypoint": "max_sub_array",
+      "starter_code": {
+        "python": "def max_sub_array(nums):\n    pass\n"
+      },
+      "test_cases": [
+        {
+          "args": [
+            [
+              -2,
+              1,
+              -3,
+              4,
+              -1,
+              2,
+              1,
+              -5,
+              4
+            ]
+          ],
+          "expected": 6
+        },
+        {
+          "args": [
+            [
+              1
+            ]
+          ],
+          "expected": 1
+        },
+        {
+          "args": [
+            [
+              5,
+              4,
+              -1,
+              7,
+              8
+            ]
+          ],
+          "expected": 23
+        },
+        {
+          "args": [
+            [
+              -1
+            ]
+          ],
+          "expected": -1
+        },
+        {
+          "args": [
+            [
+              -2,
+              -1
+            ]
+          ],
+          "expected": -1
+        }
+      ],
+      "reference_solution": {
+        "python": "def max_sub_array(nums):\n    best = cur = nums[0]\n    for n in nums[1:]:\n        cur = max(n, cur + n)\n        best = max(best, cur)\n    return best\n"
+      }
+    },
+    {
+      "slug": "longest-substring-no-repeat",
+      "title": "Longest Substring Without Repeating Characters",
+      "difficulty": "medium",
+      "time_limit_minutes": 20,
+      "description": "Given a string `s`, return the length of the longest substring that contains no repeating characters.",
+      "examples": [
+        {
+          "input": "s = \"abcabcbb\"",
+          "output": "3",
+          "explanation": "\"abc\""
+        },
+        {
+          "input": "s = \"pwwkew\"",
+          "output": "3",
+          "explanation": "\"wke\""
+        }
+      ],
+      "constraints": [
+        "0 <= len(s) <= 5*10^4"
+      ],
+      "hints": [
+        "Use a sliding window.",
+        "Track the last index of each character."
+      ],
+      "entrypoint": "length_of_longest_substring",
+      "starter_code": {
+        "python": "def length_of_longest_substring(s):\n    pass\n"
+      },
+      "test_cases": [
+        {
+          "args": [
+            "abcabcbb"
+          ],
+          "expected": 3
+        },
+        {
+          "args": [
+            "bbbbb"
+          ],
+          "expected": 1
+        },
+        {
+          "args": [
+            "pwwkew"
+          ],
+          "expected": 3
+        },
+        {
+          "args": [
+            ""
+          ],
+          "expected": 0
+        },
+        {
+          "args": [
+            "au"
+          ],
+          "expected": 2
+        },
+        {
+          "args": [
+            "dvdf"
+          ],
+          "expected": 3
+        }
+      ],
+      "reference_solution": {
+        "python": "def length_of_longest_substring(s):\n    last = {}\n    start = 0\n    best = 0\n    for i, ch in enumerate(s):\n        if ch in last and last[ch] >= start:\n            start = last[ch] + 1\n        last[ch] = i\n        best = max(best, i - start + 1)\n    return best\n"
+      }
+    }
+  ],
+  "stalls": [
+    "turn 7: 6 candidate turns in 'warm_up' with no transition; skipped to 'coding_problem_1'"
+  ],
+  "notes": [
+    "closing delivered by Flow at turn 12"
+  ],
+  "verdict": {
+    "overall": {
+      "confidence": "high",
+      "headline": "Dana demonstrates strong problem-solving skills and clear communication, but scope of ownership is more aligned with new-grad level.",
+      "recommendation": "lean_hire",
+      "level_read": "new_grad"
+    },
+    "signals": [
+      {
+        "name": "Problem-solving",
+        "reasoning": "Dana clearly articulated the approach to solving the Maximum Subarray problem using Kadane's Algorithm, explaining the time complexity and reasoning behind the choice. However, the discussion was limited to well-known algorithms without exploring alternative strategies or deeper insights.",
+        "band": "solid",
+        "scope_met": "new_grad",
+        "evidence": [
+          "Instead, I\u2019d lean towards Kadane\u2019s Algorithm, which is a game-changer here.",
+          "To put it simply, this approach has a solid time complexity of O(n) and space complexity of O(1)."
+        ],
+        "to_raise": "Discuss alternative approaches or optimizations beyond standard algorithms."
+      },
+      {
+        "name": "Coding",
+        "reasoning": "Dana's coding was described as efficient and clear, indicating a good grasp of implementing algorithms like Kadane's and the sliding window technique. However, the transcript lacks specific details on code structure or idiomatic practices.",
+        "band": "solid",
+        "scope_met": "new_grad",
+        "evidence": [
+          "Great job implementing Kadane's algorithm; your solution is efficient and clear.",
+          "Your solution is efficient and handles the main cases well, demonstrating a good understanding of the sliding window technique."
+        ],
+        "to_raise": "Provide more detail on code structure and idiomatic practices during implementation."
+      },
+      {
+        "name": "Testing & verification",
+        "reasoning": "Dana mentioned handling edge cases effectively, but there is no evidence of a structured approach to testing or verification in the transcript.",
+        "band": "borderline",
+        "scope_met": "new_grad",
+        "evidence": [
+          "It\u2019s great to hear that the edge cases were handled effectively too, since I've learned that anticipating those is key in real-world applications."
+        ],
+        "to_raise": "Explicitly discuss and demonstrate a structured approach to testing and verifying solutions."
+      },
+      {
+        "name": "Response to hints",
+        "reasoning": "There is no evidence in the transcript of Dana receiving or responding to hints, making it impossible to assess this signal.",
+        "band": "cannot_determine",
+        "scope_met": "new_grad",
+        "evidence": [],
+        "to_raise": "Engage with hints provided by the interviewer to demonstrate adaptability and coachability."
+      },
+      {
+        "name": "Communication & structure",
+        "reasoning": "Dana communicated clearly and structured thoughts well, providing context and reasoning for problem-solving approaches. The explanations were concise and easy to follow.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "To tackle the Maximum Subarray problem, I\u2019d start by considering a couple of approaches.",
+          "For this specific problem, I\u2019d approach it using a sliding window technique, which I find really effective for substring-related challenges."
+        ],
+        "to_raise": "Incorporate more technical depth and detail in explanations to match mid-level expectations."
+      }
+    ],
+    "differentiators": [
+      "To become a strong hire, Dana should demonstrate ownership of more complex problems and explore alternative solutions beyond standard algorithms."
+    ],
+    "delivery": {
+      "pace_available": false,
+      "wpm": null,
+      "wpm_band": "unknown",
+      "wpm_target": "130-160",
+      "filler_total": 34,
+      "filler_per_100w": 1.93,
+      "filler_per_min": null,
+      "filler_band": "good",
+      "filler_target": "<=3.3/100 words",
+      "word_count": 1765,
+      "sentence_count": 116,
+      "filler_breakdown": {
+        "like": 9,
+        "basically": 4,
+        "so": 14,
+        "right": 5,
+        "you know": 2
+      },
+      "top_crutch_word": {
+        "word": "so",
+        "count": 14
+      },
+      "talk_ratio": 0.84,
+      "longest_monologue_s": null
+    },
+    "gap_to_next": {
+      "signal": "Testing & verification",
+      "from_band": "borderline",
+      "to_band": "solid",
+      "move": "Explicitly discuss and demonstrate a structured approach to testing and verifying solutions."
+    },
+    "great_answers": 0,
+    "context": {
+      "track": "coding",
+      "role": "swe",
+      "seniority": "mid",
+      "archetype": "big_tech"
+    }
+  },
+  "flags": [
+    "reply latency: median 2.9s, max 6.2s (text-only; TTS adds more)"
+  ]
+}
