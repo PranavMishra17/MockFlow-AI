@@ -25,24 +25,24 @@ WELCOME_AUDIO_FILES = {
 # Welcome scripts used for fallback TTS generation (and to pre-generate files)
 WELCOME_SCRIPTS = {
     'intro': (
-        "Welcome to your mock interview. I'm Alex, your AI interviewer. "
+        "Welcome to your mock interview. I'm Flow, your AI interviewer. "
         "We'll go through a few stages: you'll introduce yourself, discuss your past experience, "
         "explore how you fit the role, and wrap up. Let's get started!"
     ),
     'behavioral': (
-        "Welcome to your behavioral mock interview. I'm Alex, your AI interviewer. "
+        "Welcome to your behavioral mock interview. I'm Flow, your AI interviewer. "
         "In this session, I'll ask you behavioral questions about your past experiences. "
         "Think about specific situations, your actions, and the results you achieved. "
         "Ready when you are!"
     ),
     'technical_voice': (
-        "Welcome to your technical mock interview. I'm Alex, your AI interviewer. "
+        "Welcome to your technical mock interview. I'm Flow, your AI interviewer. "
         "We'll be exploring your technical knowledge through conceptual questions. "
         "No coding today - just explain your understanding of the topics we'll cover. "
         "Let's begin!"
     ),
     'coding': (
-        "Welcome to your technical coding interview. I'm Alex, your AI interviewer. "
+        "Welcome to your technical coding interview. I'm Flow, your AI interviewer. "
         "You'll be solving coding problems while thinking aloud. "
         "I'll be here if you need a nudge. Good luck!"
     ),
