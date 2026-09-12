@@ -1414,11 +1414,6 @@
                     if (typeof state.room.registerTextStreamHandler === 'function' && state.captions.agent) {
                         state.room.registerTextStreamHandler('lk.transcription', onTranscriptionStream);
                     }
-                    // Legacy path, kept for self-hosted servers that still forward
-                    // it. Same caption elements; a no-op where the event is absent.
-                    if (LK.RoomEvent.TranscriptionReceived) {
-                        state.room.on(LK.RoomEvent.TranscriptionReceived, onTranscription);
-                    }
 
                     console.log('[CONNECT] Attempting to connect to LiveKit server...', {url: url, room: room});
                     await state.room.connect(url, token);
@@ -1855,23 +1850,6 @@
                 var finalAttr = (reader.info && reader.info.attributes || {})['lk.transcription_final'];
                 track.close(segmentId, finalAttr === 'true');
                 if (track.segmentId === segmentId) render(track.caption());
-            }
-
-            // Legacy captions from LiveKit's transcription packets (older servers).
-            function onTranscription(segments, participant) {
-                try {
-                    if (!segments || !segments.length) return;
-                    var text = segments.map(function (s) { return s.text || ''; }).join(' ').trim();
-                    if (!text) return;
-                    var localId = state.room && state.room.localParticipant && state.room.localParticipant.identity;
-                    if (participant && participant.identity === localId) {
-                        updateCandidateCaption(text);
-                    } else {
-                        updateAgentCaption(text);
-                    }
-                } catch (e) {
-                    console.error('[TRANSCRIPT] handler error:', e);
-                }
             }
 
             function onParticipantConnected(participant) {
