@@ -8,24 +8,29 @@ All prompts are organized by stage and aspect for easy editing.
 from fsm import InterviewStage
 
 
-# ==================== WELCOME STAGE ====================
+# ==================== OPENING ====================
+# The greeting is spoken by code (InterviewAgent.on_enter), never generated.
+# It is one line on purpose: the stage walkthrough lives in the pre-join panel
+# in the browser, and the audit found model-written greetings were skipped,
+# doubled, or narrated the FSM. The interview starts in self_intro; the
+# candidate's first utterance is their introduction.
 
-class WELCOME:
-    """Welcome stage prompts."""
-    
-    greeting = """You are a friendly interviewer named Flow conducting a mock interview.
+GREETING_LINES = {
+    'intro': "Hey, I'm Flow — I'll be taking your interview today. Please start with a short introduction.",
+    'behavioral': "Hey, I'm Flow — I'll be taking your interview today. Please start with a short introduction.",
+    'technical_voice': "Hey, I'm Flow — I'll be taking your interview today. Please start with a short introduction.",
+    'coding': "Hey, I'm Flow — we'll chat briefly, then you'll get two problems in the editor. Please start with a short introduction.",
+}
 
-IMPORTANT: You MUST speak your welcome message OUT LOUD before doing anything else.
 
-Say this greeting to the candidate:
-"Hi [CANDIDATE_NAME]! I'm Flow, and I'll be your interviewer today. Welcome to your mock interview for the [ROLE] position. We'll go through a few stages: first you'll introduce yourself, then we'll discuss your past experience, explore how you might fit with the role, and wrap up. Let's get started! Please go ahead and introduce yourself."
+def get_greeting_line(track_type: str) -> str:
+    return GREETING_LINES.get(track_type, GREETING_LINES['intro'])
 
-After you have SPOKEN this greeting (not before), call the transition_stage tool with reason "greeting complete" to move to the self_intro stage.
 
-DO NOT skip or summarize the greeting. Speak the full greeting first, THEN call transition_stage.
+# Prepended to every track's self_intro instructions: the model must know the
+# invitation to introduce themselves has already been spoken, or it asks again.
+OPENING_CONTEXT = """The greeting has already been spoken: you introduced yourself as Flow and asked the candidate for a short introduction. Their first message IS that introduction. Respond to what they said; do not ask them to introduce themselves again and do not greet them again.
 """
-
-    on_enter = "Speak the welcome greeting out loud, then call transition_stage."
 
 
 # ==================== SELF_INTRO STAGE ====================
@@ -351,11 +356,9 @@ def build_stage_instructions(stage: InterviewStage) -> str:
     """
     from fsm import BehavioralStage, TechnicalVoiceStage, CodingStage
 
-    if stage == InterviewStage.WELCOME:
-        return WELCOME.greeting
-
-    elif stage == InterviewStage.SELF_INTRO:
+    if stage == InterviewStage.SELF_INTRO:
         parts = [
+            OPENING_CONTEXT,
             SELF_INTRO.conversation,
             SELF_INTRO.focus_areas,
             SELF_INTRO.restrictions,
@@ -393,18 +396,11 @@ def build_stage_instructions(stage: InterviewStage) -> str:
     elif hasattr(stage, 'value'):
         stage_val = stage.value
 
-        if stage_val == 'greeting':
-            # Both behavioral and technical voice have greeting
-            if isinstance(stage, BehavioralStage):
-                return BEHAVIORAL_GREETING.instruction
-            elif isinstance(stage, TechnicalVoiceStage):
-                return TECHNICAL_VOICE_GREETING.instruction
-
-        elif stage_val == 'self_intro' and isinstance(stage, BehavioralStage):
-            return "\n".join([BEHAVIORAL_SELF_INTRO.conversation, BEHAVIORAL_SELF_INTRO.style, BEHAVIORAL_SELF_INTRO.rules, BEHAVIORAL_SELF_INTRO.transition])
+        if stage_val == 'self_intro' and isinstance(stage, BehavioralStage):
+            return "\n".join([OPENING_CONTEXT, BEHAVIORAL_SELF_INTRO.conversation, BEHAVIORAL_SELF_INTRO.style, BEHAVIORAL_SELF_INTRO.rules, BEHAVIORAL_SELF_INTRO.transition])
 
         elif stage_val == 'self_intro' and isinstance(stage, TechnicalVoiceStage):
-            return "\n".join([TECHNICAL_VOICE_SELF_INTRO.conversation, TECHNICAL_VOICE_SELF_INTRO.transition])
+            return "\n".join([OPENING_CONTEXT, TECHNICAL_VOICE_SELF_INTRO.conversation, TECHNICAL_VOICE_SELF_INTRO.transition])
 
         elif stage_val in ('behavioral_q1', 'behavioral_q2', 'behavioral_q3'):
             return BEHAVIORAL_QUESTION_STAGE.conversation
@@ -425,10 +421,8 @@ def build_stage_instructions(stage: InterviewStage) -> str:
     if isinstance(stage, CodingStage):
         stage_val = stage.value
 
-        if stage_val == 'greeting':
-            return CODING_GREETING.instruction
-        elif stage_val == 'self_intro':
-            return "\n".join([CODING_SELF_INTRO.conversation, CODING_SELF_INTRO.transition])
+        if stage_val == 'self_intro':
+            return "\n".join([OPENING_CONTEXT, CODING_SELF_INTRO.conversation, CODING_SELF_INTRO.transition])
         elif stage_val == 'warm_up':
             return "\n".join([CODING_WARM_UP.conversation, CODING_WARM_UP.transition])
         elif stage_val in ('coding_problem_1', 'coding_problem_2'):
@@ -619,20 +613,6 @@ def build_personality_note(candidate_name: str, job_role: str, experience_level:
 
 # ==================== BEHAVIORAL TRACK ====================
 
-class BEHAVIORAL_GREETING:
-    """Greeting stage for behavioral interview track."""
-
-    instruction = """You are a friendly interviewer named Flow conducting a behavioral mock interview.
-
-The welcome audio has just played. Now:
-1. Briefly greet the candidate by name and confirm their readiness
-2. Say something like: "Great to have you here, [CANDIDATE_NAME]. Are you ready to begin?"
-3. Once they confirm, call transition_stage with reason "greeting complete"
-
-Keep this extremely brief. Do not re-explain the interview format.
-"""
-
-
 class BEHAVIORAL_SELF_INTRO:
     """Self-intro stage for behavioral interview track."""
 
@@ -722,18 +702,6 @@ Example: "Thank you so much for your time today, [CANDIDATE_NAME]. You shared so
 
 
 # ==================== TECHNICAL VOICE TRACK ====================
-
-class TECHNICAL_VOICE_GREETING:
-    """Greeting stage for technical voice interview track."""
-
-    instruction = """You are a friendly technical interviewer named Flow.
-
-The welcome audio has just played. Briefly greet the candidate:
-"Great to have you here, [CANDIDATE_NAME]. We'll be exploring your knowledge of [TOPICS] today. Ready to get started?"
-
-Then call transition_stage with reason "greeting complete".
-"""
-
 
 class TECHNICAL_VOICE_SELF_INTRO:
     """Self-intro stage for technical voice interview track."""
@@ -1067,14 +1035,6 @@ class TECHNICAL_VOICE_FALLBACK_ACKS:
 
 
 # ==================== CODING TRACK ====================
-
-class CODING_GREETING:
-    """Greeting stage for coding interview track."""
-
-    instruction = """You are an AI coding interviewer. Be extremely brief — one sentence only.
-Greet the candidate warmly by name and tell them to click the "I'm Ready" button when they want to receive their first problem.
-Do NOT ask questions, discuss their background, or talk about the problem. One sentence maximum."""
-
 
 class CODING_SELF_INTRO:
     """Self-intro stage for coding interview track."""

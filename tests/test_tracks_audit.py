@@ -199,12 +199,16 @@ def test_get_track_config_unknown_track_falls_back_to_intro_not_crash():
 # worst possible failure mode, and one with no other test coverage.
 # ---------------------------------------------------------------------------
 
-ALL_TRACK_STAGES = (
-    [(InterviewStage, s) for s in InterviewStage]
-    + [(BehavioralStage, s) for s in BehavioralStage]
-    + [(TechnicalVoiceStage, s) for s in TechnicalVoiceStage]
-    + [(CodingStage, s) for s in CodingStage]
-)
+# The greeting/welcome members stay in the enums (UI keys, fallback timer) but
+# are no longer stages the model drives: the greeting is one fixed line spoken
+# by code in on_enter, so there are no instructions to build for them.
+_NOT_DRIVEN = {'welcome', 'greeting'}
+ALL_TRACK_STAGES = [
+    (enum_cls, s)
+    for enum_cls in (InterviewStage, BehavioralStage, TechnicalVoiceStage, CodingStage)
+    for s in enum_cls
+    if s.value not in _NOT_DRIVEN
+]
 
 
 @pytest.mark.parametrize("enum_cls,stage", ALL_TRACK_STAGES, ids=[s.value for _, s in ALL_TRACK_STAGES])

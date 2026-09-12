@@ -65,8 +65,9 @@ class InterviewState:
     - In-memory state (no database for demo)
     """
 
-    # Current stage - defaults to WELCOME
-    stage: InterviewStage = InterviewStage.WELCOME
+    # Current stage. Interviews start in SELF_INTRO: the greeting is a fixed
+    # one-liner spoken by code in on_enter, not a stage the model drives.
+    stage: InterviewStage = InterviewStage.SELF_INTRO
 
     # Candidate information
     candidate_name: str = ""
@@ -100,9 +101,6 @@ class InterviewState:
     pending_transition_reason: Optional[str] = None
 
     # Pending acknowledgement (queued when transition happens mid-user-speech)
-    pending_acknowledgement: Optional[str] = None
-    pending_ack_stage: Optional[str] = None
-    transition_acknowledged: bool = False
 
     # Closing stage tracking
     closing_initiated: bool = False
@@ -137,9 +135,6 @@ class InterviewState:
         # Clear pending transition
         self.pending_transition = None
         self.pending_transition_reason = None
-
-        # Reset acknowledgement tracking for new transition
-        self.transition_acknowledged = False
 
         # Reset closing flags (in case transitioning to a new stage)
         if new_stage != InterviewStage.CLOSING:
@@ -216,7 +211,6 @@ class InterviewState:
         through here so it is always track-correct.
         """
         return [
-            InterviewStage.WELCOME,
             InterviewStage.SELF_INTRO,
             InterviewStage.PAST_EXPERIENCE,
             InterviewStage.COMPANY_FIT,
@@ -569,7 +563,7 @@ class BehavioralInterviewState(InterviewState):
     """
 
     # Override stage with behavioral default
-    stage: Any = field(default=BehavioralStage.GREETING)
+    stage: Any = field(default=BehavioralStage.SELF_INTRO)
 
     # Track type identifier
     track_type: str = "behavioral"
@@ -609,7 +603,6 @@ class BehavioralInterviewState(InterviewState):
             List of active BehavioralStage enums in order
         """
         base_stages = [
-            BehavioralStage.GREETING,
             BehavioralStage.SELF_INTRO,
             BehavioralStage.BEHAVIORAL_Q1,
             BehavioralStage.BEHAVIORAL_Q2,
@@ -736,7 +729,7 @@ class TechnicalVoiceInterviewState(InterviewState):
     """
 
     # Override stage with technical default
-    stage: Any = field(default=TechnicalVoiceStage.GREETING)
+    stage: Any = field(default=TechnicalVoiceStage.SELF_INTRO)
 
     # Track type identifier
     track_type: str = "technical_voice"
@@ -767,7 +760,6 @@ class TechnicalVoiceInterviewState(InterviewState):
             List of active TechnicalVoiceStage enums in order
         """
         stages = [
-            TechnicalVoiceStage.GREETING,
             TechnicalVoiceStage.SELF_INTRO,
             TechnicalVoiceStage.EXPERIENCE_DISCUSSION,
             TechnicalVoiceStage.TECHNICAL_CONCEPTS_1,
@@ -921,7 +913,7 @@ class CodingInterviewState(InterviewState):
     """
 
     # Override stage with coding default
-    stage: Any = field(default=CodingStage.GREETING)
+    stage: Any = field(default=CodingStage.SELF_INTRO)
 
     # Track type identifier
     track_type: str = "coding"
@@ -966,7 +958,7 @@ class CodingInterviewState(InterviewState):
         Returns:
             List of CodingStage members in order
         """
-        base = [CodingStage.GREETING, CodingStage.SELF_INTRO, CodingStage.WARM_UP]
+        base = [CodingStage.SELF_INTRO, CodingStage.WARM_UP]
         problems = [CodingStage.CODING_PROBLEM_1]
         if self.active_problem_count >= 2:
             problems.append(CodingStage.CODING_PROBLEM_2)

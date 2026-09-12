@@ -999,11 +999,13 @@
                 }
             }
 
+            // Stage counts match fsm.get_active_stages(): there is no greeting
+            // stage; Flow opens with one line and the first stage is your intro.
             var TRACK_DETAILS = {
-                intro: '5 stages · ~20 min · Self-intro → Experience → Company fit · Speak naturally, real-time AI responses · You can skip stages',
-                behavioral: '4 stages · ~25 min · STAR-format questions · Framework-aligned (Amazon / Google / Meta / Generic) · Follow-up depth configurable',
-                technical_voice: '5 stages · ~30 min · Concept-deep questions on selected topics · Resume-aware topic suggestions available',
-                coding: '5 stages · ~35 min · Live Monaco code editor · 1–2 LLM-generated problems · 15 min timer per problem · Up to 3 attempts · Code evaluated in real-time'
+                intro: '4 stages · ~11 min · Introduction → Experience → Company fit → Closing · One question at a time · You can skip stages',
+                behavioral: 'Introduction → up to 3 behavioral questions → Closing · ~20 min · Framework-aligned (Amazon / Google / Meta / Generic) · Follow-up depth configurable',
+                technical_voice: 'Introduction → Experience → up to 3 concept topics → Closing · ~18 min · Resume-aware topic suggestions available',
+                coding: '5 stages · ~35 min · Introduction → Warm up → 2 problems → Closing · Live Monaco code editor · 15 min per problem · Up to 3 attempts'
             };
 
             function updateTrackDetailBox(track) {

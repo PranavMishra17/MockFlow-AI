@@ -51,15 +51,13 @@ from fsm import (InterviewState, InterviewStage, STAGE_TIME_LIMITS,
                   TechnicalVoiceStage, TechnicalVoiceInterviewState,
                   CodingStage, CodingInterviewState)
 from tracks import get_track_config
-from audio_cache import get_welcome_audio_bytes, get_welcome_script
 from prompts import (
     build_stage_instructions,
     get_transition_ack,
     get_fallback_ack,
     build_role_context,
     build_personality_note,
-    WELCOME,
-    SKIP_STAGE,
+    get_greeting_line,
     CLOSING_FALLBACK,
 )
 
@@ -383,30 +381,29 @@ class InterviewAgent(Agent):
     """Mock interview agent with FSM-based stage management."""
 
     def __init__(self, transport=None, candidate_info=None, track_type='intro'):
-        """Initialize agent with track-aware greeting."""
+        """Initialize the agent for the first real stage (self_intro).
+
+        There is no greeting stage: the greeting is one fixed line spoken by
+        code in `on_enter`. The model's first instructions are therefore the
+        self_intro stage's, so the first thing it does with the candidate's
+        introduction is respond to it. `on_enter` swaps in the fully-resolved
+        instructions (document context, role note) once the state is bound.
+        """
         self.candidate_info = candidate_info or {}
         self.candidate_name = self.candidate_info.get('name', 'Candidate')
         self.candidate_role = self.candidate_info.get('role', 'this position')
         self.track_type = track_type
 
-        if track_type == 'intro':
-            personalized_greeting = WELCOME.greeting.replace(
-                "[CANDIDATE_NAME]", self.candidate_name
-            ).replace("[ROLE]", self.candidate_role)
-            super().__init__(instructions=personalized_greeting)
-        else:
-            # New tracks: brief greeting, questions generated in on_enter
-            from prompts import build_stage_instructions
-            from fsm import BehavioralStage, TechnicalVoiceStage
-            if track_type == 'behavioral':
-                initial_stage = BehavioralStage.GREETING
-            elif track_type == 'coding':
-                initial_stage = CodingStage.GREETING
-            else:
-                initial_stage = TechnicalVoiceStage.GREETING
-            greeting_instructions = build_stage_instructions(initial_stage)
-            greeting_instructions = greeting_instructions.replace('[CANDIDATE_NAME]', self.candidate_name).replace('[ROLE]', self.candidate_role)
-            super().__init__(instructions=greeting_instructions)
+        from prompts import build_stage_instructions
+        from fsm import BehavioralStage, TechnicalVoiceStage
+        first_stage = {
+            'behavioral': BehavioralStage.SELF_INTRO,
+            'technical_voice': TechnicalVoiceStage.SELF_INTRO,
+            'coding': CodingStage.SELF_INTRO,
+        }.get(track_type, InterviewStage.SELF_INTRO)
+        instructions = build_stage_instructions(first_stage)
+        instructions = instructions.replace('[CANDIDATE_NAME]', self.candidate_name).replace('[ROLE]', self.candidate_role)
+        super().__init__(instructions=instructions)
         self.transport = transport if transport is not None else NullTransport()
 
     @function_tool
@@ -467,32 +464,26 @@ class InterviewAgent(Agent):
 
             await self._emit_stage_change(next_stage)
 
-            acknowledgement = get_transition_ack(
-                next_stage,
-                self.candidate_name,
-                ctx.userdata.job_role or 'this position'
-            )
-
             # Detect closing for any track
             is_closing = (next_stage.value == 'closing')
 
             if is_closing:
                 ctx.userdata.closing_initiated = True
                 return (
-                    f"Stage transitioned to closing. "
-                    f"You MUST now deliver your closing remarks. Say: '{acknowledgement}' "
-                    f"Do NOT ask any more questions."
+                    "Stage transitioned to closing. Deliver your closing remarks now: "
+                    "thank them briefly, say the written feedback will be on their "
+                    "dashboard, and end with 'best of luck'. Do NOT ask any more questions."
                 )
-            else:
-                if acknowledgement:
-                    ctx.userdata.pending_acknowledgement = acknowledgement
-                    ctx.userdata.pending_ack_stage = next_stage.value
-                    logger.info(f"[AGENT] Queued transition acknowledgement for {next_stage.value}")
 
-                return (
-                    f"Stage transitioned to {next_stage.value}. "
-                    f"Start your next response by acknowledging the stage change."
-                )
+            # No queued acknowledgement. The audit found the canned line landed
+            # one candidate turn late and displaced engagement with the
+            # candidate's first answer in the new stage. The transition IS this
+            # reply: react to what they just said in a few words, then ask.
+            return (
+                f"Stage is now {next_stage.value}. In THIS reply, react briefly to "
+                f"what they just said, then ask the first question of this stage. "
+                f"Do not announce the stage."
+            )
 
         except Exception as e:
             logger.error(f"[AGENT] Transition error: {e}", exc_info=True)
@@ -592,16 +583,6 @@ class InterviewAgent(Agent):
             # told it the opposite in the same turn.
             minimum = ctx.userdata.get_question_status()['minimum']
 
-            pending_ack = None
-            should_clear_ack = False
-
-            if ctx.userdata.pending_acknowledgement and not ctx.userdata.transition_acknowledged:
-                pending_ack = ctx.userdata.pending_acknowledgement
-                pending_stage = ctx.userdata.pending_ack_stage
-
-                if current_stage == pending_stage:
-                    should_clear_ack = True
-
             time_status = ctx.userdata.get_time_status()
             time_remaining_pct = time_status['remaining_pct']
             remaining_sec = time_status['remaining_seconds']
@@ -631,13 +612,6 @@ class InterviewAgent(Agent):
 
             response += f"Now ask: '{question}'"
 
-            if pending_ack:
-                response = f"STAGE TRANSITION - First say: \"{pending_ack}\" Then ask your question.\n\n{response}"
-                if should_clear_ack:
-                    ctx.userdata.transition_acknowledged = True
-                    ctx.userdata.pending_acknowledgement = None
-                    ctx.userdata.pending_ack_stage = None
-
             return response
 
         except Exception as e:
@@ -657,10 +631,6 @@ class InterviewAgent(Agent):
 
             response_summary = f"Depth: {depth_score}/5. Points: {', '.join(key_points_covered)}"
             ctx.userdata.experience_responses.append(response_summary)
-
-            pending_ack = None
-            if ctx.userdata.pending_acknowledgement and not ctx.userdata.transition_acknowledged:
-                pending_ack = ctx.userdata.pending_acknowledgement
 
             q_status = ctx.userdata.get_question_status()
             time_status = ctx.userdata.get_time_status()
@@ -688,9 +658,6 @@ class InterviewAgent(Agent):
                 guidance = f"{status_line}\nBrief response. Ask follow-up for more context."
             else:
                 guidance = f"{status_line}\nContinue with next question."
-
-            if pending_ack:
-                guidance = f"STAGE CHANGE: First say: \"{pending_ack}\" Then proceed.\n\n{guidance}"
 
             return guidance
 
@@ -962,26 +929,25 @@ class InterviewAgent(Agent):
             return "Error skipping problem. Call transition_stage manually."
 
     async def on_enter(self):
-        """Called when agent becomes active."""
+        """Speak the fixed greeting and hand the floor to the candidate.
+
+        Deliberately not `generate_reply()`: the audit found the model-written
+        greeting was non-deterministic (sometimes skipped, sometimes doubled,
+        sometimes narrated the FSM), and the stage walkthrough it used to carry
+        now lives in the pre-join panel. One line, always the same, then wait.
+        """
         logger.info(f"[AGENT] on_enter() called for candidate: {self.candidate_name}, track: {self.track_type}")
-        if self.track_type == 'intro':
-            # Original behavior: LLM generates the greeting
-            logger.info("[AGENT] Triggering intro greeting generation...")
-            self.session.generate_reply()
-        else:
-            # New tracks: Play cached welcome audio, then LLM takes over
-            audio_bytes = get_welcome_audio_bytes(self.track_type)
-            if audio_bytes:
-                try:
-                    logger.info(f"[AGENT] Playing cached welcome audio for track: {self.track_type}")
-                    await self.session.say(get_welcome_script(self.track_type), allow_interruptions=False)
-                except Exception as e:
-                    logger.warning(f"[AGENT] Failed to play cached audio, using LLM: {e}")
-                    self.session.generate_reply()
-            else:
-                # No cached audio: LLM generates greeting
-                logger.warning(f"[AGENT] No cached audio for track {self.track_type}, using LLM greeting")
-                self.session.generate_reply()
+        state = getattr(self.session, 'userdata', None)
+        if state is not None:
+            try:
+                await self.update_instructions(self._get_stage_instructions(state, state.stage))
+            except Exception as e:
+                logger.warning(f"[AGENT] Could not resolve first-stage instructions: {e}")
+            try:
+                await self._emit_stage_change(state.stage)
+            except Exception as e:
+                logger.warning(f"[AGENT] Could not emit initial stage: {e}")
+        await self.session.say(get_greeting_line(self.track_type), allow_interruptions=False)
 
     async def on_exit(self):
         """Called when agent is deactivated."""
@@ -1290,14 +1256,16 @@ def build_interview_state(
     state.include_profile = config.get('include_profile', True)
     state.track = track_type
 
+    # The first stage is self_intro on every track; the greeting is spoken by
+    # code in InterviewAgent.on_enter, not driven as a stage.
     if track_type == 'behavioral':
-        state.transition_to(BehavioralStage.GREETING)
+        state.transition_to(BehavioralStage.SELF_INTRO)
     elif track_type == 'technical_voice':
-        state.transition_to(TechnicalVoiceStage.GREETING)
+        state.transition_to(TechnicalVoiceStage.SELF_INTRO)
     elif track_type == 'coding':
-        state.transition_to(CodingStage.GREETING)
+        state.transition_to(CodingStage.SELF_INTRO)
     else:
-        state.transition_to(InterviewStage.WELCOME)
+        state.transition_to(InterviewStage.SELF_INTRO)
 
     logger.info(f"[RUNTIME] Interview state initialized: track={track_type}, stage={state.stage.value}")
     return state
@@ -1840,8 +1808,6 @@ async def stage_fallback_timer(
                     
                     ack = get_fallback_ack(next_stage, agent.candidate_name)
                     if ack:
-                        state.pending_acknowledgement = ack
-                        state.pending_ack_stage = next_stage.value
                         try:
                             await session.say(ack)
                         except Exception as e:

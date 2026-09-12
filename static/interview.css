@@ -504,6 +504,44 @@ body:not(.interview-live) .skip-area {
     color: var(--text-secondary, #4A4A4A);
 }
 
+/* The pre-join briefing inside the connect panel. Left-aligned prose in an
+ * otherwise centred card: it is meant to be read, not glanced at. */
+.connect-briefing {
+    text-align: left;
+    margin-top: 0.25rem;
+    padding-top: 0.625rem;
+    border-top: 1px solid var(--bg-soft, #EFEBE5);
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--text-secondary, #4A4A4A);
+}
+
+.briefing-title {
+    font-weight: 600;
+    color: var(--text-primary, #1a1a1a);
+    margin-bottom: 0.375rem;
+}
+
+.briefing-stages {
+    margin: 0 0 0.5rem;
+    padding-left: 1.25rem;
+}
+
+.briefing-stages li { margin: 0.125rem 0; }
+
+.briefing-min,
+.briefing-detail {
+    color: var(--text-muted, #7A7A7A);
+    font-variant-numeric: tabular-nums;
+}
+
+.briefing-notes {
+    margin: 0;
+    padding-left: 1.25rem;
+}
+
+.briefing-notes li { margin: 0.25rem 0; }
+
 .connect-status-timer {
     font-size: 0.75rem;
     font-variant-numeric: tabular-nums;
