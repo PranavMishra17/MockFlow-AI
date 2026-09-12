@@ -405,7 +405,12 @@
                 captions: {
                     agent: (typeof CaptionTrack === 'function') ? new CaptionTrack() : null,
                     candidate: (typeof CaptionTrack === 'function') ? new CaptionTrack() : null
-                }
+                },
+                // Why the room went away, so onDisconnected can tell a finished
+                // interview from a dropped one. Set by the agent's
+                // `interview_ending` and by the user's End button respectively.
+                interviewEnding: false,
+                endedByUser: false
             };
             
             var elements = {
@@ -1339,6 +1344,7 @@
             
             function confirmEndInterview() {
                 hideModal();
+                state.endedByUser = true;
                 if (state.room) {
                     state.room.disconnect();
                 }
@@ -1590,9 +1596,49 @@
                 if (state.timerInterval) clearInterval(state.timerInterval);
                 if (state.blinkInterval) clearTimeout(state.blinkInterval);
 
+                var reasonName = (LK && LK.DisconnectReason && LK.DisconnectReason[reason]) || String(reason);
+                console.log('[ROOM] Disconnected:', reasonName, {
+                    interviewEnding: state.interviewEnding, endedByUser: state.endedByUser, agentJoined: agentJoined
+                });
+
+                // "That's a wrap" is only true when there was an interview and it
+                // ended on purpose. A failed connect, a dropped network or a
+                // server-side kick used to land here too and promise a verdict
+                // for an interview that never happened.
+                var finished = state.interviewEnding || (state.endedByUser && agentJoined);
                 setTimeout(function() {
-                    showInterviewCompleteModal();
+                    if (finished) {
+                        showInterviewCompleteModal();
+                    } else if (state.endedByUser) {
+                        // Ended before the agent ever joined: nothing to grade.
+                        window.location.href = '/dashboard';
+                    } else {
+                        showConnectionLostModal(agentJoined);
+                    }
                 }, 1000);
+            }
+
+            // The room dropped without the interview ending. If the agent had
+            // joined, whatever was said is saved on its side when the candidate
+            // leaves; point there. If it never joined there is nothing saved.
+            function showConnectionLostModal(hadInterview) {
+                document.getElementById('modalTitle').textContent = 'Connection lost.';
+                document.getElementById('modalMessage').textContent = hadInterview
+                    ? 'The room disconnected before the interview finished. What was said so far is kept under your past interviews.'
+                    : 'The room disconnected before the interviewer joined. Nothing was recorded — start again when you are ready.';
+                document.getElementById('modalIcon').className = 'modal-icon warning';
+                document.getElementById('modalIcon').innerHTML = '<svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>';
+
+                document.getElementById('modalActions').style.display = 'none';
+                document.getElementById('modalFeedbackActions').style.display = 'flex';
+
+                var btn = document.getElementById('getFeedbackBtn');
+                btn.textContent = hadInterview ? 'Past interviews →' : 'Start again →';
+                btn.onclick = function() {
+                    window.location.href = hadInterview ? '/past-calls' : '/start';
+                };
+
+                showModal();
             }
             
             function showInterviewCompleteModal() {
@@ -1752,6 +1798,7 @@
                     }
 
                     if (data.type === 'interview_ending') {
+                        state.interviewEnding = true;
                         updateAgentCaption('Interview complete.');
                         updateStatus('Interview Complete', 'connected');
 
