@@ -197,7 +197,7 @@ def _build_voice_components(http_session):
         vad = silero.VAD.load(
             min_speech_duration=0.1,      # Minimum speech duration to detect (default: 0.05)
             min_silence_duration=0.3,     # Silence needed to end speech (default: 0.1)
-            padding_duration=0.1,         # Padding around speech (default: 0.1)
+            prefix_padding_duration=0.1,  # Speech kept before onset (default: 0.5); was `padding_duration`, removed in plugin 1.5
             max_buffered_speech=30.0,     # Max buffered speech in seconds (default: 60)
             activation_threshold=0.5,     # Confidence threshold (default: 0.5)
             sample_rate=16000,            # Use 16kHz for lower CPU (matches Deepgram)
