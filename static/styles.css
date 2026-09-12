@@ -1584,8 +1584,16 @@ select.form-input {
     opacity: 0;
 }
 
-/* Agent Caption */
+/* Captions.
+ * A subtitle window, not a scroll box: a fixed three-line viewport that shows
+ * the LATEST lines and clips older text off the top. Captions stream in word
+ * by word for a whole reply (static/captions.js), so the text outgrows any
+ * box; a scrollbar on a live caption is unreadable, and vertical centering
+ * would clip both ends. Height is derived from the line height so the top
+ * edge always falls on a line boundary rather than through one. */
 .agent-caption {
+    --caption-lines: 3;
+    --caption-line-height: 1.225rem; /* 0.875rem * 1.4, see .caption-text */
     margin-top: var(--spacing-md);
     padding: var(--spacing-sm);
     background: var(--bg-card);
@@ -1593,10 +1601,10 @@ select.form-input {
     box-shadow: var(--shadow-soft);
     max-width: 350px;
     width: 100%;
-    height: 4.25rem;
-    overflow-y: auto;
+    height: calc(var(--caption-lines) * var(--caption-line-height) + 2 * var(--spacing-sm));
+    overflow: hidden;
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: center;
 }
 
@@ -1605,6 +1613,9 @@ select.form-input {
     color: var(--text-secondary);
     text-align: center;
     line-height: 1.4;
+    width: 100%;
+    margin: 0;
+    overflow-wrap: anywhere;
 }
 
 .caption-text.empty {
@@ -1867,8 +1878,10 @@ select.form-input {
     line-height: 1.3;
 }
 
-/* Candidate Caption */
+/* Candidate Caption — same subtitle window as .agent-caption. */
 .candidate-caption {
+    --caption-lines: 3;
+    --caption-line-height: 1.225rem;
     margin-top: var(--spacing-sm);
     padding: var(--spacing-sm);
     background: var(--bg-card);
@@ -1876,10 +1889,10 @@ select.form-input {
     box-shadow: var(--shadow-soft);
     max-width: 380px;
     width: 100%;
-    height: 4.25rem;
-    overflow-y: auto;
+    height: calc(var(--caption-lines) * var(--caption-line-height) + 2 * var(--spacing-sm));
+    overflow: hidden;
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     justify-content: center;
 }
 
