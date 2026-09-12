@@ -1603,9 +1603,28 @@ select.form-input {
     width: 100%;
     height: calc(var(--caption-lines) * var(--caption-line-height) + 2 * var(--spacing-sm));
     overflow: hidden;
+    position: relative;
     display: flex;
     align-items: flex-end;
     justify-content: center;
+}
+
+/* Older lines fade out at the top of the window instead of being cut mid-glyph.
+ * A gradient from the card colour, not a mask: a mask would fade the card too.
+ * It covers the top padding (where overflow: hidden still paints a partial
+ * fourth line) plus the upper part of the first visible line. Invisible when
+ * the text is short, since it is card-on-card. */
+.agent-caption::before,
+.candidate-caption::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: calc(var(--spacing-sm) + 0.7 * var(--caption-line-height));
+    background: linear-gradient(to bottom, var(--bg-card) var(--spacing-sm), transparent);
+    pointer-events: none;
+    z-index: 1;
 }
 
 .caption-text {
@@ -1621,6 +1640,15 @@ select.form-input {
 .caption-text.empty {
     color: var(--text-light);
     font-style: italic;
+}
+
+/* The candidate's in-progress STT segment. Deepgram revises interim words
+ * until it commits the sentence; render them lighter so what is locked in
+ * reads differently from what may still change. Set by interview.html from
+ * the lk.transcription_final attribute. */
+.caption-text.interim {
+    color: var(--text-light);
+    transition: color 0.2s ease;
 }
 
 /* Candidate Side */
@@ -1891,6 +1919,7 @@ select.form-input {
     width: 100%;
     height: calc(var(--caption-lines) * var(--caption-line-height) + 2 * var(--spacing-sm));
     overflow: hidden;
+    position: relative;
     display: flex;
     align-items: flex-end;
     justify-content: center;

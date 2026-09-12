@@ -1833,14 +1833,19 @@
                     isLocal = !!(participantInfo && local && participantInfo.identity === local.identity);
                 }
                 var track = isLocal ? state.captions.candidate : state.captions.agent;
-                var render = isLocal ? updateCandidateCaption : updateAgentCaption;
+                var el = isLocal ? elements.candidateCaption : elements.agentCaption;
+                var render = function () {
+                    (isLocal ? updateCandidateCaption : updateAgentCaption)(track.caption());
+                    // Only STT output is provisional; the agent's text is exact.
+                    if (el) el.classList.toggle('interim', isLocal && !track.final);
+                };
                 if (!track.live) {
                     console.log('[TRANSCRIPT] live caption stream active for', isLocal ? 'candidate' : 'agent');
                 }
                 track.open(segmentId);
                 try {
                     for await (var chunk of reader) {
-                        if (track.append(segmentId, chunk)) render(track.caption());
+                        if (track.append(segmentId, chunk)) render();
                     }
                 } catch (e) {
                     console.error('[TRANSCRIPT] stream error:', e);
@@ -1849,7 +1854,7 @@
                 // into reader.info.attributes by the time iteration ends.
                 var finalAttr = (reader.info && reader.info.attributes || {})['lk.transcription_final'];
                 track.close(segmentId, finalAttr === 'true');
-                if (track.segmentId === segmentId) render(track.caption());
+                if (track.segmentId === segmentId) render();
             }
 
             function onParticipantConnected(participant) {
