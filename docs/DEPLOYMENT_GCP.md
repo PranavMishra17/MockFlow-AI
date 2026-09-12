@@ -438,6 +438,36 @@ CORS_ORIGINS=https://<DOMAIN>
 Note the third line: your `.env` stores the client secret under
 `GOOGLE_CLOUD_CLIENT_SECRET`, but write it here as `GOOGLE_CLIENT_SECRET`.
 
+**The free tier is off until you add this block.** The landing page promises
+"2 interviews on us, no API keys"; without these seven lines a signed-in user
+with no keys is told to go configure some, and `free_tier_usage` stays empty
+(which is how the 2026-09-12 audit found it had never run in prod). The
+`SYSTEM_*` values are YOUR LiveKit / OpenAI / Deepgram keys from `.env`
+(`LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `OPENAI_API_KEY`,
+`DEEPGRAM_API_KEY`). Each user gets `users.free_calls_granted` interviews
+(default 2); the monthly cap is the global kill-switch across all users.
+
+```
+FREE_TIER_ENABLED=true
+FREE_TIER_MONTHLY_MAX_CALLS=60
+SYSTEM_LIVEKIT_URL=<paste LIVEKIT_URL from .env>
+SYSTEM_LIVEKIT_API_KEY=<paste LIVEKIT_API_KEY from .env>
+SYSTEM_LIVEKIT_API_SECRET=<paste LIVEKIT_API_SECRET from .env>
+SYSTEM_OPENAI_KEY=<paste OPENAI_API_KEY from .env>
+SYSTEM_DEEPGRAM_KEY=<paste DEEPGRAM_API_KEY from .env>
+```
+
+Changing `app.env` later needs `docker compose up -d --force-recreate web`;
+a plain `up -d` does not re-read it. Prove it took, without printing secrets:
+
+```bash
+sudo docker exec gcp-web-1 python -c "import app; print(app.FREE_TIER_ENABLED, app._system_keys() is not None)"
+```
+
+`True True` means the next keyless user gets a free interview. Locally,
+`python tests/e2e/free_tier_probe.py` walks the whole flow against the real
+app and database as a throwaway user and cleans up after itself.
+
 Save and exit nano: **Ctrl+O**, **Enter**, **Ctrl+X**.
 
 Then tell Docker Compose your domain — **replace `<DOMAIN>`**:
