@@ -119,8 +119,9 @@ def test_exactly_one_note_lands_after_the_user_message():
 
 def test_a_star_story_in_self_intro_advances_without_a_canned_line_or_a_second_ask():
     agent, state, session, transport = make_agent(assess=full_star())
+    turn(agent, "Hi, I'm Priya. Eight years in payments.")
     move, ctx = turn(agent, "Last November our ranking model degraded 8%... I found the root cause in six hours; CTR recovered.")
-    # Communication & structure is demonstrated -> self_intro is covered -> advance.
+    # Communication & structure is demonstrated and the floor is met -> advance.
     assert state.stage.value == 'behavioral_q1'
     assert move.advanced_to == 'behavioral_q1'
     assert move.question == 'Tell me about a time you dove deep on a hard bug.'
@@ -163,6 +164,7 @@ def test_closing_is_spoken_by_code_and_the_reply_is_suppressed():
     agent, state, session, transport = make_agent(assess=full_star())
     # Jump to the last behavioral stage so coverage ends the interview.
     asyncio.run(ir.advance_to(state, agent, transport, state.get_stage_by_name('behavioral_q2')))
+    turn(agent, "Here is the situation and what I did.")
     msg = lk_llm.ChatMessage(role='user', content=['...and that shipped a week early.'])
     ctx = agent.chat_ctx.copy()
     with pytest.raises(StopResponse):
@@ -229,3 +231,13 @@ def test_after_the_closing_line_flow_stays_quiet():
     with pytest.raises(StopResponse):
         asyncio.run(agent.prepare_turn(agent.chat_ctx.copy(), msg))
     assert session.generated == [] and session.said == []
+
+
+def test_the_intro_track_runs_the_real_loop_not_the_safe_note():
+    """The base InterviewState had no track_type; prepare_turn raised on the
+    intro track and every turn silently fell back to the safe note."""
+    agent, state, session, transport = make_agent(track='intro', assess=full_star())
+    move, ctx = turn(agent, "I'm Priya, eight years in payments.")
+    assert notes(ctx) != [it.SAFE_NOTE]
+    assert move.reason != 'safe_note'
+    assert state.ledger.demonstrated()   # the assessment was merged

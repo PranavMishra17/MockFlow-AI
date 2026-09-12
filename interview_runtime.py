@@ -32,6 +32,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any, Awaitable, Callable, Mapping, Optional, Protocol
@@ -51,7 +52,7 @@ from tracks import get_track_config
 from prompts import (
     build_stage_instructions,
     build_role_context,
-    build_personality_note,
+    build_candidate_note,
     get_greeting_line,
 )
 from interview_turn import (
@@ -585,6 +586,11 @@ class InterviewAgent(Agent):
             else:
                 move = choose_move(inputs, state.ledger, assessment)
 
+            # The same honest line twice in a row reads as a glitch; the
+            # assessor occasionally re-tags a thank-you as another question.
+            if move.preface and move.preface == getattr(state, 'last_preface', ''):
+                move.preface = ''
+            state.last_preface = move.preface
             if move.question:
                 state.last_question = move.question
                 state.questions_asked.append(move.question)
@@ -690,18 +696,20 @@ class InterviewAgent(Agent):
         else:
             base_instructions = base_instructions.replace(placeholder, "")
 
+        base_instructions = base_instructions.replace('{topics_hint}', topics_str)
+
         role_context = build_role_context(
             state.job_role or "this position",
             state.experience_level or "mid"
         )
-        personality_note = build_personality_note(
+        candidate_note = build_candidate_note(
             self.candidate_name,
             state.job_role or "a technical position",
-            state.experience_level or "mid-level",
+            state.experience_level or "mid",
             role_context
         )
 
-        return base_instructions + personality_note
+        return base_instructions + candidate_note
 
     async def _emit_stage_change(self, new_stage: InterviewStage):
         """Emit stage change event to the UI."""
@@ -1360,10 +1368,12 @@ def attach_handlers(
                     asyncio.create_task(emit_agent_caption(transport, agent_text))
 
                     # What Flow actually asked, so "say that again?" repeats the
-                    # spoken question, not the one the note intended.
-                    asked = [q.strip() for q in agent_text.replace("!", ".").split("?") if q.strip()]
-                    if "?" in agent_text and asked:
-                        state.last_question = asked[-1].split(". ")[-1].strip() + "?"
+                    # spoken question - all of it, if the model asked in two parts.
+                    if "?" in agent_text:
+                        sentences = re.split(r"(?<=[.!?])\s+", agent_text.strip())
+                        questions = [q.strip() for q in sentences if q.strip().endswith("?")]
+                        if questions:
+                            state.last_question = " ".join(questions)
 
                     if getattr(state.stage, 'value', '') == 'closing' and not closing_finalized["done"]:
                         text_lower = agent_text.lower()

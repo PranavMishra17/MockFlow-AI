@@ -71,6 +71,12 @@ class InterviewState:
     # one-liner spoken by code in on_enter, not a stage the model drives.
     stage: InterviewStage = InterviewStage.SELF_INTRO
 
+    # Which track this state runs. The subclasses override the default; the
+    # base state IS the intro track. Every reader should use this rather than
+    # `getattr(state, 'track_type', 'intro')`, which papered over its absence
+    # here and let an AttributeError hide inside the turn loop.
+    track_type: str = "intro"
+
     # Candidate information
     candidate_name: str = ""
     candidate_email: str = ""
@@ -108,6 +114,8 @@ class InterviewState:
     ledger: CoverageLedger = field(default_factory=CoverageLedger)
     # The question Flow last asked, so "can you repeat that?" repeats it.
     last_question: str = ""
+    # The fixed line Flow last prefaced with, so it is never said twice running.
+    last_preface: str = ""
     # An opening question parked by a skip or the fallback timer, consumed by
     # the next prepare_turn so it lands as a reply rather than an interjection.
     pending_move: Any = None

@@ -41,6 +41,11 @@ CLOSING_SENTINEL = "That's the end of the interview — take care."
 # arriving, so a terse candidate is not held hostage.
 MAX_TURNS_BY_DEPTH = {"light": 2, "medium": 3, "deep": 4}
 MAX_TURNS_DEFAULT = 3
+# Coverage alone must not end a stage after one good answer: an interview
+# that is over in five turns has not interviewed anyone. Two exchanges per
+# stage before "covered" counts; the caps above still bound the other side.
+MIN_TURNS_BY_DEPTH = {"light": 1, "medium": 2, "deep": 2}
+MIN_TURNS_DEFAULT = 2
 ABSENT_STREAK_TO_ADVANCE = 2
 
 ASSESS_MODEL = os.getenv("FLOW_ASSESS_MODEL", "gpt-4o-mini")
@@ -211,7 +216,8 @@ def should_advance(inp: TurnInputs, ledger: CoverageLedger, assessment: TurnAsse
 
     required = stage_required_signals(inp.track, inp.stage, inp.bank_item)
     star_ok = ledger.result_told(inp.stage) if star_applies(inp.track, inp.stage) else True
-    if required and ledger.covered(required) and star_ok:
+    floor = MIN_TURNS_BY_DEPTH.get(inp.depth, MIN_TURNS_DEFAULT) if inp.track == "behavioral" else MIN_TURNS_DEFAULT
+    if required and ledger.covered(required) and star_ok and ledger.turns_in_stage >= floor:
         return "coverage"
     if inp.time_status.get("is_overtime"):
         return "overtime"

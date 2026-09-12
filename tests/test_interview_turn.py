@@ -102,7 +102,19 @@ def test_stage_advances_on_coverage_not_on_question_count():
     a = assessment(read(**{"Ownership": "demonstrated:I", "Impact & metrics": "demonstrated:8% drop fixed in six hours"}),
                    star={"situation": "demonstrated", "task": "demonstrated", "action": "demonstrated", "result": "demonstrated"})
     led.merge(a, "behavioral_q1")
+    # Covered after one answer, but one exchange is not an interview: the
+    # floor holds the stage for a second turn, then coverage advances it.
+    assert it.should_advance(behavioral(), led, a) is None
+    led.merge(a, "behavioral_q1")
     assert it.should_advance(behavioral(), led, a) == "coverage"
+
+
+def test_light_depth_lets_a_single_complete_answer_advance():
+    led = CoverageLedger()
+    a = assessment(read(**{"Ownership": "demonstrated:I", "Impact & metrics": "demonstrated:x"}),
+                   star={k: "demonstrated" for k in ("situation", "task", "action", "result")})
+    led.merge(a, "behavioral_q1")
+    assert it.should_advance(behavioral(depth="light"), led, a) == "coverage"
 
 
 def test_behavioral_stage_waits_for_the_result_even_when_signals_are_covered():
