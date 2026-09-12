@@ -1,0 +1,394 @@
+{
+  "track": "coding",
+  "persona": "marcus_junior",
+  "config": {
+    "track": "coding",
+    "role": "Software Engineer",
+    "level": "junior",
+    "user_id": "audit-user",
+    "preferred_language": "python",
+    "problem_count": "2"
+  },
+  "duration_s": 19.1,
+  "history": [
+    {
+      "who": "flow",
+      "text": "Hey, I'm Flow \u2014 we'll chat briefly, then you'll get two problems in the editor. Please start with a short introduction.",
+      "stage": "self_intro",
+      "t": 1.1,
+      "latency": null
+    },
+    {
+      "who": "flow",
+      "text": "It's in your editor: Two Sum. Read it through, then tell me how you'd approach it before you write anything.",
+      "stage": "coding_problem_1",
+      "t": 1.8,
+      "latency": null
+    },
+    {
+      "who": "system",
+      "text": "[coding_problem pushed: Two Sum]",
+      "stage": "coding_problem_1",
+      "t": 1.8
+    },
+    {
+      "who": "candidate",
+      "text": "Um, okay, so for the Two Sum problem, I guess I would, like, first think about using a hash map to store the numbers and their indices. So, I'd iterate through the array, and, um, for each number, I'd check if the difference between the target and that number is already in the map. If it is, then I can return those indices. If not, I\u2019d just add the number and its index to the map. Um, then I think that should work, right?",
+      "stage": "coding_problem_1",
+      "t": 3.5
+    },
+    {
+      "who": "flow",
+      "text": "Got it. Go ahead and write that up in the editor when you're ready.",
+      "stage": "coding_problem_1",
+      "t": 5.5,
+      "latency": 2.1
+    },
+    {
+      "who": "system",
+      "text": "[code_submitted problem 0, 8 lines]\ndef two_sum(nums, target):\n    num_dict = {}\n    for i in range(len(nums)):\n        complement = target - nums[i]\n        if complement in num_dict:\n            return [num_dict[complement], i]\n        num_dict[nums[i]] = i\n    return []",
+      "stage": "coding_problem_2",
+      "t": 7.3
+    },
+    {
+      "who": "flow",
+      "text": "Your solution is efficient and correctly returns the indices for the two numbers that add up to the target.",
+      "stage": "coding_problem_1",
+      "t": 8.4,
+      "latency": null
+    },
+    {
+      "who": "flow",
+      "text": "Next one's in your editor: Valid Parentheses. Take a minute to read it, then talk me through your approach.",
+      "stage": "coding_problem_2",
+      "t": 8.4,
+      "latency": null
+    },
+    {
+      "who": "system",
+      "text": "[evaluation_result] {\"correctness\": \"pass\", \"approach_quality\": \"A\", \"edge_cases_handled\": [\"minimum input size\", \"exactly one solution exists\"], \"edge_cases_missed\": [\"duplicate numbers that could be part of the solution but are not the same element\"], \"time_complexity\": \"O(n)\", \"space_complexity\": \"O(n)\", \"code_quality_notes\": [\"good variable naming\", \"clear logic\"], \"suggestions\": [\"Consider adding comments to explain the logic for future readers.\"], \"brief_verbal_feedback\": \"Your solution is efficient and correctly returns the indices for the two numbers that add up to the target.\"}",
+      "stage": "coding_problem_2",
+      "t": 8.4
+    },
+    {
+      "who": "system",
+      "text": "[coding_problem pushed: Valid Parentheses]",
+      "stage": "coding_problem_2",
+      "t": 8.4
+    },
+    {
+      "who": "candidate",
+      "text": "Um, okay, so for the Valid Parentheses problem, I think I would use a stack to keep track of the opening brackets. So, as I go through the string, um, whenever I see an opening bracket, I\u2019d push it onto the stack. Then, for, like, closing brackets, I\u2019d check if the stack is not empty and if the top of the stack matches the closing bracket. If it does, I\u2019d pop the stack. If not, I\u2019d return False. At the end, I'd check if the stack is empty, and if it is, then return True. Um, I guess that\u2019s the general idea?",
+      "stage": "coding_problem_2",
+      "t": 10.4
+    },
+    {
+      "who": "flow",
+      "text": "That sounds like a solid plan. Go ahead and write it out in the editor when you're ready.",
+      "stage": "coding_problem_2",
+      "t": 12.5,
+      "latency": 2.1
+    },
+    {
+      "who": "system",
+      "text": "[code_submitted problem 1, 14 lines]\ndef is_valid(s):\n    stack = []\n    mapping = {')': '(', '}': '{', ']': '['}\n    \n    for char in s:\n        if char in mapping.values():\n            stack.append(char)\n        elif char in mapping.keys():\n            if stack and stack[-1] == mapping[char]:\n                stack.pop()\n            else:\n                return False\n    \n    return len(stack) == 0",
+      "stage": "closing",
+      "t": 14.1
+    },
+    {
+      "who": "flow",
+      "text": "Your solution correctly handles all cases and is efficient with O(n) time complexity.",
+      "stage": "coding_problem_2",
+      "t": 15.3,
+      "latency": null
+    },
+    {
+      "who": "flow",
+      "text": "Thanks, Marcus. Your written feedback is on your dashboard in a minute. That's the end of the interview \u2014 take care.",
+      "stage": "closing",
+      "t": 15.3,
+      "latency": null
+    },
+    {
+      "who": "system",
+      "text": "[evaluation_result] {\"correctness\": \"pass\", \"approach_quality\": \"A\", \"edge_cases_handled\": [\"empty string\", \"balanced parentheses\", \"unbalanced parentheses\"], \"edge_cases_missed\": [], \"time_complexity\": \"O(n)\", \"space_complexity\": \"O(n)\", \"code_quality_notes\": [\"good variable naming\", \"clear logic structure\"], \"suggestions\": [\"Consider adding type hints for better readability.\"], \"brief_verbal_feedback\": \"Your solution correctly handles all cases and is efficient with O(n) time complexity.\"}",
+      "stage": "closing",
+      "t": 15.3
+    }
+  ],
+  "stages_visited": [],
+  "final_stage": "closing",
+  "tool_calls": [],
+  "question_bank": [
+    {
+      "slug": "two-sum",
+      "title": "Two Sum",
+      "difficulty": "easy",
+      "time_limit_minutes": 15,
+      "description": "Given an array of integers `nums` and an integer `target`, return the indices of the two numbers that add up to `target`. Exactly one solution exists and you may not use the same element twice. Return the indices in increasing order.",
+      "examples": [
+        {
+          "input": "nums = [2,7,11,15], target = 9",
+          "output": "[0,1]",
+          "explanation": "2 + 7 = 9"
+        },
+        {
+          "input": "nums = [3,2,4], target = 6",
+          "output": "[1,2]"
+        }
+      ],
+      "constraints": [
+        "2 <= len(nums) <= 10^4",
+        "Exactly one valid answer exists"
+      ],
+      "hints": [
+        "For each number, what complement would complete the pair?",
+        "A hash map of value->index gives O(n)."
+      ],
+      "entrypoint": "two_sum",
+      "starter_code": {
+        "python": "def two_sum(nums, target):\n    # return [i, j] with i < j\n    pass\n"
+      },
+      "test_cases": [
+        {
+          "args": [
+            [
+              2,
+              7,
+              11,
+              15
+            ],
+            9
+          ],
+          "expected": [
+            0,
+            1
+          ]
+        },
+        {
+          "args": [
+            [
+              3,
+              2,
+              4
+            ],
+            6
+          ],
+          "expected": [
+            1,
+            2
+          ]
+        },
+        {
+          "args": [
+            [
+              3,
+              3
+            ],
+            6
+          ],
+          "expected": [
+            0,
+            1
+          ]
+        },
+        {
+          "args": [
+            [
+              -1,
+              -2,
+              -3,
+              -4,
+              -5
+            ],
+            -8
+          ],
+          "expected": [
+            2,
+            4
+          ]
+        }
+      ],
+      "reference_solution": {
+        "python": "def two_sum(nums, target):\n    seen = {}\n    for i, n in enumerate(nums):\n        c = target - n\n        if c in seen:\n            return [seen[c], i]\n        seen[n] = i\n    return []\n"
+      }
+    },
+    {
+      "slug": "valid-parentheses",
+      "title": "Valid Parentheses",
+      "difficulty": "easy",
+      "time_limit_minutes": 15,
+      "description": "Given a string `s` of just '()[]{}' characters, return True if every bracket is closed by the same type in the correct order, else False.",
+      "examples": [
+        {
+          "input": "s = \"()[]{}\"",
+          "output": "True"
+        },
+        {
+          "input": "s = \"([)]\"",
+          "output": "False"
+        }
+      ],
+      "constraints": [
+        "0 <= len(s) <= 10^4",
+        "s contains only bracket characters"
+      ],
+      "hints": [
+        "A stack matches the most recent open bracket.",
+        "Empty string is valid."
+      ],
+      "entrypoint": "is_valid",
+      "starter_code": {
+        "python": "def is_valid(s):\n    pass\n"
+      },
+      "test_cases": [
+        {
+          "args": [
+            "()"
+          ],
+          "expected": true
+        },
+        {
+          "args": [
+            "()[]{}"
+          ],
+          "expected": true
+        },
+        {
+          "args": [
+            "(]"
+          ],
+          "expected": false
+        },
+        {
+          "args": [
+            "([)]"
+          ],
+          "expected": false
+        },
+        {
+          "args": [
+            "{[]}"
+          ],
+          "expected": true
+        },
+        {
+          "args": [
+            ""
+          ],
+          "expected": true
+        }
+      ],
+      "reference_solution": {
+        "python": "def is_valid(s):\n    pairs = {')': '(', ']': '[', '}': '{'}\n    stack = []\n    for ch in s:\n        if ch in '([{':\n            stack.append(ch)\n        else:\n            if not stack or stack.pop() != pairs[ch]:\n                return False\n    return not stack\n"
+      }
+    }
+  ],
+  "stalls": [],
+  "notes": [
+    "closing delivered by Flow at turn 0"
+  ],
+  "verdict": {
+    "overall": {
+      "confidence": "high",
+      "headline": "Marcus demonstrates solid problem-solving and coding skills, suitable for a new-grad level.",
+      "recommendation": "lean_hire",
+      "level_read": "new_grad"
+    },
+    "signals": [
+      {
+        "name": "Problem-solving",
+        "reasoning": "Marcus clearly articulated his approach for both problems before coding, demonstrating a solid understanding of the strategies involved.",
+        "band": "solid",
+        "scope_met": "new_grad",
+        "evidence": [
+          "I guess I would, like, first think about using a hash map to store the numbers and their indices.",
+          "I think I would use a stack to keep track of the opening brackets."
+        ],
+        "to_raise": "Consider alternative approaches and discuss their trade-offs."
+      },
+      {
+        "name": "Coding",
+        "reasoning": "Marcus translated his plans into correct and efficient code for both problems, indicating a good grasp of coding practices.",
+        "band": "solid",
+        "scope_met": "new_grad",
+        "evidence": [
+          "Your solution is efficient and correctly returns the indices for the two numbers that add up to the target.",
+          "Your solution correctly handles all cases and is efficient with O(n) time complexity."
+        ],
+        "to_raise": "Improve code modularity and naming conventions for clarity."
+      },
+      {
+        "name": "Testing & verification",
+        "reasoning": "Marcus's solutions were verified by the interviewer as correct and efficient, but there is no evidence of self-verification or testing by Marcus.",
+        "band": "cannot_determine",
+        "scope_met": "new_grad",
+        "evidence": [],
+        "to_raise": "Explicitly test and verify solutions with normal and edge cases."
+      },
+      {
+        "name": "Response to hints",
+        "reasoning": "There were no hints provided by the interviewer, so Marcus's ability to respond to hints cannot be assessed.",
+        "band": "cannot_determine",
+        "scope_met": "new_grad",
+        "evidence": [],
+        "to_raise": "Demonstrate adaptability by integrating feedback or hints when provided."
+      },
+      {
+        "name": "Communication & structure",
+        "reasoning": "Marcus communicated his approach clearly and structured his thoughts logically, though with some filler words.",
+        "band": "solid",
+        "scope_met": "new_grad",
+        "evidence": [
+          "Um, okay, so for the Two Sum problem, I guess I would, like, first think about using a hash map...",
+          "Um, okay, so for the Valid Parentheses problem, I think I would use a stack..."
+        ],
+        "to_raise": "Reduce filler words to improve clarity and conciseness."
+      }
+    ],
+    "differentiators": [
+      "To become a strong hire, Marcus should focus on testing his solutions independently and reducing filler words for clearer communication."
+    ],
+    "delivery": {
+      "pace_available": false,
+      "wpm": null,
+      "wpm_band": "unknown",
+      "wpm_target": "130-160",
+      "filler_total": 13,
+      "filler_per_100w": 6.99,
+      "filler_per_min": null,
+      "filler_band": "moderate",
+      "filler_target": "<=3.3/100 words",
+      "word_count": 186,
+      "sentence_count": 12,
+      "filler_breakdown": {
+        "um": 6,
+        "like": 2,
+        "so": 4,
+        "right": 1
+      },
+      "top_crutch_word": {
+        "word": "um",
+        "count": 6
+      },
+      "talk_ratio": 0.56,
+      "longest_monologue_s": null
+    },
+    "gap_to_next": {
+      "signal": "Problem-solving",
+      "from_band": "solid",
+      "to_band": "outstanding",
+      "move": "Consider alternative approaches and discuss their trade-offs."
+    },
+    "great_answers": 0,
+    "context": {
+      "track": "coding",
+      "role": "swe",
+      "seniority": "new_grad",
+      "archetype": "big_tech"
+    }
+  },
+  "flags": [
+    "reply latency: median 2.1s, max 2.1s (text-only; TTS adds more)"
+  ]
+}

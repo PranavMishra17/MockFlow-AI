@@ -369,8 +369,12 @@ def render_move_note(move: Move) -> str:
     if move.preface:
         lines.append(f'First say exactly: "{move.preface}"')
     if move.kind == "coding_reply":
-        lines.append("Answer what they asked in under 25 words, or say 'go ahead' if they were just thinking aloud. "
-                     "Do not read or paraphrase the problem. Ask nothing unless they asked you something.")
+        lines.append("They are at the editor. If they asked something, answer it in under 25 words. "
+                     "If they described an approach, tell them in one short sentence to write it up and submit when ready. "
+                     "If they are still thinking, one short encouraging phrase. Do not read or paraphrase the problem. "
+                     "Ask nothing unless they asked you something. Never say the same thing you said last turn.")
+        if move.ack_hint:
+            lines.append(f'Something they said you can pick up: "{move.ack_hint[:80]}".')
         return "\n".join(lines)
     ack = "Pick up one specific from their answer in at most 12 words, no praise adjectives"
     if move.ack_hint:

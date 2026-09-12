@@ -16,6 +16,51 @@ Two kinds of entry appear below:
 
 ---
 
+## 0. How a turn works — LIVE since 2026-09-12
+
+There are **no function tools in the speech path**. The model does not call
+`assess_response`, `ask_question` or `transition_stage`; those are gone, along
+with the canned transition acknowledgements. `docs/AGENT_AUDIT_2026-09.md`
+records why (silent turns at the SDK's tool-step cap; acknowledgements spoken
+one turn late; template probes; no memory across stages).
+
+Per candidate turn, `InterviewAgent.prepare_turn(turn_ctx, new_message)` runs
+in code — from `on_user_turn_completed` on the audio path, and directly from
+`HarnessSession.say` in the harness (the SDK's `session.run(user_input=)`
+never calls the hook, so the harness mirrors the SDK's end-of-turn sequence:
+copy the chat context, prepare the turn on the copy, generate from it):
+
+1. **Assess** — one structured call (`interview_turn.assess_turn_openai`,
+   strict JSON; primed from the last STT interim while the candidate is still
+   talking; 2.5 s budget; a late result merges on the next turn).
+2. **Ledger** — `state.ledger` (`interview_coverage.CoverageLedger`), keyed by
+   the verdict's signal names (`evaluator.SIGNAL_LIBRARY`). Monotone and
+   cross-stage: a STAR story told in self_intro credits the behavioral stage.
+3. **Progress** — `interview_turn.should_advance`: required signals covered
+   (after a two-turn floor per stage), stage overtime, two empty reads from a
+   terse candidate, or the depth's turn cap. Advancing is `advance_to()`, the
+   single path for every stage change (model-driven, skip, timer): it changes
+   state and instructions, emits `stage_change`, pushes a coding problem when
+   entering one, and never speaks.
+4. **Move** — `interview_turn.choose_move`: repeat / process / company
+   questions get a fixed honest preface; "I don't know" gets one scaffold;
+   a rambler is pinned to the result; a terse candidate gets a narrow
+   question; a missing STAR element gets the bank's own follow-up probe;
+   else the bank's next question.
+5. **Note** — one `[FLOW MOVE — instructions, not speech]` message appended to
+   the turn's chat context (never persisted, never a transcript line). The
+   reply IS the transition.
+
+`prepare_turn` never raises anything but `StopResponse`; on any failure it
+leaves `SAFE_NOTE`. `AgentSession(max_tool_steps=1)` as belt and braces.
+
+**Greeting**: one fixed line per track (`prompts.GREETING_LINES`), spoken by
+code in `on_enter`, never generated. Interviews start in `self_intro`.
+**Closing**: one utterance built by code (`build_closing_utterance`) that
+quotes the candidate's strongest evidence and ends with
+`interview_turn.CLOSING_SENTINEL`; `attach_handlers` finalizes on that
+sentinel and on nothing else. After it, `prepare_turn` stays quiet.
+
 ## 1. Module surface — LIVE
 
 ```python
@@ -44,7 +89,13 @@ def build_session(
     llm,
     stt=None, tts=None, vad=None,
     turn_detection=NOT_GIVEN,
-) -> AgentSession: ...
+) -> AgentSession: ...                    # sets max_tool_steps=1
+
+# The turn loop (interview_turn.py)
+async def InterviewAgent.prepare_turn(turn_ctx, new_message) -> Move
+async def advance_to(state, agent, transport, next_stage, *, forced=False, skipped=False) -> None
+async def speak_closing(state, agent, session, transport) -> None
+async def ask_opening_question(state, agent, session, *, reason) -> None
 
 # Event wiring
 @dataclass

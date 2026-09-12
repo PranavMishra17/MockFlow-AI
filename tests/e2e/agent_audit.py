@@ -261,11 +261,16 @@ async def run_one(track: str, persona: Persona, out_dir: Path, client) -> dict:
                         break
                 await sess.settle(timeout=20)
                 drain_agent()
-                for x in drain_events():
+                later = drain_events()
+                for x in later:
                     if x.get("type") == "evaluation_result":
                         ev = x.get("evaluation") or {}
                         history.append({"who": "system", "text": "[evaluation_result] " + json.dumps(ev)[:600],
                                         "stage": sess.stage, "t": round(time.time() - t_start, 1)})
+                # A pass advances by code and pushes the next problem in the
+                # same flow; solve it too rather than letting the persona talk
+                # to an editor it never saw.
+                await handle_coding_events([x for x in later if x.get("type") == "coding_problem"])
 
     if track == "coding":
         await sess.command({"type": "ready_for_problem"})

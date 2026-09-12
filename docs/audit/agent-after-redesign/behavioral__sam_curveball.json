@@ -1,0 +1,290 @@
+{
+  "track": "behavioral",
+  "persona": "sam_curveball",
+  "config": {
+    "track": "behavioral",
+    "role": "Backend Engineer",
+    "level": "mid",
+    "user_id": "audit-user",
+    "framework": "amazon",
+    "depth": "medium"
+  },
+  "duration_s": 34.8,
+  "history": [
+    {
+      "who": "flow",
+      "text": "Hey, I'm Flow \u2014 I'll be taking your interview today. Please start with a short introduction.",
+      "stage": "self_intro",
+      "t": 3.0,
+      "latency": null
+    },
+    {
+      "who": "candidate",
+      "text": "Hi Flow! I\u2019m Sam Ortiz. I\u2019ve been a backend engineer for six years, primarily working with Python and Django, along with a bit of Rust. I\u2019ve tackled everything from building robust APIs to optimizing performance in mid-size SaaS companies. I\u2019m excited to chat today and see how I can contribute to your team. How about you? What\u2019s your background?",
+      "stage": "self_intro",
+      "t": 3.7
+    },
+    {
+      "who": "flow",
+      "text": "Got it. You mentioned building robust APIs. Can you share a specific challenge you faced while doing that and how you resolved it?",
+      "stage": "self_intro",
+      "t": 6.1,
+      "latency": 2.4
+    },
+    {
+      "who": "candidate",
+      "text": "Could you repeat that question? I think I missed the end.",
+      "stage": "self_intro",
+      "t": 6.7
+    },
+    {
+      "who": "flow",
+      "text": "Sure. You mentioned optimizing performance in mid-size SaaS companies. Can you share a specific challenge you faced while doing that and how you resolved it?",
+      "stage": "behavioral_q1",
+      "t": 9.2,
+      "latency": 2.5
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> behavioral_q1]",
+      "stage": "behavioral_q1",
+      "t": 9.2
+    },
+    {
+      "who": "candidate",
+      "text": "Absolutely! One challenge I faced was with a SaaS product where API response times were slowing down as the user base grew. I discovered that an inefficient database query was the culprit. To resolve it, I implemented indexing on key fields and optimized the query logic. This reduced response times by almost fifty percent. Have you encountered similar issues in your team? How did you handle them?",
+      "stage": "behavioral_q1",
+      "t": 10.0
+    },
+    {
+      "who": "flow",
+      "text": "You discovered an inefficient database query was causing slow response times. Tell me about a time when you had to prioritize customer needs in a backend engineering project.",
+      "stage": "behavioral_q1",
+      "t": 12.6,
+      "latency": 2.6
+    },
+    {
+      "who": "candidate",
+      "text": "Great question! One time, we were rolling out a new feature, but during testing, we found that it could significantly impact the performance for our existing users. I prioritized addressing the performance issues first, communicating transparently with customers about the delay. We optimized the backend processes before the launch, ensuring that existing users wouldn't suffer from slowdowns. How does your team typically handle prioritization when customer needs conflict with technical constraints?",
+      "stage": "behavioral_q1",
+      "t": 13.4
+    },
+    {
+      "who": "flow",
+      "text": "There's no real company behind this mock, so I can't speak for one \u2014 but that's a good question to ask in a real one. You prioritized addressing the performance issues first, communicating transparently. Describe a situation where you took ownership of a challenging technical problem in your work.",
+      "stage": "behavioral_q2",
+      "t": 16.2,
+      "latency": 2.7
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> behavioral_q2]",
+      "stage": "behavioral_q2",
+      "t": 16.2
+    },
+    {
+      "who": "candidate",
+      "text": "Sure! There was a time when our system faced frequent outages due to a memory leak in a service. I took ownership of investigating the issue. I dove deep into the code, used profiling tools to pinpoint the memory usage, and then refactored the problematic parts. After implementing a fix and thorough testing, we not only stabilized that service but also improved overall performance. How does your team encourage ownership in resolving technical challenges?",
+      "stage": "behavioral_q2",
+      "t": 17.0
+    },
+    {
+      "who": "flow",
+      "text": "You used profiling tools to pinpoint the memory usage. What specific changes did you make in the code to refactor those problematic parts?",
+      "stage": "behavioral_q2",
+      "t": 19.5,
+      "latency": 2.4
+    },
+    {
+      "who": "candidate",
+      "text": "I focused on the parts of the code that were retaining references unnecessarily. I implemented a strategy to break circular references and ensured proper memory management, especially around large data structures. I also introduced context managers to handle resource allocation more efficiently. This reduced the memory footprint significantly. Have you seen similar issues in your projects, and what approaches did you find effective?",
+      "stage": "behavioral_q2",
+      "t": 20.3
+    },
+    {
+      "who": "flow",
+      "text": "You introduced context managers for better resource allocation. Tell me about a time when you had to simplify a complex backend system or process.",
+      "stage": "behavioral_q3",
+      "t": 23.4,
+      "latency": 3.1
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> behavioral_q3]",
+      "stage": "behavioral_q3",
+      "t": 23.4
+    },
+    {
+      "who": "candidate",
+      "text": "Absolutely! We had a complex microservices architecture where services were tightly coupled, making deployments a nightmare. I led an initiative to simplify by decoupling the services and introducing a message broker for communication. This reduced interdependencies and made the system more resilient. The result? Easier deployments and improved scalability. Have you ever faced a situation where complexity was hindering your team's efficiency? How did you approach it?",
+      "stage": "behavioral_q3",
+      "t": 24.3
+    },
+    {
+      "who": "flow",
+      "text": "You introduced a message broker for communication. What specific challenges did you face during the decoupling process?",
+      "stage": "behavioral_q3",
+      "t": 26.7,
+      "latency": 2.5
+    },
+    {
+      "who": "candidate",
+      "text": "Great question! One major challenge was ensuring data consistency across services during the transition. I needed to balance eventual consistency with user experience. Another hurdle was adapting existing services to communicate asynchronously without disrupting current workflows. It required careful planning and extensive testing. How does your team typically manage challenges when making significant architectural changes?",
+      "stage": "behavioral_q3",
+      "t": 27.5
+    },
+    {
+      "who": "flow",
+      "text": "Thanks, Sam. The part about \"I prioritized addressing the performance issues first, communicating transparently\u2026\" is the kind of specific that lands. Your written feedback is on your dashboard in a minute. That's the end of the interview \u2014 take care.",
+      "stage": "closing",
+      "t": 29.9,
+      "latency": 2.5
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> closing]",
+      "stage": "closing",
+      "t": 29.9
+    }
+  ],
+  "stages_visited": [
+    "behavioral_q1",
+    "behavioral_q2",
+    "behavioral_q3",
+    "closing"
+  ],
+  "final_stage": "closing",
+  "tool_calls": [],
+  "question_bank": [
+    {
+      "main_question": "Tell me about a time when you had to prioritize customer needs in a backend engineering project.",
+      "competency": "Customer Obsession",
+      "follow_up_probes": [
+        "What specific actions did you take to address those needs?",
+        "How did your decision impact the final product?"
+      ]
+    },
+    {
+      "main_question": "Describe a situation where you took ownership of a challenging technical problem in your work.",
+      "competency": "Ownership",
+      "follow_up_probes": [
+        "What steps did you take to resolve the issue?",
+        "What was the impact of your actions on the team or project?"
+      ]
+    },
+    {
+      "main_question": "Tell me about a time when you had to simplify a complex backend system or process.",
+      "competency": "Invent and Simplify",
+      "follow_up_probes": [
+        "What was the complexity you faced?",
+        "How did your simplification improve efficiency or performance?"
+      ]
+    }
+  ],
+  "stalls": [],
+  "notes": [
+    "closing delivered by Flow at turn 8"
+  ],
+  "verdict": {
+    "overall": {
+      "confidence": "high",
+      "headline": "Sam demonstrates strong ownership and impact with clear communication, suitable for a mid-level role.",
+      "recommendation": "lean_hire",
+      "level_read": "mid"
+    },
+    "signals": [
+      {
+        "name": "Ownership",
+        "reasoning": "Sam consistently uses first-person language and describes personal initiatives, such as taking ownership of a memory leak issue and leading a decoupling initiative.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "I took ownership of investigating the issue.",
+          "I led an initiative to simplify by decoupling the services."
+        ],
+        "to_raise": "Provide more examples of end-to-end ownership in varied contexts."
+      },
+      {
+        "name": "Impact & metrics",
+        "reasoning": "Sam provides specific metrics and outcomes, such as reducing API response times by almost fifty percent and improving system stability.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "This reduced response times by almost fifty percent.",
+          "After implementing a fix and thorough testing, we not only stabilized that service but also improved overall performance."
+        ],
+        "to_raise": "Include more quantified impacts across different projects."
+      },
+      {
+        "name": "Conflict & collaboration",
+        "reasoning": "Sam shows an understanding of prioritizing customer needs and balancing technical constraints, but lacks detailed examples of direct conflict resolution.",
+        "band": "borderline",
+        "scope_met": "new_grad",
+        "evidence": [
+          "I prioritized addressing the performance issues first, communicating transparently with customers about the delay."
+        ],
+        "to_raise": "Provide specific examples of resolving conflicts within a team or with stakeholders."
+      },
+      {
+        "name": "Communication & structure",
+        "reasoning": "Sam communicates clearly and structures responses well, making points easy to follow and engaging with the interviewer effectively.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "I focused on the parts of the code that were retaining references unnecessarily.",
+          "I implemented a strategy to break circular references and ensured proper memory management."
+        ],
+        "to_raise": "Enhance by providing more structured breakdowns of complex problem-solving processes."
+      },
+      {
+        "name": "Authenticity",
+        "reasoning": "Sam's responses are specific and seem genuine, with real stakes and personal involvement in the described scenarios.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "One major challenge was ensuring data consistency across services during the transition.",
+          "I needed to balance eventual consistency with user experience."
+        ],
+        "to_raise": "Share more personal reflections or learnings from the experiences discussed."
+      }
+    ],
+    "differentiators": [
+      "Demonstrate more direct conflict resolution experiences to strengthen collaboration skills.",
+      "Provide additional examples of quantified impacts to showcase consistent high-level impact."
+    ],
+    "delivery": {
+      "pace_available": false,
+      "wpm": null,
+      "wpm_band": "unknown",
+      "wpm_target": "130-160",
+      "filler_total": 0,
+      "filler_per_100w": 0.0,
+      "filler_per_min": null,
+      "filler_band": "good",
+      "filler_target": "<=3.3/100 words",
+      "word_count": 467,
+      "sentence_count": 46,
+      "filler_breakdown": {},
+      "top_crutch_word": null,
+      "talk_ratio": 0.66,
+      "longest_monologue_s": null
+    },
+    "gap_to_next": {
+      "signal": "Conflict & collaboration",
+      "from_band": "borderline",
+      "to_band": "solid",
+      "move": "Provide specific examples of resolving conflicts within a team or with stakeholders."
+    },
+    "great_answers": 0,
+    "context": {
+      "track": "behavioral",
+      "role": "swe",
+      "seniority": "mid",
+      "archetype": "big_tech"
+    }
+  },
+  "flags": [
+    "reply latency: median 2.5s, max 3.1s (text-only; TTS adds more)",
+    "3 candidate question(s) answered with an immediate counter-question"
+  ]
+}

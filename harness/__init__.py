@@ -8,7 +8,7 @@ hardware: no STT, no TTS, no VAD, and a `NullTransport` in place of the room's
 data channel.
 
 What that buys: a developer or an AI agent can play the candidate across every
-track, and a test can assert on FSM state, which tools the model called, what
+track, and a test can assert on FSM state, the coverage ledger, what
 the agent emitted to the UI, and the transcript that would have been scored.
 
 What it deliberately does NOT cover — do not retire the e2e suite on its

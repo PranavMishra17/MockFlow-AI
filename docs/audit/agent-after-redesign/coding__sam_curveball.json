@@ -1,0 +1,390 @@
+{
+  "track": "coding",
+  "persona": "sam_curveball",
+  "config": {
+    "track": "coding",
+    "role": "Backend Engineer",
+    "level": "mid",
+    "user_id": "audit-user",
+    "preferred_language": "python",
+    "problem_count": "2"
+  },
+  "duration_s": 21.2,
+  "history": [
+    {
+      "who": "flow",
+      "text": "Hey, I'm Flow \u2014 we'll chat briefly, then you'll get two problems in the editor. Please start with a short introduction.",
+      "stage": "self_intro",
+      "t": 1.1,
+      "latency": null
+    },
+    {
+      "who": "flow",
+      "text": "It's in your editor: Maximum Subarray. Read it through, then tell me how you'd approach it before you write anything.",
+      "stage": "coding_problem_1",
+      "t": 1.8,
+      "latency": null
+    },
+    {
+      "who": "system",
+      "text": "[coding_problem pushed: Maximum Subarray]",
+      "stage": "coding_problem_1",
+      "t": 1.8
+    },
+    {
+      "who": "candidate",
+      "text": "Alright, so for the Maximum Subarray problem, I\u2019d go with Kadane\u2019s algorithm. It has a time complexity of O(n) and is efficient for this type of problem. I'll start by initializing two variables: one for the current sum and another for the maximum sum found so far. As I iterate through the array, I\u2019ll update the current sum by adding the current number. If it becomes negative, I reset it to zero. I\u2019ll compare the current sum to the maximum sum and update it as needed. How does that sound to you? Would you like to dive deeper into any part of this?",
+      "stage": "coding_problem_1",
+      "t": 4.0
+    },
+    {
+      "who": "flow",
+      "text": "Got it. Go ahead and write that up in the editor. Let me know when you're ready to submit.",
+      "stage": "coding_problem_1",
+      "t": 6.2,
+      "latency": 2.2
+    },
+    {
+      "who": "system",
+      "text": "[code_submitted problem 0, 6 lines]\ndef max_sub_array(nums):\n    max_sum = current_sum = nums[0]\n    for num in nums[1:]:\n        current_sum = max(num, current_sum + num)\n        max_sum = max(max_sum, current_sum)\n    return max_sum",
+      "stage": "coding_problem_2",
+      "t": 7.7
+    },
+    {
+      "who": "flow",
+      "text": "Your solution is efficient and correctly identifies the maximum subarray sum.",
+      "stage": "coding_problem_1",
+      "t": 8.9,
+      "latency": null
+    },
+    {
+      "who": "flow",
+      "text": "Next one's in your editor: Longest Substring Without Repeating Characters. Take a minute to read it, then talk me through your approach.",
+      "stage": "coding_problem_2",
+      "t": 8.9,
+      "latency": null
+    },
+    {
+      "who": "system",
+      "text": "[evaluation_result] {\"correctness\": \"pass\", \"approach_quality\": \"A\", \"edge_cases_handled\": [\"single element array\", \"all negative numbers\", \"mixed positive and negative numbers\"], \"edge_cases_missed\": [], \"time_complexity\": \"O(n)\", \"space_complexity\": \"O(1)\", \"code_quality_notes\": [\"good variable naming\", \"clear logic\"], \"suggestions\": [], \"brief_verbal_feedback\": \"Your solution is efficient and correctly identifies the maximum subarray sum.\"}",
+      "stage": "coding_problem_2",
+      "t": 8.9
+    },
+    {
+      "who": "system",
+      "text": "[coding_problem pushed: Longest Substring Without Repeating Characters]",
+      "stage": "coding_problem_2",
+      "t": 8.9
+    },
+    {
+      "who": "candidate",
+      "text": "For the Longest Substring Without Repeating Characters problem, I'd use a sliding window technique combined with a set to track the characters we've seen. I would start with two pointers representing the bounds of the substring. As I iterate through the string, I'd expand the right pointer to include new characters. If I encounter a character that's already in the set, I'd move the left pointer to shrink the window until there are no duplicates left. This way, I can efficiently calculate the length of the longest substring without repeating characters. Does that align with your expectations, or do you want me to focus on a particular aspect?",
+      "stage": "coding_problem_2",
+      "t": 11.2
+    },
+    {
+      "who": "flow",
+      "text": "That aligns well. Go ahead and implement that in the editor. Let me know when you're ready to submit.",
+      "stage": "coding_problem_2",
+      "t": 13.6,
+      "latency": 2.4
+    },
+    {
+      "who": "system",
+      "text": "[code_submitted problem 1, 12 lines]\ndef length_of_longest_substring(s):\n    char_map = {}\n    left = 0\n    max_length = 0\n\n    for right in range(len(s)):\n        if s[right] in char_map:\n            left = max(left, char_map[s[right]] + 1)\n        char_map[s[right]] = right\n        max_length = max(max_length, right - left + 1)\n\n    return max_length",
+      "stage": "closing",
+      "t": 15.3
+    },
+    {
+      "who": "flow",
+      "text": "Your solution is efficient and correctly handles all edge cases.",
+      "stage": "coding_problem_2",
+      "t": 16.4,
+      "latency": null
+    },
+    {
+      "who": "flow",
+      "text": "Thanks, Sam. Your written feedback is on your dashboard in a minute. That's the end of the interview \u2014 take care.",
+      "stage": "closing",
+      "t": 16.4,
+      "latency": null
+    },
+    {
+      "who": "system",
+      "text": "[evaluation_result] {\"correctness\": \"pass\", \"approach_quality\": \"A\", \"edge_cases_handled\": [\"empty string\", \"string with all unique characters\", \"string with all repeating characters\"], \"edge_cases_missed\": [], \"time_complexity\": \"O(n)\", \"space_complexity\": \"O(min(n, m))\", \"code_quality_notes\": [\"good variable naming\", \"efficient use of data structures\"], \"suggestions\": [\"Consider adding comments to explain the logic for better readability.\"], \"brief_verbal_feedback\": \"Your solution is efficient and correctly handles all edge cases.\"}",
+      "stage": "closing",
+      "t": 16.4
+    }
+  ],
+  "stages_visited": [],
+  "final_stage": "closing",
+  "tool_calls": [],
+  "question_bank": [
+    {
+      "slug": "maximum-subarray",
+      "title": "Maximum Subarray",
+      "difficulty": "medium",
+      "time_limit_minutes": 20,
+      "description": "Given an integer array `nums`, return the largest sum of any contiguous non-empty subarray.",
+      "examples": [
+        {
+          "input": "nums = [-2,1,-3,4,-1,2,1,-5,4]",
+          "output": "6",
+          "explanation": "[4,-1,2,1] sums to 6"
+        },
+        {
+          "input": "nums = [5,4,-1,7,8]",
+          "output": "23"
+        }
+      ],
+      "constraints": [
+        "1 <= len(nums) <= 10^5"
+      ],
+      "hints": [
+        "Track the best sum ending at each index.",
+        "Kadane's algorithm is O(n)."
+      ],
+      "entrypoint": "max_sub_array",
+      "starter_code": {
+        "python": "def max_sub_array(nums):\n    pass\n"
+      },
+      "test_cases": [
+        {
+          "args": [
+            [
+              -2,
+              1,
+              -3,
+              4,
+              -1,
+              2,
+              1,
+              -5,
+              4
+            ]
+          ],
+          "expected": 6
+        },
+        {
+          "args": [
+            [
+              1
+            ]
+          ],
+          "expected": 1
+        },
+        {
+          "args": [
+            [
+              5,
+              4,
+              -1,
+              7,
+              8
+            ]
+          ],
+          "expected": 23
+        },
+        {
+          "args": [
+            [
+              -1
+            ]
+          ],
+          "expected": -1
+        },
+        {
+          "args": [
+            [
+              -2,
+              -1
+            ]
+          ],
+          "expected": -1
+        }
+      ],
+      "reference_solution": {
+        "python": "def max_sub_array(nums):\n    best = cur = nums[0]\n    for n in nums[1:]:\n        cur = max(n, cur + n)\n        best = max(best, cur)\n    return best\n"
+      }
+    },
+    {
+      "slug": "longest-substring-no-repeat",
+      "title": "Longest Substring Without Repeating Characters",
+      "difficulty": "medium",
+      "time_limit_minutes": 20,
+      "description": "Given a string `s`, return the length of the longest substring that contains no repeating characters.",
+      "examples": [
+        {
+          "input": "s = \"abcabcbb\"",
+          "output": "3",
+          "explanation": "\"abc\""
+        },
+        {
+          "input": "s = \"pwwkew\"",
+          "output": "3",
+          "explanation": "\"wke\""
+        }
+      ],
+      "constraints": [
+        "0 <= len(s) <= 5*10^4"
+      ],
+      "hints": [
+        "Use a sliding window.",
+        "Track the last index of each character."
+      ],
+      "entrypoint": "length_of_longest_substring",
+      "starter_code": {
+        "python": "def length_of_longest_substring(s):\n    pass\n"
+      },
+      "test_cases": [
+        {
+          "args": [
+            "abcabcbb"
+          ],
+          "expected": 3
+        },
+        {
+          "args": [
+            "bbbbb"
+          ],
+          "expected": 1
+        },
+        {
+          "args": [
+            "pwwkew"
+          ],
+          "expected": 3
+        },
+        {
+          "args": [
+            ""
+          ],
+          "expected": 0
+        },
+        {
+          "args": [
+            "au"
+          ],
+          "expected": 2
+        },
+        {
+          "args": [
+            "dvdf"
+          ],
+          "expected": 3
+        }
+      ],
+      "reference_solution": {
+        "python": "def length_of_longest_substring(s):\n    last = {}\n    start = 0\n    best = 0\n    for i, ch in enumerate(s):\n        if ch in last and last[ch] >= start:\n            start = last[ch] + 1\n        last[ch] = i\n        best = max(best, i - start + 1)\n    return best\n"
+      }
+    }
+  ],
+  "stalls": [],
+  "notes": [
+    "closing delivered by Flow at turn 0"
+  ],
+  "verdict": {
+    "overall": {
+      "confidence": "high",
+      "headline": "Sam demonstrates strong problem-solving and coding skills, meeting the mid-level backend engineer expectations.",
+      "recommendation": "lean_hire",
+      "level_read": "mid"
+    },
+    "signals": [
+      {
+        "name": "Problem-solving",
+        "reasoning": "Sam clearly articulated their approach for both problems, including the use of Kadane's algorithm and a sliding window technique, and discussed time complexity.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "I\u2019d go with Kadane\u2019s algorithm. It has a time complexity of O(n) and is efficient for this type of problem.",
+          "I'd use a sliding window technique combined with a set to track the characters we've seen."
+        ],
+        "to_raise": "Consider alternative approaches and discuss trade-offs more explicitly."
+      },
+      {
+        "name": "Coding",
+        "reasoning": "Sam's solutions were described as efficient and correct, indicating clean and idiomatic code.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "Your solution is efficient and correctly identifies the maximum subarray sum.",
+          "Your solution is efficient and correctly handles all edge cases."
+        ],
+        "to_raise": "Demonstrate more modular code structure or discuss code organization."
+      },
+      {
+        "name": "Testing & verification",
+        "reasoning": "The interviewer confirmed that Sam's solutions handled all edge cases, suggesting thorough testing.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "Your solution is efficient and correctly handles all edge cases."
+        ],
+        "to_raise": "Explicitly discuss test cases and verification steps during the interview."
+      },
+      {
+        "name": "Response to hints",
+        "reasoning": "Sam did not require hints and independently arrived at efficient solutions.",
+        "band": "cannot_determine",
+        "scope_met": "mid",
+        "evidence": [],
+        "to_raise": "Demonstrate adaptability by responding to hypothetical hints or feedback."
+      },
+      {
+        "name": "Communication & structure",
+        "reasoning": "Sam communicated their approach clearly and concisely, asking for feedback and alignment.",
+        "band": "solid",
+        "scope_met": "mid",
+        "evidence": [
+          "How does that sound to you? Would you like to dive deeper into any part of this?",
+          "Does that align with your expectations, or do you want me to focus on a particular aspect?"
+        ],
+        "to_raise": "Use more structured signposting to guide the listener through complex explanations."
+      }
+    ],
+    "differentiators": [
+      "Sam could become a strong hire by demonstrating leadership in discussing trade-offs and alternative solutions."
+    ],
+    "delivery": {
+      "pace_available": false,
+      "wpm": null,
+      "wpm_band": "unknown",
+      "wpm_target": "130-160",
+      "filler_total": 4,
+      "filler_per_100w": 1.9,
+      "filler_per_min": null,
+      "filler_band": "good",
+      "filler_target": "<=3.3/100 words",
+      "word_count": 211,
+      "sentence_count": 14,
+      "filler_breakdown": {
+        "like": 1,
+        "so": 2,
+        "right": 1
+      },
+      "top_crutch_word": {
+        "word": "so",
+        "count": 2
+      },
+      "talk_ratio": 0.6,
+      "longest_monologue_s": null
+    },
+    "gap_to_next": {
+      "signal": "Problem-solving",
+      "from_band": "solid",
+      "to_band": "outstanding",
+      "move": "Consider alternative approaches and discuss trade-offs more explicitly."
+    },
+    "great_answers": 0,
+    "context": {
+      "track": "coding",
+      "role": "swe",
+      "seniority": "mid",
+      "archetype": "big_tech"
+    }
+  },
+  "flags": [
+    "reply latency: median 2.4s, max 2.4s (text-only; TTS adds more)"
+  ]
+}

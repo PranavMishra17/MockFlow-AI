@@ -115,9 +115,15 @@ def test_candidate_questions_get_an_answer_not_a_counter_question(track, persona
 
 @pytest.mark.parametrize("track,persona", _CASES, ids=[f"{t}:{p}" for t, p in _CASES])
 def test_interview_has_enough_substance(track, persona):
-    """F17: at least five exchanges before closing, and a verdict was produced."""
+    """F17: at least five exchanges before closing, and a verdict was produced.
+    Coding is submission-driven: two problems, two evaluated submissions."""
     r = _run(track, persona)
-    assert len(_candidate_turns(r)) >= 5
+    if track == "coding":
+        evaluated = [h for h in r["history"] if h["who"] == "system" and h["text"].startswith("[evaluation_result]")]
+        assert len(evaluated) >= 2, "both problems should be evaluated"
+        assert len(_candidate_turns(r)) >= 2
+    else:
+        assert len(_candidate_turns(r)) >= 5
     assert (r.get("verdict") or {}).get("overall", {}).get("recommendation")
 
 

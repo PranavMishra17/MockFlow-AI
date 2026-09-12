@@ -1,0 +1,323 @@
+{
+  "track": "behavioral",
+  "persona": "ken_terse",
+  "config": {
+    "track": "behavioral",
+    "role": "Software Engineer",
+    "level": "mid",
+    "user_id": "audit-user",
+    "framework": "amazon",
+    "depth": "medium"
+  },
+  "duration_s": 41.7,
+  "history": [
+    {
+      "who": "flow",
+      "text": "Hey, I'm Flow \u2014 I'll be taking your interview today. Please start with a short introduction.",
+      "stage": "self_intro",
+      "t": 3.0,
+      "latency": null
+    },
+    {
+      "who": "candidate",
+      "text": "I\u2019m Ken. I have five years of experience in backend development, mostly in Java and Spring.",
+      "stage": "self_intro",
+      "t": 3.6
+    },
+    {
+      "who": "flow",
+      "text": "Got it. You mentioned having five years in backend development. Can you describe a specific project where you used Java and Spring to solve a challenging problem?",
+      "stage": "self_intro",
+      "t": 5.9,
+      "latency": 2.3
+    },
+    {
+      "who": "candidate",
+      "text": "Yeah, I built a claims batch pipeline. It processed large claims efficiently.",
+      "stage": "self_intro",
+      "t": 6.6
+    },
+    {
+      "who": "flow",
+      "text": "You built a claims batch pipeline for processing large claims. Tell me about a time when you had to solve a complex problem in a software project. What was the situation, and how did you approach it?",
+      "stage": "behavioral_q1",
+      "t": 8.9,
+      "latency": 2.3
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> behavioral_q1]",
+      "stage": "behavioral_q1",
+      "t": 8.9
+    },
+    {
+      "who": "candidate",
+      "text": "I had to optimize the claims batch pipeline. It was slow initially. I analyzed the code, found bottlenecks, and improved the queries. It worked better after that.",
+      "stage": "behavioral_q1",
+      "t": 9.7
+    },
+    {
+      "who": "flow",
+      "text": "You analyzed the code and found bottlenecks. What tools or methods did you use to find a solution?",
+      "stage": "behavioral_q1",
+      "t": 12.4,
+      "latency": 2.7
+    },
+    {
+      "who": "candidate",
+      "text": "I used profiling tools and logging to identify issues. Simple process.",
+      "stage": "behavioral_q1",
+      "t": 13.1
+    },
+    {
+      "who": "flow",
+      "text": "You used profiling tools and logging to identify issues. Can you explain a specific bottleneck you discovered and how you addressed it in the pipeline?",
+      "stage": "behavioral_q1",
+      "t": 15.5,
+      "latency": 2.4
+    },
+    {
+      "who": "candidate",
+      "text": "Yeah. I found inefficient database queries. I optimized them for better performance.",
+      "stage": "behavioral_q1",
+      "t": 16.1
+    },
+    {
+      "who": "flow",
+      "text": "You optimized inefficient database queries for better performance. Describe a situation where you had to balance multiple priorities and deliver results under tight deadlines. How did you manage your time and resources?",
+      "stage": "behavioral_q2",
+      "t": 18.7,
+      "latency": 2.6
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> behavioral_q2]",
+      "stage": "behavioral_q2",
+      "t": 18.7
+    },
+    {
+      "who": "candidate",
+      "text": "I had multiple tasks during a release. I prioritized based on urgency and impact. It worked out fine.",
+      "stage": "behavioral_q2",
+      "t": 19.4
+    },
+    {
+      "who": "flow",
+      "text": "You prioritized based on urgency and impact. What challenges did you face during this process?",
+      "stage": "behavioral_q2",
+      "t": 21.9,
+      "latency": 2.5
+    },
+    {
+      "who": "candidate",
+      "text": "Sometimes, tasks overlapped. It got stressful, but I managed.",
+      "stage": "behavioral_q2",
+      "t": 22.5
+    },
+    {
+      "who": "flow",
+      "text": "You mentioned it got stressful when tasks overlapped. How did you ensure quality while working under pressure?",
+      "stage": "behavioral_q2",
+      "t": 24.7,
+      "latency": 2.2
+    },
+    {
+      "who": "candidate",
+      "text": "I focused on key areas and did quick reviews. Kept it simple.",
+      "stage": "behavioral_q2",
+      "t": 25.4
+    },
+    {
+      "who": "flow",
+      "text": "You kept it simple with quick reviews. Tell me about a time when you disagreed with a team member or stakeholder about a technical decision. How did you handle the situation?",
+      "stage": "behavioral_q3",
+      "t": 27.7,
+      "latency": 2.3
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> behavioral_q3]",
+      "stage": "behavioral_q3",
+      "t": 27.7
+    },
+    {
+      "who": "candidate",
+      "text": "I explained my perspective clearly. We reached a compromise.",
+      "stage": "behavioral_q3",
+      "t": 28.4
+    },
+    {
+      "who": "flow",
+      "text": "You explained your perspective clearly. What specific points did you emphasize to support your view?",
+      "stage": "behavioral_q3",
+      "t": 31.4,
+      "latency": 3.0
+    },
+    {
+      "who": "candidate",
+      "text": "I focused on performance impacts and maintainability. Kept it straightforward.",
+      "stage": "behavioral_q3",
+      "t": 32.1
+    },
+    {
+      "who": "flow",
+      "text": "You focused on performance impacts and maintainability. Can you share an example of how your perspective on maintainability influenced the decision-making process?",
+      "stage": "behavioral_q3",
+      "t": 34.6,
+      "latency": 2.5
+    },
+    {
+      "who": "candidate",
+      "text": "We had a choice between two frameworks. I pointed out long-term support issues with one. It helped.",
+      "stage": "behavioral_q3",
+      "t": 35.3
+    },
+    {
+      "who": "flow",
+      "text": "Thanks, Ken. The part about \"I have five years of experience in backend development, mostly in Java and Spring\" is the kind of specific that lands. Your written feedback is on your dashboard in a minute. That's the end of the interview \u2014 take care.",
+      "stage": "closing",
+      "t": 37.5,
+      "latency": 2.2
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> closing]",
+      "stage": "closing",
+      "t": 37.5
+    }
+  ],
+  "stages_visited": [
+    "behavioral_q1",
+    "behavioral_q2",
+    "behavioral_q3",
+    "closing"
+  ],
+  "final_stage": "closing",
+  "tool_calls": [],
+  "question_bank": [
+    {
+      "main_question": "Tell me about a time when you had to solve a complex problem in a software project. What was the situation, and how did you approach it?",
+      "competency": "Invent and Simplify",
+      "follow_up_probes": [
+        "What tools or methods did you use to find a solution?",
+        "How did your solution impact the project or team?"
+      ]
+    },
+    {
+      "main_question": "Describe a situation where you had to balance multiple priorities and deliver results under tight deadlines. How did you manage your time and resources?",
+      "competency": "Deliver Results",
+      "follow_up_probes": [
+        "What challenges did you face during this process?",
+        "How did you ensure quality while working under pressure?"
+      ]
+    },
+    {
+      "main_question": "Tell me about a time when you disagreed with a team member or stakeholder about a technical decision. How did you handle the situation?",
+      "competency": "Have Backbone; Disagree and Commit",
+      "follow_up_probes": [
+        "What was your reasoning for your position?",
+        "What was the final outcome of the discussion?"
+      ]
+    }
+  ],
+  "stalls": [],
+  "notes": [
+    "closing delivered by Flow at turn 11"
+  ],
+  "verdict": {
+    "overall": {
+      "confidence": "medium",
+      "headline": "Ken shows potential in technical problem-solving but lacks depth in ownership and impact metrics.",
+      "recommendation": "lean_no_hire",
+      "level_read": "new_grad"
+    },
+    "signals": [
+      {
+        "name": "Ownership",
+        "reasoning": "Ken describes his role in optimizing the claims batch pipeline but does not provide detailed insights into his personal contributions or decision-making process.",
+        "band": "borderline",
+        "scope_met": "new_grad",
+        "evidence": [
+          "I analyzed the code, found bottlenecks, and improved the queries."
+        ],
+        "to_raise": "Provide more detailed examples of personal initiative and decision-making."
+      },
+      {
+        "name": "Impact & metrics",
+        "reasoning": "Ken mentions optimizing database queries for better performance but does not quantify the impact or provide specific metrics.",
+        "band": "poor",
+        "scope_met": "intern",
+        "evidence": [
+          "I optimized them for better performance."
+        ],
+        "to_raise": "Include specific metrics or quantifiable outcomes to demonstrate impact."
+      },
+      {
+        "name": "Conflict & collaboration",
+        "reasoning": "Ken describes a situation where he reached a compromise with a team member, showing some level of collaboration.",
+        "band": "solid",
+        "scope_met": "new_grad",
+        "evidence": [
+          "I explained my perspective clearly. We reached a compromise."
+        ],
+        "to_raise": "Provide more detailed examples of empathy and understanding in conflict resolution."
+      },
+      {
+        "name": "Communication & structure",
+        "reasoning": "Ken's responses are concise but lack depth and structure, making it difficult to follow his thought process.",
+        "band": "borderline",
+        "scope_met": "new_grad",
+        "evidence": [
+          "I focused on key areas and did quick reviews. Kept it simple."
+        ],
+        "to_raise": "Improve the structure and depth of responses to convey ideas more clearly."
+      },
+      {
+        "name": "Authenticity",
+        "reasoning": "Ken's responses are straightforward but lack emotional depth or personal stakes, making them feel somewhat rehearsed.",
+        "band": "borderline",
+        "scope_met": "new_grad",
+        "evidence": [
+          "I pointed out long-term support issues with one. It helped."
+        ],
+        "to_raise": "Share more personal insights or stakes to convey authenticity."
+      }
+    ],
+    "differentiators": [
+      "Ken could become a strong hire by providing more detailed examples of personal impact and quantifiable results in his projects."
+    ],
+    "delivery": {
+      "pace_available": false,
+      "wpm": null,
+      "wpm_band": "unknown",
+      "wpm_target": "130-160",
+      "filler_total": 0,
+      "filler_per_100w": 0.0,
+      "filler_per_min": null,
+      "filler_band": "good",
+      "filler_target": "<=3.3/100 words",
+      "word_count": 153,
+      "sentence_count": 27,
+      "filler_breakdown": {},
+      "top_crutch_word": null,
+      "talk_ratio": 0.34,
+      "longest_monologue_s": null
+    },
+    "gap_to_next": {
+      "signal": "Impact & metrics",
+      "from_band": "poor",
+      "to_band": "borderline",
+      "move": "Include specific metrics or quantifiable outcomes to demonstrate impact."
+    },
+    "great_answers": 0,
+    "context": {
+      "track": "behavioral",
+      "role": "swe",
+      "seniority": "mid",
+      "archetype": "big_tech"
+    }
+  },
+  "flags": [
+    "reply latency: median 2.4s, max 3.0s (text-only; TTS adds more)"
+  ]
+}

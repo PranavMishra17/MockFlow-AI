@@ -1,0 +1,319 @@
+{
+  "track": "technical_voice",
+  "persona": "marcus_junior",
+  "config": {
+    "track": "technical_voice",
+    "role": "Software Engineer",
+    "level": "junior",
+    "user_id": "audit-user",
+    "topics": "data structures,REST APIs"
+  },
+  "duration_s": 54.2,
+  "history": [
+    {
+      "who": "flow",
+      "text": "Hey, I'm Flow \u2014 I'll be taking your interview today. Please start with a short introduction.",
+      "stage": "self_intro",
+      "t": 3.8,
+      "latency": null
+    },
+    {
+      "who": "candidate",
+      "text": "Uh, hi Flow, um, I'm Marcus Lee. I just graduated with a degree in Computer Science. I, like, did an internship at a small startup where I, um, worked on a React dashboard. And, yeah, I've done some class projects, like, a Flask todo app and a chess engine in Python. So, um, that's me, I guess.",
+      "stage": "self_intro",
+      "t": 4.7
+    },
+    {
+      "who": "flow",
+      "text": "Got it. You mentioned the React dashboard. What specific features did you work on for that project?",
+      "stage": "self_intro",
+      "t": 7.5,
+      "latency": 2.7
+    },
+    {
+      "who": "candidate",
+      "text": "Um, so for the React dashboard, I, like, worked on, um, building some components and, uh, managing the state using, like, hooks. There were, um, some charts and tables, so I, I helped with, like, displaying data and making it interactive, I guess. It was, um, a good learning experience.",
+      "stage": "self_intro",
+      "t": 8.2
+    },
+    {
+      "who": "flow",
+      "text": "You helped with displaying data and making it interactive. What was a specific challenge you faced while building those components, and how did you overcome it?",
+      "stage": "self_intro",
+      "t": 10.6,
+      "latency": 2.5
+    },
+    {
+      "who": "candidate",
+      "text": "Uh, I think one challenge, um, was, like, managing the state effectively, especially with, uh, large data sets. I, um, had some trouble, like, figuring out how to keep everything in sync. So, um, I ended up using, like, the useEffect hook to, uh, listen for changes and update the components, and that, um, helped a lot, I guess.",
+      "stage": "self_intro",
+      "t": 11.6
+    },
+    {
+      "who": "flow",
+      "text": "You used the useEffect hook to manage state. Can you explain how that worked under the hood for your components and why you chose that approach?",
+      "stage": "experience_discussion",
+      "t": 13.9,
+      "latency": 2.3
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> experience_discussion]",
+      "stage": "experience_discussion",
+      "t": 13.9
+    },
+    {
+      "who": "candidate",
+      "text": "Um, so, I, like, used useEffect to, uh, manage side effects, I guess. Basically, it, um, runs after the component renders, and, uh, I used it to fetch data and, um, update the state based on that. I chose it because, um, it helps keep things, like, organized and, uh, prevents unnecessary re-renders. But, um, I\u2019m still, like, learning all the details about it.",
+      "stage": "experience_discussion",
+      "t": 14.8
+    },
+    {
+      "who": "flow",
+      "text": "You mentioned fetching data and updating the state. How did you handle the fetched data once it arrived, and why did you design it that way?",
+      "stage": "experience_discussion",
+      "t": 17.1,
+      "latency": 2.4
+    },
+    {
+      "who": "candidate",
+      "text": "Um, when the data came in, I, like, stored it in the state using, um, the useState hook. I think I did it that way because, um, it makes it easier to, like, re-render the UI based on, um, the new data. I was also, um, trying to keep the components, like, simple and, uh, focused on rendering, I guess. But I, um, know there's more to learn about handling data.",
+      "stage": "experience_discussion",
+      "t": 18.0
+    },
+    {
+      "who": "flow",
+      "text": "You aimed to keep the components simple and focused on rendering. Can you explain how you structured the state management to ensure that the UI stayed in sync with data updates? Why did you choose that structure?",
+      "stage": "experience_discussion",
+      "t": 20.7,
+      "latency": 2.7
+    },
+    {
+      "who": "candidate",
+      "text": "Yeah, um, so I structured state management, like, by keeping the state in the parent component and, um, passing it down as props to child components. I think I chose that structure because it, um, helps maintain a single source of truth, I guess. This way, when the data updates, um, all relevant components would, like, re-render automatically. But, um, I\u2019m still learning about, like, more advanced state management techniques, I suppose.",
+      "stage": "experience_discussion",
+      "t": 21.7
+    },
+    {
+      "who": "flow",
+      "text": "You maintained a single source of truth in your state management. Explain how a stack operates and in what scenarios it would be beneficial to use one over a queue.",
+      "stage": "technical_concepts_1",
+      "t": 24.1,
+      "latency": 2.4
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> technical_concepts_1]",
+      "stage": "technical_concepts_1",
+      "t": 24.1
+    },
+    {
+      "who": "candidate",
+      "text": "Um, I\u2019m, like, not super confident about explaining stacks and queues, but, um, I think a stack is, like, last in, first out, right? So, um, you can, like, push items onto the top and pop them off the top. It might be useful when you, um, need to keep track of function calls or, like, backtracking, I guess. A queue is, um, first in, first out, so it\u2019s, like, better for things like, um, managing tasks or, um, processes in order. That's, uh, what I remember, but I\u2019m still, like, learning more about it.",
+      "stage": "technical_concepts_1",
+      "t": 25.3
+    },
+    {
+      "who": "flow",
+      "text": "Fair \u2014 that's better than guessing. You mentioned backtracking with stacks. Can you give an example of a task you might use a stack for, and just take it one step at a time?",
+      "stage": "technical_concepts_1",
+      "t": 28.1,
+      "latency": 2.8
+    },
+    {
+      "who": "candidate",
+      "text": "Um, sure! So, like, one example of using a stack, I guess, would be, um, navigating a maze. So, um, you could, like, push each position onto the stack as you, um, move through the maze. When you hit a dead end, you, um, pop the last position off the stack to, like, go back and try another path. It helps keep track of where you\u2019ve been, I think. So, um, that's how it sort of works, I guess.",
+      "stage": "technical_concepts_1",
+      "t": 29.2
+    },
+    {
+      "who": "flow",
+      "text": "You mentioned navigating a maze as an example of using a stack. Compare an array and a linked list in terms of memory usage and access time. When would you choose one over the other?",
+      "stage": "technical_concepts_1",
+      "t": 32.4,
+      "latency": 3.1
+    },
+    {
+      "who": "candidate",
+      "text": "Um, okay, so, uh, an array usually has, like, a fixed size, right? So, it can be more memory efficient if you, um, know the size ahead of time. Access time is, like, really fast because you can access elements directly by index. But, um, it can be hard to, like, resize. \n\nOn the other hand, a linked list uses, um, more memory because each element has, like, pointers, I think. But, um, you can, like, add or remove elements easily, which is, um, great if you don't know the size beforehand. So, I guess I\u2019d choose an array if, um, I need fast access and know the size, and a linked list if, um, I need flexibility with, like, inserting or deleting. But I\u2019m still, um, figuring out more details.",
+      "stage": "technical_concepts_1",
+      "t": 33.7
+    },
+    {
+      "who": "flow",
+      "text": "You noted that an array has a fixed size. Explain the key principles of REST architecture and how they contribute to the design of REST APIs.",
+      "stage": "technical_concepts_2",
+      "t": 36.8,
+      "latency": 3.1
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> technical_concepts_2]",
+      "stage": "technical_concepts_2",
+      "t": 36.8
+    },
+    {
+      "who": "candidate",
+      "text": "Um, so, REST architecture, I think, is based on, like, a few key principles. One is that it\u2019s, um, stateless, so each request has to, like, contain all the information needed, I guess. This makes it easier to, um, scale. Also, um, it uses standard HTTP methods, like, GET, POST, PUT, and DELETE, to, uh, perform operations on resources. \n\nResources are usually, um, represented by URIs, I think, which makes them easy to access. And, um, the responses are often in formats like JSON, which is, like, easy to work with. So, um, these principles help create a, like, consistent and easily manageable API, but, um, I\u2019m still learning more about the specifics.",
+      "stage": "technical_concepts_2",
+      "t": 38.1
+    },
+    {
+      "who": "flow",
+      "text": "You mentioned that REST uses standard HTTP methods for operations. Compare REST APIs with GraphQL. What are the advantages and disadvantages of using REST for a web service?",
+      "stage": "technical_concepts_2",
+      "t": 41.2,
+      "latency": 3.1
+    },
+    {
+      "who": "candidate",
+      "text": "Um, okay, so, I think REST APIs, like, use fixed endpoints for each resource and, um, you have to make multiple requests if you want, like, different data. GraphQL, on the other hand, lets you, um, request exactly what you need in a single query, so that\u2019s, like, one advantage I guess. \n\nBut, um, with REST, it\u2019s generally simpler and, like, more straightforward to understand. REST is also, um, pretty widespread, so there\u2019s a lot of, like, documentation and support available. Um, downside of REST could be that, like, over-fetching or under-fetching data happens sometimes, which isn\u2019t great. I\u2019m still, um, getting the hang of all these concepts, though.",
+      "stage": "technical_concepts_2",
+      "t": 42.5
+    },
+    {
+      "who": "flow",
+      "text": "You mentioned over-fetching and under-fetching as downsides of REST. What are some common status codes used in REST APIs, and what do they signify in terms of client-server communication?",
+      "stage": "technical_concepts_2",
+      "t": 45.7,
+      "latency": 3.3
+    },
+    {
+      "who": "candidate",
+      "text": "Um, right, so, I think some common status codes include, like, 200 for success, which means the request was, um, completed successfully. Then there\u2019s, um, 404, which signifies that, like, the resource wasn\u2019t found. And, um, there\u2019s 500 for server errors, which means something went wrong on the server side. \n\nThere\u2019s also, um, 401 for unauthorized, and, like, 403 for forbidden, which means the client doesn't have permission, I guess. These codes are, like, really useful for understanding, um, what\u2019s happening in client-server communication, but, um, I\u2019m still learning and trying to remember them all.",
+      "stage": "technical_concepts_2",
+      "t": 47.0
+    },
+    {
+      "who": "flow",
+      "text": "Thanks, Marcus. The part about \"downside of REST could be that, like, over-fetching or under-fetching data happens\u2026\" is the kind of specific that lands. Your written feedback is on your dashboard in a minute. That's the end of the interview \u2014 take care.",
+      "stage": "closing",
+      "t": 49.3,
+      "latency": 2.3
+    },
+    {
+      "who": "system",
+      "text": "[stage_change -> closing]",
+      "stage": "closing",
+      "t": 49.3
+    }
+  ],
+  "stages_visited": [
+    "experience_discussion",
+    "technical_concepts_1",
+    "technical_concepts_2",
+    "closing"
+  ],
+  "final_stage": "closing",
+  "tool_calls": [],
+  "question_bank": [
+    {
+      "topic": "data structures",
+      "questions": [
+        "Explain how a stack operates and in what scenarios it would be beneficial to use one over a queue.",
+        "Compare an array and a linked list in terms of memory usage and access time. When would you choose one over the other?",
+        "What are the tradeoffs between using a hash table and a binary search tree for storing data?"
+      ]
+    },
+    {
+      "topic": "REST APIs",
+      "questions": [
+        "Explain the key principles of REST architecture and how they contribute to the design of REST APIs.",
+        "Compare REST APIs with GraphQL - what are the advantages and disadvantages of using REST for a web service?",
+        "What are some common status codes used in REST APIs, and what do they signify in terms of client-server communication?"
+      ]
+    }
+  ],
+  "stalls": [],
+  "notes": [
+    "closing delivered by Flow at turn 12"
+  ],
+  "verdict": {
+    "overall": {
+      "confidence": "medium",
+      "headline": "Marcus shows foundational understanding but lacks depth and structured reasoning.",
+      "recommendation": "no_hire",
+      "level_read": "intern"
+    },
+    "signals": [
+      {
+        "name": "Technical depth",
+        "reasoning": "Marcus demonstrates a basic understanding of technical concepts but often lacks depth in his explanations. For example, his explanation of stacks and queues was surface-level: 'Um, I\u2019m, like, not super confident about explaining stacks and queues, but, um, I think a stack is, like, last in, first out, right?' He also acknowledges his learning stage: 'But, um, I\u2019m still, like, learning all the details about it.'",
+        "band": "borderline",
+        "scope_met": "intern",
+        "evidence": [
+          "Um, I\u2019m, like, not super confident about explaining stacks and queues, but, um, I think a stack is, like, last in, first out, right?",
+          "But, um, I\u2019m still, like, learning all the details about it."
+        ],
+        "to_raise": "Provide deeper explanations and examples for technical concepts."
+      },
+      {
+        "name": "Trade-off reasoning",
+        "reasoning": "Marcus mentions some trade-offs but does not explore them in depth. For instance, when comparing arrays and linked lists, he states: 'I guess I\u2019d choose an array if, um, I need fast access and know the size, and a linked list if, um, I need flexibility with, like, inserting or deleting.' However, he does not delve into the implications or scenarios where these choices are critical.",
+        "band": "borderline",
+        "scope_met": "intern",
+        "evidence": [
+          "I guess I\u2019d choose an array if, um, I need fast access and know the size, and a linked list if, um, I need flexibility with, like, inserting or deleting."
+        ],
+        "to_raise": "Discuss the implications of trade-offs in more detail and provide specific scenarios."
+      },
+      {
+        "name": "Communication & structure",
+        "reasoning": "Marcus's communication is often filled with filler words and lacks structure, making it difficult to follow his points. For example, 'Um, so, I, like, used useEffect to, uh, manage side effects, I guess.' His explanations are often interspersed with hesitations and lack a clear, concise structure.",
+        "band": "poor",
+        "scope_met": "intern",
+        "evidence": [
+          "Um, so, I, like, used useEffect to, uh, manage side effects, I guess."
+        ],
+        "to_raise": "Reduce filler words and organize thoughts into clear, structured points."
+      }
+    ],
+    "differentiators": [
+      "Marcus could become a strong hire by developing deeper technical insights and improving his ability to articulate structured, concise explanations."
+    ],
+    "delivery": {
+      "pace_available": false,
+      "wpm": null,
+      "wpm_band": "unknown",
+      "wpm_target": "130-160",
+      "filler_total": 158,
+      "filler_per_100w": 15.88,
+      "filler_per_min": null,
+      "filler_band": "high",
+      "filler_target": "<=3.3/100 words",
+      "word_count": 995,
+      "sentence_count": 60,
+      "filler_breakdown": {
+        "um": 71,
+        "uh": 12,
+        "like": 49,
+        "basically": 1,
+        "so": 21,
+        "right": 3,
+        "sort of": 1
+      },
+      "top_crutch_word": {
+        "word": "um",
+        "count": 71
+      },
+      "talk_ratio": 0.73,
+      "longest_monologue_s": null
+    },
+    "gap_to_next": {
+      "signal": "Communication & structure",
+      "from_band": "poor",
+      "to_band": "borderline",
+      "move": "Reduce filler words and organize thoughts into clear, structured points."
+    },
+    "great_answers": 0,
+    "context": {
+      "track": "technical_voice",
+      "role": "swe",
+      "seniority": "new_grad",
+      "archetype": "big_tech"
+    }
+  },
+  "flags": [
+    "reply latency: median 2.7s, max 3.3s (text-only; TTS adds more)"
+  ]
+}
