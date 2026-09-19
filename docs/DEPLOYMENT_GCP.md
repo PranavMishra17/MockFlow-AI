@@ -440,8 +440,9 @@ Note the third line: your `.env` stores the client secret under
 
 **The free tier is off until you add this block.** The landing page promises
 "2 interviews on us, no API keys"; without these seven lines a signed-in user
-with no keys is told to go configure some, and `free_tier_usage` stays empty
-(which is how the 2026-09-12 audit found it had never run in prod). The
+with no keys is told to go configure some, and `free_tier_usage` stays at
+zero calls (a counter row exists for the month; it has never incremented, which is
+how the 2026-09-12 audit found the free tier had never served an interview). The
 `SYSTEM_*` values are YOUR LiveKit / OpenAI / Deepgram keys from `.env`
 (`LIVEKIT_URL`, `LIVEKIT_API_KEY`, `LIVEKIT_API_SECRET`, `OPENAI_API_KEY`,
 `DEEPGRAM_API_KEY`). Each user gets `users.free_calls_granted` interviews
