@@ -983,7 +983,9 @@
                 if (data.executed) {
                     el.textContent = 'Checked by running your code: ' + (data.objective_tests || 'tests executed') + '.';
                 } else {
-                    el.textContent = 'Not executed — reviewed by AI only. Correctness is an assessment, not a test result.';
+                    el.textContent = 'Not executed — reviewed by AI only'
+                        + (data.not_executed_reason ? ' (' + data.not_executed_reason + ')' : '')
+                        + '. Correctness is an assessment, not a test result.';
                 }
                 el.style.display = 'block';
             }
@@ -1036,6 +1038,11 @@
                     html += '<div class="problem-description">' + escHtml(problem.description) + '</div>';
                 }
 
+                if (problem.entrypoint) {
+                    html += '<div class="problem-section-label">Function to implement</div>';
+                    html += '<pre class="example-code">' + escHtml(problemSignature(problem)) + '</pre>';
+                }
+
                 if (problem.examples && problem.examples.length) {
                     html += '<div class="problem-section-label">Examples</div>';
                     problem.examples.slice(0, 2).forEach(function(ex, i) {
@@ -1064,22 +1071,30 @@
                 var mc = document.getElementById('monacoEditorContainer');
                 if (mc) mc.style.display = 'block';
 
-                // Set starter code in editor
+                // The bank's starter names the function the tests call.
                 if (monacoEditor) {
-                    var starter = getStarterCode(monacoEditor.getModel().getLanguageId());
+                    var lang = monacoEditor.getModel().getLanguageId();
+                    var starter = (problem.starter_code || {})[lang] || getStarterCode(lang, problem.entrypoint);
                     monacoEditor.setValue(starter);
                 }
 
                 console.log('[CODE] Displayed problem:', problem.title);
             }
 
-            function getStarterCode(language) {
+            function problemSignature(problem) {
+                var py = (problem.starter_code || {}).python || '';
+                var line = py.split('\n').filter(function(l) { return l.indexOf('def ') === 0; })[0];
+                return line ? line.replace(/:\s*$/, '') : problem.entrypoint + '(...)';
+            }
+
+            function getStarterCode(language, entrypoint) {
+                var name = entrypoint || 'solve';
                 var starters = {
-                    python: '# Solution\ndef solution():\n    pass\n',
-                    javascript: '// Solution\nfunction solution() {\n    \n}\n',
-                    java: '// Solution\nclass Solution {\n    public void solve() {\n        \n    }\n}\n',
-                    cpp: '// Solution\n#include <bits/stdc++.h>\nusing namespace std;\n\nvoid solution() {\n    \n}\n',
-                    go: '// Solution\npackage main\n\nfunc solution() {\n    \n}\n',
+                    python: 'def ' + name + '():\n    pass\n',
+                    javascript: 'function ' + name + '() {\n    \n}\n',
+                    java: 'class Solution {\n    public Object ' + name + '() {\n        return null;\n    }\n}\n',
+                    cpp: '#include <bits/stdc++.h>\nusing namespace std;\n\nauto ' + name + '() {\n    \n}\n',
+                    go: 'package main\n\nfunc ' + name + '() {\n    \n}\n',
                 };
                 return starters[language] || starters.python;
             }

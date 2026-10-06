@@ -983,11 +983,18 @@ async def _evaluate_code_async(
         # to live only in the model-called tool; the editor's submit path never
         # ran it. There is one evaluation path now, and this is it.
         objective_summary = None
+        not_executed_reason = None
         try:
             from coding.piston_runner import PISTON_ENABLED, run_via_piston
             test_cases = problem.get('test_cases')
             entrypoint = problem.get('entrypoint')
-            if PISTON_ENABLED and test_cases and entrypoint and language.lower().startswith('py'):
+            if not PISTON_ENABLED:
+                not_executed_reason = 'code execution is disabled on this server'
+            elif not (test_cases and entrypoint):
+                not_executed_reason = 'this problem has no test cases'
+            elif not language.lower().startswith('py'):
+                not_executed_reason = f'tests only run for Python, not {language}'
+            else:
                 # Off the event loop: run_via_piston is a blocking urlopen with
                 # a 12s timeout, and this runs mid-interview.
                 run = await asyncio.to_thread(run_via_piston, code, entrypoint, test_cases, language='python')
@@ -998,9 +1005,11 @@ async def _evaluate_code_async(
                         f"{objective_summary}."
                     )
                 else:
-                    logger.info(f"[CODE] Piston run skipped/failed: {run.get('error')}")
+                    not_executed_reason = f"execution failed: {run['error']}"
+                    logger.warning(f"[CODE] Piston run failed, grading problem {problem_index} with the LLM only: {run['error']}")
         except Exception as exec_err:
-            logger.warning(f"[CODE] Objective execution error (continuing with LLM-only): {exec_err}")
+            not_executed_reason = f'execution error: {exec_err}'
+            logger.warning(f"[CODE] Objective execution error, grading with the LLM only: {exec_err}")
 
         # Retry with backoff: the audit saw three 429s turn into no
         # evaluation_result at all, which left the editor on "Evaluating..."
@@ -1057,6 +1066,7 @@ async def _evaluate_code_async(
             # code, and correctness is an AI's reading of it.
             'executed': bool(objective_summary),
             'objective_tests': objective_summary,
+            'not_executed_reason': not_executed_reason,
         }, reliable=True)
         logger.info(f"[CODE] Evaluation sent to frontend for problem {problem_index}, attempt {attempt_num}")
 
