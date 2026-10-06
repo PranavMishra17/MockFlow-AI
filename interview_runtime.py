@@ -1045,6 +1045,8 @@ async def _evaluate_code_async(
             evaluation = _json.loads(raw)
         except Exception:
             evaluation = {'brief_verbal_feedback': 'Thanks for your submission. Let me review it.'}
+        evaluation.update(executed=bool(objective_summary), objective_tests=objective_summary,
+                          not_executed_reason=not_executed_reason)
 
         # Record submission in state. This goes through record_submission rather
         # than incrementing the counter here: this path used to write int keys

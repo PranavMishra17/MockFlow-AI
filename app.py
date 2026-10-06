@@ -1506,11 +1506,15 @@ def generate_verdict():
                 lines = []
                 for s in subs:
                     ev = s.get('evaluation_result') or {}
+                    tests = ev.get('objective_tests') if ev.get('executed') else (
+                        f"not executed ({ev.get('not_executed_reason') or 'AI review only'})")
                     lines.append(
-                        f"- {s.get('problem_title', 'problem')} [{s.get('language', '')}]: "
-                        f"passed={ev.get('passed', ev.get('all_passed', '?'))}, "
-                        f"approach={ev.get('approach_grade', ev.get('grade', '?'))}, "
-                        f"complexity={ev.get('time_complexity', '?')}"
+                        f"- {s.get('problem_title', 'problem')} attempt {s.get('attempt_number', 1)} "
+                        f"[{s.get('language', '')}]: "
+                        f"correctness={ev.get('correctness', 'unknown')}, "
+                        f"approach={ev.get('approach_quality', 'unknown')}, "
+                        f"complexity={ev.get('time_complexity', 'unknown')}, "
+                        f"tests={tests}"
                     )
                 coding_results = "\n".join(lines) if lines else None
             except Exception as e:
