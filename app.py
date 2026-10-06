@@ -1472,7 +1472,7 @@ def generate_verdict():
     from speech_analytics import analyze_transcript
     from evaluator import (
         RECOMMENDATIONS, build_evaluator_messages, build_rubric, finalize_verdict,
-        infer_archetype, infer_role, infer_seniority, pick_evaluator_model,
+        format_coding_results, infer_archetype, infer_role, infer_seniority, pick_evaluator_model,
     )
 
     try:
@@ -1502,21 +1502,7 @@ def generate_verdict():
         if track == 'coding':
             try:
                 coding_submissions = supabase_client.get_coding_submissions(interview_id)
-                subs = coding_submissions
-                lines = []
-                for s in subs:
-                    ev = s.get('evaluation_result') or {}
-                    tests = ev.get('objective_tests') if ev.get('executed') else (
-                        f"not executed ({ev.get('not_executed_reason') or 'AI review only'})")
-                    lines.append(
-                        f"- {s.get('problem_title', 'problem')} attempt {s.get('attempt_number', 1)} "
-                        f"[{s.get('language', '')}]: "
-                        f"correctness={ev.get('correctness', 'unknown')}, "
-                        f"approach={ev.get('approach_quality', 'unknown')}, "
-                        f"complexity={ev.get('time_complexity', 'unknown')}, "
-                        f"tests={tests}"
-                    )
-                coding_results = "\n".join(lines) if lines else None
+                coding_results = format_coding_results(coding_submissions)
             except Exception as e:
                 logger.warning(f"[API] Coding results for verdict failed: {e}")
 
