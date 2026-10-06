@@ -432,6 +432,16 @@ def bank_item_for(state: InterviewState, stage) -> Optional[dict]:
     return None
 
 
+_CLIENT_PROBLEM_KEYS = ('slug', 'title', 'difficulty', 'description', 'examples', 'constraints',
+                        'hints', 'entrypoint', 'starter_code', 'time_limit_minutes')
+
+
+def client_problem_view(problem: Mapping[str, Any]) -> dict:
+    """What the candidate's browser may see. test_cases and reference_solution
+    are the answer key and stay on the server."""
+    return {k: problem[k] for k in _CLIENT_PROBLEM_KEYS if k in problem}
+
+
 async def push_coding_problem(state: InterviewState, transport: "Transport", idx: int) -> bool:
     """Send problem `idx` to the editor. Returns False if there is no such problem."""
     problems = getattr(state, 'generated_problems', []) or []
@@ -442,7 +452,7 @@ async def push_coding_problem(state: InterviewState, transport: "Transport", idx
     try:
         await transport.emit({
             'type': 'coding_problem',
-            'problem': problem,
+            'problem': client_problem_view(problem),
             'problem_index': idx,
             'attempt_number': attempts_done + 1,
             'max_attempts': 3,
