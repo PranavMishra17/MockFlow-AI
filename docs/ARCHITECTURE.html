@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MockFlow-AI — architecture</title><style>
+:root{--bg:#faf8f4;--fg:#1f1d1a;--muted:#6b665e;--line:#e4dfd6;--code:#f1ede6;--accent:#2f6f5e;--note:#fff6e0;--note-line:#e6c36a}
+@media (prefers-color-scheme:dark){:root{--bg:#171614;--fg:#ece8e1;--muted:#a39d93;--line:#34312c;--code:#232120;--accent:#7cc4ad;--note:#2b2515;--note-line:#8a7232}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+main{max-width:860px;margin:0 auto;padding:2.5rem 1.25rem 4rem}
+h1{font-size:1.9rem;line-height:1.25;margin:0 0 1rem}
+h2{font-size:1.35rem;margin:2.2rem 0 .6rem;padding-top:.6rem;border-top:1px solid var(--line)}
+h3{font-size:1.08rem;margin:1.6rem 0 .4rem}
+a{color:var(--accent)}
+code{background:var(--code);padding:.1em .35em;border-radius:4px;font:.88em/1.4 ui-monospace,SFMono-Regular,Consolas,monospace}
+pre{background:var(--code);padding:.9rem 1rem;border-radius:8px;overflow-x:auto}
+pre code{background:none;padding:0}
+table{border-collapse:collapse;width:100%;margin:1rem 0;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.45rem .6rem;text-align:left;vertical-align:top}
+th{background:var(--code)}
+blockquote{margin:1rem 0;padding:.75rem 1rem;background:var(--note);border-left:4px solid var(--note-line);border-radius:4px}
+blockquote p{margin:.3rem 0}
+details{border-top:1px solid var(--line)}
+details>summary{cursor:pointer;list-style:none}
+details>summary::-webkit-details-marker{display:none}
+details>summary h2{display:inline-block;border:0;margin:1.2rem 0 .6rem}
+details>summary h2::before{content:"\25B8  ";color:var(--muted)}
+details[open]>summary h2::before{content:"\25BE  "}
+</style></head>
+<body><main>
+<h1>MockFlow-AI — Architecture (current)</h1>
+<p>Single source of truth for the <strong>current</strong> stack, as of 2026-10-06. The older
+<code>MIGRATION_HISTORY.md</code> and <code>SUPABASE_SCHEMA_HISTORY.md</code> files describe earlier
+states (Supabase, a planned Xata move) and are kept only for history — do not
+follow them for setup. <code>DEPLOYMENT.md</code> describes the earlier Fly.io setup; the
+app no longer runs there.</p>
+<h2>Stack</h2>
+<table>
+<thead>
+<tr>
+<th>Concern</th>
+<th>Technology</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Host</td>
+<td>One Google Cloud <strong>e2-micro</strong> VM (Always Free), Docker Compose, <strong>Caddy</strong> in front for automatic TLS — see <a href="DEPLOYMENT_GCP.md">DEPLOYMENT_GCP</a></td>
+</tr>
+<tr>
+<td>Web app</td>
+<td>Flask 3 (<code>app.py</code>), gunicorn (<code>gthread</code>, 1 worker, 8 threads) inside the <code>web</code> container</td>
+</tr>
+<tr>
+<td>Voice agent</td>
+<td>LiveKit Agents (<code>agent_worker.py</code>), one subprocess per interview via <code>worker_manager.py</code>; turn logic in <code>interview_runtime.py</code>, <code>interview_turn.py</code>, <code>interview_coverage.py</code> — see <a href="AGENT_DESIGN.html">AGENT_DESIGN</a></td>
+</tr>
+<tr>
+<td>Database</td>
+<td>Neon Postgres (<code>db.py</code>, psycopg3 pool)</td>
+</tr>
+<tr>
+<td>Auth</td>
+<td>Authlib Google OAuth + Flask-Login (<code>auth_helpers.py</code>)</td>
+</tr>
+<tr>
+<td>STT / LLM / TTS</td>
+<td>Deepgram (STT), OpenAI (LLM + TTS) — <strong>BYOK</strong>: each user supplies their own keys; an optional free tier uses the owner's keys</td>
+</tr>
+<tr>
+<td>Key storage</td>
+<td>Fernet-encrypted in Postgres (<code>ENCRYPTION_KEY</code>)</td>
+</tr>
+<tr>
+<td>Code execution</td>
+<td>Piston, optional, off by default (<code>PISTON_ENABLED</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>There is <strong>no MongoDB and no Supabase</strong> in the running system. <code>supabase_client.py</code>
+is a thin compatibility shim re-exporting <code>db.db_client</code> under the old name; the
+live importer is <code>agent_worker.py</code>.</p>
+<h2>Request flow</h2>
+<pre><code>Browser ──HTTPS──▶ Caddy (TLS, :443) ──▶ web container (gunicorn, :8080)
+
+Browser (form)  ──POST /api/token──▶  Flask
+                                      ├─ load user's encrypted keys from Neon (or the free-tier keys)
+                                      ├─ worker_manager.spawn_worker()  ──▶ agent_worker.py subprocess
+                                      └─ mint LiveKit JWT ──▶ returned to browser
+Browser  ──join LiveKit room──▶  agent_worker (code-owned turn loop)
+                                      └─ on end: save interview + coding submissions to Neon
+Browser (feedback) ──POST /api/feedback/verdict──▶  Flask ──▶ OpenAI ──▶ verdict
+</code></pre>
+<p>The per-track interview state (<code>fsm.py</code>) covers <code>intro</code>, <code>behavioral</code>,
+<code>technical_voice</code> and <code>coding</code> (see <code>tracks/</code>). Stage changes are decided in
+code, not by the model.</p>
+<h2>Environment variables</h2>
+<p>The app reads these (see <code>env.template</code>):</p>
+<ul>
+<li><strong>Required:</strong> <code>DATABASE_URL</code>, <code>GOOGLE_CLIENT_ID</code>, <code>GOOGLE_CLIENT_SECRET</code>, <code>SECRET_KEY</code>, <code>ENCRYPTION_KEY</code></li>
+<li><strong>Optional:</strong> <code>FLASK_ENV</code>, <code>CORS_ORIGINS</code>, <code>MAX_CONCURRENT_WORKERS</code>, the free-tier block (<code>FREE_TIER_ENABLED</code>, <code>SYSTEM_*</code>), <code>PISTON_*</code></li>
+<li><strong>Per-user (not env):</strong> LiveKit / OpenAI / Deepgram keys — entered in the app, stored encrypted.</li>
+<li><strong>Worker subprocess only (injected by <code>worker_manager</code>):</strong> <code>LIVEKIT_URL/API_KEY/API_SECRET</code>, <code>OPENAI_API_KEY</code>, <code>DEEPGRAM_API_KEY</code>, <code>INTERVIEW_ROOM_NAME</code>.</li>
+</ul>
+<p>On the VM the secrets live in <code>/opt/mockflow/app.env</code> (root-owned, mode 600),
+outside the repo, and are passed to the <code>web</code> container via <code>env_file</code>.</p>
+<h2>Local development</h2>
+<pre><code class="language-bash">python -m venv .venv &amp;&amp; .venv\Scripts\activate    # Windows (use source .venv/bin/activate on *nix)
+pip install -r requirements-dev.txt
+cp env.template .env                               # then fill in the 5 required vars
+psql &quot;$DATABASE_URL&quot; -f migrations/001_initial_schema.sql
+python app.py                                      # http://localhost:5000
+</code></pre>
+<p>Run the test suite and linter:</p>
+<pre><code class="language-bash">python -m pytest
+python -m ruff check .
+</code></pre>
+<h2>Deployment (Google Cloud e2-micro)</h2>
+<ul>
+<li><strong>Containers:</strong> <code>deploy/gcp/docker-compose.yml</code> runs <code>web</code> (built from the
+  repo's <code>Dockerfile</code>) and <code>caddy</code> (<code>caddy:2-alpine</code>, <code>deploy/gcp/Caddyfile</code>).
+  Only Caddy publishes ports (80 for the ACME challenge, 443).</li>
+<li><strong>Start command (in the Dockerfile):</strong> <code>gunicorn app:app --worker-class gthread
+  --workers 1 --threads 8 --timeout 120</code>. <code>--workers 1</code> is required: active
+  agent subprocesses live in one process's memory.</li>
+<li><strong>Capacity:</strong> <code>MAX_CONCURRENT_WORKERS=1</code> and <code>mem_limit: 768m</code> — the VM has
+  1 GB and each interview's agent loads Silero VAD.</li>
+<li><strong>Deploying is manual.</strong> A push does not deploy. On the VM:
+  <code>cd ~/MockFlow-AI &amp;&amp; git pull &amp;&amp; cd deploy/gcp &amp;&amp; docker compose up -d --build</code>.</li>
+<li><strong>Health:</strong> <code>GET /health</code> pings Neon and reports worker load; the container
+  healthcheck calls it every 60 s.</li>
+<li><strong>CI</strong> (<code>.github/workflows/deploy.yml</code>) runs ruff and pytest on every push and
+  checks the live site still answers; it does not deploy.</li>
+<li><strong>Keep-warm:</strong> <code>.github/workflows/keep-warm.yml</code> keeps Neon's free tier from
+  suspending; the web container itself is always on.</li>
+</ul>
+</main></body></html>

@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wing B — interview integrity</title><style>
+:root{--bg:#faf8f4;--fg:#1f1d1a;--muted:#6b665e;--line:#e4dfd6;--code:#f1ede6;--accent:#2f6f5e;--note:#fff6e0;--note-line:#e6c36a}
+@media (prefers-color-scheme:dark){:root{--bg:#171614;--fg:#ece8e1;--muted:#a39d93;--line:#34312c;--code:#232120;--accent:#7cc4ad;--note:#2b2515;--note-line:#8a7232}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+main{max-width:860px;margin:0 auto;padding:2.5rem 1.25rem 4rem}
+h1{font-size:1.9rem;line-height:1.25;margin:0 0 1rem}
+h2{font-size:1.35rem;margin:2.2rem 0 .6rem;padding-top:.6rem;border-top:1px solid var(--line)}
+h3{font-size:1.08rem;margin:1.6rem 0 .4rem}
+a{color:var(--accent)}
+code{background:var(--code);padding:.1em .35em;border-radius:4px;font:.88em/1.4 ui-monospace,SFMono-Regular,Consolas,monospace}
+pre{background:var(--code);padding:.9rem 1rem;border-radius:8px;overflow-x:auto}
+pre code{background:none;padding:0}
+table{border-collapse:collapse;width:100%;margin:1rem 0;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.45rem .6rem;text-align:left;vertical-align:top}
+th{background:var(--code)}
+blockquote{margin:1rem 0;padding:.75rem 1rem;background:var(--note);border-left:4px solid var(--note-line);border-radius:4px}
+blockquote p{margin:.3rem 0}
+details{border-top:1px solid var(--line)}
+details>summary{cursor:pointer;list-style:none}
+details>summary::-webkit-details-marker{display:none}
+details>summary h2{display:inline-block;border:0;margin:1.2rem 0 .6rem}
+details>summary h2::before{content:"\25B8  ";color:var(--muted)}
+details[open]>summary h2::before{content:"\25BE  "}
+</style></head>
+<body><main>
+<h1>Wing B — Interview Integrity (coding track)</h1>
+<blockquote>
+<p><strong>Status, 2026-10-06: built and wired; execution still off in production.</strong>
+The bank, the selector, the Piston runner and the single evaluation path are
+all live. What remains is a production decision, not code: <code>PISTON_ENABLED</code>
+is false on the VM, so every production grade today is an AI reading of the
+code, labelled as such. See "Open" below.</p>
+</blockquote>
+<p>The coding track's original weakness (audit §8): problems were <strong>LLM-invented
+per session, unvetted</strong> (sometimes unsolvable or ambiguous), and evaluation was
+<strong>LLM-only — the code was never executed</strong>, so there was no ground truth.</p>
+<h2>Done</h2>
+<ul>
+<li><strong>Vetted problem bank</strong> (<code>coding/problem_bank.py</code>): nine problems — three easy,
+  three medium, three hard — each with <code>entrypoint</code>, <code>starter_code</code>,
+  <code>test_cases</code> and a <code>reference_solution</code>. <code>tests/test_problem_bank.py</code> runs
+  every reference solution against its own tests, so the bank is provably
+  solvable as specified.</li>
+<li><strong>Selection by level</strong> (<code>select_problems</code>): junior → easy, mid → medium,
+  senior / lead / staff / principal → hard. A short pool steps down one level at
+  a time; it never pads a senior interview with the easiest problems.</li>
+<li><strong>Wired into the agent</strong>: the coding stage selects from the bank instead of
+  generating problems.</li>
+<li><strong>No answer key in the browser</strong>: the editor receives a client-safe view
+  (no <code>test_cases</code>, no <code>reference_solution</code>), and the saved interview row
+  stores the same view.</li>
+<li><strong>Editor matches the tests</strong>: Monaco is seeded with the problem's starter
+  code, which names the entrypoint the tests call, and the signature is shown.</li>
+<li><strong>One evaluation path</strong> (<code>interview_runtime._evaluate_code_async</code>, called on
+  Submit). With Piston on and a Python submission, the code runs against the
+  hidden tests and <strong>the pass count decides correctness</strong>; the model grades
+  approach, complexity and edge cases and writes the spoken feedback. With
+  Piston off, or when a run fails, the result says <code>executed: false</code> with a
+  <code>not_executed_reason</code>, a failed run is logged at WARNING, and the editor
+  says "Not executed — reviewed by AI only".</li>
+<li><strong>The verdict sees the code</strong>: every evaluated submission is written to
+  <code>coding_submissions</code> when the interview is saved, and the verdict reads the
+  evaluator's real fields (correctness, approach quality, complexity, test
+  result).</li>
+<li><strong>Runner</strong>: <code>coding/piston_runner.py</code> (hosted Piston, HTTP-mocked tests in
+  <code>tests/test_piston_runner.py</code>). <code>coding/code_runner.py</code> (local process +
+  timeout) is used only for the bank's own self-test in CI, never for
+  candidate code.</li>
+</ul>
+<h2>Open</h2>
+<ol>
+<li><strong>Turn execution on in production, or decide not to.</strong> <code>PISTON_ENABLED</code> is
+   off on the VM. The public emkc Piston instance is rate-limited and a third
+   party; self-hosting Piston needs more memory than the 1 GB e2-micro has
+   spare alongside an interview.</li>
+<li><strong>Only Python executes.</strong> The editor accepts five languages; the bank ships
+   Python starters and tests only. Other languages are always AI-reviewed.</li>
+<li><strong>Rows saved before 2026-10-06</strong> still hold the full problem dict (with the
+   answer key) in <code>interviews.track_config</code>; they were not rewritten.</li>
+</ol>
+<h2>The execution decision (kept for reference)</h2>
+<p>The local <code>code_runner</code> isolates by process and timeout only — fine for the
+bank's trusted reference solutions, not for arbitrary candidate code.</p>
+<table>
+<thead>
+<tr>
+<th>Option</th>
+<th>What</th>
+<th>Pros</th>
+<th>Cons</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>A. Hosted runner (Piston)</strong> — chosen</td>
+<td>POST code to a Piston instance</td>
+<td>Real isolation off our box; multi-language</td>
+<td>External call; third-party dependency unless self-hosted</td>
+</tr>
+<tr>
+<td><strong>B. Subprocess + OS limits</strong></td>
+<td><code>code_runner</code> plus rlimits, no-network namespaces</td>
+<td>No external dependency</td>
+<td>Arbitrary code on the app host; isolation is hard to get right</td>
+</tr>
+<tr>
+<td><strong>C. Grounding without execution</strong></td>
+<td>LLM reasons against the reference and visible tests</td>
+<td>No execution risk</td>
+<td>Not ground truth</td>
+</tr>
+</tbody>
+</table>
+</main></body></html>
