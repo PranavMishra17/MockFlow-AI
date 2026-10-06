@@ -163,6 +163,18 @@ def test_transient_429_is_retried_and_succeeds(fake_openai):
     assert len(ctx.transport.of_type('evaluation_result')) == 1
 
 
+def test_problem_pushed_to_the_browser_carries_no_answer_key():
+    from coding import get_problem
+    ctx = _ctx()
+    ctx.state.generated_problems = [get_problem('two-sum'), get_problem('merge-intervals')]
+    cmd(ctx, {'type': 'ready_for_problem'})
+    sent = ctx.transport.of_type('coding_problem')[0]['problem']
+    assert 'test_cases' not in sent and 'reference_solution' not in sent
+    assert sent['slug'] == 'two-sum' and sent['entrypoint'] == 'two_sum'
+    assert sent['starter_code']['python'].startswith('def two_sum(')
+    assert sent['examples'] and sent['hints'] and sent['time_limit_minutes'] == 15
+
+
 def test_grader_prompt_makes_contract_violations_a_fail():
     from prompts import CODE_EVALUATOR
     assert 'return contract' in CODE_EVALUATOR.system
