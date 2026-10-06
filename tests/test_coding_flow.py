@@ -219,10 +219,10 @@ def test_executed_tests_decide_pass_fail_not_the_model(fake_openai, monkeypatch)
     sent = ctx.transport.of_type('evaluation_result')[0]
     assert sent['executed'] is True
     assert sent['evaluation']['correctness'] == 'partial'
-    assert sent['evaluation']['approach_quality'] == 'A'          # the model still grades the approach
+    assert sent['evaluation']['approach_quality'] == 'A'
     recorded = ctx.state.submissions[0]['evaluation']
     assert recorded['passed'] is False and recorded['correctness'] == 'partial'
-    assert ctx.state.stage.value == 'coding_problem_1'            # 2/4 is not a pass: no advance
+    assert ctx.state.stage.value == 'coding_problem_1'
 
 
 def test_editor_is_seeded_from_the_problem_and_shows_the_signature():

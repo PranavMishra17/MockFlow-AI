@@ -385,22 +385,11 @@ class DB:
             return None
 
     def _save_track_submissions(self, user_id: str, interview_id: str, track_config: Dict[str, Any]) -> None:
-        """coding_submissions references interviews(id), so the agent's
-        submissions can only be written once the interview row exists."""
-        problems = track_config.get("generated_problems") or []
-        for sub in track_config.get("submissions") or []:
-            idx = sub.get("problem_index", 0)
-            problem = problems[idx] if 0 <= idx < len(problems) else {}
-            self.save_coding_submission(
-                user_id=user_id,
-                interview_id=interview_id,
-                problem_title=problem.get("title", "Coding Problem"),
-                problem_description=problem.get("description", ""),
-                language=sub.get("language") or "python",
-                code_submitted=sub.get("code") or "",
-                attempt_number=sub.get("attempt", 1),
-                evaluation_result=sub.get("evaluation") or {},
-            )
+        """Runs after the interviews insert: the agent creates that row only at the end, and coding_submissions references it."""
+        from evaluator import coding_submission_rows
+
+        for row in coding_submission_rows(track_config):
+            self.save_coding_submission(user_id=user_id, interview_id=interview_id, **row)
 
     def get_user_interviews(
         self, user_id: str, limit: int = 50

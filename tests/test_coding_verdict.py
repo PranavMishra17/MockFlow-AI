@@ -1,12 +1,3 @@
-"""
-A coding interview's verdict must see the code the candidate submitted.
-
-The verdict reads coding_submissions; the only writer was POST
-/api/coding/submit, which nothing called. It also read `passed` and
-`approach_grade`, keys the evaluator never emits (it writes `correctness` and
-`approach_quality`), so even a populated table would have rendered "?".
-"""
-
 import json
 
 import interview_runtime as ir

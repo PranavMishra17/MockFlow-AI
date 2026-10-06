@@ -1071,7 +1071,6 @@
                 var mc = document.getElementById('monacoEditorContainer');
                 if (mc) mc.style.display = 'block';
 
-                // The bank's starter names the function the tests call.
                 if (monacoEditor) {
                     var lang = monacoEditor.getModel().getLanguageId();
                     var starter = (problem.starter_code || {})[lang] || getStarterCode(lang, problem.entrypoint);

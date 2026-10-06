@@ -574,8 +574,6 @@ def test_collect_stamps_the_interview_with_the_state_clock():
 
 
 def test_saved_row_keeps_the_answer_key_out_of_the_interview_history():
-    """GET /api/user/interviews returns the saved row as-is. Selection is
-    deterministic per level, so a stored answer key is the next interview's."""
     from coding import get_problem
     state = ir.build_interview_state(_config(track='coding'))
     state.generated_problems = [get_problem('two-sum')]

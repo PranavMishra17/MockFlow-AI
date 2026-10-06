@@ -1,11 +1,3 @@
-"""
-Marketing copy must describe what the code does.
-
-Code reaches the agent only when the candidate presses Submit; nothing reads
-the editor while they type. Hidden tests run only with PISTON_ENABLED, which
-is off in production, and only for Python.
-"""
-
 from pathlib import Path
 
 import pytest

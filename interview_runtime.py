@@ -437,8 +437,6 @@ _CLIENT_PROBLEM_KEYS = ('slug', 'title', 'difficulty', 'description', 'examples'
 
 
 def client_problem_view(problem: Mapping[str, Any]) -> dict:
-    """What the candidate's browser may see. test_cases and reference_solution
-    are the answer key and stay on the server."""
     return {k: problem[k] for k in _CLIENT_PROBLEM_KEYS if k in problem}
 
 
@@ -946,6 +944,19 @@ async def execute_skip_transition(
         logger.error(f"[SKIP] Error executing skip transition: {e}", exc_info=True)
 
 
+def apply_test_results(evaluation: dict, n_passed: int, n_total: int, *, problem_index: int = 0) -> None:
+    """Executed tests set correctness; the model's approach, complexity and feedback stand."""
+    model_said = evaluation.get('correctness')
+    evaluation['correctness'] = 'pass' if n_passed == n_total else ('partial' if n_passed else 'fail')
+    if model_said == evaluation['correctness']:
+        return
+    evaluation['model_correctness'] = model_said
+    logger.info(f"[CODE] Tests overrule the model on problem {problem_index}: "
+                f"{n_passed}/{n_total} passed, model said {model_said!r}")
+    if model_said == 'pass' and evaluation.get('brief_verbal_feedback'):
+        evaluation['brief_verbal_feedback'] += f" That said, {n_total - n_passed} of {n_total} hidden tests failed."
+
+
 async def _evaluate_code_async(
     session: AgentSession,
     _agent,
@@ -1048,17 +1059,7 @@ async def _evaluate_code_async(
         except Exception:
             evaluation = {'brief_verbal_feedback': 'Thanks for your submission. Let me review it.'}
         if objective_counts:
-            # Executed tests decide correctness; the model keeps approach,
-            # complexity and feedback.
-            n_passed, n_total = objective_counts
-            model_said = evaluation.get('correctness')
-            evaluation['correctness'] = 'pass' if n_passed == n_total else ('partial' if n_passed else 'fail')
-            if model_said != evaluation['correctness']:
-                evaluation['model_correctness'] = model_said
-                logger.info(f"[CODE] Tests overrule the model on problem {problem_index}: "
-                            f"{n_passed}/{n_total} passed, model said {model_said!r}")
-                if model_said == 'pass' and evaluation.get('brief_verbal_feedback'):
-                    evaluation['brief_verbal_feedback'] += f" That said, {n_total - n_passed} of {n_total} hidden tests failed."
+            apply_test_results(evaluation, *objective_counts, problem_index=problem_index)
         evaluation.update(executed=bool(objective_summary), objective_tests=objective_summary,
                           not_executed_reason=not_executed_reason,
                           passed=str(evaluation.get('correctness', '')).lower() == 'pass')
