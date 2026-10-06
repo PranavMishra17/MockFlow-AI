@@ -983,6 +983,7 @@ async def _evaluate_code_async(
         # to live only in the model-called tool; the editor's submit path never
         # ran it. There is one evaluation path now, and this is it.
         objective_summary = None
+        objective_counts = None
         not_executed_reason = None
         try:
             from coding.piston_runner import PISTON_ENABLED, run_via_piston
@@ -999,6 +1000,7 @@ async def _evaluate_code_async(
                 # a 12s timeout, and this runs mid-interview.
                 run = await asyncio.to_thread(run_via_piston, code, entrypoint, test_cases, language='python')
                 if run.get('error') is None:
+                    objective_counts = (run['passed'], run['total'])
                     objective_summary = f"{run['passed']}/{run['total']} hidden test cases passed"
                     user_prompt += (
                         f"\n\nOBJECTIVE TEST RESULTS (ground truth - weight correctness on this): "
@@ -1045,8 +1047,21 @@ async def _evaluate_code_async(
             evaluation = _json.loads(raw)
         except Exception:
             evaluation = {'brief_verbal_feedback': 'Thanks for your submission. Let me review it.'}
+        if objective_counts:
+            # Executed tests decide correctness; the model keeps approach,
+            # complexity and feedback.
+            n_passed, n_total = objective_counts
+            model_said = evaluation.get('correctness')
+            evaluation['correctness'] = 'pass' if n_passed == n_total else ('partial' if n_passed else 'fail')
+            if model_said != evaluation['correctness']:
+                evaluation['model_correctness'] = model_said
+                logger.info(f"[CODE] Tests overrule the model on problem {problem_index}: "
+                            f"{n_passed}/{n_total} passed, model said {model_said!r}")
+                if model_said == 'pass' and evaluation.get('brief_verbal_feedback'):
+                    evaluation['brief_verbal_feedback'] += f" That said, {n_total - n_passed} of {n_total} hidden tests failed."
         evaluation.update(executed=bool(objective_summary), objective_tests=objective_summary,
-                          not_executed_reason=not_executed_reason)
+                          not_executed_reason=not_executed_reason,
+                          passed=str(evaluation.get('correctness', '')).lower() == 'pass')
 
         # Record submission in state. This goes through record_submission rather
         # than incrementing the counter here: this path used to write int keys
@@ -1075,7 +1090,7 @@ async def _evaluate_code_async(
         # Flow speaks the brief feedback, then code decides what is next: a
         # pass or the third attempt ends this problem. No model turn, no tool.
         verbal = evaluation.get('brief_verbal_feedback', '')
-        passed = str(evaluation.get('correctness', '')).lower() == 'pass'
+        passed = evaluation['passed']
         done = passed or attempt_num >= 3
         if verbal and session:
             try:
