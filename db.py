@@ -377,11 +377,19 @@ class DB:
             if row:
                 interview_id = str(row["id"])
                 logger.info(f"[DB] Interview saved with ID: {interview_id}")
+                self._save_track_submissions(user_id, interview_id, interview_data.get("track_config") or {})
                 return interview_id
             return None
         except Exception as e:
             logger.error(f"[DB] Error saving interview: {e}", exc_info=True)
             return None
+
+    def _save_track_submissions(self, user_id: str, interview_id: str, track_config: Dict[str, Any]) -> None:
+        """Runs after the interviews insert: the agent creates that row only at the end, and coding_submissions references it."""
+        from evaluator import coding_submission_rows
+
+        for row in coding_submission_rows(track_config):
+            self.save_coding_submission(user_id=user_id, interview_id=interview_id, **row)
 
     def get_user_interviews(
         self, user_id: str, limit: int = 50

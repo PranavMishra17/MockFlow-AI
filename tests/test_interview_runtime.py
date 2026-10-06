@@ -573,6 +573,16 @@ def test_collect_stamps_the_interview_with_the_state_clock():
     assert row['interview_date'] == fixed.isoformat()
 
 
+def test_saved_row_keeps_the_answer_key_out_of_the_interview_history():
+    from coding import get_problem
+    state = ir.build_interview_state(_config(track='coding'))
+    state.generated_problems = [get_problem('two-sum')]
+    row = ir.collect_interview_data(state, _conversation(), room_name='r', ended_by='x')
+    saved = row['track_config']['generated_problems'][0]
+    assert 'test_cases' not in saved and 'reference_solution' not in saved
+    assert saved['slug'] == 'two-sum' and saved['title'] == 'Two Sum'
+
+
 # ---------------------------------------------------------------------------
 # Stage pointers
 #

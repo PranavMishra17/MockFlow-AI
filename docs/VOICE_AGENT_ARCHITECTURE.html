@@ -1,0 +1,789 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Streaming voice agent architecture (research)</title><style>
+:root{--bg:#faf8f4;--fg:#1f1d1a;--muted:#6b665e;--line:#e4dfd6;--code:#f1ede6;--accent:#2f6f5e;--note:#fff6e0;--note-line:#e6c36a}
+@media (prefers-color-scheme:dark){:root{--bg:#171614;--fg:#ece8e1;--muted:#a39d93;--line:#34312c;--code:#232120;--accent:#7cc4ad;--note:#2b2515;--note-line:#8a7232}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+main{max-width:860px;margin:0 auto;padding:2.5rem 1.25rem 4rem}
+h1{font-size:1.9rem;line-height:1.25;margin:0 0 1rem}
+h2{font-size:1.35rem;margin:2.2rem 0 .6rem;padding-top:.6rem;border-top:1px solid var(--line)}
+h3{font-size:1.08rem;margin:1.6rem 0 .4rem}
+a{color:var(--accent)}
+code{background:var(--code);padding:.1em .35em;border-radius:4px;font:.88em/1.4 ui-monospace,SFMono-Regular,Consolas,monospace}
+pre{background:var(--code);padding:.9rem 1rem;border-radius:8px;overflow-x:auto}
+pre code{background:none;padding:0}
+table{border-collapse:collapse;width:100%;margin:1rem 0;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.45rem .6rem;text-align:left;vertical-align:top}
+th{background:var(--code)}
+blockquote{margin:1rem 0;padding:.75rem 1rem;background:var(--note);border-left:4px solid var(--note-line);border-radius:4px}
+blockquote p{margin:.3rem 0}
+details{border-top:1px solid var(--line)}
+details>summary{cursor:pointer;list-style:none}
+details>summary::-webkit-details-marker{display:none}
+details>summary h2{display:inline-block;border:0;margin:1.2rem 0 .6rem}
+details>summary h2::before{content:"\25B8  ";color:var(--muted)}
+details[open]>summary h2::before{content:"\25BE  "}
+</style></head>
+<body><main>
+<h1>Streaming Voice Agent Architecture: Deep Dives &amp; Best Practices</h1>
+<blockquote>
+<p><strong>Read this first (added 2026-10-06).</strong> This is a generic research document
+on streaming voice agents, written before MockFlow-AI's agent was built. It
+is not a description of the code. What the code actually does is in
+<a href="AGENT_DESIGN.html">AGENT_DESIGN</a>.</p>
+<p><strong>Recommendations here that the code does not use:</strong></p>
+<ul>
+<li><em>Function tools for stage transitions</em> (§3 <code>confirm_stage_complete</code>,
+  gotcha 2 "use explicit tools + FSM"). The code has no tools in the speech
+  path; stage changes are decided in code from a per-turn assessment. Tool
+  chains were removed after they caused silent turns (AGENT_AUDIT_2026-09).</li>
+<li><em>Pre-session embedding and lightweight retrieval</em> for documents (§6, §11).
+  Resume and JD text are injected into the prompt directly; there are no
+  embeddings (<code>document_processor.py</code> carries a TODO for them).</li>
+<li><em>Periodic state checkpoints and resume on reconnect</em> (§8). Interview state
+  is in memory only and is saved once, at the end.</li>
+<li><em>Network-quality monitoring for audio dropout</em> (§7). Not implemented.</li>
+<li><em>TTS caching</em> (§5, §11 "streaming + caching"). Nothing is cached.</li>
+<li><em>Try/except around tool calls with fallback responses</em> (§7, §11). There are
+  no tool calls; the equivalent is <code>prepare_turn</code>, which falls back to a safe
+  note on any failure.</li>
+<li><em>Latency logging and an end-to-end latency test</em> (§9, gotcha 6). There is
+  no audio round-trip instrumentation.</li>
+</ul>
+<p><strong>The "&lt;400ms E2E" figure (§1, §11) was never measured</strong> for this system.
+The only latency measured is text-only reply time in the persona audit
+(p95 2.8 s, which excludes speech recognition and speech synthesis).</p>
+<p><strong>Used as recommended:</strong> an explicit per-track stage machine, an async stage
+timeout as a fallback, streaming STT → LLM → TTS over LiveKit, STT partials
+(they start the turn assessment early), VAD endpointing, and LiveKit's
+built-in interruption handling.</p>
+<p>Focus: Interview bot (self-intro → past-experience stages) with Python/Flask. Design for fundamentally sound extensibility.</p>
+</blockquote>
+<hr />
+<details><summary><h2>1. REAL-TIME VOICE PIPELINE ARCHITECTURE</h2></summary>
+<h3>Core Pipeline: STT → LLM → TTS Over WebRTC</h3>
+<pre><code>User Speech (WebRTC Audio) 
+  → VAD (Voice Activity Detection) 
+  → Streaming STT (Deepgram) 
+  → Partial Transcripts (buffered) 
+  → LLM (GPT-4o-mini, streaming) 
+  → Token streamer 
+  → Streaming TTS (OpenAI) 
+  → Audio chunks 
+  → Back to User
+</code></pre>
+<p><strong>Key Insight:</strong> Success is <strong>concurrent execution + streaming</strong>, not sequential processing.</p>
+<ul>
+<li><strong>STT latency:</strong> 100-300ms for streaming partials (not waiting for full transcript)</li>
+<li><strong>LLM latency:</strong> 100-500ms TTFT (Time-to-First-Token) when using streaming + smaller models</li>
+<li><strong>TTS latency:</strong> 75-300ms depending on provider; OpenAI TTS-1 is ~200ms</li>
+</ul>
+<p><strong>End-to-end target:</strong> Keep round-trip under 300-400ms for natural feel. Humans respond in ~200ms on average.</p>
+<h3>Streaming Overlaps (NOT Turn-Based)</h3>
+<p>Modern agents do NOT:
+1. Wait for user to finish speaking
+2. THEN call STT
+3. THEN call LLM
+4. THEN call TTS</p>
+<p>Instead:
+- <strong>Start LLM as soon as</strong> you have partial transcript (e.g., after 500ms of streaming partial from Deepgram)
+- <strong>Start TTS as soon as</strong> first token arrives from LLM (before LLM finishes)
+- <strong>Listen AND speak simultaneously</strong> (full-duplex), detecting user interruption via VAD</p>
+<p><strong>Implementation pattern:</strong></p>
+<pre><code class="language-python">async def pipeline_loop():
+    stt_buffer = []
+    llm_generator = None
+
+    while session_active:
+        # Pull partial transcripts continuously
+        partial = await stt.get_partial()  # Non-blocking, ~100ms chunks
+        stt_buffer.append(partial)
+
+        # LLM doesn't wait for &quot;end of user utterance&quot;
+        # Start LLM planning when you have enough context (~200-500ms)
+        if len(stt_buffer) &gt;= MIN_TOKENS_TO_START_LLM and not llm_generator:
+            text = &quot;&quot;.join(stt_buffer)
+            llm_generator = llm.stream(text)  # Starts immediately
+
+        # Pull from LLM token-by-token, feed to TTS
+        if llm_generator:
+            try:
+                token = next(llm_generator)  # Non-blocking iterator
+                await tts.stream_token(token)  # TTS consumes tokens as they come
+            except StopIteration:
+                llm_generator = None
+
+        # Detect user interruption (high-priority)
+        if vad.user_speech_detected():
+            stop_tts_immediately()
+            llm_generator = None
+            stt_buffer = []  # Reset for next turn
+</code></pre>
+<hr />
+</details><details><summary><h2>2. TURN-TAKING &amp; INTERRUPTION HANDLING</h2></summary>
+<h3>Voice Activity Detection (VAD): The Silent Killer of Bad UX</h3>
+<p>VAD is <strong>not optional</strong>—it's your entire turn-taking system.</p>
+<p><strong>Two VAD modes to understand:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Mode</th>
+<th>Behavior</th>
+<th>Best For</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Server VAD (silence-based)</strong></td>
+<td>Detects pause (default 0.5s), triggers end-of-turn</td>
+<td>Noisy environments; forgiving timing</td>
+</tr>
+<tr>
+<td><strong>Semantic VAD</strong></td>
+<td>LLM-based: "did user complete thought?"</td>
+<td>Clean audio; needs ~200ms extra latency</td>
+</tr>
+</tbody>
+</table>
+<p><strong>LiveKit defaults (good baseline):</strong></p>
+<pre><code class="language-python">turndetection = MultilingualModel()
+# OR explicitly:
+session.turn_detection = &quot;vad&quot;
+session.min_endpointing_delay = 0.5  # Min silence before ending turn
+session.max_endpointing_delay = 3.0  # Force end after 3s silence
+session.allow_interruptions = True
+</code></pre>
+<p><strong>Critical VAD tuning for interviews:</strong>
+- <strong>min_endpointing_delay = 0.4-0.5s</strong> (user pauses to think before answering)
+- If too short (~0.2s): False end-of-turn (user is still thinking)
+- If too long (~1.5s): Feels unresponsive
+- <strong>Test with real interview audio</strong> (nervous pauses, heavy accents)</p>
+<h3>Handling Interruptions (Barge-In)</h3>
+<p>Real-world: <strong>User interrupts agent's response.</strong> Must handle gracefully.</p>
+<p><strong>What happens behind the scenes:</strong>
+1. User starts speaking (VAD detects speech onset)
+2. TTS pauses immediately (don't block the user)
+3. Buffer audio being played is discarded
+4. LLM generation is halted (rollback to last commit point)
+5. Clear previous intent from chat history—user's new input takes priority</p>
+<p><strong>Implementation pattern:</strong></p>
+<pre><code class="language-python"># In LiveKit AgentSession
+session.allow_interruptions = True
+session.min_interruption_duration = 0.5  # Don't cut off on every noise spike
+session.discard_audio_if_uninterruptible = True  # Drop audio while agent speaks
+
+# In Agent class
+async def on_interrupt(self, event):
+    &quot;&quot;&quot;Called when user starts speaking during agent output.&quot;&quot;&quot;
+    logger.info(f&quot;Interrupted! Clearing TTS buffer.&quot;)
+    # Agent automatically truncates conversation history to 
+    # what user heard BEFORE interruption began
+    # (LiveKit handles this internally)
+    pass
+</code></pre>
+<p><strong>Gotcha:</strong> False interruption detection due to background noise (TV, traffic).
+- <strong>Solution:</strong> Use background voice cancellation (BVC) upstream
+- Reduces false positives by 3.5x (per Krisp research)
+- For production: integrate Krisp or similar, pre-process audio before VAD</p>
+<hr />
+</details><details><summary><h2>3. STATE MANAGEMENT FOR MULTI-STAGE INTERVIEWS</h2></summary>
+<h3>Finite State Machine (FSM) Pattern: The Backbone</h3>
+<p>For interview flows (self-intro → past-experience), use explicit state tracking.</p>
+<p><strong>Why FSM vs. "just LLM everything":</strong>
+- LLMs hallucinate state transitions (will keep asking same question)
+- Interview logic is deterministic: Q1 → Q2 → Q3 (not ambiguous)
+- Clear audit trail for debugging</p>
+<p><strong>Minimal FSM for your 2-stage interview:</strong></p>
+<pre><code class="language-python">from enum import Enum
+from dataclasses import dataclass
+
+class InterviewStage(Enum):
+    GREETING = &quot;greeting&quot;
+    SELF_INTRO = &quot;self_intro&quot;          # Stage 1
+    PAST_EXPERIENCE = &quot;past_experience&quot;  # Stage 2
+    CLOSING = &quot;closing&quot;
+
+@dataclass
+class InterviewState:
+    stage: InterviewStage
+    candidate_name: str = &quot;&quot;
+    self_intro_received: bool = False
+    experience_responses: list[str] = None
+    current_question_idx: int = 0
+    timestamp_stage_started: float = None
+
+    def __post_init__(self):
+        if self.experience_responses is None:
+            self.experience_responses = []
+
+# In Agent class
+class InterviewAgent(Agent):
+    def __init__(self):
+        super().__init__(instructions=&quot;...&quot;)
+        self.fsm_states = {
+            InterviewStage.GREETING: self.handle_greeting,
+            InterviewStage.SELF_INTRO: self.handle_self_intro,
+            InterviewStage.PAST_EXPERIENCE: self.handle_past_experience,
+            InterviewStage.CLOSING: self.handle_closing,
+        }
+
+    async def handle_next_state(self, ctx: RunContext[InterviewState]):
+        &quot;&quot;&quot;Explicit state machine transition logic.&quot;&quot;&quot;
+        current = ctx.userdata.stage
+        handler = self.fsm_states.get(current)
+
+        if handler:
+            await handler(ctx)
+        else:
+            logger.error(f&quot;Unknown stage: {current}&quot;)
+</code></pre>
+<h3>Detecting Stage Completion (The Hard Part)</h3>
+<p><strong>Problem:</strong> LLM says "thanks for sharing, let's move to the next stage" but user hasn't answered yet.</p>
+<p><strong>Solution:</strong> Use function tools + explicit confirmations, NOT LLM-driven transitions.</p>
+<pre><code class="language-python">class InterviewAgent(Agent):
+    @functiontool
+    async def confirm_stage_complete(
+        self, 
+        ctx: RunContext[InterviewState],
+        quality: Annotated[int, Field(description=&quot;1-5 quality rating&quot;)]
+    ) -&gt; str:
+        &quot;&quot;&quot;LLM explicitly calls this when ready to move stages.&quot;&quot;&quot;
+        if quality &lt; 2:
+            return &quot;Please encourage more detail.&quot;
+
+        # Manual state transition
+        if ctx.userdata.stage == InterviewStage.SELF_INTRO:
+            ctx.userdata.stage = InterviewStage.PAST_EXPERIENCE
+            ctx.userdata.timestamp_stage_started = time.time()
+            return &quot;Moving to past experience questions.&quot;
+
+        return &quot;Stage transition complete.&quot;
+</code></pre>
+<p><strong>Why explicit tools?</strong> Because LLMs are unreliable state machines—they need guardrails.</p>
+<hr />
+</details><details><summary><h2>4. TIME-BASED FALLBACK MECHANISM (Critical for Robustness)</h2></summary>
+<h3>Problem: What If LLM Never Calls <code>confirm_stage_complete</code>?</h3>
+<p>Agent hangs in same stage, asking same question infinitely. User gets frustrated.</p>
+<h3>Solution: Async Timeout Fallback</h3>
+<pre><code class="language-python">class InterviewAgent(Agent):
+    STAGE_TIMEOUT = 60  # Force transition after 60s
+
+    async def on_enter(self):
+        &quot;&quot;&quot;Called when agent becomes active (stage just started).&quot;&quot;&quot;
+        self.stage_timer = asyncio.create_task(self.stage_timeout_handler())
+
+    async def on_exit(self):
+        &quot;&quot;&quot;Called when agent is deactivated.&quot;&quot;&quot;
+        if self.stage_timer:
+            self.stage_timer.cancel()
+
+    async def stage_timeout_handler(self):
+        &quot;&quot;&quot;Fallback: Force stage progression if LLM gets stuck.&quot;&quot;&quot;
+        try:
+            await asyncio.sleep(self.STAGE_TIMEOUT)
+
+            # At this point: LLM should have progressed stages
+            # If not, force progression
+            session = getattr(self, '_session', None)
+            if session:
+                userdata = session.userdata
+                logger.warning(
+                    f&quot;Stage timeout! Forcing transition from {userdata.stage}&quot;
+                )
+
+                if userdata.stage == InterviewStage.SELF_INTRO:
+                    userdata.stage = InterviewStage.PAST_EXPERIENCE
+                    await session.say(
+                        &quot;I didn't quite catch all that. Let's move on to &quot;
+                        &quot;your past experience with similar projects.&quot;
+                    )
+                elif userdata.stage == InterviewStage.PAST_EXPERIENCE:
+                    userdata.stage = InterviewStage.CLOSING
+                    await session.say(&quot;Thank you. Let's wrap up.&quot;)
+
+        except asyncio.CancelledError:
+            pass  # Stage completed normally, timer cancelled
+</code></pre>
+<p><strong>Key metrics to monitor:</strong>
+- How often fallback triggers → LLM prompt needs refinement
+- Stage time distribution → Interview pacing feedback</p>
+<hr />
+</details><details><summary><h2>5. LATENCY OPTIMIZATION TACTICS</h2></summary>
+<h3>Latency Budget Allocation (For ~300ms Round-Trip)</h3>
+<pre><code>STT partial receipt     : 100-150ms  (Deepgram streaming partial)
+LLM TTFT               : 100-200ms  (GPT-4o-mini with streaming)
+TTS first bytes        : 50-100ms   (OpenAI TTS-1 via streaming)
+Network jitter buffer  : 50-100ms   (WebRTC NetEQ)
+───────────────────────────────────
+Total                  : 300-550ms
+</code></pre>
+<h3>Concrete Optimization Points</h3>
+<p><strong>1. STT: Streaming Partials</strong></p>
+<pre><code class="language-python">stt = deepgram.STT(
+    model=&quot;nova-3&quot;,
+    language=&quot;en-US&quot;,
+    smart_format=True,
+    endpointing=200,  # ms, emit partial after 200ms silence
+    # NO: don't wait for final transcript
+)
+
+# Get partials immediately
+async for partial_transcript in stt.stream():
+    if partial_transcript.is_final:
+        # Official end of utterance
+        pass
+    else:
+        # Interim partial (100-200ms latency)
+        await llm.ingest_partial(partial_transcript.text)
+</code></pre>
+<p><strong>2. LLM: Streaming Output + Context Window</strong></p>
+<pre><code class="language-python">llm = openai.LLM(
+    model=&quot;gpt-4o-mini&quot;,  # Smaller, faster than gpt-4o
+    temperature=0.7,
+    max_tokens=150,       # Cap responses (interview answers should be &lt; 30s)
+    stream=True,          # Stream tokens, don't wait for full response
+)
+
+# In agent instructions, keep context tight:
+instructions = &quot;&quot;&quot;
+You are interviewing a candidate. Ask one question at a time.
+After the candidate responds, ask a follow-up or move to the next stage.
+Keep responses to 1-2 sentences max (30 seconds spoken time).
+&quot;&quot;&quot;
+</code></pre>
+<p><strong>3. TTS: Parallel Streaming</strong></p>
+<pre><code class="language-python">tts = openai.TTS(
+    model=&quot;tts-1&quot;,    # Faster than tts-1-hd
+    voice=&quot;alloy&quot;,    # Neutral, natural
+    speed=1.0,        # Don't over-speed; sounds robotic
+)
+
+# Feed tokens immediately as LLM generates
+async for chunk in llm_generator:
+    audio_stream = tts.synthesize(chunk)
+    await session.play(audio_stream)  # Don't wait for full synthesis
+</code></pre>
+<p><strong>4. Network: Jitter Buffer &amp; Audio Frame Size</strong>
+LiveKit handles WebRTC internally, but understand:
+- <strong>20ms frame size</strong> is standard for good networks
+- <strong>60-120ms</strong> for degraded networks (tradeoff: more latency, better recovery)
+- <strong>NetEQ buffer</strong> automatically adapts; no tuning needed, but monitor for over-buffering</p>
+<p>Monitor:</p>
+<pre><code class="language-python">session.on_participant_connected(lambda p: 
+    logger.info(f&quot;Participant stats: {p.audio_stats}&quot;)
+)
+</code></pre>
+<hr />
+</details><details><summary><h2>6. DOCUMENT CONTEXT INJECTION (For Future RAG)</h2></summary>
+<h3>Architecture Decision: Pre-Session vs. Runtime Processing</h3>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Latency</th>
+<th>Flexibility</th>
+<th>Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Pre-session embed</strong></td>
+<td>Zero runtime cost</td>
+<td>Hard to update</td>
+<td>Low</td>
+</tr>
+<tr>
+<td><strong>Runtime retrieval (RAG)</strong></td>
+<td>+100-200ms per query</td>
+<td>Easy to adapt</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td><strong>Hybrid (cache + refresh)</strong></td>
+<td>+50ms (cached)</td>
+<td>Best</td>
+<td>Medium</td>
+</tr>
+</tbody>
+</table>
+<h3>Best Practice: Hybrid Approach for Interview Agent</h3>
+<pre><code class="language-python"># Phase 1: Pre-session (before interview starts)
+async def prepare_interview_context(job_description_pdf: str, resume_pdf: str):
+    &quot;&quot;&quot;
+    Called when candidate submits form but BEFORE interview starts.
+    Embeddings ready in memory when agent boots.
+    &quot;&quot;&quot;
+    job_context = extract_text_from_pdf(job_description_pdf)
+    resume_context = extract_text_from_pdf(resume_pdf)
+
+    # Embed for later retrieval
+    job_embeddings = await embed_model.embed(job_context)
+    resume_embeddings = await embed_model.embed(resume_context)
+
+    # Store in memory (not in LLM context; too long)
+    session_cache[session_id] = {
+        &quot;job&quot;: job_context,
+        &quot;resume&quot;: resume_context,
+        &quot;job_embeddings&quot;: job_embeddings,
+        &quot;resume_embeddings&quot;: resume_embeddings,
+    }
+
+# Phase 2: Runtime (during interview)
+class InterviewAgent(Agent):
+    @functiontool
+    async def generate_follow_up_question(
+        self, 
+        ctx: RunContext[InterviewState], 
+        last_answer: str
+    ) -&gt; str:
+        &quot;&quot;&quot;LLM can call this to get context-aware follow-ups.&quot;&quot;&quot;
+
+        # Lightweight RAG: retrieve relevant job context
+        cache = session_cache[ctx.session.room.name]
+
+        # Simple semantic matching (no extra latency for small docs)
+        relevant_job_skills = retrieve_relevant_context(
+            last_answer,
+            cache[&quot;job&quot;],
+            top_k=2  # Only top 2 matches
+        )
+
+        # Inject into LLM prompt dynamically
+        augmented_prompt = f&quot;&quot;&quot;
+        Candidate said: &quot;{last_answer}&quot;
+
+        Relevant job requirements: {relevant_job_skills}
+
+        Ask a follow-up question that probes deeper on these skills.
+        &quot;&quot;&quot;
+
+        follow_up = await self.llm.generate(augmented_prompt)
+        return follow_up
+</code></pre>
+<h3>Why NOT Full RAG During Interview?</h3>
+<ul>
+<li><strong>Latency adds up:</strong> Embedding user answer (10-50ms) + retrieval (50-100ms) = 100-150ms extra per turn</li>
+<li><strong>Not needed for interviews:</strong> Job description is small; can fit in system prompt</li>
+<li><strong>Better approach:</strong> Embed documents once at session start, reference cached embeddings only</li>
+</ul>
+<h3>Injection Pattern (Keep It Simple)</h3>
+<pre><code class="language-python"># Good: Inject relevant job skills into system prompt at start
+system_prompt = f&quot;&quot;&quot;
+You are interviewing for: {job_title}
+Key skills needed: {top_job_skills}
+
+Ask about their experience with these technologies and responsibilities.
+&quot;&quot;&quot;
+
+# Bad: Re-embed and re-retrieve on every LLM call
+# (adds unnecessary latency, doesn't improve accuracy for interviews)
+</code></pre>
+<hr />
+</details><details><summary><h2>7. PRODUCTION FAILURE MODES &amp; RECOVERY</h2></summary>
+<h3>Failure Mode: STT Never Detects End-of-User-Utterance</h3>
+<p><strong>Symptom:</strong> Agent waits forever for user to finish; timeout eventually triggers.</p>
+<p><strong>Root causes:</strong>
+- VAD tuned too long
+- User has heavy accent; speech not detected
+- Network packet loss (partial audio)</p>
+<p><strong>Mitigation:</strong></p>
+<pre><code class="language-python">session.min_endpointing_delay = 0.5
+session.max_endpointing_delay = 3.0  # Force end after 3s, no exceptions
+
+# Log it
+session.on_speech_committed(lambda event:
+    logger.info(f&quot;User turn took {event.duration}s, &quot;
+                f&quot;forced={event.forced_by_timeout}&quot;)
+)
+</code></pre>
+<h3>Failure Mode: LLM Returns Malformed JSON or Gets Stuck</h3>
+<p><strong>Symptom:</strong> Agent stops responding mid-conversation.</p>
+<p><strong>Root cause:</strong> LLM confused by interview context, returns invalid tool call.</p>
+<p><strong>Mitigation:</strong></p>
+<pre><code class="language-python"># Wrap tool calls with try-catch
+@functiontool
+async def record_response(self, ctx, response: str) -&gt; str:
+    try:
+        if not response or len(response) &gt; 5000:
+            raise ValueError(&quot;Invalid response format&quot;)
+
+        ctx.userdata.responses.append(response)
+        return &quot;Response recorded.&quot;
+    except Exception as e:
+        logger.error(f&quot;Tool error: {e}&quot;)
+        # Fallback: don't crash; ask user to repeat
+        return &quot;I didn't catch that. Could you repeat?&quot;
+
+# Also: set timeout on LLM calls
+llm = openai.LLM(
+    model=&quot;gpt-4o-mini&quot;,
+    timeout=10,  # 10s max per response
+)
+</code></pre>
+<h3>Failure Mode: Network Audio Dropout</h3>
+<p><strong>Symptom:</strong> Audio stream freezes; user hears silence.</p>
+<p><strong>Root cause:</strong> WebRTC jitter buffer ran out of packets (network congestion).</p>
+<p><strong>LiveKit handles internally</strong>, but monitor:</p>
+<pre><code class="language-python"># Listen for network stats
+async def monitor_network_health():
+    while session_active:
+        stats = await session.get_network_stats()
+
+        if stats.packet_loss_rate &gt; 0.05:  # 5% loss
+            logger.warning(f&quot;High packet loss: {stats.packet_loss_rate}&quot;)
+            # Could adjust bitrate, increase buffer, etc.
+
+        if stats.rtt_ms &gt; 500:
+            logger.warning(f&quot;High latency: {stats.rtt_ms}ms&quot;)
+
+        await asyncio.sleep(5)
+</code></pre>
+<h3>Failure Mode: TTS Provider Timeout / Rate Limit</h3>
+<p><strong>Symptom:</strong> Agent gets stuck during response generation (no audio output).</p>
+<p><strong>Mitigation:</strong></p>
+<pre><code class="language-python">tts = openai.TTS(model=&quot;tts-1&quot;, timeout=5)  # 5s per call
+
+# Also: implement exponential backoff
+async def resilient_tts(text: str, max_retries=3):
+    for attempt in range(max_retries):
+        try:
+            return await tts.synthesize(text)
+        except TimeoutError:
+            wait_time = 2 ** attempt  # 1s, 2s, 4s
+            logger.warning(f&quot;TTS timeout, retrying in {wait_time}s&quot;)
+            await asyncio.sleep(wait_time)
+
+    # Fallback: use pre-recorded apology
+    return load_fallback_audio(&quot;sorry_experiencing_issues.wav&quot;)
+</code></pre>
+<h3>Failure Mode: Agent Keeps Asking Same Question (LLM State Loss)</h3>
+<p><strong>Symptom:</strong> Loop detected: agent asks "Tell me about yourself" 3 times.</p>
+<p><strong>Root cause:</strong> LLM lost context or system prompt not enforced.</p>
+<p><strong>Prevention (FSM-based):</strong></p>
+<pre><code class="language-python"># NOT: rely on LLM to remember &quot;I asked this already&quot;
+# Instead: explicit question tracking
+
+class InterviewState:
+    questions_asked: list[str] = None
+
+@functiontool
+async def ask_next_question(self, ctx, ...) -&gt; str:
+    # Only ask questions from predefined list
+    questions = [
+        &quot;Tell me about yourself.&quot;,
+        &quot;What's your experience with [skill]?&quot;,
+        &quot;Describe a challenging project.&quot;,
+    ]
+
+    idx = ctx.userdata.current_question_idx
+    if idx &gt;= len(questions):
+        # No more questions; transition stage
+        ctx.userdata.stage = InterviewStage.CLOSING
+        return &quot;Let's wrap up.&quot;
+
+    question = questions[idx]
+    ctx.userdata.current_question_idx += 1
+    return question
+</code></pre>
+<hr />
+</details><details><summary><h2>8. STATE PERSISTENCE &amp; ERROR RECOVERY</h2></summary>
+<h3>Session State: In-Memory (For Now) vs. Database</h3>
+<p>For your sample project: <strong>In-memory is fine.</strong></p>
+<p>For production:</p>
+<pre><code class="language-python"># Snapshot state periodically
+import json
+import asyncio
+
+async def checkpoint_state(userdata: InterviewState):
+    &quot;&quot;&quot;Save state to DB every 30 seconds.&quot;&quot;&quot;
+    while True:
+        await asyncio.sleep(30)
+
+        state_json = json.dumps({
+            &quot;stage&quot;: userdata.stage.value,
+            &quot;candidate_name&quot;: userdata.candidate_name,
+            &quot;responses&quot;: userdata.responses,
+            &quot;timestamp&quot;: time.time(),
+        })
+
+        # Save to DB (PostgreSQL, DynamoDB, etc.)
+        await db.save_checkpoint(session_id, state_json)
+</code></pre>
+<h3>Recovery on Connection Drop</h3>
+<pre><code class="language-python"># On agent reconnect
+async def entry_point(ctx: JobContext):
+    await ctx.connect()
+
+    # Check if session exists
+    checkpoint = await db.get_checkpoint(ctx.room.name)
+    if checkpoint:
+        # Restore state
+        userdata = InterviewState(**json.loads(checkpoint))
+        logger.info(f&quot;Resumed interview at stage: {userdata.stage}&quot;)
+    else:
+        userdata = InterviewState()
+
+    session = AgentSession(userdata=userdata)
+    agent = InterviewAgent()
+    await session.start(agent, room=ctx.room)
+</code></pre>
+<hr />
+</details><details><summary><h2>9. TESTING &amp; VALIDATION</h2></summary>
+<h3>Unit Test: State Transitions</h3>
+<pre><code class="language-python">async def test_stage_transition():
+    state = InterviewState(stage=InterviewStage.SELF_INTRO)
+
+    # Simulate LLM confirmation
+    state.stage = InterviewStage.PAST_EXPERIENCE
+
+    assert state.stage == InterviewStage.PAST_EXPERIENCE
+</code></pre>
+<h3>Integration Test: Full Interview Flow</h3>
+<pre><code class="language-python">async def test_full_interview_flow():
+    # Mock LiveKit session
+    mock_session = AsyncMock()
+    mock_room = AsyncMock()
+
+    # Run agent
+    agent = InterviewAgent()
+    ctx = RunContext(session=mock_session, userdata=InterviewState())
+
+    # Simulate user turns
+    await agent.on_message(&quot;Hi, I'm John&quot;)
+    await agent.on_message(&quot;5 years in Python&quot;)
+
+    # Assert state progression
+    assert ctx.userdata.stage == InterviewStage.PAST_EXPERIENCE
+    assert len(ctx.userdata.responses) == 2
+</code></pre>
+<h3>Latency Test: Measure End-to-End</h3>
+<pre><code class="language-python">import time
+
+async def measure_pipeline_latency():
+    start = time.perf_counter()
+
+    # Record &quot;now&quot;
+    user_speech_received = time.perf_counter()
+    stt_partial = await stt.get_partial()  # ~100ms
+    llm_token = await llm.stream()  # ~200ms
+    tts_audio = await tts.synthesize()  # ~150ms
+    end = time.perf_counter()
+
+    latency_ms = (end - start) * 1000
+    logger.info(f&quot;E2E latency: {latency_ms:.0f}ms&quot;)
+
+    assert latency_ms &lt; 400, &quot;Latency budget exceeded&quot;
+</code></pre>
+<hr />
+</details><details><summary><h2>10. FLASK APP INTEGRATION CHECKLIST</h2></summary>
+<h3>Minimal Flask Setup</h3>
+<pre><code class="language-python"># app.py
+from flask import Flask, render_template, request, jsonify
+from agent import InterviewAgent, interview_entry_point
+from livekit.agents import cli
+
+app = Flask(__name__)
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/api/interview/start', methods=['POST'])
+def start_interview():
+    data = request.json
+    candidate_name = data.get('name')
+    job_role = data.get('role')
+
+    # Generate LiveKit token
+    token = generate_token(candidate_name, room_name=f&quot;interview_{candidate_name}&quot;)
+
+    return jsonify({
+        'token': token,
+        'room': f&quot;interview_{candidate_name}&quot;,
+        'server_url': LIVEKIT_URL,
+    })
+
+@app.route('/api/interview/end', methods=['POST'])
+def end_interview():
+    # Cleanup, save results
+    return jsonify({'status': 'success'})
+
+if __name__ == '__main__':
+    # Start agent worker in background
+    from threading import Thread
+    agent_thread = Thread(target=lambda: cli.run_app(
+        entry_point=interview_entry_point
+    ), daemon=True)
+    agent_thread.start()
+
+    app.run(debug=True, port=5000)
+</code></pre>
+<h3>Critical Flask ↔ LiveKit Bridge</h3>
+<ul>
+<li><strong>Session ID mapping:</strong> Flask <code>session</code> ↔ LiveKit <code>room_name</code></li>
+<li><strong>Token generation:</strong> Use LiveKit API to create participant tokens</li>
+<li><strong>Result persistence:</strong> Store interview results (responses, feedback) in DB after session ends</li>
+</ul>
+<hr />
+</details><details><summary><h2>11. SUMMARY: ARCHITECTURE DECISIONS FOR YOUR PROJECT</h2></summary>
+<table>
+<thead>
+<tr>
+<th>Decision</th>
+<th>Choice</th>
+<th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>State Management</strong></td>
+<td>FSM (explicit stages)</td>
+<td>Prevents infinite loops; clear audit trail</td>
+</tr>
+<tr>
+<td><strong>Interruption Handling</strong></td>
+<td>LiveKit built-in (allow_interruptions=True)</td>
+<td>Automatic, handles complexities</td>
+</tr>
+<tr>
+<td><strong>Fallback Transitions</strong></td>
+<td>Async timeout timer</td>
+<td>Guarantees progress if LLM stalls</td>
+</tr>
+<tr>
+<td><strong>Latency Optimization</strong></td>
+<td>Streaming STT/LLM/TTS + caching</td>
+<td>Achievable &lt;400ms E2E</td>
+</tr>
+<tr>
+<td><strong>Document Context</strong></td>
+<td>Pre-session embedding + lightweight retrieval</td>
+<td>Future-proof without runtime latency</td>
+</tr>
+<tr>
+<td><strong>Error Recovery</strong></td>
+<td>Try-catch around tools + fallback responses</td>
+<td>Graceful degradation</td>
+</tr>
+<tr>
+<td><strong>Testing</strong></td>
+<td>Integration tests for state, unit tests for tools</td>
+<td>Catches multi-stage flow bugs</td>
+</tr>
+</tbody>
+</table>
+<hr />
+</details><details><summary><h2>Final Gotchas to Avoid</h2></summary>
+<ol>
+<li><strong>Don't wait for "final" transcript from STT.</strong> Use partials.</li>
+<li><strong>Don't let LLM drive state transitions.</strong> Use explicit tools + FSM.</li>
+<li><strong>Don't inject huge PDFs into every LLM prompt.</strong> Pre-embed, cache, retrieve sparingly.</li>
+<li><strong>Don't ignore VAD tuning.</strong> Test with real interview audio (accents, pauses, background noise).</li>
+<li><strong>Don't rely on single timeout mechanism.</strong> Layer: VAD endpointing + LLM timeout + stage timeout.</li>
+<li><strong>Don't forget to log latency metrics.</strong> You'll need them to debug "feels slow" complaints.</li>
+<li><strong>Don't use production TTS models in dev.</strong> Cost adds up fast; use mocking or cheaper models initially.</li>
+</ol>
+<hr />
+<p><strong>End of recommendations.</strong></p></details>
+</main></body></html>

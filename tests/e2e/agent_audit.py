@@ -343,8 +343,8 @@ async def run_one(track: str, persona: Persona, out_dir: Path, client) -> dict:
 
 def run_verdict(client, row: dict, track: str, persona: Persona) -> dict:
     """Exactly what /api/feedback/verdict does, minus the database."""
-    from evaluator import (build_evaluator_messages, build_rubric, finalize_verdict, infer_archetype,
-                           infer_role, infer_seniority, pick_evaluator_model)
+    from evaluator import (build_evaluator_messages, build_rubric, coding_submission_rows, finalize_verdict,
+                           format_coding_results, infer_archetype, infer_role, infer_seniority, pick_evaluator_model)
     from feedback_scoring import build_speech_summary
     from postprocess import merge_by_agent_turns
     from speech_analytics import analyze_transcript
@@ -362,9 +362,11 @@ def run_verdict(client, row: dict, track: str, persona: Persona) -> dict:
     archetype = infer_archetype(row.get("job_role"))
     speech = analyze_transcript(conv)
     rubric = build_rubric(track, role, seniority, archetype)
+    subs = coding_submission_rows(row.get("track_config") or {})
     messages = build_evaluator_messages(
         rubric, candidate_profile=f"Name: {persona.name}\nExperience Level: {persona.level}",
-        job_summary=f"Role: {persona.role}", transcript=transcript, speech_summary=build_speech_summary(speech))
+        job_summary=f"Role: {persona.role}", transcript=transcript, speech_summary=build_speech_summary(speech),
+        coding_results=format_coding_results(subs) if track == "coding" else None)
     resp = client.chat.completions.create(model=pick_evaluator_model(), messages=messages, temperature=0,
                                           response_format={"type": "json_object"}, max_tokens=2200)
     raw = json.loads(resp.choices[0].message.content)

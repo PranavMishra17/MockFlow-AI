@@ -432,6 +432,14 @@ def bank_item_for(state: InterviewState, stage) -> Optional[dict]:
     return None
 
 
+_CLIENT_PROBLEM_KEYS = ('slug', 'title', 'difficulty', 'description', 'examples', 'constraints',
+                        'hints', 'entrypoint', 'starter_code', 'time_limit_minutes')
+
+
+def client_problem_view(problem: Mapping[str, Any]) -> dict:
+    return {k: problem[k] for k in _CLIENT_PROBLEM_KEYS if k in problem}
+
+
 async def push_coding_problem(state: InterviewState, transport: "Transport", idx: int) -> bool:
     """Send problem `idx` to the editor. Returns False if there is no such problem."""
     problems = getattr(state, 'generated_problems', []) or []
@@ -442,7 +450,7 @@ async def push_coding_problem(state: InterviewState, transport: "Transport", idx
     try:
         await transport.emit({
             'type': 'coding_problem',
-            'problem': problem,
+            'problem': client_problem_view(problem),
             'problem_index': idx,
             'attempt_number': attempts_done + 1,
             'max_attempts': 3,
@@ -936,6 +944,19 @@ async def execute_skip_transition(
         logger.error(f"[SKIP] Error executing skip transition: {e}", exc_info=True)
 
 
+def apply_test_results(evaluation: dict, n_passed: int, n_total: int, *, problem_index: int = 0) -> None:
+    """Executed tests set correctness; the model's approach, complexity and feedback stand."""
+    model_said = evaluation.get('correctness')
+    evaluation['correctness'] = 'pass' if n_passed == n_total else ('partial' if n_passed else 'fail')
+    if model_said == evaluation['correctness']:
+        return
+    evaluation['model_correctness'] = model_said
+    logger.info(f"[CODE] Tests overrule the model on problem {problem_index}: "
+                f"{n_passed}/{n_total} passed, model said {model_said!r}")
+    if model_said == 'pass' and evaluation.get('brief_verbal_feedback'):
+        evaluation['brief_verbal_feedback'] += f" That said, {n_total - n_passed} of {n_total} hidden tests failed."
+
+
 async def _evaluate_code_async(
     session: AgentSession,
     _agent,
@@ -973,24 +994,35 @@ async def _evaluate_code_async(
         # to live only in the model-called tool; the editor's submit path never
         # ran it. There is one evaluation path now, and this is it.
         objective_summary = None
+        objective_counts = None
+        not_executed_reason = None
         try:
             from coding.piston_runner import PISTON_ENABLED, run_via_piston
             test_cases = problem.get('test_cases')
             entrypoint = problem.get('entrypoint')
-            if PISTON_ENABLED and test_cases and entrypoint and language.lower().startswith('py'):
+            if not PISTON_ENABLED:
+                not_executed_reason = 'code execution is disabled on this server'
+            elif not (test_cases and entrypoint):
+                not_executed_reason = 'this problem has no test cases'
+            elif not language.lower().startswith('py'):
+                not_executed_reason = f'tests only run for Python, not {language}'
+            else:
                 # Off the event loop: run_via_piston is a blocking urlopen with
                 # a 12s timeout, and this runs mid-interview.
                 run = await asyncio.to_thread(run_via_piston, code, entrypoint, test_cases, language='python')
                 if run.get('error') is None:
+                    objective_counts = (run['passed'], run['total'])
                     objective_summary = f"{run['passed']}/{run['total']} hidden test cases passed"
                     user_prompt += (
                         f"\n\nOBJECTIVE TEST RESULTS (ground truth - weight correctness on this): "
                         f"{objective_summary}."
                     )
                 else:
-                    logger.info(f"[CODE] Piston run skipped/failed: {run.get('error')}")
+                    not_executed_reason = f"execution failed: {run['error']}"
+                    logger.warning(f"[CODE] Piston run failed, grading problem {problem_index} with the LLM only: {run['error']}")
         except Exception as exec_err:
-            logger.warning(f"[CODE] Objective execution error (continuing with LLM-only): {exec_err}")
+            not_executed_reason = f'execution error: {exec_err}'
+            logger.warning(f"[CODE] Objective execution error, grading with the LLM only: {exec_err}")
 
         # Retry with backoff: the audit saw three 429s turn into no
         # evaluation_result at all, which left the editor on "Evaluating..."
@@ -1026,6 +1058,11 @@ async def _evaluate_code_async(
             evaluation = _json.loads(raw)
         except Exception:
             evaluation = {'brief_verbal_feedback': 'Thanks for your submission. Let me review it.'}
+        if objective_counts:
+            apply_test_results(evaluation, *objective_counts, problem_index=problem_index)
+        evaluation.update(executed=bool(objective_summary), objective_tests=objective_summary,
+                          not_executed_reason=not_executed_reason,
+                          passed=str(evaluation.get('correctness', '')).lower() == 'pass')
 
         # Record submission in state. This goes through record_submission rather
         # than incrementing the counter here: this path used to write int keys
@@ -1047,13 +1084,14 @@ async def _evaluate_code_async(
             # code, and correctness is an AI's reading of it.
             'executed': bool(objective_summary),
             'objective_tests': objective_summary,
+            'not_executed_reason': not_executed_reason,
         }, reliable=True)
         logger.info(f"[CODE] Evaluation sent to frontend for problem {problem_index}, attempt {attempt_num}")
 
         # Flow speaks the brief feedback, then code decides what is next: a
         # pass or the third attempt ends this problem. No model turn, no tool.
         verbal = evaluation.get('brief_verbal_feedback', '')
-        passed = str(evaluation.get('correctness', '')).lower() == 'pass'
+        passed = evaluation['passed']
         done = passed or attempt_num >= 3
         if verbal and session:
             try:
@@ -1568,7 +1606,7 @@ def collect_interview_data(
             'depth': getattr(state, 'depth_setting', ''),
             'topics': getattr(state, 'selected_topics', []),
             'generated_questions': getattr(state, 'generated_questions', []),
-            'generated_problems': getattr(state, 'generated_problems', []),
+            'generated_problems': [client_problem_view(p) for p in getattr(state, 'generated_problems', []) or []],
             'preferred_language': getattr(state, 'preferred_language', ''),
             'submissions': getattr(state, 'submissions', []),
         },

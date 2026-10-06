@@ -163,6 +163,76 @@ def test_transient_429_is_retried_and_succeeds(fake_openai):
     assert len(ctx.transport.of_type('evaluation_result')) == 1
 
 
+def test_problem_pushed_to_the_browser_carries_no_answer_key():
+    from coding import get_problem
+    ctx = _ctx()
+    ctx.state.generated_problems = [get_problem('two-sum'), get_problem('merge-intervals')]
+    cmd(ctx, {'type': 'ready_for_problem'})
+    sent = ctx.transport.of_type('coding_problem')[0]['problem']
+    assert 'test_cases' not in sent and 'reference_solution' not in sent
+    assert sent['slug'] == 'two-sum' and sent['entrypoint'] == 'two_sum'
+    assert sent['starter_code']['python'].startswith('def two_sum(')
+    assert sent['examples'] and sent['hints'] and sent['time_limit_minutes'] == 15
+
+
+def _bank_ctx():
+    from coding import get_problem
+    ctx = _ctx()
+    ctx.state.generated_problems = [get_problem('two-sum'), get_problem('merge-intervals')]
+    cmd(ctx, {'type': 'ready_for_problem'})
+    return ctx
+
+
+def test_unexecuted_evaluation_says_why(fake_openai, monkeypatch):
+    import coding.piston_runner as pr
+    fake_openai(correctness='pass')
+    monkeypatch.setattr(pr, 'PISTON_ENABLED', False)
+    ctx = _bank_ctx()
+    cmd(ctx, {'type': 'code_submitted', 'code': 'def two_sum(n, t): ...', 'language': 'python', 'problem_index': 0})
+    result = ctx.transport.of_type('evaluation_result')[0]
+    assert result['executed'] is False
+    assert 'disabled' in result['not_executed_reason']
+
+
+def test_failed_execution_falls_back_visibly(fake_openai, monkeypatch, caplog):
+    import coding.piston_runner as pr
+    fake_openai(correctness='pass')
+    monkeypatch.setattr(pr, 'PISTON_ENABLED', True)
+    monkeypatch.setattr(pr, 'run_via_piston', lambda *a, **k: {'passed': 0, 'total': 4, 'results': [],
+                                                               'error': 'entrypoint not defined'})
+    ctx = _bank_ctx()
+    with caplog.at_level('WARNING'):
+        cmd(ctx, {'type': 'code_submitted', 'code': 'def solution(): ...', 'language': 'python', 'problem_index': 0})
+    result = ctx.transport.of_type('evaluation_result')[0]
+    assert result['executed'] is False
+    assert 'entrypoint not defined' in result['not_executed_reason']
+    assert any('entrypoint not defined' in r.getMessage() and r.levelname == 'WARNING' for r in caplog.records)
+
+
+def test_executed_tests_decide_pass_fail_not_the_model(fake_openai, monkeypatch):
+    import coding.piston_runner as pr
+    fake_openai(correctness='pass')
+    monkeypatch.setattr(pr, 'PISTON_ENABLED', True)
+    monkeypatch.setattr(pr, 'run_via_piston', lambda *a, **k: {'passed': 2, 'total': 4, 'results': [], 'error': None})
+    ctx = _bank_ctx()
+    cmd(ctx, {'type': 'code_submitted', 'code': 'def two_sum(n, t): ...', 'language': 'python', 'problem_index': 0})
+    sent = ctx.transport.of_type('evaluation_result')[0]
+    assert sent['executed'] is True
+    assert sent['evaluation']['correctness'] == 'partial'
+    assert sent['evaluation']['approach_quality'] == 'A'
+    recorded = ctx.state.submissions[0]['evaluation']
+    assert recorded['passed'] is False and recorded['correctness'] == 'partial'
+    assert ctx.state.stage.value == 'coding_problem_1'
+
+
+def test_editor_is_seeded_from_the_problem_and_shows_the_signature():
+    from pathlib import Path
+    html = (Path(__file__).resolve().parents[1] / 'templates' / 'interview.html').read_text(encoding='utf-8')
+    assert 'def solution()' not in html
+    assert 'problem.starter_code' in html
+    assert 'problem.entrypoint' in html
+
+
 def test_grader_prompt_makes_contract_violations_a_fail():
     from prompts import CODE_EVALUATOR
     assert 'return contract' in CODE_EVALUATOR.system

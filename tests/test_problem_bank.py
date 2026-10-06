@@ -107,6 +107,22 @@ def test_select_falls_back_when_pool_small():
     assert len(picked) == 3
 
 
+@pytest.mark.parametrize("level", ["senior", "lead", "staff", "principal"])
+def test_senior_levels_get_hard_problems_never_easy(level):
+    picked = select_problems(level=level, count=2)
+    assert len(picked) == 2
+    assert [p["difficulty"] for p in picked] == ["hard", "hard"]
+
+
+def test_a_short_pool_steps_down_one_level_not_to_the_easiest(monkeypatch):
+    import coding.problem_bank as pb
+    one_hard = [p for p in pb.PROBLEMS if p["difficulty"] != "hard"] + [
+        next(p for p in pb.PROBLEMS if p["difficulty"] == "hard")]
+    monkeypatch.setattr(pb, "PROBLEMS", one_hard)
+    picked = pb.select_problems(level="senior", count=2)
+    assert [p["difficulty"] for p in picked] == ["hard", "medium"]
+
+
 def test_get_problem():
     assert get_problem("two-sum")["title"] == "Two Sum"
     assert get_problem("nope") is None

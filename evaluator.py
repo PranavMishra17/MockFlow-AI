@@ -335,6 +335,40 @@ _ARCHETYPE_LABEL = {"big_tech": "Big Tech", "high_bar_startup": "high-bar startu
 _ROLE_LABEL = {"swe": "software engineer", "pm": "product manager", "ds_mle": "data scientist / ML engineer"}
 
 
+def coding_submission_rows(track_config: Dict[str, Any]) -> List[Dict[str, Any]]:
+    problems = track_config.get("generated_problems") or []
+    rows = []
+    for sub in track_config.get("submissions") or []:
+        idx = sub.get("problem_index", 0)
+        problem = problems[idx] if 0 <= idx < len(problems) else {}
+        rows.append({
+            "problem_title": problem.get("title", "Coding Problem"),
+            "problem_description": problem.get("description", ""),
+            "language": sub.get("language") or "python",
+            "code_submitted": sub.get("code") or "",
+            "attempt_number": sub.get("attempt", 1),
+            "evaluation_result": sub.get("evaluation") or {},
+        })
+    return rows
+
+
+def format_coding_results(submissions: List[Dict[str, Any]]) -> Optional[str]:
+    lines = []
+    for s in submissions:
+        ev = s.get('evaluation_result') or {}
+        tests = ev.get('objective_tests') if ev.get('executed') else (
+            f"not executed ({ev.get('not_executed_reason') or 'AI review only'})")
+        lines.append(
+            f"- {s.get('problem_title', 'problem')} attempt {s.get('attempt_number', 1)} "
+            f"[{s.get('language', '')}]: "
+            f"correctness={ev.get('correctness', 'unknown')}, "
+            f"approach={ev.get('approach_quality', 'unknown')}, "
+            f"complexity={ev.get('time_complexity', 'unknown')}, "
+            f"tests={tests}"
+        )
+    return "\n".join(lines) if lines else None
+
+
 def build_evaluator_messages(
     rubric: Dict[str, Any],
     candidate_profile: str,

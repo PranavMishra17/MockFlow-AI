@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Flow — agent design</title><style>
+:root{--bg:#faf8f4;--fg:#1f1d1a;--muted:#6b665e;--line:#e4dfd6;--code:#f1ede6;--accent:#2f6f5e;--note:#fff6e0;--note-line:#e6c36a}
+@media (prefers-color-scheme:dark){:root{--bg:#171614;--fg:#ece8e1;--muted:#a39d93;--line:#34312c;--code:#232120;--accent:#7cc4ad;--note:#2b2515;--note-line:#8a7232}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.6 -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif}
+main{max-width:860px;margin:0 auto;padding:2.5rem 1.25rem 4rem}
+h1{font-size:1.9rem;line-height:1.25;margin:0 0 1rem}
+h2{font-size:1.35rem;margin:2.2rem 0 .6rem;padding-top:.6rem;border-top:1px solid var(--line)}
+h3{font-size:1.08rem;margin:1.6rem 0 .4rem}
+a{color:var(--accent)}
+code{background:var(--code);padding:.1em .35em;border-radius:4px;font:.88em/1.4 ui-monospace,SFMono-Regular,Consolas,monospace}
+pre{background:var(--code);padding:.9rem 1rem;border-radius:8px;overflow-x:auto}
+pre code{background:none;padding:0}
+table{border-collapse:collapse;width:100%;margin:1rem 0;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:.45rem .6rem;text-align:left;vertical-align:top}
+th{background:var(--code)}
+blockquote{margin:1rem 0;padding:.75rem 1rem;background:var(--note);border-left:4px solid var(--note-line);border-radius:4px}
+blockquote p{margin:.3rem 0}
+details{border-top:1px solid var(--line)}
+details>summary{cursor:pointer;list-style:none}
+details>summary::-webkit-details-marker{display:none}
+details>summary h2{display:inline-block;border:0;margin:1.2rem 0 .6rem}
+details>summary h2::before{content:"\25B8  ";color:var(--muted)}
+details[open]>summary h2::before{content:"\25BE  "}
+</style></head>
+<body><main>
+<h1>MockFlow-AI agent design — Flow</h1>
+<blockquote>
+<p><strong>Current as of 2026-10-06.</strong> This replaces the earlier design document, which
+described a tool-driven agent (<code>transition_stage</code>, <code>ask_question</code>,
+<code>assess_response</code>, queued transition acknowledgements, JSON transcript files,
+one shared worker). None of that is in the code any more. The authoritative
+contract, with signatures, is <a href="RUNTIME_CONTRACT.md">RUNTIME_CONTRACT</a> §0; why
+the tool loop was removed is in <a href="AGENT_AUDIT_2026-09.md">AGENT_AUDIT_2026-09</a>.</p>
+</blockquote>
+<h2>What Flow is</h2>
+<p>Flow is the voice interviewer. One interview is one LiveKit room and one
+<code>agent_worker.py</code> subprocess (spawned by <code>worker_manager.py</code> with the user's own
+keys, or the owner's keys on the free tier). The voice pipeline is Deepgram STT →
+an OpenAI LLM → OpenAI TTS, with Silero VAD and endpointing between 0.8 s and
+4.0 s.</p>
+<p>The interview's shape — which stage it is in, when it moves on, what to ask next
+— is decided <strong>in code</strong>. The model's only job is to say the one thing code
+tells it to say, in natural words. There are no function tools in the speech
+path, and the session is built with <code>max_tool_steps=1</code> as a backstop.</p>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>agent_worker.py</code></td>
+<td>Room lifecycle: connect, build the session, finalize and save at the end</td>
+</tr>
+<tr>
+<td><code>interview_runtime.py</code></td>
+<td><code>InterviewAgent</code>, <code>prepare_turn</code>, <code>advance_to</code>, the stage timer, data-channel commands, coding evaluation</td>
+</tr>
+<tr>
+<td><code>interview_turn.py</code></td>
+<td>Pure turn logic: <code>should_advance</code>, <code>choose_move</code>, the <code>[FLOW MOVE]</code> note, the closing line, the assessment call</td>
+</tr>
+<tr>
+<td><code>interview_coverage.py</code></td>
+<td><code>TurnAssessment</code> and <code>CoverageLedger</code> — what the candidate has demonstrated so far</td>
+</tr>
+<tr>
+<td><code>fsm.py</code></td>
+<td>Per-track state: stage enums, time limits, submissions, skip bookkeeping</td>
+</tr>
+<tr>
+<td><code>prompts.py</code></td>
+<td>How Flow speaks (<code>GLOBAL_STYLE</code>, <code>MOVE_PROTOCOL</code>), per-stage goals, greeting lines, generation and grading prompts</td>
+</tr>
+<tr>
+<td><code>tracks/</code></td>
+<td>Per-track configuration (stage sequences, time limits)</td>
+</tr>
+</tbody>
+</table>
+<h2>How a turn works</h2>
+<p>When the candidate stops speaking, <code>InterviewAgent.prepare_turn</code> runs (from the
+SDK's <code>on_user_turn_completed</code> hook on the audio path; directly from the
+harness in tests):</p>
+<ol>
+<li><strong>Assess.</strong> One structured call reads the answer: for each signal the
+   current stage needs, <em>absent / partial / demonstrated</em> with a verbatim
+   quote; the four STAR elements where they apply; whether the question was
+   answered; terse / normal / rambling; whether the candidate asked something
+   (repeat, process, feedback, company); whether they said they don't know.
+   The call is started early from STT interim transcripts while the candidate
+   is still talking and has a 2.5 s budget. If it misses, the turn proceeds on
+   the existing ledger and the late result is merged on the next turn.</li>
+<li><strong>Ledger.</strong> The assessment merges into <code>state.ledger</code>, keyed by the same
+   signal names the final verdict grades with (<code>evaluator.SIGNAL_LIBRARY</code>).
+   Merging only ever raises a level, and credit is cross-stage: a full STAR
+   story told during the introduction counts toward the behavioral questions.</li>
+<li><strong>Progress.</strong> <code>should_advance</code> moves on when the stage's required signals
+   are covered (after a minimum of two turns in the stage), when the stage is
+   over time, after two empty reads from a terse candidate, or at the depth's
+   turn cap.</li>
+<li><strong>Move.</strong> <code>choose_move</code> picks exactly one next move: an honest fixed
+   preface for meta-questions, one scaffold for "I don't know", a pin to the
+   result for a rambler, a narrow question for a terse answer, the bank's own
+   follow-up probe for a missing STAR element, otherwise the bank's next
+   question.</li>
+<li><strong>Note.</strong> One <code>[FLOW MOVE — instructions, not speech]</code> message is added to
+   this turn's chat context. The model's reply to it <em>is</em> the transition; there
+   is no separate acknowledgement turn.</li>
+</ol>
+<p><code>prepare_turn</code> never raises anything but <code>StopResponse</code> (the SDK swallows other
+exceptions and skips the reply, which is a silent turn). On any internal
+failure it leaves a short safe note instead.</p>
+<h2>Stage changes</h2>
+<p><code>advance_to()</code> is the only way the stage changes — whether from the turn loop,
+the Skip button, or the timer. It updates state and the model's instructions,
+emits one <code>stage_change</code> event to the browser, pushes the next coding problem
+when entering one, and never speaks.</p>
+<ul>
+<li><strong>Greeting.</strong> One fixed line per track, spoken by code on entry, never
+  generated. The stage walkthrough is shown in the pre-join panel instead.
+  Interviews start in <code>self_intro</code>.</li>
+<li><strong>Skip.</strong> The browser sends <code>skip_stage</code>; Flow advances and immediately asks
+  the new stage's first question.</li>
+<li><strong>Timer.</strong> <code>stage_fallback_timer</code> checks every few seconds. When a stage
+  exceeds its limit it forces the advance and parks the new stage's opening
+  question as <code>pending_move</code>, so it lands as the reply to whatever the
+  candidate says next; if they stay silent for about six seconds, Flow asks it.
+  A coding problem that runs out of time is marked timed out, Flow says so, and
+  the next problem is pushed.</li>
+<li><strong>Closing.</strong> One utterance built by code quotes the candidate's strongest
+  specific evidence and ends with a fixed sentinel sentence. The room is
+  finalized on that sentinel and nothing else; after it Flow stays quiet. If
+  the closing stage runs 60 s without it, the closing line is spoken by the
+  timer.</li>
+</ul>
+<h2>Coding track</h2>
+<ul>
+<li><strong>Problems</strong> come from the vetted bank (<code>coding/problem_bank.py</code>): each has an
+  entrypoint, Python starter code, hidden test cases and a reference solution,
+  and CI proves every reference solution passes its own tests. Difficulty
+  follows level (junior → easy, mid → medium, senior and above → hard); a short
+  pool steps down one level at a time.</li>
+<li><strong>What the browser gets</strong> is a client-safe view: title, description,
+  examples, constraints, hints, entrypoint, starter code, time limit. The test
+  cases and reference solution never leave the server, and the saved interview
+  row stores the same safe view.</li>
+<li><strong>Submissions</strong> reach the agent only when the candidate presses Submit. One
+  evaluation path (<code>_evaluate_code_async</code>): when <code>PISTON_ENABLED</code> is on and the
+  language is Python, the code runs against the hidden tests and the pass count
+  decides correctness; the model grades approach, complexity and edge cases and
+  writes the spoken feedback. When execution is off or fails, the result is
+  labelled not executed, with the reason. Evaluator outages retry with backoff
+  and end in an explicit <code>evaluation_error</code>, never a stuck editor.</li>
+<li><strong>Progress</strong> is decided in code: a pass or the third attempt ends a problem;
+  the interview cannot close with a problem still open.</li>
+<li><strong>Persistence.</strong> Each submission (code, attempt, evaluation, execution
+  provenance) is recorded in state and written to <code>coding_submissions</code> when the
+  interview is saved, which is where the verdict reads it.</li>
+</ul>
+<h2>What is saved</h2>
+<p>At the end (<code>finalize_and_disconnect</code>, or <code>save_transcript_on_disconnect</code> if
+the candidate leaves), <code>collect_interview_data</code> builds one row: both sides of
+the transcript with timestamps and stage, stage history and skips, how the
+interview ended, the track configuration and generated questions or problems,
+and coding submissions. It is saved to Neon Postgres through <code>db.save_interview</code>,
+which also writes the coding submissions. Feedback and the hiring verdict are
+generated afterwards by the web app (<code>POST /api/feedback/verdict</code>).</p>
+<h2>How it is tested</h2>
+<ul>
+<li><code>pytest</code> (default) — unit and integration tests, including the turn loop
+  (<code>tests/test_interview_turn.py</code>, <code>tests/test_prepare_turn.py</code>), the prompt
+  linter, the coding flow and the problem bank's self-test.</li>
+<li><code>pytest -m level_b tests/e2e/test_agent_audit.py</code> — twenty scripted persona
+  interviews across the four tracks through the text harness, asserted turn by
+  turn (no silent turns, one question per turn, no praise adjectives, no
+  full-name use, no stage vocabulary). Run it before changing <code>prompts.py</code>,
+  <code>interview_turn.py</code> or <code>interview_runtime.py</code>.</li>
+<li><code>tests/e2e/caption_probe.py</code> — a live-room probe for caption timing.</li>
+</ul>
+</main></body></html>

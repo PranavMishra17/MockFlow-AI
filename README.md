@@ -4,7 +4,7 @@
 
 ![MockFlow-AI — Practice the interview, for real](docs/assets/hero.png)
 
-**It interviews you out loud, reads your live code as you type, and scores how you actually deliver — like a real panel, on demand.**
+**It interviews you out loud, reviews the code you submit, and scores how you actually deliver — like a real panel, on demand.**
 
 [![LIVE](https://img.shields.io/badge/LIVE-mockflow.pranavmishra.dedyn.io-brightgreen.svg)](https://mockflow.pranavmishra.dedyn.io)
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/downloads/)
@@ -24,7 +24,7 @@
 
 ## What it is
 
-MockFlow-AI is a full-stack AI interview coach that runs realistic, voice-driven mock interviews on demand. A live "panel" greets you out loud, asks adaptive follow-ups, watches the code you type into an in-browser editor, and hands back a scored, competency-based report you can export.
+MockFlow-AI is a full-stack AI interview coach that runs realistic, voice-driven mock interviews on demand. A live "panel" greets you out loud, asks adaptive follow-ups, reviews the code you submit from an in-browser editor, and hands back a scored, competency-based report you can export.
 
 It runs on a **BYOK (Bring Your Own Keys)** model: each user supplies their own LiveKit, OpenAI, and Deepgram credentials, which are encrypted at rest. An **optional, off-by-default** owner-funded free tier can grant new users a couple of interviews on the host's keys.
 
@@ -55,7 +55,7 @@ It runs on a **BYOK (Bring Your Own Keys)** model: each user supplies their own 
 
 - **Speaks out loud in real time** — STT via Deepgram, LLM + TTS via OpenAI, over LiveKit's WebRTC pipeline.
 - **Signature "living orb"** animated interviewer (shown here) that reacts as the conversation moves — built on a reusable CSS/JS motion kit.
-- **FSM-driven stages** with explicit transitions, fallback timers, and skip controls so an interview always progresses.
+- **A code-owned turn loop**: after each answer, a structured assessment updates a coverage ledger of what you've demonstrated, and code — not the model — decides whether to probe, move on, or close. Fallback timers and skip controls mean an interview always progresses.
 - **Resume + JD aware** — uploads are parsed and injected into the agent's context.
 
 <br clear="right" />
@@ -66,9 +66,10 @@ It runs on a **BYOK (Bring Your Own Keys)** model: each user supplies their own 
 
 ### Coding track that grades objectively
 
-- Monaco code editor (Python, JavaScript, Java, C++, Go).
-- Problems come from a **curated bank** with hidden test cases and reference solutions.
-- **Optional real code execution via Piston** (`PISTON_ENABLED`, off by default) that runs your submission and grounds the AI's evaluation in objective pass/fail — not just a vibe check.
+- Monaco code editor. You can write in Python, JavaScript, Java, C++ or Go, but the problems ship starter code and hidden tests in Python only, so only Python can ever be executed; other languages are reviewed by the AI.
+- Problems come from a **curated bank** with hidden test cases and reference solutions; the difficulty follows your level (senior and above get the hard set).
+- Code is reviewed when you press Submit, not while you type.
+- **Optional real code execution via Piston** (`PISTON_ENABLED`, off by default). When on, your Python submission runs against the hidden tests and the pass count decides correctness; the AI still grades approach and complexity. When off, every result is labelled "not executed — reviewed by AI only", with the reason.
 
 ### Feedback you can actually use
 
@@ -95,7 +96,7 @@ It runs on a **BYOK (Bring Your Own Keys)** model: each user supplies their own 
 
 | Concern | Technology |
 |---|---|
-| Web app | **Flask 3** (`app.py`), served by **gunicorn** on Render |
+| Web app | **Flask 3** (`app.py`), served by **gunicorn** in Docker on a Google Cloud e2-micro, behind **Caddy** |
 | Voice agent | **LiveKit Agents** (`agent_worker.py`) — one subprocess per interview, spawned via `worker_manager.py` |
 | Database | **Neon Postgres** (`db.py`, psycopg3 connection pool) |
 | Auth | **Authlib Google OAuth** + **Flask-Login** (`auth_helpers.py`) |
@@ -115,26 +116,29 @@ Browser (form)  ──POST /api/token──▶  Flask
                                       ├─ load user's encrypted keys from Neon
                                       ├─ worker_manager.spawn_worker()  ──▶ agent_worker.py subprocess
                                       └─ mint LiveKit JWT (user's keys)  ──▶ returned to browser
-Browser  ──join LiveKit room──▶  agent_worker (FSM-driven interview)
-                                      └─ on end: save transcript to Neon
+Browser  ──join LiveKit room──▶  agent_worker (code-owned turn loop)
+                                      └─ on end: save transcript + coding submissions to Neon
 Browser (feedback) ──POST /api/feedback*──▶  Flask ──▶ OpenAI (user's key) ──▶ scored report
 ```
 
-The interview state machine (`fsm.py`) is track-aware: `intro`, `behavioral`, `technical_voice`, `technical_coding` (see `tracks/`). Because the BYOK model tracks agent subprocesses in one process's memory, the web server runs as a single gunicorn worker.
+The per-track interview state (`fsm.py`) covers `intro`, `behavioral`, `technical_voice` and `coding` (see `tracks/`); which stage it is in is decided by the turn loop in code. Because the BYOK model tracks agent subprocesses in one process's memory, the web server runs as a single gunicorn worker.
 
 | File | Purpose |
 |---|---|
 | `app.py` | Flask server — OAuth, token generation, worker spawning, feedback endpoints |
-| `agent_worker.py` | LiveKit agent — FSM-driven tools, voice pipeline, coding evaluation |
+| `agent_worker.py` | LiveKit agent entrypoint — room lifecycle, voice pipeline, save on end |
+| `interview_runtime.py` | `InterviewAgent` and the turn loop, stage changes, timers, data-channel commands, coding evaluation |
+| `interview_turn.py` | Pure turn logic — when to advance, which move to make, the closing line, the per-turn assessment |
+| `interview_coverage.py` | The coverage ledger of what the candidate has demonstrated |
 | `worker_manager.py` | Spawns and tracks one agent subprocess per interview |
-| `fsm.py` | Multi-track FSM — stage enums, time limits, transition logic |
+| `fsm.py` | Per-track state — stage enums, time limits, submissions, skip bookkeeping |
 | `tracks/` | Per-track config (stage sequences, time limits, availability) |
 | `db.py` | Neon Postgres pool — encrypted key storage, interview + coding persistence |
 | `prompts.py` | Stage instructions, feedback prompts, code evaluator, speech analytics |
 | `speech_analytics.py` | Filler-word detection, WPM, per-turn pace |
 | `document_processor.py` | Resume parsing (PDF, DOCX, TXT) with cache |
 
-For the full picture, see **[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)**.
+For the full picture, see **[`docs/ARCHITECTURE.html`](docs/ARCHITECTURE.html)** and, for how Flow interviews, **[`docs/AGENT_DESIGN.html`](docs/AGENT_DESIGN.html)**.
 
 ---
 
@@ -206,7 +210,7 @@ python -m pytest          # unit + integration suite
 python -m ruff check .    # lint
 ```
 
-A **Playwright smoke harness** lives under `tests/e2e/` for end-to-end checks. CI on every push to `main` (`.github/workflows/deploy.yml`) runs ruff + pytest and gates the Render deploy.
+A **Playwright smoke harness** lives under `tests/e2e/` for end-to-end checks. CI on every push to `main` (`.github/workflows/deploy.yml`) runs ruff + pytest and checks the live site still answers; it does not deploy.
 
 To exercise the system **end-to-end by hand** — from Google sign-in through a live voice (and coding) interview to the scored report — follow the step-by-step runbook in **[`docs/TESTING_E2E.md`](docs/TESTING_E2E.md)** (prerequisites, the Google OAuth localhost callback, BYOK keys, and a green-path checklist).
 
@@ -214,14 +218,15 @@ To exercise the system **end-to-end by hand** — from Google sign-in through a 
 
 ## Deployment
 
-Deployed on **Render**:
+Deployed on one **Google Cloud e2-micro** (Always Free) with **Docker Compose** — full guide in [`docs/DEPLOYMENT_GCP.md`](docs/DEPLOYMENT_GCP.md):
 
-- **Start command:** `gunicorn app:app --workers 1 --timeout 120`
+- **Containers:** `web` (the repo's `Dockerfile`) and **Caddy** (automatic Let's Encrypt TLS) — `deploy/gcp/docker-compose.yml`, `deploy/gcp/Caddyfile`.
+- **Start command:** `gunicorn app:app --worker-class gthread --workers 1 --threads 8 --timeout 120`
   (`--workers 1` is required — the BYOK model tracks agent subprocesses in one process's memory.)
-- **Python:** pinned via `runtime.txt` (`python-3.12.6`).
-- **Health:** `GET /health` pings Neon and reports worker load.
-- **Keep-warm:** `.github/workflows/keep-warm.yml` pings the app + Neon roughly every two weeks so the free tier doesn't cold-start.
-- Pushes to `main` run CI (lint + tests) before Render auto-deploys.
+- **Capacity:** one concurrent interview (`MAX_CONCURRENT_WORKERS=1`) on the 1 GB VM.
+- **Deploying is manual:** on the VM, `git pull && cd deploy/gcp && docker compose up -d --build`. A push to `main` runs CI but does not deploy.
+- **Health:** `GET /health` pings Neon and reports worker load; the container healthcheck calls it every minute.
+- **Keep-warm:** `.github/workflows/keep-warm.yml` keeps Neon's free tier from suspending.
 
 ---
 

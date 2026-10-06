@@ -19,6 +19,7 @@ LEVEL_DIFFICULTY = {
     "mid": "medium", "intermediate": "medium",
     "senior": "hard", "lead": "hard", "staff": "hard", "principal": "hard",
 }
+DIFFICULTY_LADDER = ("easy", "medium", "hard")
 
 
 PROBLEMS: List[Dict[str, Any]] = [
@@ -251,6 +252,143 @@ PROBLEMS: List[Dict[str, Any]] = [
             )
         },
     },
+    {
+        "slug": "trapping-rain-water",
+        "title": "Trapping Rain Water",
+        "difficulty": "hard",
+        "time_limit_minutes": 25,
+        "description": (
+            "Given a list `height` of non-negative integers where each value is the "
+            "height of a bar of width 1, return how many units of rain water are "
+            "trapped between the bars after it rains."
+        ),
+        "examples": [
+            {"input": "height = [0,1,0,2,1,0,1,3,2,1,2,1]", "output": "6"},
+            {"input": "height = [4,2,0,3,2,5]", "output": "9"},
+        ],
+        "constraints": ["0 <= len(height) <= 2*10^4", "0 <= height[i] <= 10^5"],
+        "hints": [
+            "Water above a bar is min(tallest bar to its left, tallest to its right) minus its height.",
+            "Two pointers moving inward give O(n) time and O(1) space.",
+        ],
+        "entrypoint": "trap",
+        "starter_code": {"python": "def trap(height):\n    pass\n"},
+        "test_cases": [
+            {"args": [[0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]], "expected": 6},
+            {"args": [[4, 2, 0, 3, 2, 5]], "expected": 9},
+            {"args": [[]], "expected": 0},
+            {"args": [[3]], "expected": 0},
+            {"args": [[1, 2, 3, 4]], "expected": 0},
+            {"args": [[5, 0, 5]], "expected": 5},
+        ],
+        "reference_solution": {
+            "python": (
+                "def trap(height):\n"
+                "    left, right = 0, len(height) - 1\n"
+                "    left_max = right_max = water = 0\n"
+                "    while left < right:\n"
+                "        if height[left] < height[right]:\n"
+                "            left_max = max(left_max, height[left])\n"
+                "            water += left_max - height[left]\n"
+                "            left += 1\n"
+                "        else:\n"
+                "            right_max = max(right_max, height[right])\n"
+                "            water += right_max - height[right]\n"
+                "            right -= 1\n"
+                "    return water\n"
+            )
+        },
+    },
+    {
+        "slug": "largest-rectangle-in-histogram",
+        "title": "Largest Rectangle in Histogram",
+        "difficulty": "hard",
+        "time_limit_minutes": 25,
+        "description": (
+            "Given a list `heights` of non-negative integers, the heights of adjacent "
+            "bars of width 1 in a histogram, return the area of the largest rectangle "
+            "that fits entirely inside the histogram."
+        ),
+        "examples": [
+            {"input": "heights = [2,1,5,6,2,3]", "output": "10", "explanation": "bars 5 and 6, width 2"},
+            {"input": "heights = [2,4]", "output": "4"},
+        ],
+        "constraints": ["1 <= len(heights) <= 10^5", "0 <= heights[i] <= 10^4"],
+        "hints": [
+            "For each bar, how far can a rectangle of its height extend left and right?",
+            "A stack of increasing heights finds both boundaries in one pass.",
+        ],
+        "entrypoint": "largest_rectangle_area",
+        "starter_code": {"python": "def largest_rectangle_area(heights):\n    pass\n"},
+        "test_cases": [
+            {"args": [[2, 1, 5, 6, 2, 3]], "expected": 10},
+            {"args": [[2, 4]], "expected": 4},
+            {"args": [[0]], "expected": 0},
+            {"args": [[3]], "expected": 3},
+            {"args": [[2, 2, 2, 2]], "expected": 8},
+            {"args": [[6, 2, 5, 4, 5, 1, 6]], "expected": 12},
+        ],
+        "reference_solution": {
+            "python": (
+                "def largest_rectangle_area(heights):\n"
+                "    stack = []\n"
+                "    best = 0\n"
+                "    for i, h in enumerate(heights + [0]):\n"
+                "        start = i\n"
+                "        while stack and stack[-1][1] >= h:\n"
+                "            start, height = stack.pop()\n"
+                "            best = max(best, height * (i - start))\n"
+                "        stack.append((start, h))\n"
+                "    return best\n"
+            )
+        },
+    },
+    {
+        "slug": "longest-valid-parentheses",
+        "title": "Longest Valid Parentheses",
+        "difficulty": "hard",
+        "time_limit_minutes": 25,
+        "description": (
+            "Given a string `s` made only of '(' and ')', return the length of the "
+            "longest contiguous substring that is a well-formed parentheses sequence."
+        ),
+        "examples": [
+            {"input": "s = \"(()\"", "output": "2", "explanation": "\"()\""},
+            {"input": "s = \")()())\"", "output": "4", "explanation": "\"()()\""},
+        ],
+        "constraints": ["0 <= len(s) <= 3*10^4", "s contains only '(' and ')'"],
+        "hints": [
+            "Keep a stack of indices, seeded with -1 as the base of the current run.",
+            "An unmatched ')' becomes the new base.",
+        ],
+        "entrypoint": "longest_valid_parentheses",
+        "starter_code": {"python": "def longest_valid_parentheses(s):\n    pass\n"},
+        "test_cases": [
+            {"args": ["(()"], "expected": 2},
+            {"args": [")()())"], "expected": 4},
+            {"args": [""], "expected": 0},
+            {"args": ["()(())"], "expected": 6},
+            {"args": ["())(())"], "expected": 4},
+            {"args": ["(((("], "expected": 0},
+        ],
+        "reference_solution": {
+            "python": (
+                "def longest_valid_parentheses(s):\n"
+                "    stack = [-1]\n"
+                "    best = 0\n"
+                "    for i, ch in enumerate(s):\n"
+                "        if ch == '(':\n"
+                "            stack.append(i)\n"
+                "        else:\n"
+                "            stack.pop()\n"
+                "            if not stack:\n"
+                "                stack.append(i)\n"
+                "            else:\n"
+                "                best = max(best, i - stack[-1])\n"
+                "    return best\n"
+            )
+        },
+    },
 ]
 
 
@@ -277,13 +415,14 @@ def select_problems(
     exclude_slugs: tuple = (),
 ) -> List[Dict[str, Any]]:
     """
-    Pick up to `count` vetted problems. Prefers the given difficulty (or the one
-    implied by `level`), falling back to any difficulty if the pool is too small.
-    Deterministic ordering so interviews are reproducible.
+    Pick up to `count` vetted problems at the given difficulty (or the one
+    implied by `level`). When that pool runs short, fill from one level down,
+    then the next; only an exhausted lower half reaches upward. Deterministic
+    ordering so interviews are reproducible.
     """
     diff = (difficulty or difficulty_for_level(level)).lower()
-    pool = [p for p in PROBLEMS if p["difficulty"] == diff and p["slug"] not in exclude_slugs]
-    if len(pool) < count:
-        extra = [p for p in PROBLEMS if p["slug"] not in exclude_slugs and p not in pool]
-        pool = pool + extra
+    i = DIFFICULTY_LADDER.index(diff) if diff in DIFFICULTY_LADDER else 1
+    order = DIFFICULTY_LADDER[i::-1] + DIFFICULTY_LADDER[i + 1:]
+    available = [p for p in PROBLEMS if p["slug"] not in exclude_slugs]
+    pool = [p for d in order for p in available if p["difficulty"] == d]
     return pool[:count]
