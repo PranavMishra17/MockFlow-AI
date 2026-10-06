@@ -1578,7 +1578,7 @@ def collect_interview_data(
             'depth': getattr(state, 'depth_setting', ''),
             'topics': getattr(state, 'selected_topics', []),
             'generated_questions': getattr(state, 'generated_questions', []),
-            'generated_problems': getattr(state, 'generated_problems', []),
+            'generated_problems': [client_problem_view(p) for p in getattr(state, 'generated_problems', []) or []],
             'preferred_language': getattr(state, 'preferred_language', ''),
             'submissions': getattr(state, 'submissions', []),
         },
