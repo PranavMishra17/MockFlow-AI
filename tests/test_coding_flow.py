@@ -209,6 +209,22 @@ def test_failed_execution_falls_back_visibly(fake_openai, monkeypatch, caplog):
     assert any('entrypoint not defined' in r.getMessage() and r.levelname == 'WARNING' for r in caplog.records)
 
 
+def test_executed_tests_decide_pass_fail_not_the_model(fake_openai, monkeypatch):
+    import coding.piston_runner as pr
+    fake_openai(correctness='pass')
+    monkeypatch.setattr(pr, 'PISTON_ENABLED', True)
+    monkeypatch.setattr(pr, 'run_via_piston', lambda *a, **k: {'passed': 2, 'total': 4, 'results': [], 'error': None})
+    ctx = _bank_ctx()
+    cmd(ctx, {'type': 'code_submitted', 'code': 'def two_sum(n, t): ...', 'language': 'python', 'problem_index': 0})
+    sent = ctx.transport.of_type('evaluation_result')[0]
+    assert sent['executed'] is True
+    assert sent['evaluation']['correctness'] == 'partial'
+    assert sent['evaluation']['approach_quality'] == 'A'          # the model still grades the approach
+    recorded = ctx.state.submissions[0]['evaluation']
+    assert recorded['passed'] is False and recorded['correctness'] == 'partial'
+    assert ctx.state.stage.value == 'coding_problem_1'            # 2/4 is not a pass: no advance
+
+
 def test_editor_is_seeded_from_the_problem_and_shows_the_signature():
     from pathlib import Path
     html = (Path(__file__).resolve().parents[1] / 'templates' / 'interview.html').read_text(encoding='utf-8')
