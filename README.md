@@ -4,7 +4,7 @@
 
 ![MockFlow-AI — Practice the interview, for real](docs/assets/hero.png)
 
-**It interviews you out loud, reads your live code as you type, and scores how you actually deliver — like a real panel, on demand.**
+**It interviews you out loud, reviews the code you submit, and scores how you actually deliver — like a real panel, on demand.**
 
 [![LIVE](https://img.shields.io/badge/LIVE-mockflow.pranavmishra.dedyn.io-brightgreen.svg)](https://mockflow.pranavmishra.dedyn.io)
 [![Python](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/downloads/)
@@ -24,7 +24,7 @@
 
 ## What it is
 
-MockFlow-AI is a full-stack AI interview coach that runs realistic, voice-driven mock interviews on demand. A live "panel" greets you out loud, asks adaptive follow-ups, watches the code you type into an in-browser editor, and hands back a scored, competency-based report you can export.
+MockFlow-AI is a full-stack AI interview coach that runs realistic, voice-driven mock interviews on demand. A live "panel" greets you out loud, asks adaptive follow-ups, reviews the code you submit from an in-browser editor, and hands back a scored, competency-based report you can export.
 
 It runs on a **BYOK (Bring Your Own Keys)** model: each user supplies their own LiveKit, OpenAI, and Deepgram credentials, which are encrypted at rest. An **optional, off-by-default** owner-funded free tier can grant new users a couple of interviews on the host's keys.
 
@@ -66,9 +66,10 @@ It runs on a **BYOK (Bring Your Own Keys)** model: each user supplies their own 
 
 ### Coding track that grades objectively
 
-- Monaco code editor (Python, JavaScript, Java, C++, Go).
-- Problems come from a **curated bank** with hidden test cases and reference solutions.
-- **Optional real code execution via Piston** (`PISTON_ENABLED`, off by default) that runs your submission and grounds the AI's evaluation in objective pass/fail — not just a vibe check.
+- Monaco code editor. You can write in Python, JavaScript, Java, C++ or Go, but the problems ship starter code and hidden tests in Python only, so only Python can ever be executed; other languages are reviewed by the AI.
+- Problems come from a **curated bank** with hidden test cases and reference solutions; the difficulty follows your level (senior and above get the hard set).
+- Code is reviewed when you press Submit, not while you type.
+- **Optional real code execution via Piston** (`PISTON_ENABLED`, off by default). When on, your Python submission runs against the hidden tests and the pass count decides correctness; the AI still grades approach and complexity. When off, every result is labelled "not executed — reviewed by AI only", with the reason.
 
 ### Feedback you can actually use
 
