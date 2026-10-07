@@ -78,9 +78,10 @@ per session, unvetted</strong> (sometimes unsolvable or ambiguous), and evaluati
    spare alongside an interview.</li>
 <li><strong>Only Python executes.</strong> The editor accepts five languages; the bank ships
    Python starters and tests only. Other languages are always AI-reviewed.</li>
-<li><strong>Rows saved before 2026-10-06</strong> still hold the full problem dict (with the
-   answer key) in <code>interviews.track_config</code>; they were not rewritten.</li>
 </ol>
+<p><strong>Closed 2026-10-06:</strong> interview rows saved before the fix held the answer key in
+<code>interviews.track_config</code>. <code>scripts/strip_answer_keys.py</code> was run against production;
+a follow-up dry run reports 0 rows still holding it.</p>
 <h2>The execution decision (kept for reference)</h2>
 <p>The local <code>code_runner</code> isolates by process and timeout only — fine for the
 bank's trusted reference solutions, not for arbitrary candidate code.</p>
